@@ -102,9 +102,15 @@ type P = { o: Order; lines: Line[]; can: (r: string) => boolean; load: () => voi
 function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<string, Customer>; people: Record<string, Profile> }) {
   const editable = (can('kinh_doanh') || can('admin_cnc')) && ['tiep_nhan', 'boc_tach', 'kiem_tra_f1', 'xndh'].includes(o.status);
   const [f, setF] = useState({ project: o.project, contact: o.contact, channel: o.channel, description: o.description, due_date: o.due_date ?? '', quote_due: o.quote_due ?? '' });
-  const [files, setFiles] = useState<{ name: string }[]>([]);
-  const listFiles = useCallback(() => { sb.storage.from('files').list(o.id + '/f0').then(({ data }) => setFiles(data ?? [])); }, [o.id]);
-  useEffect(listFiles, [listFiles]);
+  const [files, setFiles] = useState<{ name: string; url: string }[]>([]);
+  const listFiles = useCallback(async () => {
+    const { data } = await sb.storage.from('files').list(o.id + '/f0');
+    const names = (data ?? []).map((x) => x.name);
+    if (!names.length) { setFiles([]); return; }
+    const { data: urls } = await sb.storage.from('files').createSignedUrls(names.map((n) => `${o.id}/f0/${n}`), 3600);
+    setFiles(names.map((name, i) => ({ name, url: urls?.[i]?.signedUrl ?? '' })));
+  }, [o.id]);
+  useEffect(() => { listFiles(); }, [listFiles]);
   const save = async () => {
     const { error } = await sb.from('orders').update({ ...f, due_date: f.due_date || null, quote_due: f.quote_due || null }).eq('id', o.id);
     if (error) setErr(errText(error)); else { setOk('Đã lưu F0.'); load(); }
@@ -116,10 +122,7 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
     }
     setOk('Đã tải file.'); listFiles();
   };
-  const open = async (name: string) => {
-    const { data } = await sb.storage.from('files').createSignedUrl(`${o.id}/f0/${name}`, 3600);
-    if (data) window.open(data.signedUrl, '_blank');
-  };
+
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -136,7 +139,7 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
       {o.supplement_note && <div className="msg err"><b>Nội dung cần bổ sung (F1 không đạt):</b> {o.supplement_note}</div>}
       <div>
         <h3>Bản vẽ, file kỹ thuật</h3>
-        <ul>{files.map((x) => <li key={x.name}><button className="btn sm" onClick={() => open(x.name)}>{x.name.replace(/^\d+-/, '')}</button></li>)}</ul>
+        <ul>{files.map((x) => <li key={x.name} style={{ marginBottom: 6 }}><a className="btn sm" href={x.url} target="_blank" rel="noopener"><Icon name="file" size={16} />{x.name.replace(/^\d+-/, '')}</a></li>)}</ul>
         {editable && <input type="file" multiple onChange={upload} aria-label="Tải bản vẽ" />}
       </div>
       {editable && <div className="row"><button className="btn primary" onClick={save}>Lưu F0</button></div>}
@@ -239,11 +242,11 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
     const { error } = await sb.from('confirmations').update({ signed_pdf_path: path }).eq('order_id', o.id);
     if (error) setErr(errText(error)); else { setOk('Đã tải PDF XNĐH đã ký.'); load(); }
   };
-  const openPdf = async () => {
-    if (!conf?.signed_pdf_path) return;
-    const { data } = await sb.storage.from('files').createSignedUrl(conf.signed_pdf_path, 3600);
-    if (data) window.open(data.signedUrl, '_blank');
-  };
+  const [pdfUrl, setPdfUrl] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!conf?.signed_pdf_path) { setPdfUrl(undefined); return; }
+    sb.storage.from('files').createSignedUrl(conf.signed_pdf_path, 3600).then(({ data }) => setPdfUrl(data?.signedUrl ?? null));
+  }, [conf?.signed_pdf_path]);
   const before = ['tiep_nhan', 'boc_tach', 'kiem_tra_f1'].includes(o.status);
   if (before) return <div className="card muted">XNĐH mở sau khi F1 đạt (ĐK1).</div>;
   return (
@@ -276,7 +279,10 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
         <div className="grid2">
           <div><div className="small muted">KH1 – IPC</div>{conf?.kh1_confirmed_at ? <Chip s="dat" text={'Đã xác nhận ' + dt(conf.kh1_confirmed_at) + ' · ' + conf.kh1_channel} /> : <Chip s="chua" text="Chưa xác nhận" />}</div>
           <div><div className="small muted">KH2 – Hanwa</div>{conf?.kh2_confirmed_at ? <Chip s="dat" text={'Đã xác nhận ' + dt(conf.kh2_confirmed_at) + ' · ' + conf.kh2_channel} /> : <Chip s="chua" text="Chưa xác nhận" />}</div>
-          <div><div className="small muted">PDF XNĐH đã ký</div>{conf?.signed_pdf_path ? <button className="btn sm" onClick={openPdf}>Mở PDF</button> : <span className="muted">Chưa có</span>}</div>
+          <div><div className="small muted">PDF XNĐH đã ký</div>{!conf?.signed_pdf_path ? <span className="muted">Chưa có</span>
+            : pdfUrl === undefined ? <span className="muted small">Đang chuẩn bị…</span>
+            : pdfUrl === null ? <span className="kb-late small"><Icon name="alert" size={14} />Không tìm thấy file, tải lại PDF</span>
+            : <a className="btn sm" href={pdfUrl} target="_blank" rel="noopener"><Icon name="file" size={16} />Mở PDF</a>}</div>
         </div>
         {o.status === 'cho_khach' && (can('admin_cnc') || can('kinh_doanh')) && (
           <div className="row">
