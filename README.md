@@ -49,7 +49,7 @@ web/                   React + TypeScript + Vite
    > Code public không lộ dữ liệu: trong code không có mật khẩu, và mọi quyền đều kiểm tra ở Supabase.
    > Đừng bao giờ đưa *service_role key* hay mật khẩu database vào code.
 2. **Settings → Pages → Source**: chọn *GitHub Actions*.
-3. **Settings → Secrets and variables → Actions → Variables**: thêm `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`.
+3. URL Supabase và publishable key đã nằm sẵn trong `web/.env.production` (giá trị công khai), nên không cần khai báo biến repo.
 4. **Secrets**: thêm `SUPABASE_DB_URL`. Lấy chuỗi kết nối ở *Connect → Session pooler*, có mật khẩu database. Workflow sao lưu dùng giá trị này.
 5. Mỗi lần push vào `main`, trang tự build và deploy. Địa chỉ trang: `https://<user>.github.io/<repo>/`.
    App dùng đường dẫn dạng `#/don/...` nên Pages không cần cấu hình thêm.
