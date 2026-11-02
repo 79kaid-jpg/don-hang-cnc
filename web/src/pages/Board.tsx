@@ -60,7 +60,7 @@ export default function Board() {
   return (
     <>
       <div className="row between">
-        <div><h1>Bảng đơn hàng</h1><p className="muted" style={{ margin: '4px 0 0' }}>Mỗi cột là một bước. Bấm thẻ để mở hồ sơ, hoặc “Làm bước tiếp” để vào đúng phiếu.</p></div>
+        <div><h1>Bảng đơn hàng</h1><p className="muted" style={{ margin: '4px 0 0' }}>Mỗi cột là một bước. Bấm thẻ để mở hồ sơ, hoặc nút vàng để làm bước tiếp.</p></div>
         <div className="row">
           <Link className="btn sm" to="/don" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>Dạng danh sách</Link>
           {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary" to="/don/moi" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>+ Tạo đơn</Link>}
@@ -112,7 +112,7 @@ export default function Board() {
                         {lateAppr ? '⚠ Quá hạn · ' : 'Chờ '}{people[p.approver_id ?? '']?.full_name ?? 'người duyệt'}</span>)}
                       {o.status === 'san_xuat' && <><span className="chip wait">NVL: dự toán</span><span className="chip wait">GC: lập LGC</span></>}
                     </div>
-                    {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>Làm bước tiếp: {c.next}</Link>}
+                    {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}
                   </article>))}
               </div>
             </section>);
