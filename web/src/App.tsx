@@ -11,6 +11,7 @@ import Board from './pages/Board';
 import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
 import Admin from './pages/Admin';
+import Install, { UpdateBar } from './pages/Install';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -55,6 +56,7 @@ function Shell() {
         <div className="side-foot">
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
             <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
+          <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Cài app</NavLink>
           <button className="nav-item" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
         </div>
       </aside>
@@ -62,6 +64,7 @@ function Shell() {
       <header className="topbar">
         <div className="logo" aria-hidden="true">C</div>
         <b style={{ flex: 1 }}>Đơn hàng CNC</b>
+        <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Cài app lên màn hình chính"><Icon name="download" /></NavLink>
         <span className="avatar" title={me.full_name} aria-label={me.full_name}>{initial}</span>
         <button className="btn sm icon-btn" aria-label="Đăng xuất" onClick={() => sb.auth.signOut()}><Icon name="logout" /></button>
       </header>
@@ -80,6 +83,7 @@ function Shell() {
           <Route path="/don/moi" element={<NewOrder />} />
           <Route path="/don/:id" element={<OrderDetail />} />
           <Route path="/quan-tri" element={<Admin />} />
+          <Route path="/cai-app" element={<Install />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -88,7 +92,7 @@ function Shell() {
         {items.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
-      <Toaster /><ConfirmHost />
+      <UpdateBar /><Toaster /><ConfirmHost />
     </div>
   );
 }
