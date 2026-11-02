@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/Approvals.tsx","./src/components/ui.tsx","./src/lib/auth.tsx","./src/lib/format.ts","./src/lib/supabase.ts","./src/pages/Admin.tsx","./src/pages/Login.tsx","./src/pages/MyWork.tsx","./src/pages/NewOrder.tsx","./src/pages/OrderDetail.tsx","./src/pages/Orders.tsx"],"version":"5.6.3"}

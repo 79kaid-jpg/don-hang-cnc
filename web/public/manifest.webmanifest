@@ -1,0 +1,2 @@
+{ "name": "Đơn hàng CNC", "short_name": "Đơn hàng", "start_url": "./", "display": "standalone",
+  "background_color": "#F6F3EC", "theme_color": "#EFE6D2", "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }] }

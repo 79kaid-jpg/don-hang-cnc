@@ -1,0 +1,50 @@
+:root{--bg:#F6F3EC;--surface:#fff;--soft:#FBF8F1;--line:#E3DCCB;--line2:#D9CCAE;--ink:#23201A;--muted:#5F584B;
+--gold:#8A6A28;--gold-ink:#6B5220;--gold-tint:#EFE6D2;--blue:#24507A;--blue-bg:#E6EEF6;--red:#B42318;--red-bg:#FBE4E1;--wait-bg:#F3E6C6;--wait:#6B4E12}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 'Be Vietnam Pro',system-ui,sans-serif}
+a{color:var(--gold-ink)}
+h1{font-size:24px;margin:0}h2{font-size:17px;margin:0}h3{font-size:15px;margin:0}
+.muted{color:var(--muted)}.small{font-size:12px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 20px;background:linear-gradient(180deg,#FBF8F1,#EFE6D2);border-bottom:1px solid var(--line2)}
+.logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#E9D9AE,#B8954A 55%,#8A6A28);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+.shell{display:flex;flex-wrap:wrap;align-items:flex-start}
+.nav{flex:1 1 180px;max-width:230px;padding:14px 10px;display:flex;flex-direction:column;gap:4px}
+.nav a{display:block;padding:10px 14px;border-radius:8px;color:#3A352C;text-decoration:none;font-weight:500}
+.nav a.active{background:var(--gold-tint);color:#4A3712;font-weight:700;box-shadow:inset 0 0 0 1px var(--line2)}
+.main{flex:999 1 560px;min-width:0;padding:20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card.flush{padding:0;overflow:hidden}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 18px}
+.btn{height:42px;padding:0 18px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:#3A352C;font:inherit;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn.ghost{border-color:#C9B27A;color:var(--gold-ink)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{height:34px;padding:0 12px;font-size:13px}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:600}
+input,select,textarea{font:inherit;font-weight:400;border:1px solid var(--line2);border-radius:8px;padding:9px 11px;background:#fff;color:var(--ink);min-height:42px}
+textarea{resize:vertical}
+.chip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.chip.done{background:var(--blue-bg);color:var(--blue)}.chip.wait{background:var(--wait-bg);color:var(--wait)}
+.chip.bad{background:var(--red-bg);color:#9B1C12}.chip.idle{background:#EEEAE1;color:var(--muted)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--soft);text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:10px 12px;white-space:nowrap}
+.tbl td{padding:9px 12px;border-top:1px solid #EFE9DC;vertical-align:middle}
+.tbl td.n,.tbl th.n{text-align:right}
+.tbl tr.click{cursor:pointer}.tbl tr.click:hover td{background:#FDFBF6}
+.tbl input{min-height:34px;padding:5px 8px;width:100%}
+.scroll{overflow-x:auto}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.tabs button{white-space:nowrap;height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--line2);background:#fff;font:inherit;font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+.msg{padding:10px 14px;border-radius:8px;font-size:13px}
+.msg.err{background:var(--red-bg);color:#9B1C12}.msg.ok{background:var(--blue-bg);color:var(--blue)}.msg.info{background:var(--soft);border:1px solid var(--line)}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--line);border-radius:10px}
+.dot{width:30px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;background:#EEEAE1;color:var(--muted)}
+.dot.done{background:var(--blue);color:#fff}.dot.wait{background:var(--gold);color:#fff}.dot.bad{background:var(--red);color:#fff}
+.login{max-width:380px;margin:12vh auto;padding:28px}
+@media (max-width:640px){.main{padding:14px}.nav{max-width:none;flex-direction:row;overflow-x:auto;padding:8px}.nav a{white-space:nowrap}}
+@media print{.top,.nav,.tabs,.btn,details,a.small{display:none!important}.main{padding:0}.card{border:0}body{background:#fff}}
