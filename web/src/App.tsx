@@ -5,6 +5,7 @@ import { sb } from './lib/supabase';
 import Login from './pages/Login';
 import MyWork from './pages/MyWork';
 import Orders from './pages/Orders';
+import Board from './pages/Board';
 import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
 import Admin from './pages/Admin';
@@ -38,12 +39,14 @@ function Shell() {
       <div className="shell">
         <nav className="nav" aria-label="Menu chính">
           <NavLink to="/" end>Việc của tôi</NavLink>
-          <NavLink to="/don">Đơn hàng</NavLink>
+          <NavLink to="/bang">Bảng Kanban</NavLink>
+          <NavLink to="/don" end>Danh sách đơn</NavLink>
           {can('admin_it') && <NavLink to="/quan-tri">Quản trị</NavLink>}
         </nav>
         <main className="main">
           <Routes>
             <Route path="/" element={<MyWork />} />
+            <Route path="/bang" element={<Board />} />
             <Route path="/don" element={<Orders />} />
             <Route path="/don/moi" element={<NewOrder />} />
             <Route path="/don/:id" element={<OrderDetail />} />

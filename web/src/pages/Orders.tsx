@@ -19,7 +19,8 @@ export default function Orders() {
     <>
       <div className="row between">
         <div><h1>Đơn hàng</h1><p className="muted" style={{ margin: '4px 0 0' }}>Mỗi đơn là một hồ sơ từ tiếp nhận đến giao hàng.</p></div>
-        {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary" to="/don/moi" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>+ Tạo đơn mới</Link>}
+        <div className="row"><Link className="btn sm" to="/bang" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>Dạng Kanban</Link>
+        {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary" to="/don/moi" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>+ Tạo đơn mới</Link>}</div>
       </div>
       <div className="row">
         <input aria-label="Tìm" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: '1 1 260px', maxWidth: 420 }} />
