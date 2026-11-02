@@ -1,4 +1,5 @@
 name: Deploy GitHub Pages
+# Mỗi lần push vào main (thư mục web/ hoặc file này) sẽ build và deploy lên GitHub Pages
 on:
   push: { branches: [main], paths: ['web/**', '.github/workflows/deploy.yml'] }
   workflow_dispatch:
