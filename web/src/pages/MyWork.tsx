@@ -3,21 +3,24 @@ import { Link } from 'react-router-dom';
 import { sb, type Approval, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { DOC, ORDER_STATUS, dt } from '../lib/format';
-import { Chip } from '../components/ui';
+import { Chip, Empty, Skeleton } from '../components/ui';
+import { Icon } from '../components/Icon';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
-const TODO: Record<string, { roles: string[]; text: string }> = {
-  tiep_nhan: { roles: ['kinh_doanh', 'ky_thuat'], text: 'Bắt đầu bóc tách F1' },
-  boc_tach: { roles: ['ky_thuat', 'kinh_doanh'], text: 'Lập F1 rồi gửi kiểm tra' },
-  kiem_tra_f1: { roles: ['kiem_tra_f1'], text: 'Kiểm tra F1 (ĐK1)' },
-  xndh: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Nhập đơn giá, gửi duyệt XNĐH' },
-  cho_khach: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Ghi xác nhận KH1 → KH2, tải PDF ký' }
+export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
+  tiep_nhan: { roles: ['kinh_doanh', 'ky_thuat'], text: 'Bắt đầu bóc tách F1', tab: 'F1' },
+  boc_tach: { roles: ['ky_thuat', 'kinh_doanh'], text: 'Lập F1 rồi gửi kiểm tra', tab: 'F1' },
+  kiem_tra_f1: { roles: ['kiem_tra_f1'], text: 'Kiểm tra F1 (ĐK1)', tab: 'F1' },
+  xndh: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Nhập đơn giá, gửi duyệt XNĐH', tab: 'F2' },
+  cho_khach: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Ghi xác nhận KH1 → KH2, tải PDF ký', tab: 'F2' }
 };
+
+type A = Approval & { orders: Pick<Order, 'code' | 'project'> };
 
 export default function MyWork() {
   const { me, can } = useAuth();
-  const [appr, setAppr] = useState<(Approval & { orders: Pick<Order, 'code' | 'project'> })[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [appr, setAppr] = useState<A[] | null>(null);
+  const [orders, setOrders] = useState<Order[] | null>(null);
   useEffect(() => {
     if (!me) return;
     sb.from('approvals').select('*, orders(code, project)').eq('approver_id', me.id).eq('status', 'cho').order('due_at')
@@ -25,34 +28,44 @@ export default function MyWork() {
     sb.from('orders').select('*').in('status', Object.keys(TODO)).order('due_date', { nullsFirst: false })
       .then(({ data }) => setOrders((data as Order[]) ?? []));
   }, [me]);
-  const mine = orders.filter((o) => TODO[o.status].roles.some(can));
+  const mine = (orders ?? []).filter((o) => TODO[o.status].roles.some(can));
   const late = (d: string | null) => !!d && new Date(d) < new Date();
+  const hello = new Date().getHours() < 12 ? 'Chào buổi sáng' : new Date().getHours() < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
   return (
     <>
-      <div><h1>Việc của tôi</h1><p className="muted" style={{ margin: '4px 0 0' }}>Sắp theo hạn. Bấm để mở hồ sơ đơn.</p></div>
-      <section className="card flush">
-        <div className="row between" style={{ padding: '12px 16px', background: 'var(--soft)' }}><h2>Chờ tôi duyệt</h2><span className="chip wait">{appr.length} phiếu</span></div>
-        <div className="scroll"><table className="tbl"><tbody>
-          {appr.length === 0 && <tr><td className="muted">Không có phiếu chờ duyệt.</td></tr>}
-          {appr.map((a) => (
-            <tr key={a.id}>
-              <td><span className="chip idle">{DOC[a.doc_type] ?? a.doc_type}</span></td>
-              <td><Link to={'/don/' + a.order_id + '?tab=' + a.doc_type}><b>{a.orders?.code}</b></Link><div className="small muted">{a.orders?.project} · cấp {a.step_no} · {a.label}</div></td>
-              <td className="n"><span style={{ color: late(a.due_at) ? 'var(--red)' : undefined, fontWeight: late(a.due_at) ? 600 : 400 }}>hạn {dt(a.due_at)}</span></td>
-            </tr>))}
-        </tbody></table></div>
+      <div className="page-head"><div><h1>{hello}, {me?.full_name}</h1>
+        <p className="muted">{appr && orders ? `${appr.length} phiếu chờ duyệt · ${mine.length} việc đến lượt` : 'Đang tải việc của bạn…'}</p></div></div>
+
+      <section className="card flush" aria-labelledby="h-appr">
+        <div className="card-head"><h2 id="h-appr">Chờ tôi duyệt</h2>{appr && <span className="chip wait">{appr.length} phiếu</span>}</div>
+        <div style={{ padding: appr && appr.length ? 0 : 12 }}>
+          {!appr ? <Skeleton rows={2} /> : appr.length === 0 ? <Empty title="Không có phiếu chờ duyệt" /> : (
+            <ul className="worklist">
+              {appr.map((a) => (
+                <li key={a.id}><Link to={'/don/' + a.order_id + '?tab=' + a.doc_type} className="work">
+                  <span className="chip idle">{DOC[a.doc_type] ?? a.doc_type}</span>
+                  <span className="work-main"><b>{a.orders?.code}</b><span className="small muted">{a.orders?.project} · cấp {a.step_no} · {a.label}</span></span>
+                  <span className={late(a.due_at) ? 'kb-late small' : 'small muted'}>{late(a.due_at) && <Icon name="alert" size={14} />}{late(a.due_at) ? 'Quá hạn · ' : 'Hạn '}{dt(a.due_at)}</span>
+                  <Icon name="arrow" size={18} />
+                </Link></li>))}
+            </ul>)}
+        </div>
       </section>
-      <section className="card flush">
-        <div style={{ padding: '12px 16px', background: 'var(--soft)' }}><h2>Đến lượt tôi làm</h2></div>
-        <div className="scroll"><table className="tbl"><tbody>
-          {mine.length === 0 && <tr><td className="muted">Không có việc.</td></tr>}
-          {mine.map((o) => (
-            <tr key={o.id}>
-              <td><Chip s={o.status} text={ORDER_STATUS[o.status]} /></td>
-              <td><Link to={'/don/' + o.id}><b>{o.code}</b></Link><div className="small muted">{o.project}</div></td>
-              <td>{TODO[o.status].text}</td>
-            </tr>))}
-        </tbody></table></div>
+
+      <section className="card flush" aria-labelledby="h-todo">
+        <div className="card-head"><h2 id="h-todo">Đến lượt tôi làm</h2>{orders && <span className="chip idle">{mine.length} việc</span>}</div>
+        <div style={{ padding: orders && mine.length ? 0 : 12 }}>
+          {!orders ? <Skeleton rows={3} /> : mine.length === 0 ? <Empty title="Không có việc nào đến lượt bạn"><Link to="/bang">Xem bảng Kanban</Link></Empty> : (
+            <ul className="worklist">
+              {mine.map((o) => (
+                <li key={o.id}><Link to={'/don/' + o.id + '?tab=' + TODO[o.status].tab} className="work">
+                  <Chip s={o.status} text={ORDER_STATUS[o.status]} />
+                  <span className="work-main"><b>{o.code}</b><span className="small muted">{o.project}</span></span>
+                  <span className="small">{TODO[o.status].text}</span>
+                  <Icon name="arrow" size={18} />
+                </Link></li>))}
+            </ul>)}
+        </div>
       </section>
     </>
   );

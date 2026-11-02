@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { sb, type Approval, type Customer, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { date, num } from '../lib/format';
+import { Icon } from '../components/Icon';
+import { Skeleton } from '../components/ui';
 
 /** Cột Kanban = trạng thái đơn. Kéo-thả cố ý không có: chuyển cột phải qua kiểm tra nghiệp vụ (ĐK1, duyệt, ĐK2),
  *  nên mỗi thẻ có nút "Làm bước tiếp" mở đúng tab cần thao tác. */
@@ -20,7 +22,7 @@ type Agg = { qty: number; kg: number };
 
 export default function Board() {
   const { me, can } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[] | null>(null);
   const [agg, setAgg] = useState<Record<string, Agg>>({});
   const [appr, setAppr] = useState<Approval[]>([]);
   const [people, setPeople] = useState<Record<string, Profile>>({});
@@ -44,7 +46,7 @@ export default function Board() {
   }, []);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const cards = useMemo(() => orders.filter((o) => (o.code + ' ' + o.project).toLowerCase().includes(q.toLowerCase())).map((o) => {
+  const cards = useMemo(() => (orders ?? []).filter((o) => (o.code + ' ' + o.project).toLowerCase().includes(q.toLowerCase())).map((o) => {
     const c = COLS.find((x) => x.key === o.status)!;
     const pend = appr.filter((a) => a.order_id === o.id && a.status === 'cho');
     const lastF2 = appr.filter((a) => a.order_id === o.id && a.doc_type === 'F2').at(-1);
@@ -59,18 +61,16 @@ export default function Board() {
 
   return (
     <>
-      <div className="row between">
-        <div><h1>Bảng đơn hàng</h1><p className="muted" style={{ margin: '4px 0 0' }}>Mỗi cột là một bước. Bấm thẻ để mở hồ sơ, hoặc nút vàng để làm bước tiếp.</p></div>
+      <div className="page-head">
+        <div><h1>Bảng Kanban</h1><p className="muted">Mỗi cột là một bước. Bấm thẻ để mở hồ sơ, hoặc nút vàng để làm bước tiếp.</p></div>
         <div className="row">
-          <Link className="btn sm" to="/don" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>Dạng danh sách</Link>
-          {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary" to="/don/moi" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>+ Tạo đơn</Link>}
+          <Link className="btn sm" to="/don"><Icon name="list" size={18} />Dạng danh sách</Link>
+          {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn</Link>}
         </div>
       </div>
       <div className="row">
-        <input aria-label="Tìm đơn" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: '1 1 240px', maxWidth: 380 }} />
-        <button className={'btn sm' + (mine ? ' primary' : '')} aria-pressed={mine} onClick={() => setMine(!mine)}>
-          {mine ? '✓ ' : ''}Chỉ việc đến lượt tôi
-        </button>
+        <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm mã đơn, dự án" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <button className="pill-toggle" aria-pressed={mine} onClick={() => setMine(!mine)}>{mine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
       </div>
 
       {/* Điện thoại: chọn một cột, không cuộn ngang cả trang */}
@@ -92,7 +92,7 @@ export default function Board() {
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">
-                {list.length === 0 && <p className="kb-empty">Trống</p>}
+                {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
                   <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '')}>
                     <Link to={'/don/' + o.id} className="kb-link">
@@ -103,13 +103,13 @@ export default function Board() {
                     <div className="kb-meta">
                       {a && <span>{a.qty} tấm · {num(a.kg, 0)} kg</span>}
                       {o.due_date && <span className={days != null && days < 0 ? 'kb-late' : days != null && days <= 3 ? 'kb-soon' : ''}>
-                        {days != null && days < 0 ? '⚠ Trễ ' + -days + ' ngày · ' : ''}Giao {date(o.due_date)}</span>}
+                        {days != null && days < 0 && <><Icon name="alert" size={14} />Trễ {-days} ngày · </>}Giao {date(o.due_date)}</span>}
                     </div>
                     <div className="kb-tags">
                       {o.f1_result === 'khong_dat' && <span className="chip bad">F1 không đạt</span>}
                       {rejected && <span className="chip bad">XNĐH bị từ chối</span>}
                       {pend.map((p) => <span key={p.id} className={'chip ' + (lateAppr ? 'bad' : 'wait')}>
-                        {lateAppr ? '⚠ Quá hạn · ' : 'Chờ '}{people[p.approver_id ?? '']?.full_name ?? 'người duyệt'}</span>)}
+                        {lateAppr ? <><Icon name="alert" size={13} />Quá hạn · </> : <><Icon name="clock" size={13} />Chờ </>}{people[p.approver_id ?? '']?.full_name ?? 'người duyệt'}</span>)}
                       {o.status === 'san_xuat' && <><span className="chip wait">NVL: dự toán</span><span className="chip wait">GC: lập LGC</span></>}
                     </div>
                     {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}

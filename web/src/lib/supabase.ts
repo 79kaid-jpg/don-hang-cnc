@@ -23,3 +23,14 @@ export function errText(e: unknown): string {
   if (m.includes('row-level security')) return 'Bạn không có quyền sửa phiếu này ở bước hiện tại.';
   return m;
 }
+
+// Báo "đang xử lý" toàn cục cho mọi thao tác nghiệp vụ (rpc): thanh tiến trình + chặn bấm lặp
+let pending = 0;
+const emit = () => window.dispatchEvent(new CustomEvent('busy', { detail: pending > 0 }));
+const origRpc = sb.rpc.bind(sb);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(sb as any).rpc = (...args: Parameters<typeof origRpc>) => {
+  pending++; emit();
+  const p = origRpc(...args);
+  return p.then((r) => { pending--; emit(); return r; }, (e) => { pending--; emit(); throw e; });
+};

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { sb, errText, type Approval, type Profile } from '../lib/supabase';
 import { dt } from '../lib/format';
-import { Msg } from './ui';
+import { Msg, confirmDialog } from './ui';
 
 const STATE: Record<string, [string, string]> = { dat: ['done', 'Đạt'], cho: ['wait', 'Đang chờ'], tu_choi: ['bad', 'Từ chối'], huy: ['idle', 'Huỷ'] };
 
@@ -36,6 +36,8 @@ export function ApprovalChain({ rows, people, meId, onDone, steps }: {
 export function Decide({ id, onDone }: { id: string; onDone: () => void }) {
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const act = async (ok: boolean) => {
+    if (!ok && !note.trim()) { setErr('Ghi lý do từ chối để người lập biết cần sửa gì.'); return; }
+    if (!(await confirmDialog(ok ? 'Duyệt phiếu này và chuyển sang cấp tiếp theo?' : 'Từ chối và trả phiếu về người lập?', ok ? 'Duyệt' : 'Từ chối', ok))) return;
     setBusy(true); setErr('');
     const { error } = await sb.rpc('decide_approval', { p_approval: id, p_ok: ok, p_note: note || null });
     setBusy(false); if (error) setErr(errText(error)); else onDone();

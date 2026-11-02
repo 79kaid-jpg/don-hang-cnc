@@ -3,7 +3,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { BRANCH, ORDER_STATUS, date, dt, money, num } from '../lib/format';
-import { Chip, Msg } from '../components/ui';
+import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
 
 type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_at: string | null; kh1_channel: string | null;
@@ -56,19 +57,20 @@ export default function OrderDetail() {
     if (error) setErr(errText(error)); else { setOk(msg); load(); }
   };
 
-  if (!o) return <p>Đang tải…</p>;
+  if (!o) return <Skeleton rows={4} h={72} />;
   const tot = lines.reduce((s, l) => ({ qty: s.qty + l.qty, m2: s.m2 + Number(l.area_m2), kg: s.kg + Number(l.weight_kg) }), { qty: 0, m2: 0, kg: 0 });
   const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');
   const props = { o, lines, run, can, load, setErr, setOk };
 
   return (
     <>
-      <Link to="/don" className="small" style={{ fontWeight: 600 }}>← Danh sách đơn</Link>
+      <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="row between">
           <div><h1>{o.code}</h1><div className="muted">{chain} · {o.project}{o.due_date ? ' · giao ' + date(o.due_date) : ''}</div></div>
           <span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
         </div>
+        <Flow status={o.status} f1={o.f1_result} />
         <div className="grid2">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
           <div><div className="small muted">Nhánh NVL · QT2</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
@@ -161,7 +163,7 @@ function F1({ o, lines, can, run, load, setErr, setOk, tot }: P & { tot: { qty: 
     if (!rows.length) { setErr('Không đọc được dòng nào. Cần 6 cột: Mã TP, Vật liệu, Dày, Dài, Rộng, Số tấm.'); return; }
     add(rows);
   };
-  const del = async (lid: string) => { const { error } = await sb.from('order_lines').delete().eq('id', lid); if (error) setErr(errText(error)); else load(); };
+  const del = async (lid: string) => { if (!(await confirmDialog('Xoá dòng này khỏi F1?', 'Xoá dòng'))) return; const { error } = await sb.from('order_lines').delete().eq('id', lid); if (error) setErr(errText(error)); else load(); };
   const set = (k: keyof typeof blank) => (e: React.ChangeEvent<HTMLInputElement>) => setN({ ...n, [k]: e.target.value });
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -174,7 +176,7 @@ function F1({ o, lines, can, run, load, setErr, setOk, tot }: P & { tot: { qty: 
             <tr key={l.id}><td>{l.line_no}</td><td>{l.product_code}</td><td>{l.material}</td><td className="n">{num(l.thickness_mm, 2)}</td>
               <td className="n">{num(l.length_mm, 0)}</td><td className="n">{num(l.width_mm, 0)}</td><td className="n">{l.qty}</td>
               <td className="n">{num(l.area_m2, 2)}</td><td className="n">{num(l.weight_kg, 1)}</td>
-              <td>{editable && <button className="btn sm danger" onClick={() => del(l.id)} aria-label={'Xoá dòng ' + l.line_no}>Xoá</button>}</td></tr>))}
+              <td>{editable && <button className="btn sm danger" onClick={() => del(l.id)} aria-label={'Xoá dòng ' + l.line_no}><Icon name="trash" size={16} /></button>}</td></tr>))}
           {editable && (
             <tr><td></td><td><input aria-label="Mã TP" value={n.product_code} onChange={set('product_code')} /></td>
               <td><input aria-label="Vật liệu" value={n.material} onChange={set('material')} /></td>
@@ -247,7 +249,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="row between"><h2>F2 · Xác nhận đơn hàng</h2><button className="btn sm ghost" onClick={() => window.print()}>In / Lưu PDF</button></div>
+        <div className="row between"><h2>F2 · Xác nhận đơn hàng</h2><button className="btn sm ghost" onClick={() => window.print()}><Icon name="print" size={16} />In / Lưu PDF</button></div>
         {seesPrice ? (
           <div className="scroll"><table className="tbl" style={{ minWidth: 640 }}>
             <thead><tr><th>#</th><th>Vật liệu</th><th className="n">Dày</th><th className="n">Số tấm</th><th className="n">kg</th><th className="n">Đơn giá (đ/kg)</th><th className="n">Thành tiền</th></tr></thead>
@@ -280,11 +282,31 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
           <div className="row">
             {!conf?.kh1_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 1, p_channel: 'Email' }, 'Đã ghi KH1 xác nhận.')}>Ghi KH1 (IPC) xác nhận</button>}
             {conf?.kh1_confirmed_at && !conf?.kh2_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 2, p_channel: 'Email' }, 'Đã ghi KH2 xác nhận.')}>Ghi KH2 (Hanwa) xác nhận</button>}
-            <label className="btn ghost" style={{ display: 'flex', alignItems: 'center' }}>Tải PDF đã ký<input type="file" accept="application/pdf" onChange={uploadPdf} style={{ display: 'none' }} /></label>
+            <label className="btn ghost" ><Icon name="upload" size={18} />Tải PDF đã ký<input type="file" accept="application/pdf" onChange={uploadPdf} style={{ display: 'none' }} /></label>
             <button className="btn primary" disabled={!conf?.kh1_confirmed_at || !conf?.kh2_confirmed_at || !conf?.signed_pdf_path}
               onClick={() => run('close_qt1', { p_order: o.id }, 'ĐK2 đạt – đã mở nhánh NVL và gia công.')}>Hoàn tất QT1 (ĐK2)</button>
           </div>)}
       </div>
     </div>
+  );
+}
+
+/** Tiến trình QT0 → QT1 → ĐK2: bước đã qua, bước hiện tại, bước sau */
+const FLOW = [['tiep_nhan', 'Tiếp nhận'], ['boc_tach', 'Bóc tách F1'], ['kiem_tra_f1', 'Kiểm tra F1'], ['xndh', 'Lập XNĐH'],
+  ['cho_duyet_xndh', 'Duyệt XNĐH'], ['cho_khach', 'Khách xác nhận'], ['san_xuat', 'Sản xuất']] as const;
+function Flow({ status, f1 }: { status: string; f1: string }) {
+  if (status === 'huy') return <div className="msg err" role="status"><Icon name="x" size={18} />Đơn đã huỷ</div>;
+  const cur = FLOW.findIndex(([k]) => k === status);
+  return (
+    <ol className="flow" aria-label="Tiến trình đơn" style={{ listStyle: 'none', margin: 0 }}>
+      {FLOW.map(([k, t], i) => {
+        const cls = i < cur || (cur === -1 && status !== 'tiep_nhan') ? 'done' : i === cur ? 'cur' : '';
+        return (
+          <li key={k} className={'flow-step ' + cls} aria-current={i === cur ? 'step' : undefined}>
+            <span className="fdot">{cls === 'done' ? <Icon name="check" size={14} /> : i + 1}</span>
+            <span>{t}{k === 'boc_tach' && f1 === 'khong_dat' && i === cur ? ' (bổ sung)' : ''}</span>
+          </li>);
+      })}
+    </ol>
   );
 }

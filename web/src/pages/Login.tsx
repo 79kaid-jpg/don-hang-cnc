@@ -1,21 +1,33 @@
 import { useState } from 'react';
 import { sb } from '../lib/supabase';
 import { Msg } from '../components/ui';
+import { Icon } from '../components/Icon';
 export default function Login() {
-  const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [show, setShow] = useState(false);
+  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const go = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) setErr('Sai email hoặc mật khẩu.'); setBusy(false);
+    const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
+    if (error) setErr('Email hoặc mật khẩu chưa đúng. Kiểm tra lại, hoặc nhờ IT đặt lại mật khẩu.'); setBusy(false);
   };
   return (
-    <form className="card login" onSubmit={go} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="row"><div className="logo" aria-hidden="true">C</div><h1>Đơn hàng CNC</h1></div>
-      <p className="muted" style={{ margin: 0 }}>Tài khoản do IT cấp.</p>
-      <label className="f">Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" /></label>
-      <label className="f">Mật khẩu<input type="password" required value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" /></label>
-      <Msg err={err} />
-      <button className="btn primary" disabled={busy}>Đăng nhập</button>
-    </form>
+    <div className="login-wrap">
+      <form className="card login" onSubmit={go} noValidate>
+        <div className="row"><div className="logo" aria-hidden="true">C</div><div><h1 style={{ fontSize: 22 }}>Đơn hàng CNC</h1><div className="small muted">CNC → IPC → Hanwa</div></div></div>
+        <label className="f">Email
+          <input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" inputMode="email" />
+        </label>
+        <label className="f">Mật khẩu
+          <span className="pw">
+            <input type={show ? 'text' : 'password'} required value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
+            <button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={show}>
+              <Icon name={show ? 'eyeoff' : 'eye'} /></button>
+          </span>
+        </label>
+        <Msg err={err} />
+        <button className="btn primary" disabled={busy || !email || !pw}>{busy ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
+        <p className="small muted" style={{ margin: 0 }}>Tài khoản do IT cấp. Quên mật khẩu: liên hệ IT.</p>
+      </form>
+    </div>
   );
 }
