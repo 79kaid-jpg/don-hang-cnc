@@ -47,7 +47,7 @@ function Shell() {
     <div className={'app' + (busy ? ' is-busy' : '')}>
       {busy && <div className="busy" role="progressbar" aria-label="Đang xử lý" />}
       <aside className="side" aria-label="Điều hướng">
-        <div className="brand"><div className="logo" aria-hidden="true">C</div>
+        <div className="brand"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
           <div><div style={{ fontWeight: 700 }}>Đơn hàng CNC</div><div className="small muted">CNC → IPC → Hanwa</div></div></div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((i) => (
@@ -62,7 +62,7 @@ function Shell() {
       </aside>
 
       <header className="topbar">
-        <div className="logo" aria-hidden="true">C</div>
+        <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
         <b style={{ flex: 1 }}>Đơn hàng CNC</b>
         <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Cài app lên màn hình chính"><Icon name="download" /></NavLink>
         <span className="avatar" title={me.full_name} aria-label={me.full_name}>{initial}</span>

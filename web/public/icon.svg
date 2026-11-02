@@ -1,1 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D9AE"/><stop offset=".55" stop-color="#B8954A"/><stop offset="1" stop-color="#8A6A28"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#g)"/><text x="32" y="43" font-family="sans-serif" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">C</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F3E7C4"/><stop offset=".45" stop-color="#C9A55A"/><stop offset="1" stop-color="#7E6024"/>
+    </linearGradient>
+    <linearGradient id="pa" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFDF6"/><stop offset="1" stop-color="#E9DDBF"/>
+    </linearGradient>
+    <linearGradient id="pb" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#E4D3A8"/><stop offset="1" stop-color="#C7AC6E"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- façade: 3 cột tấm nhôm, mặt trước sáng + mặt bên tối (phối cảnh), mạch ghép ngang -->
+  <g stroke="#5E4716" stroke-width="1.8" stroke-linejoin="round">
+    <path d="M11 51V19l12-5v37z" fill="url(#pb)"/>
+    <path d="M23 51V14l16 4v33z" fill="url(#pa)"/>
+    <path d="M39 51V18l14-6v39z" fill="url(#pb)"/>
+  </g>
+  <g stroke="#5E4716" stroke-width="1.4" opacity=".8">
+    <path d="M11 30l12-4M11 41l12-3M23 26l16 3M23 39l16 1M39 29l14-4M39 40l14-3"/>
+  </g>
+  <path d="M23 14l16 4v33H23z" fill="url(#shine)"/>
+  <path d="M8 51.5h48" stroke="#5E4716" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

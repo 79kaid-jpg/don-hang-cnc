@@ -43,7 +43,7 @@ export default function Install() {
             <Step n={1}>Mở <b>{URL_APP}</b> bằng <b>Safari</b>. <button className="btn sm" onClick={copy}>Chép đường dẫn</button></Step>
             <Step n={2}>Bấm nút <b>Chia sẻ</b> <span className="kbd"><Icon name="share" size={16} /></span> ở thanh dưới (iPad: góc trên bên phải).</Step>
             <Step n={3}>Kéo xuống, chọn <b>Thêm vào MH chính</b> (Add to Home Screen).</Step>
-            <Step n={4}>Giữ tên <b>Đơn hàng</b>, bấm <b>Thêm</b>. Biểu tượng chữ C vàng xuất hiện trên màn hình chính.</Step>
+            <Step n={4}>Giữ tên <b>Đơn hàng</b>, bấm <b>Thêm</b>. Biểu tượng mặt dựng nhôm vàng xuất hiện trên màn hình chính.</Step>
             <Step n={5}>Mở app từ biểu tượng và <b>đăng nhập lại một lần</b> (app trên màn hình chính có phiên đăng nhập riêng với Safari).</Step>
           </ol>
           <p className="small muted" style={{ marginBottom: 0 }}>Muốn nhận thông báo đẩy sau này: cần iOS 16.4 trở lên và mở từ biểu tượng trên màn hình chính.</p>
