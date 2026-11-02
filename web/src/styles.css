@@ -159,3 +159,5 @@ textarea{resize:vertical}
 .work:hover{background:#FDFBF6}
 .work-main{flex:1 1 220px;display:flex;flex-direction:column;min-width:0}
 .work>svg:last-child{color:var(--muted)}
+.acting{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border-radius:var(--r);background:#FBE9D8;border:2px solid #A85A12;color:#5C2E07;font-size:15px}
+.acting .btn{border-color:#A85A12;color:#5C2E07}

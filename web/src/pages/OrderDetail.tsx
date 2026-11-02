@@ -11,7 +11,7 @@ type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_a
   kh2_confirmed_at: string | null; kh2_channel: string | null; signed_pdf_path: string | null };
 type Price = { line_id: string; order_id: string; unit_price: number; price_unit: string };
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
-type Ev = { id: number; at: string; actor: string | null; action: string };
+type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
 const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['LS', 'Lịch sử']] as const;
 
@@ -40,7 +40,7 @@ export default function OrderDetail() {
       sb.from('approval_steps').select('*').order('step_no'),
       sb.from('profiles').select('*'),
       sb.from('customers').select('*'),
-      sb.from('audit_log').select('id, at, actor, action').eq('order_id', id).eq('table_name', 'event').order('at', { ascending: false })
+      sb.from('audit_log').select('id, at, actor, acting_as, action').eq('order_id', id).eq('table_name', 'event').order('at', { ascending: false })
     ]);
     setO(a.data as Order); setLines((b.data as Line[]) ?? []);
     setPrices(Object.fromEntries(((c.data as Price[]) ?? []).map((p) => [p.line_id, p])));
@@ -89,7 +89,7 @@ export default function OrderDetail() {
       {tab === 'LS' && (
         <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
-          {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}</span><div>{e.action}</div></div>)}
+          {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
         </div>
       )}
     </>

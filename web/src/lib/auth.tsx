@@ -2,17 +2,27 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { sb, type Profile } from './supabase';
 
-type Ctx = { session: Session | null; me: Profile | null; can: (r: string) => boolean; reload: () => void };
-const AuthCtx = createContext<Ctx>({ session: null, me: null, can: () => false, reload: () => {} });
+/** me = người dùng hiệu lực (người được đóng vai nếu IT đang "đăng nhập với tư cách"); real = người thật đang đăng nhập */
+type Ctx = { session: Session | null; me: Profile | null; real: Profile | null; acting: boolean;
+  can: (r: string) => boolean; reload: () => Promise<void>; actAs: (id: string) => Promise<string | null>; stopActing: () => Promise<void> };
+const AuthCtx = createContext<Ctx>({ session: null, me: null, real: null, acting: false, can: () => false,
+  reload: async () => {}, actAs: async () => null, stopActing: async () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [real, setReal] = useState<Profile | null>(null);
   const [me, setMe] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
   const load = async (s: Session | null) => {
     setSession(s);
-    if (s) { const { data } = await sb.from('profiles').select('*').eq('id', s.user.id).single(); setMe(data as Profile); }
-    else setMe(null);
+    if (s) {
+      const { data } = await sb.from('profiles').select('*').eq('id', s.user.id).single();
+      const r = data as Profile; setReal(r);
+      if (r?.impersonating && r.roles.includes('admin_it')) {
+        const { data: t } = await sb.from('profiles').select('*').eq('id', r.impersonating).single();
+        setMe((t as Profile) ?? r);
+      } else setMe(r);
+    } else { setReal(null); setMe(null); }
     setReady(true);
   };
   useEffect(() => {
@@ -21,7 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
   const can = (r: string) => !!me && me.active && (me.roles.includes(r) || me.roles.includes('admin_it'));
+  const acting = !!real && !!me && real.id !== me.id;
+  const actAs = async (id: string) => {
+    const { error } = await sb.rpc('start_impersonation', { p_user: id });
+    if (error) return error.message;
+    await load(session); return null;
+  };
+  const stopActing = async () => { await sb.rpc('stop_impersonation'); await load(session); };
   if (!ready) return <p style={{ padding: 24 }}>Đang tải…</p>;
-  return <AuthCtx.Provider value={{ session, me, can, reload: () => load(session) }}>{children}</AuthCtx.Provider>;
+  return <AuthCtx.Provider value={{ session, me, real, acting, can, reload: () => load(session), actAs, stopActing }}>{children}</AuthCtx.Provider>;
 }
 export const useAuth = () => useContext(AuthCtx);

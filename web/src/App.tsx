@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
 import { Icon } from './components/Icon';
@@ -13,7 +13,8 @@ import OrderDetail from './pages/OrderDetail';
 import Admin from './pages/Admin';
 
 function Shell() {
-  const { session, me, can } = useAuth();
+  const { session, me, can, acting, real, stopActing } = useAuth();
+  const nav = useNavigate();
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -66,6 +67,12 @@ function Shell() {
       </header>
 
       <main className="main" id="main">
+        {acting && (
+          <div className="acting" role="status">
+            <Icon name="eye" />
+            <span style={{ flex: '1 1 240px' }}>Đang <b>đăng nhập với tư cách {me.full_name}</b> ({me.roles.join(', ') || 'chưa có vai trò'}). Bạn thấy và làm đúng như người này; nhật ký ghi tên thật của bạn ({real?.full_name}).</span>
+            <button className="btn sm" onClick={async () => { await stopActing(); nav('/quan-tri'); }}><Icon name="x" size={16} />Thoát, về tài khoản của tôi</button>
+          </div>)}
         <Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/bang" element={<Board />} />

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { DOC, ROLES } from '../lib/format';
-import { Msg } from '../components/ui';
+import { Msg, confirmDialog } from '../components/ui';
+import { useAuth } from '../lib/auth';
+import { useNavigate } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 
 type Step = { id: string; doc_type: string; step_no: number; label: string; approver_id: string | null; hours: number };
 
@@ -9,6 +12,11 @@ export default function Admin() {
   const [tab, setTab] = useState<'users' | 'flows'>('users');
   const [people, setPeople] = useState<Profile[]>([]); const [steps, setSteps] = useState<Step[]>([]);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
+  const { real, actAs } = useAuth(); const nav = useNavigate();
+  const loginAs = async (p: Profile) => {
+    if (!(await confirmDialog(`Đăng nhập với tư cách ${p.full_name}? Bạn sẽ thấy và thao tác đúng như người này cho tới khi bấm Thoát. Mọi thao tác được ghi tên bạn.`, 'Đăng nhập với tư cách', true))) return;
+    const e = await actAs(p.id); if (e) setErr(e); else nav('/');
+  };
   const load = () => {
     sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? []));
     sb.from('approval_steps').select('*').order('doc_type').order('step_no').then(({ data }) => setSteps((data as Step[]) ?? []));
@@ -42,7 +50,10 @@ export default function Admin() {
                   <input type="checkbox" style={{ minHeight: 0, width: 'auto' }} checked={p.roles.includes(k)}
                     onChange={(e) => patchP(p.id, { roles: e.target.checked ? [...p.roles, k] : p.roles.filter((r) => r !== k) })} />{t}</label>))}</div></td>
               <td><input type="checkbox" aria-label="Hoạt động" style={{ minHeight: 0, width: 'auto' }} checked={p.active} onChange={(e) => patchP(p.id, { active: e.target.checked })} /></td>
-              <td><button className="btn sm primary" onClick={() => saveUser(p)}>Lưu</button></td>
+              <td><div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                <button className="btn sm primary" onClick={() => saveUser(p)}>Lưu</button>
+                {p.id !== real?.id && p.active && <button className="btn sm ghost" onClick={() => loginAs(p)} aria-label={'Đăng nhập với tư cách ' + p.full_name}><Icon name="eye" size={16} />Đăng nhập với tư cách</button>}
+              </div></td>
             </tr>))}</tbody>
         </table></div>)}
       {tab === 'flows' && (
