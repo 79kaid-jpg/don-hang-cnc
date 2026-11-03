@@ -96,6 +96,7 @@ export default function FlowMap() {
   const [poDone, setPoDone] = useState<Set<string>>(new Set());
   const nav = useNavigate();
   const [sel, setSel] = useState<string | null>(null); const [showMap, setShowMap] = useState(false);
+  const [z, setZ] = useState(1); const [full, setFull] = useState(false); // phóng to sơ đồ: 1 = vừa khung
   useEffect(() => {
     Promise.all([
       sb.from('orders').select('*').neq('status', 'huy').order('code', { ascending: false }),
@@ -164,8 +165,14 @@ export default function FlowMap() {
         </div>)}
 
       {/* Sơ đồ (máy tính; điện thoại bấm "Xem sơ đồ") */}
-      <div className={'fm-map card flush' + (showMap ? ' force' : '')}>
-        <div className="fm-inner">
+      <div className={'fm-map card flush' + (showMap ? ' force' : '') + (full ? ' full' : '')}>
+        <div className="fm-zoom" role="group" aria-label="Phóng to thu nhỏ sơ đồ">
+          <button onClick={() => setZ((v) => Math.max(1, +(v - 0.5).toFixed(1)))} disabled={z <= 1} aria-label="Thu nhỏ">−</button>
+          <button onClick={() => setZ(1)} className="fit" aria-label="Vừa khung">{Math.round(z * 100)}%</button>
+          <button onClick={() => setZ((v) => Math.min(4, +(v + 0.5).toFixed(1)))} disabled={z >= 4} aria-label="Phóng to">+</button>
+          <button onClick={() => setFull(!full)} aria-label={full ? 'Thoát toàn màn hình' : 'Xem toàn màn hình'}><Icon name={full ? 'x' : 'eye'} size={16} /></button>
+        </div>
+        <div className="fm-inner" style={{ ['--z' as string]: z }}>
         <svg viewBox={`0 0 ${vbW} ${vbH}`} role="img" aria-label="Sơ đồ quy trình đơn hàng với số đơn ở từng bước" className="fm-svg">
           <defs><marker id="fm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9A8F7A" /></marker>
             <marker id="fm-arr-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2C5F8A" /></marker></defs>
@@ -232,7 +239,7 @@ export default function FlowMap() {
 
       {/* Điện thoại: dòng thời gian / danh sách theo bước */}
       <div className="fm-mobile">
-        <button className="btn sm" onClick={() => setShowMap(!showMap)}>{showMap ? 'Ẩn sơ đồ' : 'Xem sơ đồ (cuộn ngang)'}</button>
+        <button className="btn sm" onClick={() => setShowMap(!showMap)}>{showMap ? 'Ẩn sơ đồ' : 'Xem sơ đồ toàn bộ'}</button>
         {O ? (
           <ol className="fm-tl">
             {PATH.map((k) => { const s = state(k); if (s === 'skip') return null; const pa = s === 'cur' ? oPend : [];
