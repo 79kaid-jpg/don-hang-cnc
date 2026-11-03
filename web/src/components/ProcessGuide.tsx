@@ -4,25 +4,25 @@ import { Icon } from './Icon';
 /** Sơ đồ quy trình tương tác QT0 → QT3 (bản gộp QT2, 4 điều kiện ĐK1–ĐK4).
  *  Bấm một quy trình để xem các bước, bấm một bước để xem ai làm, nhập gì, ai duyệt, xong thì sang đâu, làm ở đâu trong app. */
 type Step = { k: string; t: string; who: string; form?: string; input: string; approve?: string; next: string; where: string; gate?: string };
-type Proc = { k: string; t: string; sub: string; steps: Step[]; exit: string };
+type Proc = { k: string; t: string; sub: string; steps: Step[]; exit: string; back: string };
 
 const PROCS: Proc[] = [
-  { k: 'QT0', t: 'QT0', sub: 'Tiếp nhận & bóc tách', exit: 'ĐK1: F1 đạt → QT1', steps: [
+  { k: 'QT0', t: 'QT0', sub: 'Tiếp nhận & bóc tách', exit: 'ĐK1: F1 đạt → QT1', back: 'F1 không đạt → ghi nội dung cần bổ sung, trả về Bóc tách (B2).', steps: [
     { k: 'B1', t: 'Tiếp nhận yêu cầu', who: 'Kinh doanh / CSKH', form: 'F0', input: 'Khách hàng KH1 → KH2, dự án, kênh, người liên hệ, bản vẽ, ngày cần báo giá / giao, người bóc tách', next: 'Bóc tách F1', where: 'Tạo đơn → thẻ F0' },
     { k: 'B2', t: 'Bóc tách kỹ thuật', who: 'Kỹ thuật bóc tách', form: 'F1', input: 'Mỗi dòng: mã TP, vật liệu, dày, dài, rộng, số tấm (m², kg tự tính). Nhập tay, dán từ Excel hoặc tải file Excel theo mẫu', next: 'Gửi kiểm tra F1', where: 'Thẻ F1 · Bắt đầu bóc tách → Gửi kiểm tra F1' },
     { k: 'B3', t: 'Kiểm tra F1', who: 'Kiểm tra F1', form: 'F1', input: 'Đạt / Không đạt; không đạt phải ghi nội dung cần bổ sung', next: 'Đạt → QT1. Không đạt → về B2', where: 'Thẻ F1 · Đạt / Không đạt', gate: 'ĐK1' }] },
-  { k: 'QT1', t: 'QT1', sub: 'Xác nhận đơn hàng', exit: 'ĐK2: XNĐH đã ký → QT2', steps: [
+  { k: 'QT1', t: 'QT1', sub: 'Xác nhận đơn hàng', exit: 'ĐK2: XNĐH đã ký → QT2', back: 'XNĐH bị từ chối hoặc khách yêu cầu sửa → quay về Lập XNĐH (B1).', steps: [
     { k: 'B1', t: 'Lập XNĐH', who: 'Admin CNC / Kinh doanh', form: 'F2', input: 'Đơn giá (đ/kg) từng dòng, VAT, điều kiện giao / thanh toán', next: 'Gửi duyệt XNĐH', where: 'Thẻ F2 · Lưu đơn giá → Gửi duyệt XNĐH' },
     { k: 'B2', t: 'Duyệt XNĐH', who: 'Người duyệt', form: 'F2', input: 'Duyệt / Từ chối (từ chối ghi lý do)', approve: 'Dung · có tin Zalo', next: 'Duyệt → B3. Từ chối → về B1', where: 'Việc của tôi → Chờ tôi duyệt' },
     { k: 'B3', t: 'Khách xác nhận', who: 'Admin CNC', form: 'F2', input: 'Ghi KH1 (IPC) rồi KH2 (Hanwa) xác nhận, tải PDF XNĐH đã ký', next: 'Hoàn tất QT1 → QT2', where: 'Thẻ F2 · Ghi KH1 / KH2 → Tải PDF → Hoàn tất QT1', gate: 'ĐK2' }] },
-  { k: 'QT2', t: 'QT2', sub: 'Lệnh GC & bàn giao NVL', exit: 'ĐK4: QC thành phẩm đạt → QT3', steps: [
+  { k: 'QT2', t: 'QT2', sub: 'Lệnh GC & bàn giao NVL', exit: 'ĐK4: QC thành phẩm đạt → QT3', back: 'LGC bị từ chối → về B1. NVL thiếu / lỗi (B4), bàn giao chênh lệch (B5), QC thành phẩm không đạt (B6) → phiếu F7 ở thẻ F7 Phát sinh.', steps: [
     { k: 'B1', t: 'Lập LGC + dự toán NVL', who: 'Admin CNC · Kế hoạch', form: 'F5 + F3', input: 'LGC: dự phòng %, ngày bắt đầu / hoàn thành, xưởng nhận. Dự toán: hao hụt % → cần dùng − tồn kho = cần mua', next: 'Gửi duyệt LGC + dự toán NVL', where: 'Thẻ QT2 · Tính LGC → Lưu ngày → Tính dự toán' },
     { k: 'B2', t: 'Duyệt LGC 4 cấp', who: 'Người duyệt theo chuỗi', form: 'F5 + F3', input: 'Duyệt / Từ chối từng cấp', approve: 'Anh Mai → Dung (duyệt cả dự toán NVL) → Thủy → Anh Kiên · mỗi cấp 1 tin Zalo', next: 'Cần mua → B3. Tồn kho đủ → B5. Từ chối → về B1', where: 'Thẻ QT2 · khối B2' },
     { k: 'B3', t: 'Mua NVL (PO)', who: 'Mua hàng', form: 'PO', input: 'Số PO, nhà cung cấp, ngày hàng về, đơn giá', approve: 'Dung · có tin Zalo', next: 'B4', where: 'Thẻ QT2 · khối B3 · Lưu PO → Gửi duyệt PO' },
     { k: 'B4', t: 'Nhập kho & QC NVL', who: 'Kho NVL + QC', form: 'F4', input: 'Số thực nhận (điền sẵn theo PO), kg lỗi; lệch trong 0,5% / 5 kg coi là khớp', next: 'Đạt → ĐK3. Thiếu / lỗi → F7, về B3 mua bổ sung', where: 'Thẻ QT2 · khối B4 · QC đạt, nhập kho', gate: 'ĐK3' },
     { k: 'B5', t: 'Bàn giao NVL', who: 'Kho IPC → Xưởng', form: 'F6', input: 'Số thực giao (điền sẵn theo LGC), bên giao, bên nhận, biên bản đã ký', next: 'B6. Chênh lệch vượt mức → F7', where: 'Thẻ QT2 · khối B5 · Chốt bàn giao' },
     { k: 'B6', t: 'Gia công & QC thành phẩm', who: 'Xưởng · Kho/QC', input: 'Đạt / Không đạt, số pallet', next: 'Đạt → QT3. Không đạt → F7', where: 'Thẻ QT2 · khối B6', gate: 'ĐK4' }] },
-  { k: 'QT3', t: 'QT3', sub: 'Giao thành phẩm', exit: 'Hoàn tất đơn', steps: [
+  { k: 'QT3', t: 'QT3', sub: 'Giao thành phẩm', exit: 'Hoàn tất đơn', back: 'Lệnh giao hàng bị từ chối → sửa lệnh (B3). Còn phiếu F7 đang mở thì chưa hoàn tất được.', steps: [
     { k: 'B1', t: 'Nhập kho thành phẩm', who: 'Kho thành phẩm', input: 'Lấy từ QC thành phẩm QT2-B6 (số pallet)', next: 'B2', where: 'Thẻ QT3 Giao hàng · B1' },
     { k: 'B2', t: 'Thông báo giao + packing list', who: 'Admin CNC', form: 'F8', input: 'Lập packing list theo pallet (tự chia đều, sửa được), ngày giao dự kiến, địa điểm', next: 'B3', where: 'Thẻ QT3 · Lập packing list → Thông báo giao hàng' },
     { k: 'B3', t: 'Lệnh giao hàng 2 chặng', who: 'Admin CNC', form: 'F9', input: 'Mã lệnh PMKT, xe, tài xế, ngày giờ giao', approve: 'Chặng 1 CNC → IPC: Dung → Chị Trang; tự gửi chặng 2 IPC → Hanwa: Nhung → Anh Kiên · tin Zalo từng cấp', next: 'Duyệt đủ 2 chặng → B4. Từ chối → sửa lệnh', where: 'Thẻ QT3 · Gửi duyệt LGH 2 chặng' },
@@ -68,7 +68,7 @@ export default function ProcessGuide() {
           <dt>Xong thì</dt><dd>{S.next}</dd>
           <dt>Làm ở đâu</dt><dd>{S.where}</dd>
         </dl>
-        <div className="small muted">Kết thúc {P.t}: <b>{P.exit}</b>. Thiếu, lỗi, chênh lệch hoặc QC không đạt ở bất kỳ bước nào → phiếu F7 (thẻ F7 Phát sinh).</div>
+        <div className="small muted">Kết thúc {P.t}: <b>{P.exit}</b>. {P.back}</div>
       </div>
     </div>);
 }
