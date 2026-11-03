@@ -584,3 +584,4 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   .fm-map.full{padding-top:calc(56px + env(safe-area-inset-top))}.fm-map.full .fm-zoom{top:calc(10px + env(safe-area-inset-top))}
 }
 @media (min-width:901px){.fm-inner{width:calc(var(--z,1) * 100%)}}
+button{color:inherit}

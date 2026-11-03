@@ -54,7 +54,6 @@ export default function Board() {
   const P = PROCS.find((x) => x.key === qt) ?? PROCS[0]; const COLS = P.cols;
   const [col, setCol] = useState(''); // cột đang xem trên điện thoại
   const pick = (k: string) => { setQt(k); setCol(''); try { localStorage.setItem('kb-qt', k); } catch { /* */ } };
-  const curCol = col || COLS[0].key;
 
   const [drag, setDrag] = useState<{ id: string; i: number } | null>(null);
   const [over, setOver] = useState(-1);
@@ -164,6 +163,8 @@ export default function Board() {
   }).filter((x) => x.c && (!mine || x.myTurn)), [orders, appr, agg, q, mine, me, can, P]); // eslint-disable-line
 
   const byCol = (k: string) => cards.filter((x) => val(x.o, P.field) === k);
+  // Điện thoại: mặc định mở cột có việc của tôi, rồi cột đầu tiên có đơn
+  const curCol = col || (COLS.find((c) => byCol(c.key).some((x) => x.myTurn)) ?? COLS.find((c) => byCol(c.key).length) ?? COLS[0]).key;
   // Phím tắt Kanban: 1–4 đổi quy trình, J/K/H/L (hoặc mũi tên) chọn thẻ, Enter mở, M chuyển, R trả về, F lọc việc của tôi
   const [sel, setSel] = useState<{ c: number; r: number } | null>(null);
   const navg = useNavigate();
