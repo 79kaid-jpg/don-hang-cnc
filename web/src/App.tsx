@@ -20,6 +20,10 @@ function Shell() {
   const nav = useNavigate();
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
+  // Menu trái: ẩn/hiện (nhớ theo trình duyệt); khi ẩn có nút nổi để mở menu dạng lớp phủ
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('side-hidden') === '1'; } catch { return false; } });
+  const [peek, setPeek] = useState(false);
+  const toggleSide = (v: boolean) => { setHidden(v); setPeek(false); try { localStorage.setItem('side-hidden', v ? '1' : '0'); } catch { /* */ } };
   useEffect(() => {
     const h = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
     window.addEventListener('busy', h); return () => window.removeEventListener('busy', h);
@@ -47,14 +51,17 @@ function Shell() {
   const initial = (me.full_name || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className={'app' + (busy ? ' is-busy' : '')}>
+    <div className={'app' + (busy ? ' is-busy' : '') + (hidden ? ' side-hidden' : '') + (peek ? ' side-peek' : '')}>
+      {hidden && !peek && <button className="side-fab" aria-label="Mở menu" title="Mở menu" onClick={() => setPeek(true)}><Icon name="menu" /></button>}
+      {peek && <div className="side-scrim" onClick={() => setPeek(false)} aria-hidden="true" />}
       {busy && <div className="busy" role="progressbar" aria-label="Đang xử lý" />}
       <aside className="side" aria-label="Điều hướng">
         <div className="brand"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
-          <div><div style={{ fontWeight: 700 }}>Đơn hàng CNC</div><div className="small muted">CNC → IPC → Hanwa</div></div></div>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>Đơn hàng CNC</div><div className="small muted">CNC → IPC → Hanwa</div></div>
+          <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Ghim menu' : 'Ẩn menu'} title={hidden ? 'Ghim menu' : 'Ẩn menu (mở lại bằng nút ☰ góc trái)'} onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((i) => (
-            <NavLink key={i.to} to={i.to} end={i.end} className="nav-item"><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
+            <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
         </nav>
         <div className="side-foot">
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>

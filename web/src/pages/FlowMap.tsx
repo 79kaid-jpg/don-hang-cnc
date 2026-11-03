@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { sb, type Approval, type Order, type Profile } from '../lib/supabase';
 import { DOC, dt, qt2Step } from '../lib/format';
 import { Icon } from '../components/Icon';
@@ -48,6 +48,34 @@ export function nodeOf(o: Order): string | null {
   return null;
 }
 
+const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+/** Tìm tương đối: mọi từ gõ vào đều phải xuất hiện (không dấu, không phân biệt hoa thường) trong mã, dự án, người liên hệ, mô tả */
+const match = (o: Order, q: string) => { const hay = norm([o.code, o.project, o.contact, o.description].join(' ')).replace(/-/g, ' ');
+  return norm(q).replace(/-/g, ' ').split(/\s+/).filter(Boolean).every((w) => hay.includes(w) || hay.replace(/\s/g, '').includes(w)); };
+
+function OrderSearch({ orders, value, onPick }: { orders: Order[]; value: Order | null; onPick: (id: string) => void }) {
+  const [q, setQ] = useState(''); const [open, setOpen] = useState(false); const [hi, setHi] = useState(0);
+  const res = (q.trim() ? orders.filter((o) => match(o, q)) : orders).slice(0, 8);
+  const pick = (o: Order) => { onPick(o.id); setQ(''); setOpen(false); };
+  return (
+    <div className="fm-search" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}>
+      <Icon name="search" size={18} />
+      <input role="combobox" aria-expanded={open} aria-controls="fm-search-list" aria-label="Tìm đơn hàng"
+        placeholder={value ? value.code + ' · ' + value.project : 'Tìm đơn: mã, dự án, người liên hệ… (không cần dấu)'}
+        value={q} onFocus={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }}
+        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setHi(Math.min(hi + 1, res.length - 1)); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(Math.max(hi - 1, 0)); }
+          else if (e.key === 'Enter' && res[hi]) pick(res[hi]); else if (e.key === 'Escape') setOpen(false); }} />
+      {open && (
+        <ul id="fm-search-list" role="listbox" className="fm-search-list">
+          {res.map((o, i) => <li key={o.id} role="option" aria-selected={i === hi}>
+            <button tabIndex={-1} className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(o)}>
+              <b>{o.code}</b><span className="small muted">{o.project}</span></button></li>)}
+          {res.length === 0 && <li className="small muted" style={{ padding: '8px 12px' }}>Không tìm thấy đơn nào.</li>}
+        </ul>)}
+    </div>);
+}
+
 const W = 158, H = 62, X0 = 24, COLW = 208, LANE0 = 44, LANEH = 124;
 const pos = (n: N) => ({ x: X0 + 8 + n.col * COLW, y: LANE0 + 34 + n.lane * LANEH });
 const byK = Object.fromEntries(NODES.map((n) => [n.k, n]));
@@ -66,6 +94,7 @@ export default function FlowMap() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [pend, setPend] = useState<Pend[]>([]); const [f7, setF7] = useState<Record<string, number>>({});
   const [poDone, setPoDone] = useState<Set<string>>(new Set());
+  const nav = useNavigate();
   const [sel, setSel] = useState<string | null>(null); const [showMap, setShowMap] = useState(false);
   useEffect(() => {
     Promise.all([
@@ -98,6 +127,8 @@ export default function FlowMap() {
   useEffect(() => { const h = (e: KeyboardEvent) => e.key === 'Escape' && setSel(null); window.addEventListener('keydown', h);
     const d = (e: MouseEvent) => { const t = e.target as Element; if (!t.closest?.('.fm-pop') && !t.closest?.('.fm-node')) setSel(null); };
     document.addEventListener('mousedown', d); return () => { window.removeEventListener('keydown', h); document.removeEventListener('mousedown', d); }; }, []);
+  /** Tất cả đơn: mở danh sách ở bước. Một đơn: mở đơn ở đúng thẻ của bước đó */
+  const clickNode = (k: string) => { if (O) { nav('/don/' + O.id + '?tab=' + TAB[k]); return; } setSel(sel === k ? null : k); };
   const pickOrder = (id: string) => { setSel(null); setSp(id ? { don: id } : {}); };
   const oPend = O ? pend.filter((a) => a.order_id === O.id) : [];
 
@@ -108,7 +139,7 @@ export default function FlowMap() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="page-head">
-        <div><h1>Sơ đồ đơn hàng</h1><p className="muted">Đơn đang ở đâu trong toàn bộ quy trình. Bấm một bước để xem các đơn, hoặc chọn một đơn để xem đường đi.</p></div>
+        <div><h1>Sơ đồ đơn hàng</h1><p className="muted">{O ? 'Bấm một bước trên sơ đồ để mở đơn ở đúng phần đó.' : 'Đơn đang ở đâu trong toàn bộ quy trình. Bấm một bước để xem các đơn, hoặc tìm một đơn để xem đường đi.'}</p></div>
         <Link className="btn sm" to="/bang"><Icon name="kanban" size={18} />Bảng Kanban</Link>
       </div>
       <div className="row">
@@ -116,11 +147,7 @@ export default function FlowMap() {
           <button aria-pressed={!O} onClick={() => pickOrder('')}>Tất cả đơn</button>
           <button aria-pressed={!!O} onClick={() => !O && orders[0] && pickOrder(orders[0].id)}>Một đơn</button>
         </div>
-        {O !== null || one ? (
-          <label className="f" style={{ flex: '1 1 260px', maxWidth: 'min(420px, 100%)', minWidth: 0 }}><span className="sr-only">Chọn đơn</span>
-            <select value={O?.id ?? ''} onChange={(e) => pickOrder(e.target.value)} aria-label="Chọn đơn">
-              {orders.map((o) => <option key={o.id} value={o.id}>{o.code} · {o.project}</option>)}
-            </select></label>) : null}
+        <OrderSearch orders={orders} value={O} onPick={pickOrder} />
         <div className="fm-legend small">
           <span><i className="fm-badge-dot" />Chờ duyệt</span><span><i className="fm-badge-dot late" />Quá hạn</span><span><i className="fm-f7-dot" />Có F7 mở</span>
           {O && <><span><i className="fm-sw done" />Đã qua</span><span><i className="fm-sw cur" />Đang ở</span></>}
@@ -154,7 +181,7 @@ export default function FlowMap() {
             return (
               <g key={n.k} className={`fm-node ${n.kind ?? ''} ${s} ${sel === n.k ? 'sel' : ''}`} tabIndex={0} role="button"
                 aria-label={`${n.t}: ${c} đơn${pa.length ? ', ' + pa.length + ' chờ duyệt' : ''}`}
-                onClick={() => setSel(sel === n.k ? null : n.k)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setSel(sel === n.k ? null : n.k)}>
+                onClick={() => clickNode(n.k)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && clickNode(n.k)}>
                 <rect x={x} y={y} width={W} height={H} rx="10" className="fm-box" />
                 <text x={x + 12} y={y + 24} className="fm-t">{n.t}</text>
                 <text x={x + 12} y={y + 44} className="fm-s">{n.s}</text>
