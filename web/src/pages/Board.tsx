@@ -7,7 +7,7 @@ const val = (o: Order, f: Proc['field']) => (f === 'step' ? qt2Step(o) : o[f]);
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
 import { MoveDialog } from '../components/MoveDialog';
-import { Avatar, DueChip, type OStep } from '../components/StepPeople';
+import { Avatar, DueChip, GroupBadge, useGroups, type OStep } from '../components/StepPeople';
 
 /** Bảng Kanban theo từng quy trình: mỗi quy trình một bảng, cột = bước của quy trình đó (giống sơ đồ).
  *  Đơn nằm ở bước theo trạng thái của đúng nhánh: QT0–QT1 theo trạng thái đơn, QT2 theo nhánh NVL, QT3 theo nhánh gia công.
@@ -58,6 +58,7 @@ export default function Board() {
   const [drag, setDrag] = useState<{ id: string; i: number } | null>(null);
   const [over, setOver] = useState(-1);
   const [move, setMove] = useState<{ o: Order; i: number } | null>(null);
+  const [groups] = useGroups();
   const [osteps, setOsteps] = useState<OStep[]>([]);
   const loadSteps = () => sb.from('order_steps').select('*').is('done_at', null).then(({ data }) => setOsteps((data as OStep[]) ?? []));
   useEffect(() => { loadSteps(); }, []); // eslint-disable-line
@@ -191,11 +192,12 @@ export default function Board() {
                       {o.due_date && <span className={days != null && days < 0 ? 'kb-late' : days != null && days <= 3 ? 'kb-soon' : ''}>
                         {days != null && days < 0 && <><Icon name="alert" size={14} />Trễ {-days} ngày · </>}Giao {date(o.due_date)}</span>}
                     </div>
-                    {(() => { const st = stepOf(o.id, c.key); if (!st) return null; const d = st.doer_id ? people[st.doer_id] : undefined; return (
+                    {(() => { const st = stepOf(o.id, c.key); if (!st) return null; const d = st.doer_id ? people[st.doer_id] : undefined; const dg = groups.find((g) => g.id === st.doer_group_id);
+                      const supN = [...st.supervisor_group_ids.map((x) => 'Nhóm ' + (groups.find((g) => g.id === x)?.name ?? '?')), ...st.supervisor_ids.map((x) => people[x]?.full_name)]; return (
                       <div className="kb-people">
-                        {d ? <span className="kb-doer"><Avatar p={d} />{d.full_name}</span> : c.roles.length ? <span className="chip bad">Chưa giao người</span> : <span className="small muted">Theo chuỗi duyệt</span>}
-                        {st.supervisor_ids.length > 0 && <span className="kb-sup" title={'Giám sát: ' + st.supervisor_ids.map((x) => people[x]?.full_name).join(', ')}>
-                          <Icon name="eye" size={13} />{st.supervisor_ids.map((x) => <Avatar key={x} p={people[x]} />)}</span>}
+                        {dg ? <span className="kb-doer"><GroupBadge g={dg} />Nhóm {dg.name}</span> : d ? <span className="kb-doer"><Avatar p={d} />{d.full_name}</span> : c.roles.length ? <span className="chip bad">Chưa giao người</span> : <span className="small muted">Theo chuỗi duyệt</span>}
+                        {supN.length > 0 && <span className="kb-sup" title={'Giám sát: ' + supN.join(', ')}>
+                          <Icon name="eye" size={13} />{st.supervisor_group_ids.map((x) => <GroupBadge key={x} g={groups.find((g) => g.id === x)} />)}{st.supervisor_ids.map((x) => <Avatar key={x} p={people[x]} />)}</span>}
                         <DueChip due={st.due_at} />
                       </div>); })()}
                     <div className="kb-tags">

@@ -1,0 +1,3 @@
+-- Nhóm làm việc (Admin IT lập). Một người thuộc nhiều nhóm. Bước giao cho người hoặc nhóm; giám sát gồm người và nhóm.
+-- Nội dung đã áp dụng qua MCP: bảng work_groups(member_ids uuid[]), cột doer_group_id / supervisor_group_ids
+-- trên step_defaults và order_steps, hàm in_group / in_any_group, cập nhật os_upd, track_steps, guard_checklist.
