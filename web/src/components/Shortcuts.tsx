@@ -22,10 +22,10 @@ export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
   { group: 'Bảng Kanban', items: [
     [['1'], 'QT0'], [['2'], 'QT1'], [['3'], 'QT2'], [['4'], 'QT3'],
     [['J', '↓'], 'Thẻ đơn tiếp theo'], [['K', '↑'], 'Thẻ đơn trước'], [['H', '←'], 'Sang cột trái'], [['L', '→'], 'Sang cột phải'],
-    [['Enter'], 'Mở đơn đang chọn'], [['M'], 'Chuyển đơn đang chọn sang bước sau'], [['R'], 'Trả đơn đang chọn về bước trước'],
+    [['Enter'], 'Mở đơn đang chọn'], [['M'], 'Ký nhanh hồ sơ đang chọn (sang bước sau)'], [['R'], 'Trả hồ sơ đang chọn về bước trước'],
     [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"']] },
   { group: 'Chi tiết đơn', items: [
-    [['1 … 7'], 'Đổi thẻ: F0, F1, F2, QT2, QT3, F7, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'], [['C'], 'Nhận việc (bước giao cho nhóm)'],
+    [['1 … 6'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
     [['B'], 'Quay lại bảng Kanban']] }
 ];
 

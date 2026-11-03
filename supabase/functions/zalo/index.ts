@@ -124,5 +124,32 @@ Deno.serve(async (req) => {
     for (const p of ps ?? []) if (ids.has(p.id) && p.zalo_chat_id) out.push(await send(p.zalo_chat_id, text));
     return json({ ok: true, sent: out.length, to: ids.size });
   }
+  // 5) Hồ sơ theo swimlane: bản tới lượt người phụ trách (lập / kiểm tra / duyệt từng công ty, hoặc tải bản ký tay)
+  if (op === 'doc') {
+    if (req.headers.get('x-notify-key') !== s.NOTIFY_KEY) return json({ error: 'forbidden' }, 403);
+    const { doc_id } = await req.json();
+    const { data: d } = await db.from('docs').select('*, batches(id, proc, title, status, order_id, orders(code, project))').eq('id', doc_id).single();
+    if (!d) return json({ ok: false });
+    const b = d.batches; const proc = b.proc as string;
+    const ROLE: Record<string, string> = proc === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
+    const STL: Record<string, string> = { tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập' };
+    const CO: Record<string, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwha' };
+    const FIN: Record<string, string> = { QT1: 'khách ký xác nhận', QT2: 'ký bàn giao / nhận vật liệu', QT3: 'khách ký nhận hàng' };
+    let company = d.company, role = ROLE[d.status], what = '';
+    if (d.status === 'da_duyet' && proc !== 'QT0' && d.company === 'HW') { company = 'PN'; role = 'hoan_tat'; what = `Cả 3 công ty đã duyệt. Bước cuối: ${FIN[proc]} – in bản, ký tay, tải lên.`; }
+    if (!role) return json({ ok: true, skipped: d.status });
+    const { data: cp } = await db.from('chain_people').select('*').eq('proc', proc).eq('company', company).in('role', role === 'hoan_tat' ? ['hoan_tat', 'lap'] : [role]);
+    const ids = new Set<string>();
+    for (const c of cp ?? []) { if (c.user_id) ids.add(c.user_id); if (c.group_id) { const { data: g } = await db.from('work_groups').select('member_ids, active').eq('id', c.group_id).single(); if (g?.active) g.member_ids.forEach((m: string) => ids.add(m)); } }
+    const last = (d.signs ?? []).at(-1); if (last?.user) ids.delete(last.user);
+    if (!ids.size) return json({ ok: true, skipped: 'không có người nhận' });
+    const back = last?.action === 'tra_ve';
+    const link = `${APP}#/don/${b.order_id}?tab=${proc}`;
+    const head = `${b.orders.code} · ${b.orders.project}\n${proc} · ${b.title}${proc === 'QT0' ? '' : ' · ' + CO[d.company]}`;
+    const text = what ? `✍ ${head}\n${what}\n${link}` : back ? `↩️ Bị trả về – ${STL[d.status]}\n${head}\nLý do: ${last?.note ?? ''}\n${link}` : `📌 Đến lượt bạn: ${STL[d.status]}${proc === 'QT0' ? '' : ' (' + CO[company] + ')'}\n${head}\n${link}`;
+    const { data: ps } = await db.from('profiles').select('id, zalo_chat_id').in('id', [...ids]);
+    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { await send(p.zalo_chat_id, text); n++; }
+    return json({ ok: true, sent: n, to: ids.size });
+  }
   return json({ error: 'unknown op' }, 400);
 });

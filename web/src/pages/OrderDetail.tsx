@@ -1,7 +1,7 @@
 import { QtTag } from '../components/QtTag';
+import ProcPanel from '../components/ProcPanel';
+import { PROC_SHORT, procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
 import { isTyping, modalOpen } from '../components/Shortcuts';
-import { StepPeople, StepTimeline } from '../components/StepPeople';
-import { ChecklistBox, STEP_LABEL, stepKeys } from '../components/Checklist';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
@@ -18,41 +18,34 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'LS Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['QT0', 'QT0 Bóc tách'], ['QT1', 'QT1 XNĐH'], ['QT2', 'QT2 Lệnh GC'], ['QT3', 'QT3 Giao hàng'], ['LS', 'LS Lịch sử']] as const;
+const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 
 export default function OrderDetail() {
-  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate(); const wide = typeof matchMedia === 'undefined' || matchMedia('(min-width: 901px)').matches;
-  const tab = ((t) => (t === 'QT3' ? 'QT2' : t))(sp.get('tab') ?? 'F1');
-  const { me, can } = useAuth();
+  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
+  const tab0 = sp.get('tab') ?? 'QT0'; const tab = TABS.some(([k]) => k === tab0) ? tab0 : 'QT0';
+  const { can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
-  const [lines, setLines] = useState<Line[]>([]);
-  const [prices, setPrices] = useState<Record<string, Price>>({});
-  const [conf, setConf] = useState<Conf | null>(null);
-  const [appr, setAppr] = useState<Approval[]>([]);
-  const [steps, setSteps] = useState<Step[]>([]);
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [cust, setCust] = useState<Record<string, Customer>>({});
   const [events, setEvents] = useState<Ev[]>([]);
+  const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
   const load = useCallback(async () => {
-    const [a, b, c, d, e, f, g, h, i] = await Promise.all([
+    const [a, g, h, i, j] = await Promise.all([
       sb.from('orders').select('*').eq('id', id).single(),
-      sb.from('order_lines').select('*').eq('order_id', id).order('line_no'),
-      sb.from('order_prices').select('*').eq('order_id', id),
-      sb.from('confirmations').select('*').eq('order_id', id).maybeSingle(),
-      sb.from('approvals').select('*').eq('order_id', id).order('created_at'),
-      sb.from('approval_steps').select('*').order('step_no'),
       sb.from('profiles').select('*'),
       sb.from('customers').select('*'),
-      sb.from('audit_log').select('id, at, actor, acting_as, action').eq('order_id', id).eq('table_name', 'event').order('at', { ascending: false })
+      sb.from('audit_log').select('id, at, actor, acting_as, action').eq('order_id', id).eq('table_name', 'event').order('at', { ascending: false }),
+      sb.from('batches').select('*').eq('order_id', id).order('seq')
     ]);
-    setO(a.data as Order); setLines((b.data as Line[]) ?? []);
-    setPrices(Object.fromEntries(((c.data as Price[]) ?? []).map((p) => [p.line_id, p])));
-    setConf(d.data as Conf); setAppr((e.data as Approval[]) ?? []); setSteps((f.data as Step[]) ?? []);
+    setO(a.data as Order);
     setPeople(Object.fromEntries(((g.data as Profile[]) ?? []).map((p) => [p.id, p])));
     setCust(Object.fromEntries(((h.data as Customer[]) ?? []).map((x) => [x.id, x])));
     setEvents((i.data as Ev[]) ?? []);
+    const b = (j.data as Batch[]) ?? []; setBs(b);
+    if (b.length) { const { data } = await sb.from('docs').select('*').in('batch_id', b.map((x) => x.id)); setDs((data as Doc[]) ?? []); } else setDs([]);
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -66,68 +59,41 @@ export default function OrderDetail() {
     const k = (e: KeyboardEvent) => {
       if (!o || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
       const key = e.key.toLowerCase(); const n = Number(key);
-      const vis = TABS.filter(([t]) => ['F0', 'F1', 'F7', 'LS'].includes(t) || (t === 'F2' ? !['tiep_nhan', 'boc_tach', 'kiem_tra_f1'].includes(o.status) : t === 'GH' ? o.gh_status !== 'chua_giao' : ['san_xuat', 'giao_hang', 'hoan_tat'].includes(o.status)));
-      if (n >= 1 && n <= vis.length) { e.preventDefault(); setSp({ tab: vis[n - 1][0] }); }
+      if (n >= 1 && n <= TABS.length) { e.preventDefault(); setSp({ tab: TABS[n - 1][0] }); }
       else if (key === 's') { e.preventDefault(); navOD('/so-do?don=' + o.id); }
       else if (key === 'b') { e.preventDefault(); navOD('/bang'); }
-      else if (key === 'c') { e.preventDefault();
-        sb.from('order_steps').select('step, doer_group_id').eq('order_id', o.id).is('done_at', null).not('doer_group_id', 'is', null).then(async ({ data }) => {
-          const st = (data ?? [])[0]; if (!st) { toast('Bước hiện tại không giao cho nhóm'); return; }
-          const { error } = await sb.rpc('claim_step', { p_order: o.id, p_step: st.step });
-          if (error) toast(errText(error)); else { toast('Bạn đã nhận việc'); load(); } }); }
     };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k);
   });
   if (!o) return <Skeleton rows={4} h={72} />;
-  const tot = lines.reduce((s, l) => ({ qty: s.qty + l.qty, m2: s.m2 + Number(l.area_m2), kg: s.kg + Number(l.weight_kg) }), { qty: 0, m2: 0, kg: 0 });
   const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');
-  const props = { o, lines, run, can, load, setErr, setOk };
-  // Chỉ hiện quy trình / phiếu đơn đã tới
-  function reached(k: string) {
-    const st = o!.status;
-    if (k === 'F2') return !['tiep_nhan', 'boc_tach', 'kiem_tra_f1'].includes(st);
-    if (k === 'QT2' || k === 'QT3') return ['san_xuat', 'giao_hang', 'hoan_tat'].includes(st);
-    if (k === 'GH') return o!.gh_status !== 'chua_giao' || ['giao_hang', 'hoan_tat'].includes(st);
-    return true;
-  }
-  const vt = reached(tab) ? tab : 'F1';
-
+  const props = { o, lines: [] as Line[], run, can, load, setErr, setOk };
+  const sum = (p: Proc) => procSummary(p, bs, ds);
   return (
     <>
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="row between">
-          <div><h1 className="row" style={{ gap: 10 }}>{o.code}{stepKeys(o).map((k) => <QtTag key={k} qt={k.slice(0, 3).toUpperCase()} long />)}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
-          <span className="row" style={{ gap: 8 }}><span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
-            <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link></span>
+          <div><h1>{o.code}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
+          <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link>
         </div>
-        <Flow status={o.status} f1={o.f1_result} />
-        {o.status === 'san_xuat' && <QT2Flow o={o} />}
-        {stepKeys(o).map((k) => { const kk = k + o.status + o.gc_status + o.nvl_status + o.gh_status; return (
-          <details className="stepbox" key={kk} open={wide}><summary><Icon name="clock" size={16} /><b>{STEP_LABEL[k] ?? k}</b><span className="small muted">Người làm · giám sát · checklist</span></summary>
-            <StepPeople orderId={o.id} step={k} people={people} /><ChecklistBox orderId={o.id} step={k} compact /></details>); })}
-        <div className="grid2 od-status">
-          <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
-          {reached('QT2') && <><div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
-          <div><div className="small muted">QT2 · Lệnh gia công</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div></>}
-          {reached('GH') && <div><div className="small muted">QT3 · Giao hàng</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>}
+        <div className="od-procs">
+          {PROCS.map((p) => { const s = sum(p); return (
+            <button key={p} className={'od-proc ' + p.toLowerCase() + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })}>
+              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls}>{s.t}</span></button>); })}
         </div>
       </div>
       <div className="qt-group od-group"><div className="qt-tabs" role="tablist">
-        {TABS.filter(([k]) => reached(k)).map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={vt === k} className={vt === k ? 'on' : ''} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
+        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={(tab === k ? 'on ' : '') + (k.startsWith('QT') ? 'q' + k.slice(2) : '')} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
       </div><div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
-      {vt === 'F0' && <F0 {...props} cust={cust} people={people} />}
-      {vt === 'F1' && <F1 {...props} tot={tot} />}
-      {vt === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
-        steps={steps.filter((s) => s.doc_type === 'F2')} people={people} meId={me!.id} />}
-      {(vt === 'QT2' || vt === 'QT3' || vt === 'F7' || vt === 'GH') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
-        return vt === 'F7' ? <F7 {...q} /> : vt === 'GH' ? <QT3Giao {...q} /> : <QT2Merged {...q} />; })()}
-      {vt === 'LS' && (
-        <><StepTimeline orderId={o.id} people={people} /><div className="card steps">
+      {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
+      {PROCS.includes(tab as Proc) && <ProcPanel o={o} proc={tab as Proc} people={people} />}
+      {tab === 'LS' && (
+        <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
           {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
-        </div></>
+        </div>
       )}
       </div></div>
     </>

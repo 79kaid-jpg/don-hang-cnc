@@ -121,7 +121,7 @@ export default function Install() {
         <p className="muted" style={{ margin: 0 }}>Dùng bàn phím để làm nhanh hơn. Bấm <kbd>?</kbd> ở bất kỳ đâu để mở bảng này; <kbd>Ctrl</kbd><kbd>K</kbd> để tìm và mở đơn ngay (gõ không dấu cũng được, ví dụ “binh duong 003”).
           Phím tắt không chạy khi đang gõ trong ô nhập. Trên Mac dùng <kbd>⌘</kbd> thay <kbd>Ctrl</kbd>.</p>
         <ShortcutTable />
-        <div className="msg info"><Icon name="alert" size={18} /><span><b>Ví dụ làm nhanh trên Kanban:</b> <kbd>G</kbd><kbd>B</kbd> mở Bảng → <kbd>3</kbd> chọn QT2 → <kbd>J</kbd>/<kbd>L</kbd> chọn đơn → <kbd>M</kbd> mở hộp chuyển bước (tick checklist) hoặc <kbd>R</kbd> trả về → <kbd>Enter</kbd> mở đơn → <kbd>4</kbd> sang thẻ QT2 của đơn.</span></div>
+        <div className="msg info"><Icon name="alert" size={18} /><span><b>Ví dụ làm nhanh trên Kanban:</b> <kbd>G</kbd><kbd>B</kbd> mở Bảng → <kbd>3</kbd> chọn QT2 → <kbd>J</kbd>/<kbd>L</kbd> chọn đơn → <kbd>M</kbd> ký nhanh hoặc <kbd>R</kbd> trả về → <kbd>Enter</kbd> mở hồ sơ → <kbd>4</kbd> sang thẻ QT2 của đơn.</span></div>
       </section>
     </>
   );

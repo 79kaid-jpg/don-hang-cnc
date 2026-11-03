@@ -5,13 +5,17 @@ import { useAuth } from '../lib/auth';
 import { BRANCH, ORDER_STATUS, date } from '../lib/format';
 import { Chip, Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
 
 export default function Orders() {
   const { can } = useAuth(); const nav = useNavigate();
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(''); const [done, setDone] = useState(false);
+  const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   useEffect(() => {
     sb.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => setRows((data as Order[]) ?? []));
+    sb.from('batches').select('*').then(({ data }) => setBs((data as Batch[]) ?? []));
+    sb.from('docs').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
     sb.from('customers').select('*').then(({ data }) => setCust(Object.fromEntries(((data as Customer[]) ?? []).map((c) => [c.id, c]))));
   }, []);
   const list = useMemo(() => (rows ?? []).filter((o) => (done ? true : !['hoan_tat', 'huy'].includes(o.status)) &&
@@ -19,7 +23,7 @@ export default function Orders() {
   return (
     <>
       <div className="page-head">
-        <div><h1>Danh sách đơn</h1><p className="muted">Mỗi đơn là một hồ sơ từ tiếp nhận đến giao hàng.</p></div>
+        <div><h1>Danh sách đơn</h1><p className="muted">Mỗi đơn gom hồ sơ 4 quy trình theo mã đơn / dự án.</p></div>
         <div className="row"><Link className="btn sm hide-m" to="/bang" ><Icon name="kanban" size={18} />Dạng Kanban</Link>
         {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary fab-m" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn mới</Link>}</div>
       </div>
@@ -29,7 +33,7 @@ export default function Orders() {
       </div>
       <div className="card flush scroll">
         <table className="tbl tbl-cards">
-          <thead><tr><th>Mã đơn</th><th>Khách / dự án</th><th>Ngày giao</th><th>Trạng thái</th><th>NVL</th><th>Gia công</th><th>Giao hàng</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách / dự án</th><th>Ngày giao</th><th>QT0 Bóc tách</th><th>QT1 XNĐH</th><th>QT2 Lệnh GC</th><th>QT3 Giao hàng</th></tr></thead>
           <tbody>
             {!rows && <tr><td colSpan={7}><Skeleton rows={4} h={40} /></td></tr>}
             {rows && list.length === 0 && <tr><td colSpan={7}><Empty title={q ? 'Không có đơn khớp “' + q + '”' : 'Chưa có đơn'} /></td></tr>}
@@ -38,10 +42,7 @@ export default function Orders() {
                 <td data-l="Mã đơn" className="nw"><Link to={'/don/' + o.id} onClick={(e) => e.stopPropagation()}><b>{o.code}</b></Link></td>
                 <td data-l="Khách">{[cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ')}<div className="small muted">{o.project}</div></td>
                 <td data-l="Ngày giao">{date(o.due_date)}</td>
-                <td data-l="Trạng thái"><Chip s={o.status} text={ORDER_STATUS[o.status]} /></td>
-                <td data-l="NVL"><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></td>
-                <td data-l="Gia công"><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></td>
-                <td data-l="Giao hàng"><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></td>
+                {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => { const x = procSummary(p, bs.filter((b) => b.order_id === o.id), ds); return <td key={p} data-l={p}><span className={'chip ' + x.cls}>{x.t}</span></td>; })}
               </tr>))}
           </tbody>
         </table>
