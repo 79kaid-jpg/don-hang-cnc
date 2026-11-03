@@ -23,7 +23,7 @@ function Shell() {
   const [busy, setBusy] = useState(false);
   // Menu trái: ẩn/hiện (nhớ theo trình duyệt); khi ẩn có nút nổi để mở menu dạng lớp phủ
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('side-hidden') === '1'; } catch { return false; } });
-  const [peek, setPeek] = useState(false);
+  const [peek, setPeek] = useState(false); const [sheet, setSheet] = useState(false);
   const toggleSide = (v: boolean) => { setHidden(v); setPeek(false); try { localStorage.setItem('side-hidden', v ? '1' : '0'); } catch { /* */ } };
   useEffect(() => {
     const h = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
@@ -79,12 +79,25 @@ function Shell() {
 
       <header className="topbar">
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
-        <b style={{ flex: 1 }}>Đơn hàng CNC</b>
-        <NavLink to="/zalo" className="btn sm icon-btn" aria-label="Thông báo Zalo"><Icon name="bell" /></NavLink>
-        <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Hướng dẫn sử dụng"><Icon name="download" /></NavLink>
-        <span className="avatar" title={me.full_name} aria-label={me.full_name}>{initial}</span>
-        <button className="btn sm icon-btn" aria-label="Đăng xuất" onClick={() => sb.auth.signOut()}><Icon name="logout" /></button>
+        <b className="tb-title">Đơn hàng CNC</b>
+        <button className="tb-btn" aria-label="Tìm đơn" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}><Icon name="search" size={21} /></button>
+        <NavLink to="/zalo" className="tb-btn" aria-label="Thông báo Zalo"><Icon name="bell" size={21} />{!me.zalo_chat_id && <i className="tb-dot" aria-hidden="true" />}</NavLink>
+        <button className="tb-av" aria-label={'Tài khoản ' + me.full_name} aria-expanded={sheet} onClick={() => setSheet(true)}>{initial}</button>
       </header>
+      {sheet && (
+        <div className="sheet-bg" onClick={() => setSheet(false)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Tài khoản" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet-grip" aria-hidden="true" />
+            <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
+              <span style={{ minWidth: 0 }}><b style={{ display: 'block' }}>{me.full_name}</b><span className="small muted">{me.unit} · {me.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}</span></span></div>
+            <nav className="sheet-list" onClick={() => setSheet(false)}>
+              {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
+              <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
+              <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
+              <button onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
+            </nav>
+          </div>
+        </div>)}
 
       <main className="main" id="main">
         {acting && (
@@ -113,7 +126,7 @@ function Shell() {
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
-        {items.filter((i) => !('side' in i)).map((i) => (
+        {items.filter((i) => i.to !== '/quan-tri').map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
       <UpdateBar /><Toaster /><ConfirmHost />

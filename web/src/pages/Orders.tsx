@@ -20,8 +20,8 @@ export default function Orders() {
     <>
       <div className="page-head">
         <div><h1>Danh sách đơn</h1><p className="muted">Mỗi đơn là một hồ sơ từ tiếp nhận đến giao hàng.</p></div>
-        <div className="row"><Link className="btn sm" to="/bang" ><Icon name="kanban" size={18} />Dạng Kanban</Link>
-        {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn mới</Link>}</div>
+        <div className="row"><Link className="btn sm hide-m" to="/bang" ><Icon name="kanban" size={18} />Dạng Kanban</Link>
+        {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary fab-m" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn mới</Link>}</div>
       </div>
       <div className="row">
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm mã đơn, dự án" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} /></label>

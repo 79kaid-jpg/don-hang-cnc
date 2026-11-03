@@ -201,9 +201,9 @@ export default function Board() {
       <div className="page-head">
         <div><h1>Bảng Kanban</h1><p className="muted">Chọn quy trình. Mỗi cột là một bước; vạch đỏ là điều kiện chuyển (ĐK).</p></div>
         <div className="row">
-          <Link className="btn sm" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
-          <Link className="btn sm" to="/don"><Icon name="list" size={18} />Dạng danh sách</Link>
-          {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn</Link>}
+          <Link className="btn sm hide-m" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
+          <Link className="btn sm hide-m" to="/don"><Icon name="list" size={18} />Dạng danh sách</Link>
+          {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary fab-m" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn</Link>}
         </div>
       </div>
       <div className="row">

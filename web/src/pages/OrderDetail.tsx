@@ -1,6 +1,6 @@
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { StepPeople, StepTimeline } from '../components/StepPeople';
-import { ChecklistBox, stepKeys } from '../components/Checklist';
+import { ChecklistBox, STEP_LABEL, stepKeys } from '../components/Checklist';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
@@ -20,7 +20,7 @@ type Ev = { id: number; at: string; actor: string | null; acting_as: string | nu
 const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'LS Lịch sử']] as const;
 
 export default function OrderDetail() {
-  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
+  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate(); const wide = typeof matchMedia === 'undefined' || matchMedia('(min-width: 901px)').matches;
   const tab = ((t) => (t === 'QT3' ? 'QT2' : t))(sp.get('tab') ?? 'F1');
   const { me, can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
@@ -93,8 +93,9 @@ export default function OrderDetail() {
         <Flow status={o.status} f1={o.f1_result} />
         {o.status === 'san_xuat' && <QT2Flow o={o} />}
         {stepKeys(o).map((k) => { const kk = k + o.status + o.gc_status + o.nvl_status + o.gh_status; return (
-          <div className="stepbox" key={kk}><StepPeople orderId={o.id} step={k} people={people} /><ChecklistBox orderId={o.id} step={k} compact /></div>); })}
-        <div className="grid2">
+          <details className="stepbox" key={kk} open={wide}><summary><Icon name="clock" size={16} /><b>{STEP_LABEL[k] ?? k}</b><span className="small muted">Người làm · giám sát · checklist</span></summary>
+            <StepPeople orderId={o.id} step={k} people={people} /><ChecklistBox orderId={o.id} step={k} compact /></details>); })}
+        <div className="grid2 od-status">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
           <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
           <div><div className="small muted">QT2 · Lệnh gia công</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div>
