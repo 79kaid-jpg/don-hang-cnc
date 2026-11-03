@@ -354,3 +354,7 @@ textarea{resize:vertical}
 .od-panel .card:not(.card .card){border:0!important;border-radius:0;background:transparent;padding:18px 0;box-shadow:none}
 .od-panel{overflow:hidden;padding-bottom:0}.od-panel .card:not(.card .card){border-bottom:1px solid #EDE3CC!important;margin-bottom:-1px}
 @media (max-width:900px){.od-panel{padding:4px 14px 14px}}
+/* Ô nhập và nút cùng hàng: canh đáy, cùng chiều cao 44px */
+input:not([type=checkbox]):not([type=radio]),select{line-height:22px;height:44px}
+.row:has(> label.f){align-items:flex-end}
+.row:has(> label.f) > .small,.row:has(> label.f) > span.muted{align-self:center}
