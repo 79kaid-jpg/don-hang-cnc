@@ -18,9 +18,9 @@ begin
   if bad then
     insert into issues(order_id, source, kind, description) values (p_order, 'F4', case when not p_ok then 'loi_nvl' else 'sai_lech_nvl' end, p_note);
     update orders set nvl_status = 'mua_hang' where id = p_order;
-    -- lượt nhập sau chỉ chờ phần còn thiếu
-    update receipt_lines set expected_kg = greatest(-diff_kg, 0), received_kg = null, bad_kg = 0 where order_id = p_order;
-    delete from receipt_lines where order_id = p_order and expected_kg = 0;
+    -- lượt nhập sau chỉ chờ phần còn thiếu; dòng đã đủ giữ lại với 0 kg
+    update receipt_lines set expected_kg = greatest(-diff_kg, 0),
+      received_kg = case when greatest(-diff_kg, 0) = 0 then 0 else null end, bad_kg = 0 where order_id = p_order;
     perform log_event(p_order, 'F4 không đạt → F7, mua bổ sung: ' || p_note);
   else
     update orders set nvl_status = 'san_sang' where id = p_order;
