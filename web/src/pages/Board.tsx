@@ -15,7 +15,8 @@ const COLS: { key: string; title: string; group: string; tab: string; next: stri
   { key: 'xndh', title: 'Lập XNĐH', group: 'QT1', tab: 'F2', next: 'Nhập giá, gửi duyệt', roles: ['admin_cnc', 'kinh_doanh'] },
   { key: 'cho_duyet_xndh', title: 'Chờ duyệt XNĐH', group: 'QT1', tab: 'F2', next: 'Duyệt XNĐH', roles: [] },
   { key: 'cho_khach', title: 'Chờ khách xác nhận', group: 'QT1', tab: 'F2', next: 'Ghi KH1 → KH2, PDF ký', roles: ['admin_cnc', 'kinh_doanh'] },
-  { key: 'san_xuat', title: 'Sản xuất', group: 'QT2–QT4', tab: 'F1', next: 'Xem hồ sơ', roles: [] }
+  { key: 'san_xuat', title: 'Sản xuất', group: 'QT2–QT3', tab: 'QT3', next: 'Xem NVL & gia công', roles: ['ke_hoach', 'mua_hang', 'kho_qc', 'admin_cnc'] },
+  { key: 'giao_hang', title: 'Giao hàng', group: 'QT4', tab: 'QT3', next: 'Xem hồ sơ', roles: [] }
 ];
 
 type Agg = { qty: number; kg: number };

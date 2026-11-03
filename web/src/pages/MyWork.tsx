@@ -15,6 +15,15 @@ export const TODO: Record<string, { roles: string[]; text: string; tab: string }
   xndh: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Nhập đơn giá, gửi duyệt XNĐH', tab: 'F2' },
   cho_khach: { roles: ['admin_cnc', 'kinh_doanh'], text: 'Ghi xác nhận KH1 → KH2, tải PDF ký', tab: 'F2' }
 };
+/** Việc của nhánh QT2 / QT3 khi đơn đang sản xuất */
+export const BRANCH_TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
+  du_toan: { roles: ['ke_hoach'], text: 'Lập dự toán NVL (F3), gửi duyệt', tab: 'QT2' },
+  mua_hang: { roles: ['mua_hang'], text: 'Lập PO, gửi duyệt', tab: 'QT2' },
+  nhap_kho: { roles: ['kho_qc'], text: 'Nhập kho & QC NVL (F4)', tab: 'QT2' },
+  lap_lgc: { roles: ['admin_cnc'], text: 'Lập lệnh gia công (F5), gửi duyệt', tab: 'QT3' },
+  ban_giao: { roles: ['admin_cnc'], text: 'Bàn giao NVL (F6)', tab: 'QT3' },
+  gia_cong: { roles: ['kho_qc', 'admin_cnc'], text: 'QC thành phẩm (ĐK5)', tab: 'QT3' }
+};
 
 type A = Approval & { orders: Pick<Order, 'code' | 'project'> };
 
@@ -26,10 +35,15 @@ export default function MyWork() {
     if (!me) return;
     sb.from('approvals').select('*, orders(code, project)').eq('approver_id', me.id).eq('status', 'cho').order('due_at')
       .then(({ data }) => setAppr((data as never) ?? []));
-    sb.from('orders').select('*').in('status', Object.keys(TODO)).order('due_date', { nullsFirst: false })
+    sb.from('orders').select('*').in('status', [...Object.keys(TODO), 'san_xuat']).order('due_date', { nullsFirst: false })
       .then(({ data }) => setOrders((data as Order[]) ?? []));
   }, [me]);
-  const mine = (orders ?? []).filter((o) => TODO[o.status].roles.some(can));
+  type W = { o: Order; text: string; tab: string; key: string };
+  const mine: W[] = [];
+  for (const o of orders ?? []) {
+    if (TODO[o.status]?.roles.some(can)) mine.push({ o, ...TODO[o.status], key: o.id });
+    for (const b of [o.nvl_status, o.gc_status]) if (o.status === 'san_xuat' && BRANCH_TODO[b]?.roles.some(can)) mine.push({ o, ...BRANCH_TODO[b], key: o.id + b });
+  }
   const late = (d: string | null) => !!d && new Date(d) < new Date();
   const hello = new Date().getHours() < 12 ? 'Chào buổi sáng' : new Date().getHours() < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
   return (
@@ -59,11 +73,11 @@ export default function MyWork() {
         <div style={{ padding: orders && mine.length ? 0 : 12 }}>
           {!orders ? <Skeleton rows={3} /> : mine.length === 0 ? <Empty title="Không có việc nào đến lượt bạn"><Link to="/bang">Xem bảng Kanban</Link></Empty> : (
             <ul className="worklist">
-              {mine.map((o) => (
-                <li key={o.id}><Link to={'/don/' + o.id + '?tab=' + TODO[o.status].tab} className="work">
+              {mine.map(({ o, text, tab, key }) => (
+                <li key={key}><Link to={'/don/' + o.id + '?tab=' + tab} className="work">
                   <Chip s={o.status} text={ORDER_STATUS[o.status]} />
                   <span className="work-main"><b>{o.code}</b><span className="small muted">{o.project}</span></span>
-                  <span className="small">{TODO[o.status].text}</span>
+                  <span className="small">{text}</span>
                   <Icon name="arrow" size={18} />
                 </Link></li>))}
             </ul>)}

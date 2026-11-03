@@ -6,6 +6,7 @@ import { BRANCH, ORDER_STATUS, date, dt, money, num } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
+import { QT2, QT3, F7 } from './Phase2';
 
 type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_at: string | null; kh1_channel: string | null;
   kh2_confirmed_at: string | null; kh2_channel: string | null; signed_pdf_path: string | null };
@@ -13,7 +14,7 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['LS', 'Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 NVL'], ['QT3', 'QT3 Gia công'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
 
 export default function OrderDetail() {
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams();
@@ -79,13 +80,15 @@ export default function OrderDetail() {
         </div>
       </div>
       <div className="tabs" role="tablist">
-        {TABS.map(([k, t]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setSp({ tab: k })}>{t}</button>)}
+        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setSp({ tab: k })}>{t}</button>)}
       </div>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {tab === 'F1' && <F1 {...props} tot={tot} />}
       {tab === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
         steps={steps.filter((s) => s.doc_type === 'F2')} people={people} meId={me!.id} />}
+      {(tab === 'QT2' || tab === 'QT3' || tab === 'F7') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
+        return tab === 'QT2' ? <QT2 {...q} /> : tab === 'QT3' ? <QT3 {...q} /> : <F7 {...q} />; })()}
       {tab === 'LS' && (
         <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
@@ -299,7 +302,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
 
 /** Tiến trình QT0 → QT1 → ĐK2: bước đã qua, bước hiện tại, bước sau */
 const FLOW = [['tiep_nhan', 'Tiếp nhận'], ['boc_tach', 'Bóc tách F1'], ['kiem_tra_f1', 'Kiểm tra F1'], ['xndh', 'Lập XNĐH'],
-  ['cho_duyet_xndh', 'Duyệt XNĐH'], ['cho_khach', 'Khách xác nhận'], ['san_xuat', 'Sản xuất']] as const;
+  ['cho_duyet_xndh', 'Duyệt XNĐH'], ['cho_khach', 'Khách xác nhận'], ['san_xuat', 'Sản xuất'], ['giao_hang', 'Giao hàng']] as const;
 function Flow({ status, f1 }: { status: string; f1: string }) {
   if (status === 'huy') return <div className="msg err" role="status"><Icon name="x" size={18} />Đơn đã huỷ</div>;
   const cur = FLOW.findIndex(([k]) => k === status);

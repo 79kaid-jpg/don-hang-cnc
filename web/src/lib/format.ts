@@ -11,7 +11,9 @@ export const ORDER_STATUS: Record<string, string> = {
   giao_hang: 'Giao hàng', hoan_tat: 'Hoàn tất', huy: 'Huỷ'
 };
 export const BRANCH: Record<string, string> = {
-  chua_bat_dau: 'Chưa bắt đầu', du_toan: 'Dự toán NVL', lap_lgc: 'Lập LGC', chua_giao: 'Chưa giao'
+  chua_bat_dau: 'Chưa bắt đầu', du_toan: 'Dự toán NVL', cho_duyet_f3: 'Chờ duyệt dự toán', mua_hang: 'Mua hàng', cho_duyet_po: 'Chờ duyệt PO',
+  nhap_kho: 'Nhập kho & QC', san_sang: 'NVL sẵn sàng', lap_lgc: 'Lập LGC', cho_duyet_lgc: 'Chờ duyệt LGC', cho_nvl: 'Chờ NVL',
+  ban_giao: 'Bàn giao NVL', gia_cong: 'Đang gia công', qc_dat: 'QC đạt', chua_giao: 'Chưa giao', thong_bao: 'Thông báo giao'
 };
 export const DOC: Record<string, string> = { F2: 'XNĐH', F3: 'Dự toán NVL', PO: 'PO', F5: 'Lệnh gia công', LGH1: 'LGH chặng 1', LGH2: 'LGH chặng 2' };
 export const ROLES: Record<string, string> = {
@@ -19,7 +21,7 @@ export const ROLES: Record<string, string> = {
   admin_cnc: 'Admin CNC', ke_hoach: 'Kế hoạch', mua_hang: 'Mua hàng', kho_qc: 'Kho / QC', ipc: 'IPC', duyet: 'Người duyệt', xem: 'Chỉ xem'
 };
 export function chipKind(status: string): 'done' | 'wait' | 'bad' | 'idle' {
-  if (['hoan_tat', 'dat', 'san_xuat'].includes(status)) return 'done';
+  if (['hoan_tat', 'dat', 'san_xuat', 'san_sang', 'qc_dat'].includes(status)) return 'done';
   if (['tu_choi', 'huy', 'khong_dat'].includes(status)) return 'bad';
   if (['chua_bat_dau', 'chua_giao', 'chua'].includes(status)) return 'idle';
   return 'wait';
