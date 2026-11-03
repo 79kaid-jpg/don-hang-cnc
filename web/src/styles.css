@@ -206,3 +206,8 @@ textarea{resize:vertical}
 .zalo-card{border-color:#BBD3F5;background:#F5F9FF}
 .zalo-badge{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#0068FF;color:#fff;font-weight:800;font-size:13px}
 .zalo-code{font-size:20px;letter-spacing:.15em;background:#fff;border:1px solid var(--line2);border-radius:6px;padding:2px 8px}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.xl-box{display:flex;flex-direction:column;gap:12px;border:1px dashed var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--soft)}
+.xl-box label.btn:focus-within{outline:2px solid var(--gold);outline-offset:2px}
+.xl-preview{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}

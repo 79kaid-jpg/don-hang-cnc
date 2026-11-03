@@ -150,17 +150,49 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
   );
 }
 
+const XL_HEAD = ['Mã TP', 'Vật liệu', 'Dày (mm)', 'Dài (mm)', 'Rộng (mm)', 'Số tấm', 'Quy cách'];
+async function downloadTemplate(code: string) {
+  const X = await import('xlsx');
+  const ws = X.utils.aoa_to_sheet([XL_HEAD, ['VÍ DỤ', 'SS400', 8, 1500, 1400, 40, 'Dòng VÍ DỤ được bỏ qua khi tải lên'], ['TP-01', '', '', '', '', '', '']]);
+  ws['!cols'] = [12, 12, 10, 10, 10, 9, 28].map((w) => ({ wch: w }));
+  const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'F1');
+  X.writeFile(wb, `F1-mau-${code}.xlsx`);
+}
+type XlRow = { product_code: string; material: string; thickness_mm: string; length_mm: string; width_mm: string; qty: string; spec: string };
+async function readExcel(file: File): Promise<{ rows: XlRow[]; bad: string[] }> {
+  const X = await import('xlsx');
+  const wb = X.read(await file.arrayBuffer());
+  const aoa = X.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '' });
+  const rows: XlRow[] = []; const bad: string[] = [];
+  aoa.forEach((r, i) => {
+    const c = r.map((v) => String(v ?? '').trim());
+    if (i === 0 && isNaN(Number(c[2]?.replace(',', '.')))) return; // dòng tiêu đề
+    if (c.every((v) => !v) || c[0].toUpperCase() === 'VÍ DỤ') return;
+    if (!c[2] && !c[3] && !c[4] && !c[5]) return; // dòng chỉ có mã, chưa điền
+    const n = (v: string) => Number(v.replace(',', '.'));
+    if (!(n(c[2]) > 0 && n(c[3]) > 0 && n(c[4]) > 0 && Number.isInteger(n(c[5])) && n(c[5]) > 0)) { bad.push('dòng ' + (i + 1)); return; }
+    rows.push({ product_code: c[0], material: c[1] || 'SS400', thickness_mm: c[2], length_mm: c[3], width_mm: c[4], qty: c[5], spec: c[6] ?? '' });
+  });
+  return { rows, bad };
+}
+
 function F1({ o, lines, can, run, load, setErr, setOk, tot }: P & { tot: { qty: number; m2: number; kg: number } }) {
   const editable = (can('ky_thuat') || can('kinh_doanh')) && ['tiep_nhan', 'boc_tach'].includes(o.status);
   const blank = { product_code: '', material: 'SS400', thickness_mm: '', length_mm: '', width_mm: '', qty: '', spec: '' };
   const [n, setN] = useState(blank); const [paste, setPaste] = useState(''); const [note, setNote] = useState('');
+  const [xl, setXl] = useState<{ name: string; rows: XlRow[]; bad: string[] } | null>(null);
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+    try { const r = await readExcel(f); setXl({ name: f.name, ...r }); if (!r.rows.length) setErr('Không đọc được dòng hợp lệ nào. Kiểm tra lại theo file mẫu.'); }
+    catch { setErr('Không mở được file. Hãy dùng file .xlsx hoặc .csv theo mẫu.'); }
+  };
   const add = async (rows: typeof blank[]) => {
     const base = lines.length;
     const payload = rows.map((r, i) => ({ order_id: o.id, line_no: base + i + 1, product_code: r.product_code, material: r.material || 'SS400',
       thickness_mm: Number(String(r.thickness_mm).replace(',', '.')), length_mm: Number(String(r.length_mm).replace(',', '.')),
       width_mm: Number(String(r.width_mm).replace(',', '.')), qty: Number(r.qty), spec: r.spec }));
     const { error } = await sb.from('order_lines').insert(payload);
-    if (error) setErr(errText(error)); else { setOk('Đã thêm ' + payload.length + ' dòng.'); setN(blank); setPaste(''); load(); }
+    if (error) setErr(errText(error)); else { setOk('Đã thêm ' + payload.length + ' dòng.'); setN(blank); setPaste(''); setXl(null); load(); }
   };
   const fromPaste = () => {
     // Cột: Mã TP | Vật liệu | Dày | Dài | Rộng | Số tấm  (dán thẳng từ Excel)
@@ -195,11 +227,30 @@ function F1({ o, lines, can, run, load, setErr, setOk, tot }: P & { tot: { qty: 
         </tbody>
       </table></div>
       {editable && (
-        <details><summary style={{ cursor: 'pointer', fontWeight: 600 }}>Dán nhiều dòng từ Excel</summary>
-          <p className="small muted">6 cột theo thứ tự: Mã TP · Vật liệu · Dày · Dài · Rộng · Số tấm (cột 7 Quy cách nếu có).</p>
-          <textarea rows={5} style={{ width: '100%' }} value={paste} onChange={(e) => setPaste(e.target.value)} aria-label="Dán từ Excel" />
-          <button className="btn ghost" onClick={fromPaste}>Thêm các dòng đã dán</button>
-        </details>)}
+        <section className="xl-box" aria-labelledby="h-xl">
+          <div className="row between" style={{ gap: 8 }}>
+            <div><h3 id="h-xl" style={{ margin: 0 }}>Nhập nhiều dòng từ Excel</h3>
+              <span className="small muted">Cột: Mã TP · Vật liệu · Dày · Dài · Rộng · Số tấm · Quy cách (tuỳ chọn)</span></div>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn" onClick={() => downloadTemplate(o.code)}><Icon name="download" size={18} />Tải file mẫu</button>
+              <label className="btn primary" style={{ cursor: 'pointer' }}><Icon name="upload" size={18} />Tải Excel lên
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={onFile} className="sr-only" /></label>
+            </div>
+          </div>
+          {xl && (
+            <div className="xl-preview" role="status">
+              <Icon name="file" size={20} />
+              <span style={{ flex: '1 1 220px' }}><b>{xl.name}</b><br />
+                <span className="small">{xl.rows.length} dòng hợp lệ · {num(xl.rows.reduce((a, r) => a + Number(r.qty), 0), 0)} tấm
+                  {xl.bad.length > 0 && <span className="kb-late"> · bỏ qua {xl.bad.length} dòng sai ({xl.bad.slice(0, 5).join(', ')}{xl.bad.length > 5 ? '…' : ''})</span>}</span></span>
+              <button className="btn sm" onClick={() => setXl(null)}>Huỷ</button>
+              <button className="btn sm primary" disabled={!xl.rows.length} onClick={() => add(xl.rows)}>Thêm {xl.rows.length} dòng vào F1</button>
+            </div>)}
+          <details><summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>Hoặc dán trực tiếp từ Excel</summary>
+            <textarea rows={4} style={{ width: '100%', marginTop: 8 }} value={paste} onChange={(e) => setPaste(e.target.value)} aria-label="Dán từ Excel" placeholder="Chọn các ô trong Excel → Ctrl+C → dán vào đây" />
+            <button className="btn ghost" onClick={fromPaste}>Thêm các dòng đã dán</button>
+          </details>
+        </section>)}
       <div className="row">
         {o.status === 'tiep_nhan' && (can('ky_thuat') || can('kinh_doanh')) &&
           <button className="btn primary" onClick={() => run('start_extraction', { p_order: o.id }, 'Đã chuyển sang bóc tách.')}>Bắt đầu bóc tách</button>}
