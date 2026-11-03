@@ -93,14 +93,16 @@ Deno.serve(async (req) => {
     const { order_id, step, event, actor } = await req.json();
     const { data: r } = await db.from('order_steps').select('*, orders(code, project)').eq('order_id', order_id).eq('step', step).single();
     if (!r || r.done_at) return json({ ok: true, skipped: 'bước đã đóng' });
+    if (event === 'start' && r.returned_at && Date.now() - new Date(r.returned_at).getTime() < 120000) return json({ ok: true, skipped: 'trả về, gửi riêng' });
     const ids = new Set<string>();
-    const gids = [r.doer_group_id, ...(event === 'overdue' ? r.supervisor_group_ids : [])].filter(Boolean);
+    const toSup = event === 'overdue' || event === 'returned';
+    const gids = [r.doer_group_id, ...(toSup ? r.supervisor_group_ids : [])].filter(Boolean);
     const { data: gs } = gids.length ? await db.from('work_groups').select('id, name, member_ids').in('id', gids) : { data: [] };
     const grp = (gs ?? []).find((g) => g.id === r.doer_group_id);
     const members: string[] = grp?.member_ids ?? [];
     if (event === 'start' || event === 'assigned' || event === 'remind_half') { if (r.doer_id) ids.add(r.doer_id); else members.forEach((m) => ids.add(m)); }
     if (event === 'claimed') members.filter((m) => m !== actor).forEach((m) => ids.add(m));
-    if (event === 'overdue') {
+    if (toSup) {
       if (r.doer_id) ids.add(r.doer_id); else members.forEach((m) => ids.add(m));
       r.supervisor_ids.forEach((m: string) => ids.add(m));
       (gs ?? []).filter((g) => r.supervisor_group_ids.includes(g.id)).forEach((g) => g.member_ids.forEach((m: string) => ids.add(m)));
@@ -112,7 +114,8 @@ Deno.serve(async (req) => {
     const lbl = STEP[step] ?? step; const tab = step.startsWith('qt0') ? 'F1' : step.startsWith('qt1') ? 'F2' : step.startsWith('qt2') ? 'QT2' : 'GH';
     const link = `${APP}#/don/${order_id}?tab=${tab}`;
     const head = `${r.orders.code} · ${r.orders.project}\n${lbl}`;
-    const text = event === 'claimed' ? `✋ ${name(actor)} đã nhận việc\n${head}\nBạn không cần làm bước này nữa.\n${link}`
+    const text = event === 'returned' ? `↩️ Đơn bị trả về bước này\n${head}\nNgười trả về: ${name(actor)}\nLý do: ${r.return_note ?? ''}\nHạn mới: ${fmt(r.due_at)}${grp && !r.doer_id ? '\nNhóm ' + grp.name + ': bấm "Nhận việc"' : ''}\n${link}`
+      : event === 'claimed' ? `✋ ${name(actor)} đã nhận việc\n${head}\nBạn không cần làm bước này nữa.\n${link}`
       : event === 'overdue' ? `⏰ Quá hạn\n${head}\nHạn: ${fmt(r.due_at)} · Người làm: ${name(r.doer_id) || (grp ? 'nhóm ' + grp.name + ' (chưa ai nhận)' : 'chưa giao')}\n${link}`
       : event === 'remind_half' ? `🔔 Nhắc: chưa ai nhận việc\n${head}\nNhóm ${grp?.name ?? ''} · hạn ${fmt(r.due_at)}\nBấm "Nhận việc" trong app: ${link}`
       : r.doer_id ? `📌 Việc mới cho bạn\n${head}\nHạn: ${fmt(r.due_at)}\n${link}`

@@ -1,0 +1,3 @@
+-- Đã áp dụng qua MCP (return_step): order_steps.return_note/returned_at; _restart_approval(order, doc, restart);
+-- return_step(order, step, reason): lùi đúng 1 bước trong cùng quy trình, bắt buộc lý do; qua bước duyệt thì huỷ duyệt cũ
+-- (status 'huy') và mở lượt duyệt mới từ cấp 1; B5→B4 trừ lại tồn kho F4, B6→B5 cộng lại tồn kho F6; báo Zalo 'returned'.

@@ -68,3 +68,44 @@ export function MoveDialog({ o, proc, i, onClose, onMoved }: { o: Order; proc: P
       </div>
     </div>);
 }
+
+/** Trả về bước trước 1 bước: bắt buộc lý do; nếu qua bước duyệt thì huỷ duyệt cũ, duyệt lại từ cấp 1 */
+const BACK_NOTE: Record<string, string> = {
+  'qt1.cho_duyet_xndh': 'Lượt duyệt XNĐH đang chờ sẽ bị huỷ; sửa xong phải gửi duyệt lại.',
+  'qt1.cho_khach': 'Huỷ toàn bộ duyệt XNĐH và xác nhận KH1/KH2; XNĐH được gửi duyệt lại từ cấp 1.',
+  'qt2.b2': 'Lượt duyệt LGC 4 cấp đang chờ sẽ bị huỷ; sửa LGC xong phải gửi duyệt lại.',
+  'qt2.b3': 'Huỷ duyệt LGC đã có (và PO nếu đang duyệt); LGC được gửi duyệt lại từ cấp 1 (Anh Mai).',
+  'qt2.b4': 'Huỷ duyệt PO; Mua hàng phải gửi duyệt PO lại.',
+  'qt2.b5': 'Huỷ kết quả nhập kho F4 và trừ lại tồn kho đã nhập (nếu có mua). Nếu NVL lấy từ tồn kho thì về B2 và LGC duyệt lại từ cấp 1.',
+  'qt2.b6': 'Huỷ biên bản bàn giao F6 và cộng lại tồn kho đã xuất.',
+  'qt3.cho_duyet_lgh': 'Huỷ duyệt Lệnh giao hàng 2 chặng đang chờ.',
+  'qt3.giao_hang': 'Huỷ duyệt LGH đã có; LGH chặng 1 được gửi duyệt lại từ cấp 1.',
+  'qt3.ky_bbgh': 'Bỏ mốc "đã giao xong"; ảnh và BBGH đã tải vẫn giữ.'
+};
+export function ReturnDialog({ o, proc, i, onClose, onDone }: { o: Order; proc: Proc; i: number; onClose: () => void; onDone: () => void }) {
+  const from = proc.cols[i], to = proc.cols[i - 1]; const key = PREFIX[proc.key] + from.key;
+  const [why, setWhy] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [onClose]);
+  const go = async () => {
+    setBusy(true); setErr('');
+    const { error } = await sb.rpc('return_step', { p_order: o.id, p_step: key, p_reason: why.trim() });
+    setBusy(false);
+    if (error) setErr(errText(error)); else { toast('Đã trả về ' + to.title + '. Người làm bước đó đã được báo.'); onDone(); }
+  };
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal mv" role="dialog" aria-modal="true" aria-labelledby="rt-t" onClick={(e) => e.stopPropagation()}>
+        <div className="mv-head"><h2 id="rt-t" style={{ margin: 0 }}>Trả về {o.code}</h2>
+          <button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+        <div className="mv-route"><span className="chip wait">{to.title}</span><Icon name="back" size={16} /><span className="chip idle">{from.title}</span></div>
+        {BACK_NOTE[key] && <div className="msg rt-warn"><Icon name="alert" size={18} /><span>{BACK_NOTE[key]}</span></div>}
+        <label className="f">Lý do trả về *<textarea rows={3} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Ví dụ: Sai độ dày dòng 3, cần bóc tách lại" /></label>
+        <p className="small muted" style={{ margin: 0 }}>Bước "{to.title}" mở lại với hạn mới. Người/nhóm làm bước đó và người giám sát nhận Zalo kèm lý do. Checklist đã tick vẫn giữ.</p>
+        {err && <div className="msg err" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn" onClick={onClose}>Huỷ</button>
+          <button className="btn rt-go" disabled={busy || !why.trim()} onClick={go}><Icon name="back" size={16} />{busy ? 'Đang trả về…' : 'Trả về ' + to.title}</button>
+        </div>
+      </div>
+    </div>);
+}

@@ -474,3 +474,13 @@ body.kb-dragging,body.kb-dragging *{cursor:grabbing!important;user-select:none}
 .kb-col.drop-ok .kb-list{min-height:120px}
 .kb-board{align-items:stretch!important}.kb-col{align-self:stretch}
 .kb-slot.fixed{position:fixed;top:16px;z-index:94;box-shadow:0 12px 28px rgba(60,45,10,.22)}
+
+/* Trả về bước trước */
+.kb-col.drop-ok.back{box-shadow:inset 0 0 0 2px rgba(200,110,40,.5);background:#FBEFE4}
+.kb-col.drop-over.back{box-shadow:inset 0 0 0 2px #C86E28;background:#F7E1CE}
+.kb-slot.back{background:linear-gradient(#F9E6D5,#F3D6BE);border-color:rgba(200,110,40,.7);color:#8A4B17}
+.kb-slot.back.open{border-color:#C86E28;background:linear-gradient(#F5D5B8,#EFC6A2)}
+.kb-acts{display:grid;grid-template-columns:1fr auto;gap:6px}.kb-acts .kb-next{grid-column:1 / -1}
+.kb-back{min-height:38px;background:transparent;color:#8A4B17;border-style:dashed;border-color:#E2B892}
+.rt-warn{background:#FFF1E3;border:1px solid #F0CDA6;color:#7A3F10}
+.rt-go{background:#C86E28;border-color:#C86E28;color:#fff}.rt-go:disabled{opacity:.5}

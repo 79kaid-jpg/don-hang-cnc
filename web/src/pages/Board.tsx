@@ -6,7 +6,7 @@ import { BRANCH, date, num, qt2Step } from '../lib/format';
 const val = (o: Order, f: Proc['field']) => (f === 'step' ? qt2Step(o) : o[f]);
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
-import { MoveDialog } from '../components/MoveDialog';
+import { MoveDialog, ReturnDialog } from '../components/MoveDialog';
 import { Avatar, DueChip, GroupBadge, useGroups, type OStep } from '../components/StepPeople';
 
 /** Bảng Kanban theo từng quy trình: mỗi quy trình một bảng, cột = bước của quy trình đó (giống sơ đồ).
@@ -63,8 +63,8 @@ export default function Board() {
   const loadSteps = () => sb.from('order_steps').select('*').is('done_at', null).then(({ data }) => setOsteps((data as OStep[]) ?? []));
   useEffect(() => { loadSteps(); }, []); // eslint-disable-line
   const stepOf = (id: string, colKey: string) => osteps.find((x) => x.order_id === id && x.step === ({ qt0: 'qt0.', qt1: 'qt1.', qt2: 'qt2.', qt4: 'qt3.' } as Record<string, string>)[P.key] + colKey);
-  const [slotFix, setSlotFix] = useState<{ l: number; w: number } | null>(null); const fixRef = useRef('');
-  const [landed, setLanded] = useState(''); const [eat, setEat] = useState(-1);
+  const [slotFix, setSlotFix] = useState<{ c: number; l: number; w: number } | null>(null); const [back, setBack] = useState<{ o: Order; i: number } | null>(null); const fixRef = useRef('');
+  const [landed, setLanded] = useState(''); const [backEat, setBackEat] = useState(false); const [eat, setEat] = useState(-1);
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Kéo bằng chuột (pointer events): thẻ thu nhỏ như phong bì bám theo con trỏ, tự cuộn trang khi gần mép,
   // thả ở bất kỳ đâu trong cột kế tiếp; khe hộp thư dính ở đầu phần cột đang thấy.
@@ -81,10 +81,11 @@ export default function Board() {
     if (vy) window.scrollBy(0, vy);
     const bd = document.querySelector<HTMLElement>('.kb-board'); if (bd) { const r = bd.getBoundingClientRect();
       const vx = d.px < r.left + m ? -(r.left + m - d.px) / 3 : d.px > r.right - m ? (d.px - r.right + m) / 3 : 0; if (vx) bd.scrollLeft += vx; }
-    const c = colAt(d.px, d.py); const ok = c === d.i + 1 ? c : -1; if (ok !== d.over) { d.over = ok; setOver(ok); }
+    const c = colAt(d.px, d.py); const ok = c === d.i + 1 || (c === d.i - 1 && c >= 0) ? c : -1; if (ok !== d.over) { d.over = ok; setOver(ok); }
     // cột đích cuộn khuất đầu → hộp thư bám mép trên màn hình, ngay trên cột
-    const tc = document.querySelector<HTMLElement>(`[data-col="${d.i + 1}"]`)?.getBoundingClientRect();
-    const fx = tc && tc.top + 64 < 16 && tc.bottom > 140 ? { l: Math.round(tc.left + 10), w: Math.round(tc.width - 20) } : null;
+    const tci = d.over >= 0 ? d.over : d.i + 1;
+    const tc = document.querySelector<HTMLElement>(`[data-col="${tci}"]`)?.getBoundingClientRect();
+    const fx = tc && tc.top + 64 < 16 && tc.bottom > 140 ? { c: tci, l: Math.round(tc.left + 10), w: Math.round(tc.width - 20) } : null;
     const key = JSON.stringify(fx); if (key !== fixRef.current) { fixRef.current = key; setSlotFix(fx); }
     d.raf = requestAnimationFrame(tick);
   };
@@ -113,15 +114,16 @@ export default function Board() {
         .finished.then(() => g.remove());
       setSlotFix(null); fixRef.current = ''; return;
     }
-    const col = d.over; setEat(col);
-    if (reduce) { g.remove(); setEat(-1); setMove({ o, i: d.i }); return; }
+    const col = d.over; setEat(col); setBackEat(col < d.i);
+    const open = () => (col < d.i ? setBack({ o, i: d.i }) : setMove({ o, i: d.i }));
+    if (reduce) { g.remove(); setEat(-1); open(); return; }
     const t = slot.getBoundingClientRect(); const cx = t.left + t.width / 2 - from.width / 2, cy = t.top + t.height / 2 - from.height / 2;
     g.animate([
       { transform: g.style.transform, opacity: 1 },
       { transform: `translate(${cx - d.w * .2}px,${cy - 40}px) rotate(-2deg) scale(.42)`, opacity: 1, offset: .55 },
       { transform: `translate(${cx - d.w * .2}px,${cy + 4}px) rotate(0) scale(.4,.04)`, opacity: .2 }
     ], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }).finished.then(() => {
-      g.remove(); setTimeout(() => { setEat(-1); setSlotFix(null); fixRef.current = ''; }, 260); setMove({ o, i: d.i });
+      g.remove(); setTimeout(() => { setEat(-1); setSlotFix(null); fixRef.current = ''; }, 260); open();
     });
   };
   const startDrag = (e: React.PointerEvent<HTMLElement>, id: string, i: number) => {
@@ -200,18 +202,18 @@ export default function Board() {
           const list = byCol(c.key);
           return (
             <section key={c.key} className={'kb-col' + (curCol === c.key ? ' show' : '') + (c.gate ? ' gated' : '')
-              + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag?.i === i - 1 ? ' drop-over' : '')} aria-label={c.title}
+              + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i - 1 === i ? ' drop-ok back' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag ? ' drop-over' : '')} aria-label={c.title}
               data-col={i}>
               <header className="kb-head">
                 <span className="kb-group">{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">
-                {((drag && drag.i + 1 === i) || eat === i) && (
-                  <div className={'kb-slot' + (over === i || eat === i ? ' open' : '') + (eat === i ? ' eat' : '') + (slotFix ? ' fixed' : '')} aria-hidden="true"
-                    style={slotFix ? { left: slotFix.l, width: slotFix.w } : undefined}>
-                    <span className="kb-slot-mouth" /><span className="kb-slot-txt"><Icon name="inbox" size={16} />Thả vào đây để chuyển sang {c.title}</span>
-                  </div>)}
+                {((drag && (drag.i + 1 === i || drag.i - 1 === i)) || eat === i) && (() => { const isBack = drag ? drag.i - 1 === i : backEat; const fx = slotFix?.c === i ? slotFix : null; return (
+                  <div className={'kb-slot' + (isBack ? ' back' : '') + (over === i || eat === i ? ' open' : '') + (eat === i ? ' eat' : '') + (fx ? ' fixed' : '')} aria-hidden="true"
+                    style={fx ? { left: fx.l, width: fx.w } : undefined}>
+                    <span className="kb-slot-mouth" /><span className="kb-slot-txt"><Icon name={isBack ? 'back' : 'inbox'} size={16} />{isBack ? 'Thả vào đây để trả về ' : 'Thả vào đây để chuyển sang '}{c.title}</span>
+                  </div>); })()}
                 {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
                   <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '') + (landed === o.id ? ' landed' : '')} data-card={o.id}
@@ -246,6 +248,8 @@ export default function Board() {
                       {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}
                       {i < COLS.length - 1 && <button className="btn sm kb-move" onClick={() => setMove({ o, i })} aria-label={'Chuyển ' + o.code + ' sang ' + COLS[i + 1].title}
                         title="Chuyển sang bước sau (hoặc kéo thẻ)"><Icon name="arrow" size={16} />Chuyển bước</button>}
+                      {i > 0 && <button className="btn sm kb-back" onClick={() => setBack({ o, i })} aria-label={'Trả ' + o.code + ' về ' + COLS[i - 1].title}
+                        title="Trả về bước trước (hoặc kéo thẻ sang trái)"><Icon name="back" size={16} />Trả về</button>}
                     </div>
                   </article>))}
               </div>
@@ -255,6 +259,7 @@ export default function Board() {
       </div>
       </div>
       </div>
+      {back && <ReturnDialog o={back.o} proc={P} i={back.i} onClose={() => setBack(null)} onDone={() => { const id = back.o.id; setBack(null); reload().then(() => { loadSteps(); setLanded(id); setTimeout(() => setLanded(''), 900); }); }} />}
       {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { const id = move.o.id; setMove(null); reload().then(() => { loadSteps(); setLanded(id); setTimeout(() => setLanded(''), 900); }); }} />}
     </>
   );
