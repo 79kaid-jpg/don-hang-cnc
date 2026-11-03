@@ -7,6 +7,7 @@ const val = (o: Order, f: Proc['field']) => (f === 'step' ? qt2Step(o) : o[f]);
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
 import { MoveDialog } from '../components/MoveDialog';
+import { Avatar, DueChip, type OStep } from '../components/StepPeople';
 
 /** Bảng Kanban theo từng quy trình: mỗi quy trình một bảng, cột = bước của quy trình đó (giống sơ đồ).
  *  Đơn nằm ở bước theo trạng thái của đúng nhánh: QT0–QT1 theo trạng thái đơn, QT2 theo nhánh NVL, QT3 theo nhánh gia công.
@@ -57,6 +58,10 @@ export default function Board() {
   const [drag, setDrag] = useState<{ id: string; i: number } | null>(null);
   const [over, setOver] = useState(-1);
   const [move, setMove] = useState<{ o: Order; i: number } | null>(null);
+  const [osteps, setOsteps] = useState<OStep[]>([]);
+  const loadSteps = () => sb.from('order_steps').select('*').is('done_at', null).then(({ data }) => setOsteps((data as OStep[]) ?? []));
+  useEffect(() => { loadSteps(); }, []); // eslint-disable-line
+  const stepOf = (id: string, colKey: string) => osteps.find((x) => x.order_id === id && x.step === ({ qt0: 'qt0.', qt1: 'qt1.', qt2: 'qt2.', qt4: 'qt3.' } as Record<string, string>)[P.key] + colKey);
   const [landed, setLanded] = useState(''); const [eat, setEat] = useState(-1);
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Ảnh kéo: thẻ thu nhỏ, nghiêng như phong bì
@@ -186,6 +191,13 @@ export default function Board() {
                       {o.due_date && <span className={days != null && days < 0 ? 'kb-late' : days != null && days <= 3 ? 'kb-soon' : ''}>
                         {days != null && days < 0 && <><Icon name="alert" size={14} />Trễ {-days} ngày · </>}Giao {date(o.due_date)}</span>}
                     </div>
+                    {(() => { const st = stepOf(o.id, c.key); if (!st) return null; const d = st.doer_id ? people[st.doer_id] : undefined; return (
+                      <div className="kb-people">
+                        {d ? <span className="kb-doer"><Avatar p={d} />{d.full_name}</span> : c.roles.length ? <span className="chip bad">Chưa giao người</span> : <span className="small muted">Theo chuỗi duyệt</span>}
+                        {st.supervisor_ids.length > 0 && <span className="kb-sup" title={'Giám sát: ' + st.supervisor_ids.map((x) => people[x]?.full_name).join(', ')}>
+                          <Icon name="eye" size={13} />{st.supervisor_ids.map((x) => <Avatar key={x} p={people[x]} />)}</span>}
+                        <DueChip due={st.due_at} />
+                      </div>); })()}
                     <div className="kb-tags">
                       {o.f1_result === 'khong_dat' && <span className="chip bad">F1 không đạt</span>}
                       {rejected && <span className="chip bad">XNĐH bị từ chối</span>}
@@ -207,7 +219,7 @@ export default function Board() {
       </div>
       </div>
       </div>
-      {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { const id = move.o.id; setMove(null); reload().then(() => { setLanded(id); setTimeout(() => setLanded(''), 900); }); }} />}
+      {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { const id = move.o.id; setMove(null); reload().then(() => { loadSteps(); setLanded(id); setTimeout(() => setLanded(''), 900); }); }} />}
     </>
   );
 }

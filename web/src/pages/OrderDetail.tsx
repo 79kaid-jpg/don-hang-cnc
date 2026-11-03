@@ -1,3 +1,4 @@
+import { StepPeople, StepTimeline } from '../components/StepPeople';
 import { ChecklistBox, stepKeys } from '../components/Checklist';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -75,7 +76,8 @@ export default function OrderDetail() {
         </div>
         <Flow status={o.status} f1={o.f1_result} />
         {o.status === 'san_xuat' && <QT2Flow o={o} />}
-        {stepKeys(o).map((k) => <ChecklistBox key={k + o.status + o.gc_status + o.nvl_status + o.gh_status} orderId={o.id} step={k} compact />)}
+        {stepKeys(o).map((k) => { const kk = k + o.status + o.gc_status + o.nvl_status + o.gh_status; return (
+          <div className="stepbox" key={kk}><StepPeople orderId={o.id} step={k} people={people} /><ChecklistBox orderId={o.id} step={k} compact /></div>); })}
         <div className="grid2">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
           <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
@@ -94,10 +96,10 @@ export default function OrderDetail() {
       {(tab === 'QT2' || tab === 'QT3' || tab === 'F7' || tab === 'GH') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
         return tab === 'F7' ? <F7 {...q} /> : tab === 'GH' ? <QT3Giao {...q} /> : <QT2Merged {...q} />; })()}
       {tab === 'LS' && (
-        <div className="card steps">
+        <><StepTimeline orderId={o.id} people={people} /><div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
           {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
-        </div>
+        </div></>
       )}
       </div></div>
     </>

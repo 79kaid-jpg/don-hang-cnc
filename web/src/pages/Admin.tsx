@@ -1,3 +1,4 @@
+import { StepDefaultsAdmin } from '../components/StepPeople';
 import { ChecklistAdmin } from '../components/Checklist';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +14,7 @@ const UNITS = ['CNC', 'IPC', 'IT', 'KHAC'];
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<'users' | 'flows' | 'ck'>('users');
+  const [tab, setTab] = useState<'users' | 'flows' | 'ck' | 'sd'>('users');
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function Admin() {
         <button role="tab" aria-selected={tab === 'users'} className={tab === 'users' ? 'on' : ''} onClick={() => setTab('users')}>Người dùng{people ? ` (${people.length})` : ''}</button>
         <button role="tab" aria-selected={tab === 'flows'} className={tab === 'flows' ? 'on' : ''} onClick={() => setTab('flows')}>Chuỗi duyệt & hạn</button>
         <button role="tab" aria-selected={tab === 'ck'} className={tab === 'ck' ? 'on' : ''} onClick={() => setTab('ck')}>Checklist các bước</button>
+        <button role="tab" aria-selected={tab === 'sd'} className={tab === 'sd' ? 'on' : ''} onClick={() => setTab('sd')}>Người phụ trách bước</button>
       </div>
 
       {tab === 'users' && (<>
@@ -61,6 +63,7 @@ export default function Admin() {
           </ul>)}
       </>)}
 
+      {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
       {tab === 'ck' && <ChecklistAdmin canEdit={can('admin_it')} />}
       {tab === 'flows' && (!steps || !people ? <Skeleton rows={4} h={90} /> : <Flows steps={steps} people={people} onSaved={load} />)}
     </>
