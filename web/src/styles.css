@@ -340,3 +340,17 @@ textarea{resize:vertical}
 .od-panel{gap:14px}
 .od-panel>.card,.od-panel .card{box-shadow:none;border:1px solid #EDE3CC;background:#fff}
 .od-panel .card .card{background:var(--soft)}
+
+/* Rà soát UI */
+.main{overflow-x:clip}
+.tbl-cards{min-width:820px}.tbl-cards td.nw{white-space:nowrap}
+@media (max-width:700px){.tbl-cards{min-width:0}.tbl-cards thead{display:none}.tbl-cards,.tbl-cards tbody,.tbl-cards tr,.tbl-cards td{display:block;width:100%}
+.tbl-cards tr{border:1px solid var(--line2);border-radius:12px;background:#fff;padding:10px 12px;margin-bottom:10px}
+.tbl-cards td{border:0!important;padding:3px 0!important;display:flex;gap:10px;justify-content:space-between;align-items:center;text-align:right}
+.tbl-cards td::before{content:attr(data-l);color:var(--muted);font-size:13px;text-align:left;flex:none}
+.tbl-cards td[data-l="Mã đơn"]{font-size:16px}.tbl-cards td[colspan]{display:block}.tbl-cards td[data-l="Khách"]{flex-wrap:wrap}.tbl-cards td[data-l="Khách"] .small{flex-basis:100%}.tbl-cards td[colspan]::before{display:none}}
+/* nội dung trong thẻ phiếu: bỏ khung lồng khung, dùng vạch chia */
+.od-panel{padding:6px 22px 18px;gap:0}
+.od-panel .card:not(.card .card){border:0!important;border-radius:0;background:transparent;padding:18px 0;box-shadow:none}
+.od-panel{overflow:hidden;padding-bottom:0}.od-panel .card:not(.card .card){border-bottom:1px solid #EDE3CC!important;margin-bottom:-1px}
+@media (max-width:900px){.od-panel{padding:4px 14px 14px}}

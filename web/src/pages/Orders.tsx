@@ -28,20 +28,20 @@ export default function Orders() {
         <button className="pill-toggle" aria-pressed={done} onClick={() => setDone(!done)}>{done && <Icon name="check" size={16} />}Gồm đơn đã xong / huỷ</button>
       </div>
       <div className="card flush scroll">
-        <table className="tbl" style={{ minWidth: 820 }}>
+        <table className="tbl tbl-cards">
           <thead><tr><th>Mã đơn</th><th>Khách / dự án</th><th>Ngày giao</th><th>Trạng thái</th><th>NVL</th><th>Gia công</th><th>Giao hàng</th></tr></thead>
           <tbody>
             {!rows && <tr><td colSpan={7}><Skeleton rows={4} h={40} /></td></tr>}
             {rows && list.length === 0 && <tr><td colSpan={7}><Empty title={q ? 'Không có đơn khớp “' + q + '”' : 'Chưa có đơn'} /></td></tr>}
             {list.map((o) => (
               <tr key={o.id} className="click" onClick={() => nav('/don/' + o.id)}>
-                <td><Link to={'/don/' + o.id} onClick={(e) => e.stopPropagation()}><b>{o.code}</b></Link></td>
-                <td>{[cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ')}<div className="small muted">{o.project}</div></td>
-                <td>{date(o.due_date)}</td>
-                <td><Chip s={o.status} text={ORDER_STATUS[o.status]} /></td>
-                <td><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></td>
-                <td><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></td>
-                <td><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></td>
+                <td data-l="Mã đơn" className="nw"><Link to={'/don/' + o.id} onClick={(e) => e.stopPropagation()}><b>{o.code}</b></Link></td>
+                <td data-l="Khách">{[cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ')}<div className="small muted">{o.project}</div></td>
+                <td data-l="Ngày giao">{date(o.due_date)}</td>
+                <td data-l="Trạng thái"><Chip s={o.status} text={ORDER_STATUS[o.status]} /></td>
+                <td data-l="NVL"><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></td>
+                <td data-l="Gia công"><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></td>
+                <td data-l="Giao hàng"><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></td>
               </tr>))}
           </tbody>
         </table>
