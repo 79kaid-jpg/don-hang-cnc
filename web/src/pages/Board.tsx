@@ -226,7 +226,7 @@ export default function Board() {
       <div className="qt-group">
       <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
         {PROCS.map((pr) => (
-          <button key={pr.key} role="tab" aria-selected={qt === pr.key} className={qt === pr.key ? 'on' : ''} onClick={() => pick(pr.key)}>
+          <button key={pr.key} role="tab" aria-selected={qt === pr.key} className={(qt === pr.key ? 'on ' : '') + 'q' + pr.title.slice(2)} onClick={() => pick(pr.key)}>
             <b>{pr.title}</b><span>{pr.sub}</span><span className="kb-count">{countIn(pr)}</span>
           </button>))}
       </div>
@@ -248,7 +248,7 @@ export default function Board() {
               + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i - 1 === i ? ' drop-ok back' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag ? ' drop-over' : '')} aria-label={c.title}
               data-col={i}>
               <header className="kb-head">
-                <span className="kb-group">{P.title} · bước {i + 1}</span>
+                <span className={'kb-group qt-c ' + P.title.toLowerCase()}>{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">

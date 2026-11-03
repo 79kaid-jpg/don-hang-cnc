@@ -585,3 +585,22 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 }
 @media (min-width:901px){.fm-inner{width:calc(var(--z,1) * 100%)}}
 button{color:inherit}
+
+/* Màu quy trình: QT0 xanh dương, QT1 tím, QT2 hổ phách, QT3 xanh lá */
+:root{--q0:#2F6FB0;--q0b:#E4EEF8;--q1:#7A4DB3;--q1b:#EFE7F8;--q2:#B4690E;--q2b:#FBEEDC;--q3:#2E8B57;--q3b:#E2F3E9}
+.qt-tag{display:inline-flex;align-items:center;flex:none;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.qt-tag span{font-weight:600}
+.qt-tag.qt0{background:var(--q0b);color:var(--q0)}.qt-tag.qt1{background:var(--q1b);color:var(--q1)}.qt-tag.qt2{background:var(--q2b);color:var(--q2)}.qt-tag.qt3{background:var(--q3b);color:var(--q3)}
+.qtl{box-shadow:inset 4px 0 0 var(--qc,transparent)}
+.qtl.qt0{--qc:var(--q0)}.qtl.qt1{--qc:var(--q1)}.qtl.qt2{--qc:var(--q2)}.qtl.qt3{--qc:var(--q3)}
+.qt-c.qt0{color:var(--q0)}.qt-c.qt1{color:var(--q1)}.qt-c.qt2{color:var(--q2)}.qt-c.qt3{color:var(--q3)}
+.qt-group .qt-tabs button.q0.on{box-shadow:inset 0 3px 0 var(--q0)}.qt-group .qt-tabs button.q1.on{box-shadow:inset 0 3px 0 var(--q1)}
+.qt-group .qt-tabs button.q2.on{box-shadow:inset 0 3px 0 var(--q2)}.qt-group .qt-tabs button.q3.on{box-shadow:inset 0 3px 0 var(--q3)}
+.qt-group .qt-tabs button.q0 b{color:var(--q0)}.qt-group .qt-tabs button.q1 b{color:var(--q1)}.qt-group .qt-tabs button.q2 b{color:var(--q2)}.qt-group .qt-tabs button.q3 b{color:var(--q3)}
+.qt-filter{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line)}
+.qt-filter button{min-height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--line2);background:#fff;font:inherit;font-size:14px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.qt-filter button b{font-size:12px;opacity:.75}
+.qt-filter button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.qt-filter .qf.qt0{color:var(--q0)}.qt-filter .qf.qt1{color:var(--q1)}.qt-filter .qf.qt2{color:var(--q2)}.qt-filter .qf.qt3{color:var(--q3)}
+.qt-filter .qf.qt0.on{background:var(--q0);border-color:var(--q0);color:#fff}.qt-filter .qf.qt1.on{background:var(--q1);border-color:var(--q1);color:#fff}
+.qt-filter .qf.qt2.on{background:var(--q2);border-color:var(--q2);color:#fff}.qt-filter .qf.qt3.on{background:var(--q3);border-color:var(--q3);color:#fff}

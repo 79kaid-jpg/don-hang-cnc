@@ -3,6 +3,7 @@ import { sb, errText, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { dt, ROLES } from '../lib/format';
 import { STEP_LABEL } from './Checklist';
+import { QtTag } from './QtTag';
 import { Icon } from './Icon';
 
 /** Người thực hiện + người giám sát + thời hạn của bước (giống giai đoạn BASE Workflow) */
@@ -243,9 +244,9 @@ export function StepInbox() {
   const tab = (st: string) => (st.startsWith('qt0') ? 'F1' : st.startsWith('qt1') ? 'F2' : st.startsWith('qt2') ? 'QT2' : 'GH');
   const claim = async (r: OStep) => { setErr(''); const { error } = await sb.rpc('claim_step', { p_order: r.order_id, p_step: r.step }); if (error) setErr(errText(error)); else load(); };
   const Row = ({ r, act }: { r: OStep & { orders: { code: string; project: string } }; act?: boolean }) => (
-    <li className="inbox-row">
+    <li className={'inbox-row qtl ' + r.step.slice(0, 3)}>
       <a href={'#/don/' + r.order_id + '?tab=' + tab(r.step)} className="inbox-main">
-        <b>{r.orders.code}</b><span className="small">{STEP_LABEL[r.step] ?? r.step}</span><span className="small muted">{r.orders.project}</span></a>
+        <span className="row" style={{ gap: 8 }}><QtTag qt={r.step.slice(0, 3).toUpperCase()} /><b>{r.orders.code}</b></span><span className="small">{STEP_LABEL[r.step] ?? r.step}</span><span className="small muted">{r.orders.project}</span></a>
       <DueChip due={r.due_at} />
       {act && <button className="btn sm primary" onClick={() => claim(r)}><Icon name="check" size={16} />Nhận việc</button>}
     </li>);

@@ -1,3 +1,4 @@
+import { QtTag } from '../components/QtTag';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { StepPeople, StepTimeline } from '../components/StepPeople';
 import { ChecklistBox, STEP_LABEL, stepKeys } from '../components/Checklist';
@@ -96,7 +97,7 @@ export default function OrderDetail() {
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="row between">
-          <div><h1>{o.code}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
+          <div><h1 className="row" style={{ gap: 10 }}>{o.code}{stepKeys(o).map((k) => <QtTag key={k} qt={k.slice(0, 3).toUpperCase()} long />)}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
           <span className="row" style={{ gap: 8 }}><span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
             <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link></span>
         </div>
