@@ -57,7 +57,7 @@ function Shell() {
         <div className="side-foot">
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
             <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
-          <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Cài app</NavLink>
+          <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Hướng dẫn</NavLink>
           <NavLink to="/zalo" className="nav-item"><Icon name="bell" />Thông báo Zalo{me.zalo_chat_id ? '' : <span className="nav-badge" aria-label="chưa liên kết">!</span>}</NavLink>
           <button className="nav-item" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
         </div>
@@ -67,7 +67,7 @@ function Shell() {
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
         <b style={{ flex: 1 }}>Đơn hàng CNC</b>
         <NavLink to="/zalo" className="btn sm icon-btn" aria-label="Thông báo Zalo"><Icon name="bell" /></NavLink>
-        <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Cài app lên màn hình chính"><Icon name="download" /></NavLink>
+        <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Hướng dẫn sử dụng"><Icon name="download" /></NavLink>
         <span className="avatar" title={me.full_name} aria-label={me.full_name}>{initial}</span>
         <button className="btn sm icon-btn" aria-label="Đăng xuất" onClick={() => sb.auth.signOut()}><Icon name="logout" /></button>
       </header>

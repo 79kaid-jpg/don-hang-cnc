@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { BUILD, applyUpdate, isIOSNotSafari, platform, useInstall, useUpdate } from '../lib/pwa';
 import { toast } from '../components/ui';
+import { BOT_NAME, ZaloLink } from '../components/ZaloLink';
 
 const URL_APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
 
@@ -18,8 +19,13 @@ export default function Install() {
 
   return (
     <>
-      <div className="page-head"><div><h1>Cài app lên màn hình chính</h1>
-        <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ. App tự cập nhật khi có bản mới.</p></div></div>
+      <div className="page-head"><div><h1>Hướng dẫn sử dụng</h1>
+        <p className="muted">Cài app lên màn hình chính, nhận thông báo duyệt qua Zalo và cập nhật app.</p></div></div>
+      <nav className="row" aria-label="Mục hướng dẫn"><a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-install')?.scrollIntoView({ behavior: 'smooth' }); }}>1. Cài app</a>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-zalo')?.scrollIntoView({ behavior: 'smooth' }); }}>2. Thông báo Zalo</a>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a></nav>
+      <div><h2 id="h-install" style={{ marginTop: 8 }}>1. Cài app lên màn hình chính</h2>
+        <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ.</p></div>
 
       {standalone ? (
         <div className="msg ok"><Icon name="check" size={18} /><span>Bạn đang dùng app từ màn hình chính. Không cần làm gì thêm.</span></div>
@@ -63,8 +69,33 @@ export default function Install() {
           </ol>)}
       </div>
 
+      <section className="card" aria-labelledby="h-zalo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <h2 id="h-zalo">2. Nhận thông báo duyệt qua Zalo</h2>
+        <p className="muted" style={{ margin: 0 }}>Bot <b>{BOT_NAME}</b> nhắn riêng cho bạn khi đến lượt bạn duyệt phiếu, và báo cho người tạo đơn khi phiếu bị từ chối. Mỗi người chỉ cần liên kết một lần.</p>
+        <ol className="ins-steps">
+          <Step n={1}>Bấm <b>Liên kết Zalo</b> ở ô bên dưới (hoặc biểu tượng chuông <span className="kbd"><Icon name="bell" size={16} /></span> trên đầu trang). App hiện một <b>mã 6 số</b>, có hiệu lực 30 phút.</Step>
+          <Step n={2}>Mở Zalo trên điện thoại, gõ tìm <b>{BOT_NAME}</b>, bấm <b>Nhắn tin</b>.</Step>
+          <Step n={3}>Gửi cho bot đúng mã 6 số đó.</Step>
+          <Step n={4}>Bot trả lời <b>"Đã liên kết Zalo với tài khoản …"</b>, app tự chuyển sang <b>Đã liên kết</b>. Xong.</Step>
+        </ol>
+        <ZaloLink />
+        <div className="small" style={{ lineHeight: 1.7 }}>
+          <b>Bạn sẽ nhận tin khi:</b>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+            <li>Đến lượt bạn duyệt: XNĐH (F2), dự toán NVL (F3), PO, từng cấp lệnh gia công (F5). Tin có mã đơn, tên phiếu, cấp duyệt, hạn và link mở thẳng phiếu.</li>
+            <li>Phiếu của đơn bạn tạo bị từ chối: kèm người từ chối và lý do.</li>
+          </ul>
+          <b>Lưu ý:</b>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+            <li>Mở link trong tin nhắn bằng trình duyệt (hoặc app đã cài) và đăng nhập tài khoản của bạn.</li>
+            <li>Gửi sai mã hoặc mã hết hạn: bấm Liên kết Zalo lại để lấy mã mới.</li>
+            <li>Đổi số Zalo: bấm <b>Huỷ liên kết</b> rồi liên kết lại với Zalo mới.</li>
+          </ul>
+        </div>
+      </section>
+
       <section className="card" aria-labelledby="h-up" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <h2 id="h-up">Tự động cập nhật</h2>
+        <h2 id="h-up">3. Tự động cập nhật</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           <li>App kiểm tra bản mới mỗi 5 phút, khi có mạng lại và mỗi lần bạn mở lại app.</li>
           <li>Có bản mới: hiện thanh <b>“Đã có phiên bản mới”</b>. Bấm <b>Cập nhật</b> hoặc chỉ cần thoát ra rồi mở lại app là tự cập nhật.</li>
