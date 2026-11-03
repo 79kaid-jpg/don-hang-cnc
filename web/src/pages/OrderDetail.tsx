@@ -1,11 +1,12 @@
+import { isTyping, modalOpen } from '../components/Shortcuts';
 import { StepPeople, StepTimeline } from '../components/StepPeople';
 import { ChecklistBox, stepKeys } from '../components/Checklist';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
-import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
+import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
 import { QT2Merged, QT3Giao, F7 } from './Phase2';
@@ -19,7 +20,7 @@ type Ev = { id: number; at: string; actor: string | null; acting_as: string | nu
 const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'LS Lịch sử']] as const;
 
 export default function OrderDetail() {
-  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams();
+  const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
   const tab = ((t) => (t === 'QT3' ? 'QT2' : t))(sp.get('tab') ?? 'F1');
   const { me, can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
@@ -60,6 +61,21 @@ export default function OrderDetail() {
     if (error) setErr(errText(error)); else { setOk(msg); load(); }
   };
 
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (!o || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
+      const key = e.key.toLowerCase(); const n = Number(key);
+      if (n >= 1 && n <= TABS.length) { e.preventDefault(); setSp({ tab: TABS[n - 1][0] }); }
+      else if (key === 's') { e.preventDefault(); navOD('/so-do?don=' + o.id); }
+      else if (key === 'b') { e.preventDefault(); navOD('/bang'); }
+      else if (key === 'c') { e.preventDefault();
+        sb.from('order_steps').select('step, doer_group_id').eq('order_id', o.id).is('done_at', null).not('doer_group_id', 'is', null).then(async ({ data }) => {
+          const st = (data ?? [])[0]; if (!st) { toast('Bước hiện tại không giao cho nhóm'); return; }
+          const { error } = await sb.rpc('claim_step', { p_order: o.id, p_step: st.step });
+          if (error) toast(errText(error)); else { toast('Bạn đã nhận việc'); load(); } }); }
+    };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k);
+  });
   if (!o) return <Skeleton rows={4} h={72} />;
   const tot = lines.reduce((s, l) => ({ qty: s.qty + l.qty, m2: s.m2 + Number(l.area_m2), kg: s.kg + Number(l.weight_kg) }), { qty: 0, m2: 0, kg: 0 });
   const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');

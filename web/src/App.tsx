@@ -14,6 +14,7 @@ import Admin from './pages/Admin';
 import FlowMap from './pages/FlowMap';
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
+import { ShortcutHost } from './components/Shortcuts';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -54,11 +55,14 @@ function Shell() {
     <div className={'app' + (busy ? ' is-busy' : '') + (hidden ? ' side-hidden' : '') + (peek ? ' side-peek' : '')}>
       {hidden && !peek && <button className="side-fab" aria-label="Mở menu" title="Mở menu" onClick={() => setPeek(true)}><Icon name="menu" /></button>}
       {peek && <div className="side-scrim" onClick={() => setPeek(false)} aria-hidden="true" />}
+ <ShortcutHost onToggleSide={() => toggleSide(!hidden)} />
       {busy && <div className="busy" role="progressbar" aria-label="Đang xử lý" />}
       <aside className="side" aria-label="Điều hướng">
         <div className="brand"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>Đơn hàng CNC</div><div className="small muted">CNC → IPC → Hanwa</div></div>
           <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Ghim menu' : 'Ẩn menu'} title={hidden ? 'Ghim menu' : 'Ẩn menu (mở lại bằng nút ☰ góc trái)'} onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
+        <button className="side-search" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
+          <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((i) => (
             <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
@@ -67,6 +71,7 @@ function Shell() {
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
             <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
           <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Hướng dẫn</NavLink>
+          <button className="nav-item kbd-link" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => dispatchEvent(new Event('show-shortcuts'))}><Icon name="list" />Phím tắt<kbd>?</kbd></button>
           <NavLink to="/zalo" className="nav-item"><Icon name="bell" />Thông báo Zalo{me.zalo_chat_id ? '' : <span className="nav-badge" aria-label="chưa liên kết">!</span>}</NavLink>
           <button className="nav-item" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
         </div>

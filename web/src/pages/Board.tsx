@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { sb, type Approval, type Customer, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { BRANCH, date, num, qt2Step } from '../lib/format';
 const val = (o: Order, f: Proc['field']) => (f === 'step' ? qt2Step(o) : o[f]);
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
+import { isTyping, modalOpen } from '../components/Shortcuts';
 import { MoveDialog, ReturnDialog } from '../components/MoveDialog';
 import { Avatar, DueChip, GroupBadge, useGroups, type OStep } from '../components/StepPeople';
 
@@ -163,6 +164,36 @@ export default function Board() {
   }).filter((x) => x.c && (!mine || x.myTurn)), [orders, appr, agg, q, mine, me, can, P]); // eslint-disable-line
 
   const byCol = (k: string) => cards.filter((x) => val(x.o, P.field) === k);
+  // Phím tắt Kanban: 1–4 đổi quy trình, J/K/H/L (hoặc mũi tên) chọn thẻ, Enter mở, M chuyển, R trả về, F lọc việc của tôi
+  const [sel, setSel] = useState<{ c: number; r: number } | null>(null);
+  const navg = useNavigate();
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
+      const key = e.key.toLowerCase();
+      if (['1', '2', '3', '4'].includes(key)) { e.preventDefault(); pick(PROCS[Number(key) - 1].key); setSel(null); return; }
+      if (key === 'f') { e.preventDefault(); setMine((v) => !v); return; }
+      const cols = COLS.map((c) => byCol(c.key));
+      const first = () => { const c = cols.findIndex((l) => l.length); return c < 0 ? null : { c, r: 0 }; };
+      const mv = (dc: number, dr: number) => { e.preventDefault();
+        setSel((s0) => { if (!s0) return first(); let c = s0.c, r = s0.r;
+          if (dc) { let n = c + dc; while (n >= 0 && n < cols.length && !cols[n].length) n += dc; if (n >= 0 && n < cols.length) { c = n; r = Math.min(r, cols[n].length - 1); } }
+          if (dr) r = Math.max(0, Math.min(cols[c].length - 1, r + dr));
+          return { c, r }; }); };
+      if (key === 'j' || e.key === 'ArrowDown') mv(0, 1); else if (key === 'k' || e.key === 'ArrowUp') mv(0, -1);
+      else if (key === 'h' || e.key === 'ArrowLeft') mv(-1, 0); else if (key === 'l' || e.key === 'ArrowRight') mv(1, 0);
+      else if (sel && cols[sel.c]?.[sel.r]) {
+        const it = cols[sel.c][sel.r];
+        if (e.key === 'Enter') { e.preventDefault(); navg('/don/' + it.o.id); }
+        else if (key === 'm' && sel.c < COLS.length - 1) { e.preventDefault(); setMove({ o: it.o, i: sel.c }); }
+        else if (key === 'r' && sel.c > 0) { e.preventDefault(); setBack({ o: it.o, i: sel.c }); }
+        else if (e.key === 'Escape') setSel(null);
+      }
+    };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k);
+  });
+  const selId = sel ? byCol(COLS[sel.c]?.key ?? '')[sel.r]?.o.id : undefined;
+  useEffect(() => { if (selId) document.querySelector(`[data-card="${selId}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [selId]);
   const countIn = (pr: Proc) => (orders ?? []).filter((o) => pr.cols.some((c) => c.key === val(o, pr.field))).length;
 
   return (
@@ -177,7 +208,8 @@ export default function Board() {
       </div>
       <div className="row">
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm mã đơn, dự án" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
-        <button className="pill-toggle" aria-pressed={mine} onClick={() => setMine(!mine)}>{mine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
+        <button className="pill-toggle" aria-pressed={mine} onClick={() => setMine(!mine)} title="Phím F">{mine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
+        <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} title="Xem phím tắt"><kbd>J</kbd><kbd>K</kbd> chọn · <kbd>M</kbd> chuyển · <kbd>R</kbd> trả về · <kbd>?</kbd></button>
       </div>
 
       <div className="qt-group">
@@ -216,7 +248,7 @@ export default function Board() {
                   </div>); })()}
                 {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
-                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '') + (landed === o.id ? ' landed' : '')} data-card={o.id}
+                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '') + (landed === o.id ? ' landed' : '') + (selId === o.id ? ' kb-sel' : '')} data-card={o.id}
                     onPointerDown={(e) => startDrag(e, o.id, i)} onDragStart={(e) => e.preventDefault()}>
                     <Link to={'/don/' + o.id} className="kb-link">
                       <span className="kb-code">{o.code}</span>

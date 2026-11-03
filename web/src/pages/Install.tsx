@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { BUILD, applyUpdate, isIOSNotSafari, platform, useInstall, useUpdate } from '../lib/pwa';
 import { toast } from '../components/ui';
 import { BOT_NAME, ZaloLink } from '../components/ZaloLink';
+import { ShortcutTable } from '../components/Shortcuts';
 import ProcessGuide from '../components/ProcessGuide';
 
 const URL_APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
@@ -26,7 +27,8 @@ export default function Install() {
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-zalo')?.scrollIntoView({ behavior: 'smooth' }); }}>2. Thông báo Zalo</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-qt')?.scrollIntoView({ behavior: 'smooth' }); }}>4. Quy trình</a>
-        <a className="btn sm primary" href="#/quy-trinh">5. Tài liệu quy trình BASE</a></nav>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-kb')?.scrollIntoView({ behavior: 'smooth' }); }}>5. Phím tắt</a>
+        <a className="btn sm primary" href="#/quy-trinh">6. Tài liệu quy trình BASE</a></nav>
       <div><h2 id="h-install" style={{ marginTop: 8 }}>1. Cài app lên màn hình chính</h2>
         <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ.</p></div>
 
@@ -113,6 +115,13 @@ export default function Install() {
         <p className="muted" style={{ margin: 0 }}>Bấm một quy trình rồi bấm từng bước để xem ai làm, nhập gì, ai duyệt và làm ở đâu trong app. Dùng để đối chiếu khi chạy đơn.</p>
         <ProcessGuide />
         <div className="row"><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình đầy đủ (sơ đồ, bảng bước, 10 form)</a></div>
+      </section>
+      <section className="card" aria-labelledby="h-kb" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h2 id="h-kb">5. Phím tắt (máy tính)</h2>
+        <p className="muted" style={{ margin: 0 }}>Dùng bàn phím để làm nhanh hơn. Bấm <kbd>?</kbd> ở bất kỳ đâu để mở bảng này; <kbd>Ctrl</kbd><kbd>K</kbd> để tìm và mở đơn ngay (gõ không dấu cũng được, ví dụ “binh duong 003”).
+          Phím tắt không chạy khi đang gõ trong ô nhập. Trên Mac dùng <kbd>⌘</kbd> thay <kbd>Ctrl</kbd>.</p>
+        <ShortcutTable />
+        <div className="msg info"><Icon name="alert" size={18} /><span><b>Ví dụ làm nhanh trên Kanban:</b> <kbd>G</kbd><kbd>B</kbd> mở Bảng → <kbd>3</kbd> chọn QT2 → <kbd>J</kbd>/<kbd>L</kbd> chọn đơn → <kbd>M</kbd> mở hộp chuyển bước (tick checklist) hoặc <kbd>R</kbd> trả về → <kbd>Enter</kbd> mở đơn → <kbd>4</kbd> sang thẻ QT2 của đơn.</span></div>
       </section>
     </>
   );
