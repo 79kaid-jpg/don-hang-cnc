@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { BUILD, applyUpdate, isIOSNotSafari, platform, useInstall, useUpdate } from '../lib/pwa';
 import { toast } from '../components/ui';
 import { BOT_NAME, ZaloLink } from '../components/ZaloLink';
+import ProcessGuide from '../components/ProcessGuide';
 
 const URL_APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
 
@@ -23,7 +24,8 @@ export default function Install() {
         <p className="muted">Cài app lên màn hình chính, nhận thông báo duyệt qua Zalo và cập nhật app.</p></div></div>
       <nav className="row" aria-label="Mục hướng dẫn"><a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-install')?.scrollIntoView({ behavior: 'smooth' }); }}>1. Cài app</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-zalo')?.scrollIntoView({ behavior: 'smooth' }); }}>2. Thông báo Zalo</a>
-        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a></nav>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-qt')?.scrollIntoView({ behavior: 'smooth' }); }}>4. Quy trình</a></nav>
       <div><h2 id="h-install" style={{ marginTop: 8 }}>1. Cài app lên màn hình chính</h2>
         <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ.</p></div>
 
@@ -104,6 +106,11 @@ export default function Install() {
         <div className="row"><span className="small muted">Phiên bản hiện tại: <b>{BUILD}</b></span>
           {update ? <button className="btn sm primary" onClick={applyUpdate}><Icon name="refresh" size={16} />Cập nhật ngay</button>
             : <button className="btn sm" onClick={() => location.reload()}><Icon name="refresh" size={16} />Tải lại</button>}</div>
+      </section>
+      <section className="card" aria-labelledby="h-qt" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h2 id="h-qt">4. Quy trình đơn hàng</h2>
+        <p className="muted" style={{ margin: 0 }}>Bấm một quy trình rồi bấm từng bước để xem ai làm, nhập gì, ai duyệt và làm ở đâu trong app. Dùng để đối chiếu khi chạy đơn.</p>
+        <ProcessGuide />
       </section>
     </>
   );
