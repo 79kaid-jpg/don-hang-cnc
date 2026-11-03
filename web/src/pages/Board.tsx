@@ -2,21 +2,39 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sb, type Approval, type Customer, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { date, num } from '../lib/format';
+import { BRANCH, date, num } from '../lib/format';
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
 
-/** Cột Kanban = trạng thái đơn. Kéo-thả cố ý không có: chuyển cột phải qua kiểm tra nghiệp vụ (ĐK1, duyệt, ĐK2),
- *  nên mỗi thẻ có nút "Làm bước tiếp" mở đúng tab cần thao tác. */
-const COLS: { key: string; title: string; group: string; tab: string; next: string; roles: string[] }[] = [
-  { key: 'tiep_nhan', title: 'Tiếp nhận', group: 'QT0', tab: 'F1', next: 'Bắt đầu bóc tách', roles: ['kinh_doanh', 'ky_thuat'] },
-  { key: 'boc_tach', title: 'Bóc tách F1', group: 'QT0', tab: 'F1', next: 'Lập F1, gửi kiểm tra', roles: ['ky_thuat', 'kinh_doanh'] },
-  { key: 'kiem_tra_f1', title: 'Kiểm tra F1', group: 'QT0', tab: 'F1', next: 'Kiểm tra F1 (ĐK1)', roles: ['kiem_tra_f1'] },
-  { key: 'xndh', title: 'Lập XNĐH', group: 'QT1', tab: 'F2', next: 'Nhập giá, gửi duyệt', roles: ['admin_cnc', 'kinh_doanh'] },
-  { key: 'cho_duyet_xndh', title: 'Chờ duyệt XNĐH', group: 'QT1', tab: 'F2', next: 'Duyệt XNĐH', roles: [] },
-  { key: 'cho_khach', title: 'Chờ khách xác nhận', group: 'QT1', tab: 'F2', next: 'Ghi KH1 → KH2, PDF ký', roles: ['admin_cnc', 'kinh_doanh'] },
-  { key: 'san_xuat', title: 'Sản xuất', group: 'QT2–QT3', tab: 'QT3', next: 'Xem NVL & gia công', roles: ['ke_hoach', 'mua_hang', 'kho_qc', 'admin_cnc'] },
-  { key: 'giao_hang', title: 'Giao hàng', group: 'QT4', tab: 'QT3', next: 'Xem hồ sơ', roles: [] }
+/** Bảng Kanban theo từng quy trình: mỗi quy trình một bảng, cột = bước của quy trình đó (giống sơ đồ).
+ *  Đơn nằm ở bước theo trạng thái của đúng nhánh: QT0–QT1 theo trạng thái đơn, QT2 theo nhánh NVL, QT3 theo nhánh gia công.
+ *  Không kéo-thả: chuyển bước phải qua điều kiện (ĐK) và duyệt, nên mỗi thẻ có nút "Làm bước tiếp". */
+type Col = { key: string; title: string; tab: string; next: string; roles: string[]; gate?: string };
+type Proc = { key: string; title: string; sub: string; field: 'status' | 'nvl_status' | 'gc_status' | 'gh_status'; cols: Col[] };
+const PROCS: Proc[] = [
+  { key: 'qt01', title: 'QT0–QT1', sub: 'Tiếp nhận & xác nhận đơn', field: 'status', cols: [
+    { key: 'tiep_nhan', title: 'Tiếp nhận', tab: 'F1', next: 'Bắt đầu bóc tách', roles: ['kinh_doanh', 'ky_thuat'] },
+    { key: 'boc_tach', title: 'Bóc tách F1', tab: 'F1', next: 'Lập F1, gửi kiểm tra', roles: ['ky_thuat', 'kinh_doanh'] },
+    { key: 'kiem_tra_f1', title: 'Kiểm tra F1', tab: 'F1', next: 'Kiểm tra F1', roles: ['kiem_tra_f1'], gate: 'ĐK1 F1 đạt' },
+    { key: 'xndh', title: 'Lập XNĐH (F2)', tab: 'F2', next: 'Nhập giá, gửi duyệt', roles: ['admin_cnc', 'kinh_doanh'] },
+    { key: 'cho_duyet_xndh', title: 'Duyệt XNĐH', tab: 'F2', next: 'Duyệt XNĐH', roles: [] },
+    { key: 'cho_khach', title: 'KH1 → KH2 xác nhận', tab: 'F2', next: 'Ghi KH1 → KH2, PDF ký', roles: ['admin_cnc', 'kinh_doanh'], gate: 'ĐK2 XNĐH đã ký' }] },
+  { key: 'qt2', title: 'QT2', sub: 'Chuẩn bị NVL', field: 'nvl_status', cols: [
+    { key: 'du_toan', title: 'Dự toán NVL (F3)', tab: 'QT2', next: 'Lập F3, gửi duyệt', roles: ['ke_hoach'] },
+    { key: 'cho_duyet_f3', title: 'Dung duyệt F3', tab: 'QT2', next: 'Duyệt F3', roles: [] },
+    { key: 'mua_hang', title: 'Mua hàng (PO)', tab: 'QT2', next: 'Lập PO, gửi duyệt', roles: ['mua_hang'] },
+    { key: 'cho_duyet_po', title: 'Duyệt PO', tab: 'QT2', next: 'Duyệt PO', roles: [] },
+    { key: 'nhap_kho', title: 'Nhập kho + QC (F4)', tab: 'QT2', next: 'Nhập kho, QC NVL', roles: ['kho_qc'], gate: 'ĐK3 F4 đạt' },
+    { key: 'san_sang', title: 'NVL sẵn sàng', tab: 'QT3', next: 'Xem QT3', roles: [] }] },
+  { key: 'qt3', title: 'QT3', sub: 'Lệnh gia công', field: 'gc_status', cols: [
+    { key: 'lap_lgc', title: 'Lập LGC (F5)', tab: 'QT3', next: 'Lập F5, gửi duyệt', roles: ['admin_cnc'] },
+    { key: 'cho_duyet_lgc', title: 'Duyệt LGC 4 cấp', tab: 'QT3', next: 'Duyệt LGC', roles: [] },
+    { key: 'cho_nvl', title: 'Chờ NVL', tab: 'QT2', next: 'Xem QT2', roles: [], gate: 'ĐK4 LGC duyệt + F4 đạt' },
+    { key: 'ban_giao', title: 'Bàn giao NVL (F6)', tab: 'QT3', next: 'Bàn giao F6', roles: ['admin_cnc'] },
+    { key: 'gia_cong', title: 'Gia công + QC TP', tab: 'QT3', next: 'QC thành phẩm', roles: ['kho_qc', 'admin_cnc'], gate: 'ĐK5 QC thành phẩm đạt' },
+    { key: 'qc_dat', title: 'QC đạt → giao', tab: 'QT3', next: 'Xem hồ sơ', roles: [] }] },
+  { key: 'qt4', title: 'QT4', sub: 'Giao hàng', field: 'gh_status', cols: [
+    { key: 'thong_bao', title: 'Thông báo giao', tab: 'QT3', next: 'Xem hồ sơ', roles: [] }] }
 ];
 
 type Agg = { qty: number; kg: number };
@@ -29,7 +47,11 @@ export default function Board() {
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(''); const [mine, setMine] = useState(false);
-  const [col, setCol] = useState('tiep_nhan'); // cột đang xem trên điện thoại
+  const [qt, setQt] = useState(() => { try { return localStorage.getItem('kb-qt') ?? 'qt01'; } catch { return 'qt01'; } });
+  const P = PROCS.find((x) => x.key === qt) ?? PROCS[0]; const COLS = P.cols;
+  const [col, setCol] = useState(''); // cột đang xem trên điện thoại
+  const pick = (k: string) => { setQt(k); setCol(''); try { localStorage.setItem('kb-qt', k); } catch { /* */ } };
+  const curCol = col || COLS[0].key;
 
   useEffect(() => {
     sb.from('orders').select('*').not('status', 'in', '(hoan_tat,huy)').order('due_date', { nullsFirst: false })
@@ -48,7 +70,7 @@ export default function Board() {
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const cards = useMemo(() => (orders ?? []).filter((o) => (o.code + ' ' + o.project).toLowerCase().includes(q.toLowerCase())).map((o) => {
-    const c = COLS.find((x) => x.key === o.status)!;
+    const c = COLS.find((x) => x.key === o[P.field])!;
     const pend = appr.filter((a) => a.order_id === o.id && a.status === 'cho');
     const lastF2 = appr.filter((a) => a.order_id === o.id && a.doc_type === 'F2').at(-1);
     const myTurn = pend.some((a) => a.approver_id === me?.id) || (!!c && c.roles.some(can));
@@ -56,14 +78,15 @@ export default function Board() {
     const due = o.due_date ? new Date(o.due_date) : null;
     const days = due ? Math.round((due.getTime() - today.getTime()) / 864e5) : null;
     return { o, c, pend, myTurn, lateAppr, days, rejected: o.status === 'xndh' && lastF2?.status === 'tu_choi', a: agg[o.id] };
-  }).filter((x) => x.c && (!mine || x.myTurn)), [orders, appr, agg, q, mine, me, can]); // eslint-disable-line
+  }).filter((x) => x.c && (!mine || x.myTurn)), [orders, appr, agg, q, mine, me, can, P]); // eslint-disable-line
 
-  const byCol = (k: string) => cards.filter((x) => x.o.status === k);
+  const byCol = (k: string) => cards.filter((x) => x.o[P.field] === k);
+  const countIn = (pr: Proc) => (orders ?? []).filter((o) => pr.cols.some((c) => c.key === o[pr.field])).length;
 
   return (
     <>
       <div className="page-head">
-        <div><h1>Bảng Kanban</h1><p className="muted">Mỗi cột là một bước. Bấm thẻ để mở hồ sơ, hoặc nút vàng để làm bước tiếp.</p></div>
+        <div><h1>Bảng Kanban</h1><p className="muted">Chọn quy trình. Mỗi cột là một bước; vạch đỏ là điều kiện chuyển (ĐK).</p></div>
         <div className="row">
           <Link className="btn sm" to="/don"><Icon name="list" size={18} />Dạng danh sách</Link>
           {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn sm primary" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn</Link>}
@@ -74,10 +97,17 @@ export default function Board() {
         <button className="pill-toggle" aria-pressed={mine} onClick={() => setMine(!mine)}>{mine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
       </div>
 
+      <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
+        {PROCS.map((pr) => (
+          <button key={pr.key} role="tab" aria-selected={qt === pr.key} className={qt === pr.key ? 'on' : ''} onClick={() => pick(pr.key)}>
+            <b>{pr.title}</b><span>{pr.sub}</span><span className="kb-count">{countIn(pr)}</span>
+          </button>))}
+      </div>
+
       {/* Điện thoại: chọn một cột, không cuộn ngang cả trang */}
       <div className="kb-picker" role="tablist" aria-label="Chọn bước">
         {COLS.map((c) => (
-          <button key={c.key} role="tab" aria-selected={col === c.key} className={col === c.key ? 'on' : ''} onClick={() => setCol(c.key)}>
+          <button key={c.key} role="tab" aria-selected={curCol === c.key} className={curCol === c.key ? 'on' : ''} onClick={() => setCol(c.key)}>
             {c.title} <span className="kb-count">{byCol(c.key).length}</span>
           </button>))}
       </div>
@@ -85,11 +115,10 @@ export default function Board() {
       <div className="kb-board">
         {COLS.map((c, i) => {
           const list = byCol(c.key);
-          const firstOfGroup = i === 0 || COLS[i - 1].group !== c.group;
           return (
-            <section key={c.key} className={'kb-col' + (col === c.key ? ' show' : '')} aria-label={c.title}>
+            <section key={c.key} className={'kb-col' + (curCol === c.key ? ' show' : '') + (c.gate ? ' gated' : '')} aria-label={c.title}>
               <header className="kb-head">
-                <span className="kb-group" style={{ visibility: firstOfGroup ? 'visible' : 'hidden' }}>{c.group}</span>
+                <span className="kb-group">{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">
@@ -111,11 +140,13 @@ export default function Board() {
                       {rejected && <span className="chip bad">XNĐH bị từ chối</span>}
                       {pend.map((p) => <span key={p.id} className={'chip ' + (lateAppr ? 'bad' : 'wait')}>
                         {lateAppr ? <><Icon name="alert" size={13} />Quá hạn · </> : <><Icon name="clock" size={13} />Chờ </>}{people[p.approver_id ?? '']?.full_name ?? 'người duyệt'}</span>)}
-                      {o.status === 'san_xuat' && <><span className="chip wait">NVL: dự toán</span><span className="chip wait">GC: lập LGC</span></>}
+                      {P.field !== 'nvl_status' && o.status === 'san_xuat' && <span className="chip idle">QT2: {BRANCH[o.nvl_status]}</span>}
+                      {P.field !== 'gc_status' && o.status === 'san_xuat' && <span className="chip idle">QT3: {BRANCH[o.gc_status]}</span>}
                     </div>
                     {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}
                   </article>))}
               </div>
+              {c.gate && <div className="kb-gate" title="Điều kiện để sang bước sau"><Icon name="alert" size={14} />{c.gate}</div>}
             </section>);
         })}
       </div>
