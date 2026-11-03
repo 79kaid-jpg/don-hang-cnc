@@ -14,7 +14,7 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'LS Lịch sử']] as const;
 
 export default function OrderDetail() {
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams();
@@ -68,7 +68,7 @@ export default function OrderDetail() {
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="row between">
-          <div><h1>{o.code}</h1><div className="muted">{chain} · {o.project}{o.due_date ? ' · giao ' + date(o.due_date) : ''}</div></div>
+          <div><h1>{o.code}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
           <span className="row" style={{ gap: 8 }}><span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
             <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link></span>
         </div>
@@ -81,9 +81,9 @@ export default function OrderDetail() {
           <div><div className="small muted">QT3 · Giao hàng</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>
         </div>
       </div>
-      <div className="tabs" role="tablist">
-        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setSp({ tab: k })}>{t}</button>)}
-      </div>
+      <div className="qt-group od-group"><div className="qt-tabs" role="tablist">
+        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
+      </div><div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {tab === 'F1' && <F1 {...props} tot={tot} />}
@@ -97,6 +97,7 @@ export default function OrderDetail() {
           {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
         </div>
       )}
+      </div></div>
     </>
   );
 }

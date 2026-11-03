@@ -332,3 +332,11 @@ textarea{resize:vertical}
 .qt-panel .kb-group{color:#8A6D2A}
 @media (prefers-reduced-motion:reduce){.qt-panel{animation:none}}
 @media (max-width:900px){.qt-group .qt-tabs{overflow-x:auto;scrollbar-width:none;padding:0 14px}.qt-group .qt-tabs button{flex:none}.qt-panel{padding:10px}}
+
+/* Chi tiết đơn: thẻ phiếu nối liền nội dung */
+.od-group .qt-tabs button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:54px;text-align:left;white-space:nowrap}
+.od-group .qt-tabs button b{font-size:14px}
+.od-group .qt-tabs button span{font-size:12.5px}
+.od-panel{gap:14px}
+.od-panel>.card,.od-panel .card{box-shadow:none;border:1px solid #EDE3CC;background:#fff}
+.od-panel .card .card{background:var(--soft)}
