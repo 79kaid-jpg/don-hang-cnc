@@ -65,7 +65,8 @@ export default function OrderDetail() {
     const k = (e: KeyboardEvent) => {
       if (!o || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
       const key = e.key.toLowerCase(); const n = Number(key);
-      if (n >= 1 && n <= TABS.length) { e.preventDefault(); setSp({ tab: TABS[n - 1][0] }); }
+      const vis = TABS.filter(([t]) => ['F0', 'F1', 'F7', 'LS'].includes(t) || (t === 'F2' ? !['tiep_nhan', 'boc_tach', 'kiem_tra_f1'].includes(o.status) : t === 'GH' ? o.gh_status !== 'chua_giao' : ['san_xuat', 'giao_hang', 'hoan_tat'].includes(o.status)));
+      if (n >= 1 && n <= vis.length) { e.preventDefault(); setSp({ tab: vis[n - 1][0] }); }
       else if (key === 's') { e.preventDefault(); navOD('/so-do?don=' + o.id); }
       else if (key === 'b') { e.preventDefault(); navOD('/bang'); }
       else if (key === 'c') { e.preventDefault();
@@ -80,6 +81,15 @@ export default function OrderDetail() {
   const tot = lines.reduce((s, l) => ({ qty: s.qty + l.qty, m2: s.m2 + Number(l.area_m2), kg: s.kg + Number(l.weight_kg) }), { qty: 0, m2: 0, kg: 0 });
   const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');
   const props = { o, lines, run, can, load, setErr, setOk };
+  // Chỉ hiện quy trình / phiếu đơn đã tới
+  function reached(k: string) {
+    const st = o!.status;
+    if (k === 'F2') return !['tiep_nhan', 'boc_tach', 'kiem_tra_f1'].includes(st);
+    if (k === 'QT2' || k === 'QT3') return ['san_xuat', 'giao_hang', 'hoan_tat'].includes(st);
+    if (k === 'GH') return o!.gh_status !== 'chua_giao' || ['giao_hang', 'hoan_tat'].includes(st);
+    return true;
+  }
+  const vt = reached(tab) ? tab : 'F1';
 
   return (
     <>
@@ -97,22 +107,22 @@ export default function OrderDetail() {
             <StepPeople orderId={o.id} step={k} people={people} /><ChecklistBox orderId={o.id} step={k} compact /></details>); })}
         <div className="grid2 od-status">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
-          <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
-          <div><div className="small muted">QT2 · Lệnh gia công</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div>
-          <div><div className="small muted">QT3 · Giao hàng</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>
+          {reached('QT2') && <><div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
+          <div><div className="small muted">QT2 · Lệnh gia công</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div></>}
+          {reached('GH') && <div><div className="small muted">QT3 · Giao hàng</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>}
         </div>
       </div>
       <div className="qt-group od-group"><div className="qt-tabs" role="tablist">
-        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
+        {TABS.filter(([k]) => reached(k)).map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={vt === k} className={vt === k ? 'on' : ''} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
       </div><div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
-      {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
-      {tab === 'F1' && <F1 {...props} tot={tot} />}
-      {tab === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
+      {vt === 'F0' && <F0 {...props} cust={cust} people={people} />}
+      {vt === 'F1' && <F1 {...props} tot={tot} />}
+      {vt === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
         steps={steps.filter((s) => s.doc_type === 'F2')} people={people} meId={me!.id} />}
-      {(tab === 'QT2' || tab === 'QT3' || tab === 'F7' || tab === 'GH') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
-        return tab === 'F7' ? <F7 {...q} /> : tab === 'GH' ? <QT3Giao {...q} /> : <QT2Merged {...q} />; })()}
-      {tab === 'LS' && (
+      {(vt === 'QT2' || vt === 'QT3' || vt === 'F7' || vt === 'GH') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
+        return vt === 'F7' ? <F7 {...q} /> : vt === 'GH' ? <QT3Giao {...q} /> : <QT2Merged {...q} />; })()}
+      {vt === 'LS' && (
         <><StepTimeline orderId={o.id} people={people} /><div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
           {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
