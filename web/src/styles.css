@@ -312,16 +312,23 @@ textarea{resize:vertical}
 .fm-search-list button.on{background:var(--soft)}
 .fm-node.done,.fm-node.cur{cursor:pointer}
 
-/* Thẻ quy trình nối liền với vùng các bước (kiểu thẻ hồ sơ) */
-.qt-group{display:flex;flex-direction:column}
-.qt-group .qt-tabs{gap:6px;padding:0 0 0 2px;overflow:visible;flex-wrap:wrap;position:relative;z-index:2}
-.qt-group .qt-tabs button{border-radius:12px 12px 0 0;border:1.5px solid var(--line2);border-bottom:0;background:#F3EEE2;margin-bottom:0;min-height:58px;transition:background .15s,border-color .15s}
-.qt-group .qt-tabs button span:not(.kb-count){color:var(--muted)}
-.qt-group .qt-tabs button.on{background:#FFFCF4;border-color:var(--gold);border-width:2px;color:var(--ink);margin-bottom:-2px;padding-bottom:10px;box-shadow:0 -3px 10px rgba(120,90,20,.08)}
+/* Thẻ quy trình nối liền với vùng các bước – kiểu thẻ trình duyệt (Chrome): góc cong lõm nối mượt xuống khung */
+.qt-group{--qp:#FFFDF6;display:flex;flex-direction:column;}
+.qt-group .qt-tabs{gap:2px;padding:0 16px;overflow:visible;flex-wrap:nowrap;position:relative;z-index:2;align-items:flex-end}
+.qt-group .qt-tabs button{position:relative;border:0;border-radius:14px 14px 0 0;background:transparent;min-height:58px;padding:9px 16px 10px;transition:background-color .22s ease,color .22s ease,box-shadow .22s ease}
+.qt-group .qt-tabs button span:not(.kb-count){color:var(--muted);transition:color .22s ease}
+.qt-group .qt-tabs button:not(.on)::after{content:'';position:absolute;right:-1px;top:16px;bottom:16px;width:1px;background:#E2D3AE}
+.qt-group .qt-tabs button:not(.on):hover{background:rgba(255,248,234,.65)}
+.qt-group .qt-tabs button.on{background:var(--qp);color:var(--ink);box-shadow:inset 0 3px 0 var(--gold);z-index:1}
 .qt-group .qt-tabs button.on span:not(.kb-count){color:#7A6A48}
 .qt-group .qt-tabs button.on .kb-count{background:var(--gold);color:#fff}
-.qt-group .qt-tabs button:not(.on):hover{background:#FBF6EA;border-color:#C9B27A}
-.qt-panel{position:relative;z-index:1;background:#FFFCF4;border:2px solid var(--gold);border-radius:0 14px 14px 14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 6px 18px rgba(120,90,20,.08)}
-.qt-panel .kb-col{background:#F4EEE0}
+/* góc cong lõm hai bên chân thẻ đang chọn */
+.qt-group .qt-tabs button.on::before,.qt-group .qt-tabs button.on::after{content:'';position:absolute;bottom:0;width:14px;height:14px;pointer-events:none}
+.qt-group .qt-tabs button.on::before{left:-14px;background:radial-gradient(circle at 0 0,transparent 13.5px,var(--qp) 14px)}
+.qt-group .qt-tabs button.on::after{right:-14px;background:radial-gradient(circle at 100% 0,transparent 13.5px,var(--qp) 14px)}
+.qt-panel{position:relative;z-index:1;background:var(--qp);border-radius:16px;box-shadow:0 10px 24px -12px rgba(120,90,20,.25);padding:14px;display:flex;flex-direction:column;gap:10px;animation:qtIn .22s ease-out}
+@keyframes qtIn{from{opacity:.4;transform:translateY(4px)}}
+.qt-panel .kb-col{background:#F3ECDC}
 .qt-panel .kb-group{color:#8A6D2A}
-@media (max-width:900px){.qt-group .qt-tabs{flex-wrap:nowrap;overflow-x:auto}.qt-panel{padding:10px;border-radius:0 12px 12px 12px}}
+@media (prefers-reduced-motion:reduce){.qt-panel{animation:none}}
+@media (max-width:900px){.qt-group .qt-tabs{overflow-x:auto;scrollbar-width:none;padding:0 14px}.qt-group .qt-tabs button{flex:none}.qt-panel{padding:10px}}

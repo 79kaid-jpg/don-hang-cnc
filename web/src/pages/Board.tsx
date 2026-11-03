@@ -107,7 +107,7 @@ export default function Board() {
       </div>
 
       {/* Điện thoại: chọn một cột, không cuộn ngang cả trang */}
-      <div className="qt-panel">
+      <div className="qt-panel" key={qt}>
       <div className="kb-picker" role="tablist" aria-label="Chọn bước">
         {COLS.map((c) => (
           <button key={c.key} role="tab" aria-selected={curCol === c.key} className={curCol === c.key ? 'on' : ''} onClick={() => setCol(c.key)}>
