@@ -13,10 +13,12 @@ import { Skeleton } from '../components/ui';
 type Col = { key: string; title: string; tab: string; next: string; roles: string[]; gate?: string };
 type Proc = { key: string; title: string; sub: string; field: 'status' | 'nvl_status' | 'gc_status' | 'gh_status' | 'step'; cols: Col[] };
 const PROCS: Proc[] = [
-  { key: 'qt01', title: 'QT0–QT1', sub: 'Tiếp nhận & xác nhận đơn', field: 'status', cols: [
+  { key: 'qt0', title: 'QT0', sub: 'Tiếp nhận & bóc tách', field: 'status', cols: [
     { key: 'tiep_nhan', title: 'Tiếp nhận', tab: 'F1', next: 'Bắt đầu bóc tách', roles: ['kinh_doanh', 'ky_thuat'] },
     { key: 'boc_tach', title: 'Bóc tách F1', tab: 'F1', next: 'Lập F1, gửi kiểm tra', roles: ['ky_thuat', 'kinh_doanh'] },
     { key: 'kiem_tra_f1', title: 'Kiểm tra F1', tab: 'F1', next: 'Kiểm tra F1', roles: ['kiem_tra_f1'], gate: 'ĐK1 F1 đạt' },
+    ] },
+  { key: 'qt1', title: 'QT1', sub: 'Xác nhận đơn hàng', field: 'status', cols: [
     { key: 'xndh', title: 'Lập XNĐH (F2)', tab: 'F2', next: 'Nhập giá, gửi duyệt', roles: ['admin_cnc', 'kinh_doanh'] },
     { key: 'cho_duyet_xndh', title: 'Duyệt XNĐH', tab: 'F2', next: 'Duyệt XNĐH', roles: [] },
     { key: 'cho_khach', title: 'KH1 → KH2 xác nhận', tab: 'F2', next: 'Ghi KH1 → KH2, PDF ký', roles: ['admin_cnc', 'kinh_doanh'], gate: 'ĐK2 XNĐH đã ký' }] },
@@ -45,7 +47,7 @@ export default function Board() {
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(''); const [mine, setMine] = useState(false);
-  const [qt, setQt] = useState(() => { try { return localStorage.getItem('kb-qt') ?? 'qt01'; } catch { return 'qt01'; } });
+  const [qt, setQt] = useState(() => { try { return localStorage.getItem('kb-qt') ?? 'qt0'; } catch { return 'qt0'; } });
   const P = PROCS.find((x) => x.key === qt) ?? PROCS[0]; const COLS = P.cols;
   const [col, setCol] = useState(''); // cột đang xem trên điện thoại
   const pick = (k: string) => { setQt(k); setCol(''); try { localStorage.setItem('kb-qt', k); } catch { /* */ } };
