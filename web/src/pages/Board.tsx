@@ -98,6 +98,7 @@ export default function Board() {
         <button className="pill-toggle" aria-pressed={mine} onClick={() => setMine(!mine)}>{mine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
       </div>
 
+      <div className="qt-group">
       <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
         {PROCS.map((pr) => (
           <button key={pr.key} role="tab" aria-selected={qt === pr.key} className={qt === pr.key ? 'on' : ''} onClick={() => pick(pr.key)}>
@@ -106,6 +107,7 @@ export default function Board() {
       </div>
 
       {/* Điện thoại: chọn một cột, không cuộn ngang cả trang */}
+      <div className="qt-panel">
       <div className="kb-picker" role="tablist" aria-label="Chọn bước">
         {COLS.map((c) => (
           <button key={c.key} role="tab" aria-selected={curCol === c.key} className={curCol === c.key ? 'on' : ''} onClick={() => setCol(c.key)}>
@@ -150,6 +152,8 @@ export default function Board() {
               {c.gate && <div className="kb-gate" title="Điều kiện để sang bước sau"><Icon name="alert" size={14} />{c.gate}</div>}
             </section>);
         })}
+      </div>
+      </div>
       </div>
     </>
   );

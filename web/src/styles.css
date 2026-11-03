@@ -311,3 +311,17 @@ textarea{resize:vertical}
 .fm-search-list button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:none;font:inherit;text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;min-height:44px}
 .fm-search-list button.on{background:var(--soft)}
 .fm-node.done,.fm-node.cur{cursor:pointer}
+
+/* Thẻ quy trình nối liền với vùng các bước (kiểu thẻ hồ sơ) */
+.qt-group{display:flex;flex-direction:column}
+.qt-group .qt-tabs{gap:6px;padding:0 0 0 2px;overflow:visible;flex-wrap:wrap;position:relative;z-index:2}
+.qt-group .qt-tabs button{border-radius:12px 12px 0 0;border:1.5px solid var(--line2);border-bottom:0;background:#F3EEE2;margin-bottom:0;min-height:58px;transition:background .15s,border-color .15s}
+.qt-group .qt-tabs button span:not(.kb-count){color:var(--muted)}
+.qt-group .qt-tabs button.on{background:#FFFCF4;border-color:var(--gold);border-width:2px;color:var(--ink);margin-bottom:-2px;padding-bottom:10px;box-shadow:0 -3px 10px rgba(120,90,20,.08)}
+.qt-group .qt-tabs button.on span:not(.kb-count){color:#7A6A48}
+.qt-group .qt-tabs button.on .kb-count{background:var(--gold);color:#fff}
+.qt-group .qt-tabs button:not(.on):hover{background:#FBF6EA;border-color:#C9B27A}
+.qt-panel{position:relative;z-index:1;background:#FFFCF4;border:2px solid var(--gold);border-radius:0 14px 14px 14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 6px 18px rgba(120,90,20,.08)}
+.qt-panel .kb-col{background:#F4EEE0}
+.qt-panel .kb-group{color:#8A6D2A}
+@media (max-width:900px){.qt-group .qt-tabs{flex-wrap:nowrap;overflow-x:auto}.qt-panel{padding:10px;border-radius:0 12px 12px 12px}}
