@@ -95,6 +95,9 @@ export default function FlowMap() {
     if ((k === 'q2b3' || k === 'q2b4') && i < ci && !poDone.has(O.id)) return 'skip';
     return i < ci ? 'done' : i === ci ? 'cur' : 'todo';
   };
+  useEffect(() => { const h = (e: KeyboardEvent) => e.key === 'Escape' && setSel(null); window.addEventListener('keydown', h);
+    const d = (e: MouseEvent) => { const t = e.target as Element; if (!t.closest?.('.fm-pop') && !t.closest?.('.fm-node')) setSel(null); };
+    document.addEventListener('mousedown', d); return () => { window.removeEventListener('keydown', h); document.removeEventListener('mousedown', d); }; }, []);
   const pickOrder = (id: string) => { setSel(null); setSp(id ? { don: id } : {}); };
   const oPend = O ? pend.filter((a) => a.order_id === O.id) : [];
 
@@ -135,6 +138,7 @@ export default function FlowMap() {
 
       {/* Sơ đồ (máy tính; điện thoại bấm "Xem sơ đồ") */}
       <div className={'fm-map card flush' + (showMap ? ' force' : '')}>
+        <div className="fm-inner">
         <svg viewBox={`0 0 ${vbW} ${vbH}`} role="img" aria-label="Sơ đồ quy trình đơn hàng với số đơn ở từng bước" className="fm-svg">
           <defs><marker id="fm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9A8F7A" /></marker>
             <marker id="fm-arr-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2C5F8A" /></marker></defs>
@@ -162,11 +166,31 @@ export default function FlowMap() {
                 {n.k === 'f7' && nf7 > 0 && <g><rect x={x + W - 34} y={y - 10} width="40" height="22" rx="11" className="fm-count f7c" /><text x={x + W - 14} y={y + 5} textAnchor="middle" className="fm-count-t">{nf7}</text></g>}
               </g>); })}
         </svg>
+        {sel && !O && (() => { const n = byK[sel]; const { x, y } = pos(n); const right = n.col < 4;
+          const list = sel === 'f7' ? orders.filter((o) => f7[o.id]) : nodeOrders;
+          return (
+            <div className="fm-pop" role="dialog" aria-label={'Các đơn ở bước ' + n.t}
+              style={{ top: `${Math.min(y / vbH * 100, 62)}%`, left: right ? `${(x + W + 10) / vbW * 100}%` : `${(x - 10) / vbW * 100}%`, transform: right ? 'none' : 'translateX(-100%)' }}>
+              <div className="fm-pop-head"><b>{n.t}</b><span className="chip idle">{list.length} đơn</span>
+                <button className="btn sm icon-btn" aria-label="Đóng" onClick={() => setSel(null)}><Icon name="x" size={16} /></button></div>
+              <ul className="fm-pop-list">
+                {list.map((o) => { const pa = pend.filter((a) => a.order_id === o.id);
+                  return <li key={o.id}><div className="fm-pop-row">
+                    <button className="fm-pop-main" onClick={() => pickOrder(o.id)} title="Xem đường đi trên sơ đồ"><b>{o.code}</b><span className="small muted">{o.project}</span></button>
+                    <Link className="btn sm" to={'/don/' + o.id + '?tab=' + TAB[sel]} aria-label={'Mở đơn ' + o.code}><Icon name="arrow" size={16} /></Link></div>
+                    {(pa.length > 0 || f7[o.id]) && <div className="fm-pop-tags">
+                      {pa.map((a) => <span key={a.id} className={'chip ' + (a.late ? 'bad' : 'wait')}><Icon name={a.late ? 'alert' : 'clock'} size={13} />{a.late ? 'Quá hạn · ' : 'Chờ '}{a.who} · cấp {a.step_no}</span>)}
+                      {f7[o.id] ? <span className="chip bad">F7 · {f7[o.id]}</span> : null}</div>}</li>; })}
+                {list.length === 0 && <li className="muted small" style={{ padding: '8px 4px' }}>Không có đơn ở bước này.</li>}
+              </ul>
+              <div className="small muted">Bấm mã đơn để xem đường đi · mũi tên để mở đơn</div>
+            </div>); })()}
+        </div>
       </div>
 
-      {/* Danh sách đơn ở bước đã chọn */}
+      {/* Danh sách đơn ở bước đã chọn (điện thoại) */}
       {sel && !O && (
-        <section className="card flush" aria-labelledby="fm-sel">
+        <section className="card flush fm-sel-list" aria-labelledby="fm-sel">
           <div className="card-head"><h2 id="fm-sel">{byK[sel].t}</h2><span className="chip idle">{sel === 'f7' ? Object.keys(f7).length : nodeOrders.length} đơn</span></div>
           <ul className="worklist">
             {(sel === 'f7' ? orders.filter((o) => f7[o.id]) : nodeOrders).map((o) => { const pa = pend.filter((a) => a.order_id === o.id);
