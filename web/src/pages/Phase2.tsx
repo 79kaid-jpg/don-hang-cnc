@@ -7,20 +7,25 @@ import { ApprovalChain } from '../components/Approvals';
 
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Common = {
+  shared?: Shared;
   o: Order; can: (r: string) => boolean; load: () => void; setErr: (s: string) => void; setOk: (s: string) => void;
   run: (fn: string, a: Record<string, unknown>, m: string) => Promise<void>;
   appr: Approval[]; steps: Step[]; people: Record<string, Profile>; meId: string;
 };
 type Row = Record<string, any>; // eslint-disable-line
 
-function useRows(o: Order, tables: string[]) {
+/** Sai số cho phép khi so khối lượng: 0,5% hoặc 5 kg, lấy số lớn hơn (khớp hàm _tol trong CSDL) */
+export const tol = (kg: number) => Math.max(Math.abs(kg) * 0.005, 5);
+type Shared = { d: Record<string, Row[]>; reload: () => Promise<void> };
+function useRows(o: Order, tables: string[], shared?: Shared) {
   const [d, setD] = useState<Record<string, Row[]>>({});
   const reload = useCallback(async () => {
+    if (shared) return shared.reload();
     const res = await Promise.all(tables.map((t) => sb.from(t).select('*').eq('order_id', o.id)));
     setD(Object.fromEntries(tables.map((t, i) => [t, (res[i].data as Row[]) ?? []])));
   }, [o]); // eslint-disable-line — o đổi sau mỗi lần tải lại đơn → nạp lại phiếu
-  useEffect(() => { reload(); }, [reload]);
-  return [d, reload] as const;
+  useEffect(() => { if (!shared) reload(); }, [reload]); // eslint-disable-line
+  return [shared ? shared.d : d, reload] as const;
 }
 
 const Box = ({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) => (
@@ -41,7 +46,7 @@ const toNum = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.'
 /* ───────────── QT2: F3 dự toán → PO → F4 nhập kho ───────────── */
 export function QT2(p: Common & { part?: 'f3' | 'buy' }) {
   const { o, can, run, setErr, setOk, load, part } = p;
-  const [d, reload] = useRows(o, ['material_plans', 'material_plan_lines', 'purchase_orders', 'receipts', 'receipt_lines']);
+  const [d, reload] = useRows(o, ['material_plans', 'material_plan_lines', 'purchase_orders', 'receipts', 'receipt_lines'], p.shared);
   const plan = d.material_plans?.[0]; const ml = d.material_plan_lines ?? [];
   const po = d.purchase_orders?.[0]; const rl = d.receipt_lines ?? []; const rc = d.receipts?.[0];
   const [waste, setWaste] = useState(''); const [poF, setPoF] = useState<Row>({}); const [recv, setRecv] = useState<Record<string, Row>>({});
@@ -60,7 +65,7 @@ export function QT2(p: Common & { part?: 'f3' | 'buy' }) {
   };
   const saveRecv = async () => {
     for (const l of rl) {
-      const r = recv[l.id]; if (!r) continue;
+      const r = recv[l.id] ?? (l.received_kg == null ? { received_kg: l.expected_kg } : null); if (!r) continue;
       const { error } = await sb.from('receipt_lines').update({ received_kg: toNum(numIn(r.received_kg)), bad_kg: toNum(numIn(r.bad_kg)) ?? 0 }).eq('id', l.id);
       if (error) { setErr(errText(error)); return; }
     }
@@ -110,10 +115,10 @@ export function QT2(p: Common & { part?: 'f3' | 'buy' }) {
             <thead><tr><th>Vật liệu</th><th className="n">Dày</th><th className="n">Theo PO (kg)</th><th className="n">Thực nhận</th><th className="n">Lỗi (kg)</th><th className="n">Chênh</th></tr></thead>
             <tbody>{rl.map((l) => {
               const ed = s === 'nhap_kho' && can('kho_qc'); const r = recv[l.id] ?? {};
-              return <tr key={l.id}><td>{l.material}</td><td className="n">{num(l.thickness_mm, 2)}</td><td className="n">{num(l.expected_kg, 1)}</td>
-                <td className="n">{ed ? <input inputMode="decimal" aria-label="Thực nhận" style={{ textAlign: 'right' }} value={numIn(r.received_kg ?? l.received_kg)} onChange={(e) => setRecv({ ...recv, [l.id]: { ...r, received_kg: e.target.value } })} /> : num(l.received_kg, 1)}</td>
+              return <tr key={l.id}><td>{l.material}</td><td className="n">{num(l.thickness_mm, 2)}</td><td className="n">{num(l.expected_kg, 2)}</td>
+                <td className="n">{ed ? <input inputMode="decimal" aria-label="Thực nhận" style={{ textAlign: 'right' }} value={numIn(r.received_kg ?? l.received_kg ?? l.expected_kg)} onChange={(e) => setRecv({ ...recv, [l.id]: { ...r, received_kg: e.target.value } })} /> : num(l.received_kg, 2)}</td>
                 <td className="n">{ed ? <input inputMode="decimal" aria-label="Lỗi" style={{ textAlign: 'right' }} value={numIn(r.bad_kg ?? l.bad_kg)} onChange={(e) => setRecv({ ...recv, [l.id]: { ...r, bad_kg: e.target.value } })} /> : num(l.bad_kg, 1)}</td>
-                <td className={'n' + (l.received_kg != null && Number(l.diff_kg) < 0 ? ' kb-late' : '')}>{l.received_kg == null ? '' : num(l.diff_kg, 1)}</td></tr>;
+                <td className={'n' + (l.received_kg != null && Number(l.diff_kg) < -tol(l.expected_kg) ? ' kb-late' : '')}>{l.received_kg == null ? '' : Math.abs(Number(l.diff_kg)) <= tol(l.expected_kg) ? <span className="muted">≈ 0</span> : num(l.diff_kg, 2)}</td></tr>;
             })}</tbody>
           </table></div>
           {s === 'nhap_kho' && can('kho_qc') && (<>
@@ -133,7 +138,7 @@ export function QT2(p: Common & { part?: 'f3' | 'buy' }) {
 /* ───────────── QT3: F5 LGC → F6 bàn giao → QC thành phẩm ───────────── */
 export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
   const { o, can, run, setErr, setOk, load, part } = p;
-  const [d, reload] = useRows(o, ['work_orders', 'work_order_lines', 'handovers', 'handover_lines', 'qc_finished']);
+  const [d, reload] = useRows(o, ['work_orders', 'work_order_lines', 'handovers', 'handover_lines', 'qc_finished'], p.shared);
   const wo = d.work_orders?.[0]; const wl = d.work_order_lines ?? []; const ho = d.handovers?.[0]; const hl = d.handover_lines ?? []; const qc = d.qc_finished?.[0];
   const [reserve, setReserve] = useState(''); const [woF, setWoF] = useState<Row>({}); const [hoF, setHoF] = useState<Row>({});
   const [act, setAct] = useState<Record<string, string>>({}); const [note, setNote] = useState(''); const [qcNote, setQcNote] = useState(''); const [pallets, setPallets] = useState('');
@@ -149,8 +154,8 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
     if (error) setErr(errText(error)); else { setOk('Đã lưu LGC.'); after(); }
   };
   const saveHO = async () => {
-    for (const l of hl) if (act[l.id] !== undefined) {
-      const { error } = await sb.from('handover_lines').update({ actual_kg: toNum(act[l.id]) }).eq('id', l.id);
+    for (const l of hl) if (act[l.id] !== undefined || l.actual_kg == null) {
+      const { error } = await sb.from('handover_lines').update({ actual_kg: act[l.id] !== undefined ? toNum(act[l.id]) : Number(l.planned_kg) }).eq('id', l.id);
       if (error) { setErr(errText(error)); return; }
     }
     const { error } = await sb.from('handovers').update({ delivered_by: hoF.delivered_by ?? '', received_by: hoF.received_by ?? '' }).eq('order_id', o.id);
@@ -161,7 +166,9 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
     const path = `${o.id}/f6/${Date.now()}-${f.name}`;
     const up = await sb.storage.from('files').upload(path, f); if (up.error) { setErr(errText(up.error)); return; }
     const { error } = await sb.from('handovers').update({ signed_pdf_path: path }).eq('order_id', o.id);
-    if (error) setErr(errText(error)); else { setOk('Đã tải biên bản F6.'); after(); }
+    if (error) { setErr(errText(error)); return; }
+    const { data: su } = await sb.storage.from('files').createSignedUrl(path, 3600); setPdf(su?.signedUrl ?? null);
+    setOk('Đã tải biên bản F6.'); after();
   };
   const lgcLabel: Record<string, string> = { lap_lgc: 'Đang lập', cho_duyet_lgc: 'Chờ duyệt 4 cấp', cho_nvl: 'Đã duyệt · chờ NVL' };
 
@@ -200,9 +207,9 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
         <Box title="B5 · Bàn giao NVL (F6)" right={<Chip s={g === 'ban_giao' ? 'wait' : 'dat'} text={g === 'ban_giao' ? 'Đang bàn giao' : 'Đã bàn giao ' + date(ho?.done_at)} />}>
           <div className="scroll"><table className="tbl" style={{ minWidth: 520 }}>
             <thead><tr><th>Vật liệu</th><th className="n">Dày</th><th className="n">Theo LGC (kg)</th><th className="n">Thực giao</th><th className="n">Chênh</th></tr></thead>
-            <tbody>{hl.map((l) => <tr key={l.id}><td>{l.material}</td><td className="n">{num(l.thickness_mm, 2)}</td><td className="n">{num(l.planned_kg, 1)}</td>
-              <td className="n">{g === 'ban_giao' && can('admin_cnc') ? <input inputMode="decimal" aria-label="Thực giao" style={{ textAlign: 'right' }} value={act[l.id] ?? numIn(l.actual_kg)} onChange={(e) => setAct({ ...act, [l.id]: e.target.value })} /> : num(l.actual_kg, 1)}</td>
-              <td className={'n' + (l.actual_kg != null && Number(l.diff_kg) !== 0 ? ' kb-late' : '')}>{l.actual_kg == null ? '' : num(l.diff_kg, 1)}</td></tr>)}</tbody>
+            <tbody>{hl.map((l) => <tr key={l.id}><td>{l.material}</td><td className="n">{num(l.thickness_mm, 2)}</td><td className="n">{num(l.planned_kg, 2)}</td>
+              <td className="n">{g === 'ban_giao' && can('admin_cnc') ? <input inputMode="decimal" aria-label="Thực giao" style={{ textAlign: 'right' }} value={act[l.id] ?? numIn(l.actual_kg ?? l.planned_kg)} onChange={(e) => setAct({ ...act, [l.id]: e.target.value })} /> : num(l.actual_kg, 2)}</td>
+              <td className={'n' + (l.actual_kg != null && Math.abs(Number(l.diff_kg)) > tol(l.planned_kg) ? ' kb-late' : '')}>{l.actual_kg == null ? '' : Math.abs(Number(l.diff_kg)) <= tol(l.planned_kg) ? <span className="muted">≈ 0</span> : num(l.diff_kg, 2)}</td></tr>)}</tbody>
           </table></div>
           <div className="grid2">
             <label className="f">Bên giao (Kho IPC)<input disabled={g !== 'ban_giao'} value={numIn(hoF.delivered_by)} onChange={(e) => setHoF({ ...hoF, delivered_by: e.target.value })} /></label>
@@ -210,7 +217,7 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
             <div><div className="small muted">Biên bản F6 đã ký</div>{pdf ? <a className="btn sm" href={pdf} target="_blank" rel="noopener"><Icon name="file" size={16} />Mở PDF</a> : <span className="muted">Chưa có</span>}</div>
           </div>
           {g === 'ban_giao' && can('admin_cnc') && (<>
-            <label className="f">Lý do chênh lệch (nếu có – sẽ lập F7)<textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></label>
+            <label className="f">Lý do chênh lệch (khi lệch quá 0,5% / 5 kg – sẽ lập F7)<textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></label>
             <div className="row">
               <button className="btn" onClick={saveHO}>Lưu bàn giao</button>
               <label className="btn ghost"><Icon name="upload" size={18} />Tải biên bản ký<input type="file" accept="application/pdf,image/*" onChange={upPdf} style={{ display: 'none' }} /></label>
@@ -262,7 +269,16 @@ export function F7({ o, can, run, people }: Common) {
 }
 
 /* QT2 gộp: B1 LGC + dự toán → B2 duyệt → B3 PO → B4 F4 → ĐK3 → B5 F6 → B6 QC TP */
-export function QT2Merged(p: Common) {
+const ALL = ['material_plans', 'material_plan_lines', 'purchase_orders', 'receipts', 'receipt_lines', 'work_orders', 'work_order_lines', 'handovers', 'handover_lines', 'qc_finished'];
+export function QT2Merged(p0: Common) {
+  const [d, setD] = useState<Record<string, Row[]> | null>(null);
+  const reload = useCallback(async () => {
+    const res = await Promise.all(ALL.map((t) => sb.from(t).select('*').eq('order_id', p0.o.id)));
+    setD(Object.fromEntries(ALL.map((t, i) => [t, (res[i].data as Row[]) ?? []])));
+  }, [p0.o]);
+  useEffect(() => { reload(); }, [reload]);
+  if (!d) return <div className="card muted">Đang tải phiếu QT2…</div>;
+  const p = { ...p0, shared: { d, reload } };
   if (p.o.gc_status === 'chua_bat_dau') return <div className="card muted">QT2 mở khi đơn hoàn tất QT1 (ĐK2: khách đã ký XNĐH).</div>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

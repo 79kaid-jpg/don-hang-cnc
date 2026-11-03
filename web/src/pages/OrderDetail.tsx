@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { BRANCH, ORDER_STATUS, date, dt, money, num } from '../lib/format';
+import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
@@ -72,6 +72,7 @@ export default function OrderDetail() {
           <span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
         </div>
         <Flow status={o.status} f1={o.f1_result} />
+        {o.status === 'san_xuat' && <QT2Flow o={o} />}
         <div className="grid2">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
           <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
@@ -369,4 +370,23 @@ function Flow({ status, f1 }: { status: string; f1: string }) {
       })}
     </ol>
   );
+}
+
+/** Tiến trình con của QT2 Lệnh GC & bàn giao NVL (B1–B6) khi đơn đang sản xuất */
+function QT2Flow({ o }: { o: Order }) {
+  const keys = Object.keys(QT2_STEP); const cur = keys.indexOf(qt2Step(o) ?? '');
+  return (
+    <div>
+      <div className="small muted" style={{ marginBottom: 6, fontWeight: 600 }}>QT2 · Lệnh gia công & bàn giao NVL{o.gc_status === 'cho_nvl' ? ' · NVL: ' + (BRANCH[o.nvl_status] ?? o.nvl_status) : ''}</div>
+      <ol className="flow" aria-label="Tiến trình QT2" style={{ listStyle: 'none', margin: 0 }}>
+        {keys.map((k, i) => {
+          const cls = i < cur ? 'done' : i === cur ? 'cur' : '';
+          return (
+            <li key={k} className={'flow-step ' + cls} aria-current={i === cur ? 'step' : undefined}>
+              <span className="fdot">{cls === 'done' ? <Icon name="check" size={14} /> : i + 1}</span>
+              <span>{QT2_STEP[k].replace(/^B\d /, '')}</span>
+            </li>);
+        })}
+      </ol>
+    </div>);
 }
