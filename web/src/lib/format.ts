@@ -11,7 +11,7 @@ export const ORDER_STATUS: Record<string, string> = {
   giao_hang: 'Giao hàng', hoan_tat: 'Hoàn tất', huy: 'Huỷ'
 };
 export const BRANCH: Record<string, string> = {
-  chua_bat_dau: 'Chưa bắt đầu', du_toan: 'Dự toán NVL', cho_duyet_f3: 'Chờ duyệt dự toán', mua_hang: 'Mua hàng', cho_duyet_po: 'Chờ duyệt PO',
+  chua_bat_dau: 'Chưa bắt đầu', du_toan: 'Dự toán NVL', cho_duyet_f3: 'Duyệt cùng LGC', mua_hang: 'Mua hàng', cho_duyet_po: 'Chờ duyệt PO',
   nhap_kho: 'Nhập kho & QC', san_sang: 'NVL sẵn sàng', lap_lgc: 'Lập LGC', cho_duyet_lgc: 'Chờ duyệt LGC', cho_nvl: 'Chờ NVL',
   ban_giao: 'Bàn giao NVL', gia_cong: 'Đang gia công', qc_dat: 'QC đạt', chua_giao: 'Chưa giao', thong_bao: 'Thông báo giao'
 };
@@ -26,3 +26,16 @@ export function chipKind(status: string): 'done' | 'wait' | 'bad' | 'idle' {
   if (['chua_bat_dau', 'chua_giao', 'chua'].includes(status)) return 'idle';
   return 'wait';
 }
+
+/** Bước của QT2 gộp (Lệnh GC & bàn giao NVL) suy từ 2 trạng thái nhánh */
+export function qt2Step(o: { status: string; nvl_status: string; gc_status: string }): string | null {
+  if (o.status !== 'san_xuat' && o.gc_status !== 'qc_dat') return null;
+  const g = o.gc_status, n = o.nvl_status;
+  if (g === 'lap_lgc') return 'b1';
+  if (g === 'cho_duyet_lgc') return 'b2';
+  if (g === 'cho_nvl') return n === 'nhap_kho' ? 'b4' : 'b3';
+  if (g === 'ban_giao') return 'b5';
+  if (g === 'gia_cong') return 'b6';
+  return null;
+}
+export const QT2_STEP: Record<string, string> = { b1: 'B1 Lập LGC + dự toán NVL', b2: 'B2 Duyệt LGC 4 cấp', b3: 'B3 Mua NVL (PO)', b4: 'B4 Nhập kho & QC NVL', b5: 'B5 Bàn giao NVL', b6: 'B6 Gia công & QC TP' };

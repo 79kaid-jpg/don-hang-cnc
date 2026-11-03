@@ -18,12 +18,11 @@ export const TODO: Record<string, { roles: string[]; text: string; tab: string }
 };
 /** Việc của nhánh QT2 / QT3 khi đơn đang sản xuất */
 export const BRANCH_TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
-  du_toan: { roles: ['ke_hoach'], text: 'Lập dự toán NVL (F3), gửi duyệt', tab: 'QT2' },
-  mua_hang: { roles: ['mua_hang'], text: 'Lập PO, gửi duyệt', tab: 'QT2' },
-  nhap_kho: { roles: ['kho_qc'], text: 'Nhập kho & QC NVL (F4)', tab: 'QT2' },
-  lap_lgc: { roles: ['admin_cnc'], text: 'Lập lệnh gia công (F5), gửi duyệt', tab: 'QT3' },
-  ban_giao: { roles: ['admin_cnc'], text: 'Bàn giao NVL (F6)', tab: 'QT3' },
-  gia_cong: { roles: ['kho_qc', 'admin_cnc'], text: 'QC thành phẩm (ĐK5)', tab: 'QT3' }
+  lap_lgc: { roles: ['admin_cnc', 'ke_hoach'], text: 'B1 Lập LGC + dự toán NVL, gửi duyệt', tab: 'QT2' },
+  mua_hang: { roles: ['mua_hang'], text: 'B3 Lập PO, gửi duyệt', tab: 'QT2' },
+  nhap_kho: { roles: ['kho_qc'], text: 'B4 Nhập kho & QC NVL (F4)', tab: 'QT2' },
+  ban_giao: { roles: ['admin_cnc'], text: 'B5 Bàn giao NVL (F6)', tab: 'QT2' },
+  gia_cong: { roles: ['kho_qc', 'admin_cnc'], text: 'B6 QC thành phẩm (ĐK4)', tab: 'QT2' }
 };
 
 type A = Approval & { orders: Pick<Order, 'code' | 'project'> };

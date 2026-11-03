@@ -6,7 +6,7 @@ import { BRANCH, ORDER_STATUS, date, dt, money, num } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
-import { QT2, QT3, F7 } from './Phase2';
+import { QT2Merged, F7 } from './Phase2';
 
 type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_at: string | null; kh1_channel: string | null;
   kh2_confirmed_at: string | null; kh2_channel: string | null; signed_pdf_path: string | null };
@@ -14,11 +14,11 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 NVL'], ['QT3', 'QT3 Gia công'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
 
 export default function OrderDetail() {
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams();
-  const tab = (sp.get('tab') ?? 'F1') as string;
+  const tab = ((t) => (t === 'QT3' ? 'QT2' : t))(sp.get('tab') ?? 'F1');
   const { me, can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -74,9 +74,9 @@ export default function OrderDetail() {
         <Flow status={o.status} f1={o.f1_result} />
         <div className="grid2">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
-          <div><div className="small muted">Nhánh NVL · QT2</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
-          <div><div className="small muted">Nhánh gia công · QT3</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div>
-          <div><div className="small muted">Giao hàng · QT4</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>
+          <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>
+          <div><div className="small muted">QT2 · Lệnh gia công</div><Chip s={o.gc_status} text={BRANCH[o.gc_status] ?? o.gc_status} /></div>
+          <div><div className="small muted">QT3 · Giao hàng</div><Chip s={o.gh_status} text={BRANCH[o.gh_status] ?? o.gh_status} /></div>
         </div>
       </div>
       <div className="tabs" role="tablist">
@@ -88,7 +88,7 @@ export default function OrderDetail() {
       {tab === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
         steps={steps.filter((s) => s.doc_type === 'F2')} people={people} meId={me!.id} />}
       {(tab === 'QT2' || tab === 'QT3' || tab === 'F7') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
-        return tab === 'QT2' ? <QT2 {...q} /> : tab === 'QT3' ? <QT3 {...q} /> : <F7 {...q} />; })()}
+        return tab === 'F7' ? <F7 {...q} /> : <QT2Merged {...q} />; })()}
       {tab === 'LS' && (
         <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
