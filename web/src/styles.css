@@ -358,3 +358,29 @@ textarea{resize:vertical}
 input:not([type=checkbox]):not([type=radio]),select{line-height:22px;height:44px}
 .row:has(> label.f){align-items:flex-end}
 .row:has(> label.f) > .small,.row:has(> label.f) > span.muted{align-self:center}
+/* Checklist */
+.ck{border:1px solid #EDE3CC;border-radius:12px;padding:12px 14px;background:#FFFCF3;display:flex;flex-direction:column;gap:8px}
+.ck.ok{background:#F6FAF4;border-color:#D5E6CF}
+.ck-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.ck-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px}
+.ck-item{display:flex;gap:10px;align-items:flex-start;min-height:40px;padding:8px 6px;border-radius:8px;cursor:pointer;font-size:15px;transition:background var(--t)}
+.ck-item:hover{background:rgba(184,149,74,.08)}
+.ck-item input{width:20px;height:20px;min-height:0;margin:1px 0 0;accent-color:var(--gold);flex:none}
+.ck-item.on span{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+.ck-req{color:var(--red);font-style:normal;font-weight:700}.ck-opt{color:var(--muted);font-style:normal;font-size:13px}
+.ck-admin{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ck-admin li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ck-admin li input:not([type=checkbox]){flex:1 1 260px}
+.ck-admin li.off{opacity:.5}.ck-tog{display:flex;gap:6px;align-items:center;font-size:14px;white-space:nowrap}
+.ck-tog input{width:18px;height:18px;min-height:0;accent-color:var(--gold)}
+/* Kéo thả Kanban */
+.kb-card[draggable=true]{cursor:grab}.kb-card.dragging{opacity:.45;transform:scale(.98)}
+.kb-col{transition:background-color .18s ease,box-shadow .18s ease,opacity .18s ease}
+.kb-col.drop-ok{box-shadow:inset 0 0 0 2px rgba(184,149,74,.55);background:#FBF4E2}
+.kb-col.drop-over{box-shadow:inset 0 0 0 2px var(--gold);background:#F7EBCB}
+.kb-col.drop-no{opacity:.55}
+.kb-acts{display:flex;flex-direction:column;gap:6px}
+.kb-move{width:100%;min-height:38px;background:transparent;color:#6B5A2E;border-style:dashed}
+.modal.mv{max-width:560px;max-height:calc(100dvh - 32px);overflow:auto}
+.mv-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mv-route{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.kb-col,.kb-card{transition:none}}

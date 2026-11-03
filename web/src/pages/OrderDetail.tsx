@@ -1,3 +1,4 @@
+import { ChecklistBox, stepKeys } from '../components/Checklist';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
@@ -74,6 +75,7 @@ export default function OrderDetail() {
         </div>
         <Flow status={o.status} f1={o.f1_result} />
         {o.status === 'san_xuat' && <QT2Flow o={o} />}
+        {stepKeys(o).map((k) => <ChecklistBox key={k + o.status + o.gc_status + o.nvl_status + o.gh_status} orderId={o.id} step={k} compact />)}
         <div className="grid2">
           <div><div className="small muted">Trạng thái đơn</div><Chip s={o.status} text={ORDER_STATUS[o.status]} /></div>
           <div><div className="small muted">QT2 · NVL</div><Chip s={o.nvl_status} text={BRANCH[o.nvl_status] ?? o.nvl_status} /></div>

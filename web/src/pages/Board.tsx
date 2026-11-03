@@ -6,12 +6,13 @@ import { BRANCH, date, num, qt2Step } from '../lib/format';
 const val = (o: Order, f: Proc['field']) => (f === 'step' ? qt2Step(o) : o[f]);
 import { Icon } from '../components/Icon';
 import { Skeleton } from '../components/ui';
+import { MoveDialog } from '../components/MoveDialog';
 
 /** Bảng Kanban theo từng quy trình: mỗi quy trình một bảng, cột = bước của quy trình đó (giống sơ đồ).
  *  Đơn nằm ở bước theo trạng thái của đúng nhánh: QT0–QT1 theo trạng thái đơn, QT2 theo nhánh NVL, QT3 theo nhánh gia công.
- *  Không kéo-thả: chuyển bước phải qua điều kiện (ĐK) và duyệt, nên mỗi thẻ có nút "Làm bước tiếp". */
-type Col = { key: string; title: string; tab: string; next: string; roles: string[]; gate?: string };
-type Proc = { key: string; title: string; sub: string; field: 'status' | 'nvl_status' | 'gc_status' | 'gh_status' | 'step'; cols: Col[] };
+ *  Kéo thẻ sang cột kế tiếp (hoặc bấm "Chuyển bước"): mở hộp kiểm tra checklist + dữ liệu, đủ mới chuyển. */
+export type Col = { key: string; title: string; tab: string; next: string; roles: string[]; gate?: string };
+export type Proc = { key: string; title: string; sub: string; field: 'status' | 'nvl_status' | 'gc_status' | 'gh_status' | 'step'; cols: Col[] };
 const PROCS: Proc[] = [
   { key: 'qt0', title: 'QT0', sub: 'Tiếp nhận & bóc tách', field: 'status', cols: [
     { key: 'tiep_nhan', title: 'Tiếp nhận', tab: 'F1', next: 'Bắt đầu bóc tách', roles: ['kinh_doanh', 'ky_thuat'] },
@@ -53,6 +54,11 @@ export default function Board() {
   const pick = (k: string) => { setQt(k); setCol(''); try { localStorage.setItem('kb-qt', k); } catch { /* */ } };
   const curCol = col || COLS[0].key;
 
+  const [drag, setDrag] = useState<{ id: string; i: number } | null>(null);
+  const [over, setOver] = useState(-1);
+  const [move, setMove] = useState<{ o: Order; i: number } | null>(null);
+  const reload = () => sb.from('orders').select('*').not('status', 'in', '(hoan_tat,huy)').order('due_date', { nullsFirst: false })
+    .then(({ data }) => setOrders((data as Order[]) ?? []));
   useEffect(() => {
     sb.from('orders').select('*').not('status', 'in', '(hoan_tat,huy)').order('due_date', { nullsFirst: false })
       .then(({ data }) => setOrders((data as Order[]) ?? []));
@@ -119,7 +125,11 @@ export default function Board() {
         {COLS.map((c, i) => {
           const list = byCol(c.key);
           return (
-            <section key={c.key} className={'kb-col' + (curCol === c.key ? ' show' : '') + (c.gate ? ' gated' : '')} aria-label={c.title}>
+            <section key={c.key} className={'kb-col' + (curCol === c.key ? ' show' : '') + (c.gate ? ' gated' : '')
+              + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag?.i === i - 1 ? ' drop-over' : '')} aria-label={c.title}
+              onDragOver={(e) => { if (drag && drag.i + 1 === i) { e.preventDefault(); setOver(i); } }}
+              onDragLeave={() => setOver(-1)}
+              onDrop={(e) => { e.preventDefault(); const o = (orders ?? []).find((x) => x.id === drag?.id); if (o && drag) setMove({ o, i: drag.i }); setDrag(null); setOver(-1); }}>
               <header className="kb-head">
                 <span className="kb-group">{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
@@ -127,7 +137,8 @@ export default function Board() {
               <div className="kb-list">
                 {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
-                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '')}>
+                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '')}
+                    draggable={i < COLS.length - 1} onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDrag({ id: o.id, i }); }} onDragEnd={() => { setDrag(null); setOver(-1); }}>
                     <Link to={'/don/' + o.id} className="kb-link">
                       <span className="kb-code">{o.code}</span>
                       <span className="kb-proj">{o.project}</span>
@@ -146,7 +157,11 @@ export default function Board() {
                       {P.field === 'status' && o.status === 'san_xuat' && <span className="chip idle">QT2: {BRANCH[o.gc_status]}</span>}
                       {P.field === 'step' && o.gc_status === 'cho_nvl' && <span className="chip idle">NVL: {BRANCH[o.nvl_status]}</span>}
                     </div>
-                    {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}
+                    <div className="kb-acts">
+                      {myTurn && <Link className="btn sm primary kb-next" to={'/don/' + o.id + '?tab=' + c.tab}>{c.next} →</Link>}
+                      {i < COLS.length - 1 && <button className="btn sm kb-move" onClick={() => setMove({ o, i })} aria-label={'Chuyển ' + o.code + ' sang ' + COLS[i + 1].title}
+                        title="Chuyển sang bước sau (hoặc kéo thẻ)"><Icon name="arrow" size={16} />Chuyển bước</button>}
+                    </div>
                   </article>))}
               </div>
               {c.gate && <div className="kb-gate" title="Điều kiện để sang bước sau"><Icon name="alert" size={14} />{c.gate}</div>}
@@ -155,6 +170,7 @@ export default function Board() {
       </div>
       </div>
       </div>
+      {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { setMove(null); reload(); }} />}
     </>
   );
 }
