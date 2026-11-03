@@ -57,6 +57,39 @@ export default function Board() {
   const [drag, setDrag] = useState<{ id: string; i: number } | null>(null);
   const [over, setOver] = useState(-1);
   const [move, setMove] = useState<{ o: Order; i: number } | null>(null);
+  const [landed, setLanded] = useState(''); const [eat, setEat] = useState(-1);
+  const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Ảnh kéo: thẻ thu nhỏ, nghiêng như phong bì
+  const startDrag = (e: React.DragEvent<HTMLElement>, id: string, i: number) => {
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id);
+    const src = e.currentTarget; const g = src.cloneNode(true) as HTMLElement;
+    g.classList.add('kb-ghost'); g.style.width = src.offsetWidth + 'px'; document.body.appendChild(g);
+    e.dataTransfer.setDragImage(g, 40, 24); setTimeout(() => g.remove(), 0);
+    setDrag({ id, i });
+  };
+  // Thả: thẻ bay vào khe hộp thư rồi mới mở hộp kiểm tra
+  const dropInto = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    const o = (orders ?? []).find((x) => x.id === drag?.id); const d = drag;
+    setDrag(null); setOver(-1);
+    if (!o || !d) return;
+    const card = document.querySelector<HTMLElement>('[data-card="' + o.id + '"]');
+    const slot = e.currentTarget.querySelector<HTMLElement>('.kb-slot-mouth');
+    if (reduce || !card || !slot) { setMove({ o, i: d.i }); return; }
+    const r = card.getBoundingClientRect(), t = slot.getBoundingClientRect();
+    const f = card.cloneNode(true) as HTMLElement; f.classList.add('kb-fly');
+    Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px' }); document.body.appendChild(f);
+    const sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2;
+    const dx = t.left + t.width / 2 - r.left - r.width / 2, dy = t.top + t.height / 2 - r.top - r.height / 2;
+    const col = d.i + 1; setEat(col);
+    f.animate([
+      { transform: `translate(${sx}px,${sy}px) scale(.55) rotate(-6deg)`, opacity: 1 },
+      { transform: `translate(${dx}px,${dy - 40}px) scale(.42) rotate(-2deg)`, opacity: 1, offset: .55 },
+      { transform: `translate(${dx}px,${dy + 6}px) scale(.38,.05) rotate(0)`, opacity: .2 }
+    ], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)' }).finished.then(() => {
+      f.remove(); setTimeout(() => setEat(-1), 260); setMove({ o, i: d.i });
+    });
+  };
   const reload = () => sb.from('orders').select('*').not('status', 'in', '(hoan_tat,huy)').order('due_date', { nullsFirst: false })
     .then(({ data }) => setOrders((data as Order[]) ?? []));
   useEffect(() => {
@@ -129,16 +162,20 @@ export default function Board() {
               + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag?.i === i - 1 ? ' drop-over' : '')} aria-label={c.title}
               onDragOver={(e) => { if (drag && drag.i + 1 === i) { e.preventDefault(); setOver(i); } }}
               onDragLeave={() => setOver(-1)}
-              onDrop={(e) => { e.preventDefault(); const o = (orders ?? []).find((x) => x.id === drag?.id); if (o && drag) setMove({ o, i: drag.i }); setDrag(null); setOver(-1); }}>
+              onDrop={dropInto}>
               <header className="kb-head">
                 <span className="kb-group">{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">
+                {((drag && drag.i + 1 === i) || eat === i) && (
+                  <div className={'kb-slot' + (over === i || eat === i ? ' open' : '') + (eat === i ? ' eat' : '')} aria-hidden="true">
+                    <span className="kb-slot-mouth" /><span className="kb-slot-txt"><Icon name="inbox" size={16} />Thả vào đây để chuyển sang {c.title}</span>
+                  </div>)}
                 {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
-                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '')}
-                    draggable={i < COLS.length - 1} onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDrag({ id: o.id, i }); }} onDragEnd={() => { setDrag(null); setOver(-1); }}>
+                  <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '') + (landed === o.id ? ' landed' : '')} data-card={o.id}
+                    draggable={i < COLS.length - 1} onDragStart={(e) => startDrag(e, o.id, i)} onDragEnd={() => { setDrag(null); setOver(-1); }}>
                     <Link to={'/don/' + o.id} className="kb-link">
                       <span className="kb-code">{o.code}</span>
                       <span className="kb-proj">{o.project}</span>
@@ -170,7 +207,7 @@ export default function Board() {
       </div>
       </div>
       </div>
-      {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { setMove(null); reload(); }} />}
+      {move && <MoveDialog o={move.o} proc={P} i={move.i} onClose={() => setMove(null)} onMoved={() => { const id = move.o.id; setMove(null); reload().then(() => { setLanded(id); setTimeout(() => setLanded(''), 900); }); }} />}
     </>
   );
 }
