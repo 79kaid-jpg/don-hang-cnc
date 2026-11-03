@@ -42,7 +42,7 @@ export function PeoplePick({ people, groups, role, v, disabled, approval, onChan
           {fit.length > 0 && <optgroup label={'Có vai trò ' + (ROLES[role] ?? role)}>{fit.map((p) => <option key={p.id} value={'p:' + p.id}>{p.full_name}</option>)}</optgroup>}
           <optgroup label="Người khác">{rest.map((p) => <option key={p.id} value={'p:' + p.id}>{p.full_name}</option>)}</optgroup>
         </select>
-        {g && <span className="small muted">Ai trong nhóm cũng làm được: {g.member_ids.map((id) => people.find((p) => p.id === id {g.member_ids.map((id) => people.find((p) => p.id === id)?.full_name).filter(Boolean){g.member_ids.map((id) => people.find((p) => p.id === id)?.full_name).filter(Boolean) p.active)?.full_name).filter(Boolean).join(', ') || 'nhóm chưa có người'}</span>}
+        {g && <span className="small muted">Ai trong nhóm cũng làm được: {g.member_ids.map((id) => people.find((p) => p.id === id && p.active)?.full_name).filter(Boolean).join(', ') || 'nhóm chưa có người'}</span>}
       </label>
       <div className="f">Người / nhóm giám sát
         <div className="sp-sups">
