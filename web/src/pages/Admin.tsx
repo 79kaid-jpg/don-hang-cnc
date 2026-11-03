@@ -1,4 +1,4 @@
-import { GroupsAdmin, StepDefaultsAdmin } from '../components/StepPeople';
+import { GroupsAdmin, StepDefaultsAdmin, useGroups } from '../components/StepPeople';
 import { ChecklistAdmin } from '../components/Checklist';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ export default function Admin() {
   const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd'>('users');
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
   const [q, setQ] = useState('');
   const load = () => {
     sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? []));
@@ -28,12 +28,13 @@ export default function Admin() {
   const open = people?.find((p) => p.id === openId) ?? null;
   const noRole = (people ?? []).filter((p) => p.active && !p.roles.length).length;
 
+  if (creating) return <NewUser onBack={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setOpenId(id); }} />;
   if (open) return <UserDetail p={open} onBack={() => setOpenId(null)} onSaved={load} />;
 
   return (
     <>
       <div className="page-head"><div><h1>Quản trị</h1>
-        <p className="muted">Tài khoản tạo ở Supabase → Authentication → Add user. Vai trò, người duyệt, thời hạn chỉnh tại đây.</p></div></div>
+        <p className="muted">Tạo tài khoản, chọn vai trò, nhóm, người duyệt và thời hạn tại đây.</p></div></div>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'users'} className={tab === 'users' ? 'on' : ''} onClick={() => setTab('users')}>Người dùng{people ? ` (${people.length})` : ''}</button>
         <button role="tab" aria-selected={tab === 'groups'} className={tab === 'groups' ? 'on' : ''} onClick={() => setTab('groups')}>Nhóm</button>
@@ -43,6 +44,7 @@ export default function Admin() {
       </div>
 
       {tab === 'users' && (<>
+        {can('admin_it') && <div><button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Tạo người dùng</button></div>}
         <label className="search" style={{ maxWidth: 'none', flex: '0 0 auto' }}><Icon name="search" size={18} />
           <input aria-label="Tìm người dùng" placeholder="Tìm tên, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         {noRole > 0 && <div className="msg info"><Icon name="alert" size={18} /><span>{noRole} người chưa có vai trò – họ đăng nhập được nhưng không làm được việc gì.</span></div>}
@@ -189,4 +191,70 @@ function Flows({ steps, people, onSaved }: { steps: Step[]; people: Profile[]; o
       </div>
     </>
   );
+}
+
+/** Tạo tài khoản mới: Edge Function admin-users (service role ở máy chủ, chỉ Admin IT) */
+function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) => void }) {
+  const [groups] = useGroups();
+  const [f, setF] = useState({ full_name: '', email: '', unit: 'CNC', password: '', roles: [] as string[], group_ids: [] as string[] });
+  const [show, setShow] = useState(true); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState<{ id: string; email: string; pw: string } | null>(null);
+  const gen = () => { const a = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; const r = crypto.getRandomValues(new Uint32Array(10));
+    setF({ ...f, password: Array.from(r, (x) => a[x % a.length]).join('') + '!' }); setShow(true); };
+  const tog = (k: 'roles' | 'group_ids', v: string) => setF({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] });
+  const submit = async () => {
+    setErr(''); setBusy(true);
+    const { data, error } = await sb.functions.invoke('admin-users', { body: f });
+    setBusy(false);
+    let msg = (data as { error?: string } | null)?.error;
+    if (error && !msg) { try { msg = (await (error as { context?: Response }).context?.json())?.error; } catch { /* */ } msg = msg || error.message; }
+    if (msg) { setErr(msg); return; }
+    setDone({ id: (data as { id: string }).id, email: f.email, pw: f.password });
+  };
+  if (done) return (
+    <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560 }}>
+      <h1 style={{ margin: 0 }}>Đã tạo tài khoản</h1>
+      <div className="msg ok"><Icon name="check" size={18} /><span>Gửi cho người dùng thông tin đăng nhập dưới đây (qua Zalo / trực tiếp). Mật khẩu chỉ hiện lần này.</span></div>
+      <div className="newu-cred"><span className="small muted">Email</span><b>{done.email}</b><span className="small muted">Mật khẩu tạm</span><b className="mono">{done.pw}</b></div>
+      <div className="row"><button className="btn" onClick={() => navigator.clipboard?.writeText(`App Đơn hàng CNC: https://79kaid-jpg.github.io/don-hang-cnc/\nEmail: ${done.email}\nMật khẩu tạm: ${done.pw}`)}><Icon name="file" size={16} />Chép thông tin</button>
+        <button className="btn primary" onClick={() => onDone(done.id)}>Xong, mở hồ sơ</button></div>
+    </section>);
+  const ok = f.full_name.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim()) && f.password.length >= 8;
+  return (
+    <>
+      <button className="small" onClick={onBack} style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, border: 0, background: 'none', padding: 0, cursor: 'pointer' }}><Icon name="back" size={16} />Người dùng</button>
+      <div className="page-head"><div><h1>Tạo người dùng</h1><p className="muted">Tài khoản dùng được ngay, không cần xác nhận email.</p></div></div>
+      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="grid2">
+          <label className="f">Họ tên *<input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} placeholder="Nguyễn Văn A" autoFocus /></label>
+          <label className="f">Email đăng nhập *<input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="ten@congty.vn" autoComplete="off" /></label>
+        </div>
+        <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
+          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{u}</button>)}</div></div>
+        <div className="row">
+          <label className="f" style={{ flex: '1 1 260px' }}>Mật khẩu tạm * (từ 8 ký tự)
+            <input type={show ? 'text' : 'password'} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" className="mono" /></label>
+          <button className="btn" type="button" onClick={gen}><Icon name="refresh" size={16} />Tạo ngẫu nhiên</button>
+          <button className="btn icon-btn" type="button" onClick={() => setShow(!show)} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><Icon name={show ? 'eyeoff' : 'eye'} size={18} /></button>
+        </div>
+      </section>
+      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <h2 style={{ marginBottom: 8 }}>Vai trò</h2>
+        {Object.entries(ROLES).map(([k, t]) => (
+          <label key={k} className="role-row"><input type="checkbox" checked={f.roles.includes(k)} onChange={() => tog('roles', k)} />
+            <span><b>{t}</b><br /><span className="small muted">{ROLE_HINT[k]}</span></span></label>))}
+      </section>
+      {groups.filter((g) => g.active).length > 0 && (
+        <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h2 style={{ marginBottom: 8 }}>Nhóm</h2>
+          {groups.filter((g) => g.active).map((g) => (
+            <label key={g.id} className="role-row"><input type="checkbox" checked={f.group_ids.includes(g.id)} onChange={() => tog('group_ids', g.id)} />
+              <span><b>{g.name}</b><br /><span className="small muted">{g.member_ids.length} người{g.note ? ' · ' + g.note : ''}</span></span></label>))}
+        </section>)}
+      <Msg err={err} />
+      <div className="savebar">
+        <span className="small muted" style={{ flex: 1 }}>{f.roles.length ? f.roles.length + ' vai trò' : 'Chưa chọn vai trò – đăng nhập được nhưng chưa làm được việc gì'}</span>
+        <button className="btn" onClick={onBack}>Huỷ</button>
+        <button className="btn primary" disabled={!ok || busy} onClick={submit}><Icon name="plus" size={18} />{busy ? 'Đang tạo…' : 'Tạo tài khoản'}</button>
+      </div>
+    </>);
 }

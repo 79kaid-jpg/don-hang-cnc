@@ -439,3 +439,6 @@ input:not([type=checkbox]):not([type=radio]),select{line-height:22px;height:44px
 .grp-edit{padding:4px 14px 14px;display:flex;flex-direction:column;gap:10px;border-top:1px solid #EFE7D4}
 .grp-mem{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 12px}
 .ck-item.sel{background:#F5EEDC}
+
+.newu-cred{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;padding:12px 14px;border:1px dashed var(--line2);border-radius:10px;background:var(--soft)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.02em}
