@@ -18,7 +18,7 @@ function useRows(o: Order, tables: string[]) {
   const reload = useCallback(async () => {
     const res = await Promise.all(tables.map((t) => sb.from(t).select('*').eq('order_id', o.id)));
     setD(Object.fromEntries(tables.map((t, i) => [t, (res[i].data as Row[]) ?? []])));
-  }, [o.id, o.nvl_status, o.gc_status, o.status]); // eslint-disable-line
+  }, [o]); // eslint-disable-line — o đổi sau mỗi lần tải lại đơn → nạp lại phiếu
   useEffect(() => { reload(); }, [reload]);
   return [d, reload] as const;
 }

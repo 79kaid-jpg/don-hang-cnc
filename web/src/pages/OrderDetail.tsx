@@ -344,7 +344,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
             {conf?.kh1_confirmed_at && !conf?.kh2_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 2, p_channel: 'Email' }, 'Đã ghi KH2 xác nhận.')}>Ghi KH2 (Hanwa) xác nhận</button>}
             <label className="btn ghost" ><Icon name="upload" size={18} />Tải PDF đã ký<input type="file" accept="application/pdf" onChange={uploadPdf} style={{ display: 'none' }} /></label>
             <button className="btn primary" disabled={!conf?.kh1_confirmed_at || !conf?.kh2_confirmed_at || !conf?.signed_pdf_path}
-              onClick={() => run('close_qt1', { p_order: o.id }, 'ĐK2 đạt – đã mở nhánh NVL và gia công.')}>Hoàn tất QT1 (ĐK2)</button>
+              onClick={() => run('close_qt1', { p_order: o.id }, 'ĐK2 đạt – đã mở QT2 Lệnh gia công & bàn giao NVL.')}>Hoàn tất QT1 (ĐK2)</button>
           </div>)}
       </div>
     </div>
