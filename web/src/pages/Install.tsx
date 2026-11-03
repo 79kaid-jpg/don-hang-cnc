@@ -25,7 +25,8 @@ export default function Install() {
       <nav className="row" aria-label="Mục hướng dẫn"><a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-install')?.scrollIntoView({ behavior: 'smooth' }); }}>1. Cài app</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-zalo')?.scrollIntoView({ behavior: 'smooth' }); }}>2. Thông báo Zalo</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a>
-        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-qt')?.scrollIntoView({ behavior: 'smooth' }); }}>4. Quy trình</a></nav>
+        <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-qt')?.scrollIntoView({ behavior: 'smooth' }); }}>4. Quy trình</a>
+        <a className="btn sm primary" href="#/quy-trinh">5. Tài liệu quy trình BASE</a></nav>
       <div><h2 id="h-install" style={{ marginTop: 8 }}>1. Cài app lên màn hình chính</h2>
         <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ.</p></div>
 
@@ -111,6 +112,7 @@ export default function Install() {
         <h2 id="h-qt">4. Quy trình đơn hàng</h2>
         <p className="muted" style={{ margin: 0 }}>Bấm một quy trình rồi bấm từng bước để xem ai làm, nhập gì, ai duyệt và làm ở đâu trong app. Dùng để đối chiếu khi chạy đơn.</p>
         <ProcessGuide />
+        <div className="row"><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình đầy đủ (sơ đồ, bảng bước, 10 form)</a></div>
       </section>
     </>
   );

@@ -87,6 +87,11 @@ function Shell() {
           <Route path="/don/:id" element={<OrderDetail />} />
           <Route path="/quan-tri" element={<Admin />} />
           <Route path="/cai-app" element={<Install />} />
+          <Route path="/quy-trinh" element={<div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="page-head"><div><h1>Tài liệu quy trình đơn hàng BASE</h1><p className="muted">Sơ đồ tương tác, bảng bước, điều kiện chuyển và 10 form. Bản v4 – đã gộp QT2.</p></div>
+              <div className="row"><NavLink className="btn sm" to="/cai-app"><Icon name="back" size={16} />Hướng dẫn</NavLink><a className="btn sm" href="./quy-trinh/index.html" target="_blank" rel="noopener">Mở toàn màn hình ↗</a></div></div>
+            <iframe src="./quy-trinh/index.html" title="Tài liệu quy trình đơn hàng BASE" style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: 600, border: '1px solid var(--line)', borderRadius: 'var(--r)', background: '#fff' }} />
+          </div>} />
           <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
