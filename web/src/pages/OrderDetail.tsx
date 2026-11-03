@@ -69,7 +69,8 @@ export default function OrderDetail() {
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="row between">
           <div><h1>{o.code}</h1><div className="muted">{chain} · {o.project}{o.due_date ? ' · giao ' + date(o.due_date) : ''}</div></div>
-          <span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
+          <span className="row" style={{ gap: 8 }}><span className="small muted">{tot.qty} tấm · {num(tot.m2, 1)} m² · {num(tot.kg, 1)} kg</span>
+            <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link></span>
         </div>
         <Flow status={o.status} f1={o.f1_result} />
         {o.status === 'san_xuat' && <QT2Flow o={o} />}

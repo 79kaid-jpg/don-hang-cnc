@@ -11,6 +11,7 @@ import Board from './pages/Board';
 import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
 import Admin from './pages/Admin';
+import FlowMap from './pages/FlowMap';
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
 
@@ -38,6 +39,7 @@ function Shell() {
   const items = [
     { to: '/', end: true, icon: 'inbox', label: 'Việc của tôi', short: 'Việc', badge: pending },
     { to: '/bang', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
+    { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
@@ -82,6 +84,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/bang" element={<Board />} />
+          <Route path="/so-do" element={<FlowMap />} />
           <Route path="/don" element={<Orders />} />
           <Route path="/don/moi" element={<NewOrder />} />
           <Route path="/don/:id" element={<OrderDetail />} />
@@ -98,7 +101,7 @@ function Shell() {
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
-        {items.map((i) => (
+        {items.filter((i) => !('side' in i)).map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
       <UpdateBar /><Toaster /><ConfirmHost />
