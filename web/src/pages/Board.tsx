@@ -163,6 +163,16 @@ export default function Board() {
   }).filter((x) => x.c && (!mine || x.myTurn)), [orders, appr, agg, q, mine, me, can, P]); // eslint-disable-line
 
   const byCol = (k: string) => cards.filter((x) => val(x.o, P.field) === k);
+  // Mở Bảng: tự chọn quy trình có việc đến lượt tôi (nếu quy trình đang xem không có), rồi quy trình có đơn
+  const autoQt = useRef(false);
+  useEffect(() => {
+    if (autoQt.current || !orders || !me) return; autoQt.current = true;
+    const mineIn = (pr: Proc) => orders.some((o) => { const c = pr.cols.find((x) => x.key === val(o, pr.field)); if (!c) return false;
+      return appr.some((a) => a.order_id === o.id && a.status === 'cho' && a.approver_id === me.id) || c.roles.some(can); });
+    if (mineIn(P)) return;
+    const t = PROCS.find(mineIn) ?? (countIn(P) ? null : PROCS.find((pr) => countIn(pr) > 0));
+    if (t) { setQt(t.key); setCol(''); }
+  }, [orders, appr, me]); // eslint-disable-line
   // Điện thoại: mặc định mở cột có việc của tôi, rồi cột đầu tiên có đơn
   const curCol = col || (COLS.find((c) => byCol(c.key).some((x) => x.myTurn)) ?? COLS.find((c) => byCol(c.key).length) ?? COLS[0]).key;
   // Phím tắt Kanban: 1–4 đổi quy trình, J/K/H/L (hoặc mũi tên) chọn thẻ, Enter mở, M chuyển, R trả về, F lọc việc của tôi
