@@ -18,7 +18,8 @@ export default function Admin() {
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(''); const [fRole, setFRole] = useState(''); const [fAct, setFAct] = useState<'on' | 'off' | 'all'>('on'); const [fZ, setFZ] = useState(false);
+  const [groups] = useGroups();
   const load = () => {
     sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? []));
     sb.from('approval_steps').select('*').order('doc_type').order('step_no').then(({ data }) => setSteps((data as Step[]) ?? []));
@@ -31,45 +32,71 @@ export default function Admin() {
   if (creating) return <NewUser onBack={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setOpenId(id); }} />;
   if (open) return <UserDetail p={open} onBack={() => setOpenId(null)} onSaved={load} />;
 
+  const TABS: [typeof tab, string, string, string][] = [
+    ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
+    ['sd', 'Phụ trách bước', 'Người làm, giám sát, SLA', 'clock'], ['ck', 'Checklist', 'Mục phải xong mỗi bước', 'check'],
+    ['flows', 'Chuỗi duyệt', 'Người duyệt & hạn', 'flow']];
+  const act = (people ?? []).filter((p) => p.active);
+  const noZalo = act.filter((p) => !p.zalo_chat_id).length;
+  const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
+  const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id));
   return (
     <>
       <div className="page-head"><div><h1>Quản trị</h1>
-        <p className="muted">Tạo tài khoản, chọn vai trò, nhóm, người duyệt và thời hạn tại đây.</p></div></div>
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'users'} className={tab === 'users' ? 'on' : ''} onClick={() => setTab('users')}>Người dùng{people ? ` (${people.length})` : ''}</button>
-        <button role="tab" aria-selected={tab === 'groups'} className={tab === 'groups' ? 'on' : ''} onClick={() => setTab('groups')}>Nhóm</button>
-        <button role="tab" aria-selected={tab === 'flows'} className={tab === 'flows' ? 'on' : ''} onClick={() => setTab('flows')}>Chuỗi duyệt & hạn</button>
-        <button role="tab" aria-selected={tab === 'ck'} className={tab === 'ck' ? 'on' : ''} onClick={() => setTab('ck')}>Checklist các bước</button>
-        <button role="tab" aria-selected={tab === 'sd'} className={tab === 'sd' ? 'on' : ''} onClick={() => setTab('sd')}>Người phụ trách bước</button>
+        <p className="muted">Tài khoản, vai trò, nhóm, người phụ trách từng bước, checklist và chuỗi duyệt.</p></div>
+        {can('admin_it') && tab === 'users' && <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Tạo người dùng</button>}
       </div>
+      {people && <div className="adm-stats">
+        <button className="adm-stat" onClick={() => { setTab('users'); setFRole(''); setFAct('on'); setFZ(false); }}><b>{act.length}</b><span>Đang hoạt động</span></button>
+        <button className={'adm-stat' + (noRole ? ' warn' : '')} onClick={() => { setTab('users'); setFRole('_none'); setFAct('on'); setFZ(false); }}><b>{noRole}</b><span>Chưa có vai trò</span></button>
+        <button className={'adm-stat' + (noZalo ? ' warn' : '')} onClick={() => { setTab('users'); setFRole(''); setFAct('on'); setQ(''); setFZ(true); }}><b>{noZalo}</b><span>Chưa liên kết Zalo</span></button>
+        <button className="adm-stat" onClick={() => setTab('groups')}><b>{groups.filter((g) => g.active).length}</b><span>Nhóm</span></button>
+      </div>}
+      <div className="qt-group od-group adm-group"><div className="qt-tabs" role="tablist" aria-label="Mục quản trị">
+        {TABS.map(([k, t, sub, ic]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
+            <b><Icon name={ic as never} size={15} /> {t}</b><span>{sub}</span></button>))}
+      </div><div className="qt-panel od-panel adm-panel" key={tab}>
 
-      {tab === 'users' && (<>
-        {can('admin_it') && <div><button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Tạo người dùng</button></div>}
-        <label className="search" style={{ maxWidth: 'none', flex: '0 0 auto' }}><Icon name="search" size={18} />
-          <input aria-label="Tìm người dùng" placeholder="Tìm tên, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
-        {noRole > 0 && <div className="msg info"><Icon name="alert" size={18} /><span>{noRole} người chưa có vai trò – họ đăng nhập được nhưng không làm được việc gì.</span></div>}
-        {!people ? <Skeleton rows={4} h={76} /> : (
-          <ul className="ulist">
-            {list.map((p) => (
+      {tab === 'users' && (<div className="adm-users">
+        <div className="row">
+          <label className="search" style={{ flex: '1 1 260px', maxWidth: 'none' }}><Icon name="search" size={18} />
+            <input aria-label="Tìm người dùng" placeholder="Tìm tên, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <div className="seg" role="group" aria-label="Trạng thái">{([['on', 'Hoạt động'], ['off', 'Đã khoá'], ['all', 'Tất cả']] as const).map(([k, t]) =>
+            <button key={k} type="button" aria-pressed={fAct === k} onClick={() => setFAct(k)}>{t}</button>)}</div>
+        </div>
+        <div className="adm-chips" role="group" aria-label="Lọc theo vai trò">
+          <button className={'pill-toggle' + (fRole === '' ? ' on' : '')} aria-pressed={fRole === ''} onClick={() => setFRole('')}>Tất cả vai trò</button>
+          {Object.entries(ROLES).map(([k, t]) => roleCount(k) > 0 && (
+            <button key={k} className={'pill-toggle' + (fRole === k ? ' on' : '')} aria-pressed={fRole === k} onClick={() => setFRole(fRole === k ? '' : k)}>{t} <span className="kb-count">{roleCount(k)}</span></button>))}
+          <button className={'pill-toggle' + (fZ ? ' on' : '')} aria-pressed={fZ} onClick={() => setFZ(!fZ)}>Chưa liên kết Zalo</button>
+          {noRole > 0 && <button className={'pill-toggle' + (fRole === '_none' ? ' on' : '')} aria-pressed={fRole === '_none'} onClick={() => setFRole('_none')}>Chưa có vai trò <span className="kb-count">{noRole}</span></button>}
+        </div>
+        {!people ? <Skeleton rows={4} h={76} /> : shown.length === 0 ? <p className="muted">Không có người dùng khớp bộ lọc.</p> : (
+          <ul className="ulist adm-ulist">
+            {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); return (
               <li key={p.id}>
-                <button className="ucard" onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
-                  <span className="avatar">{(p.full_name || '?').charAt(0).toUpperCase()}</span>
+                <button className={'ucard' + (p.active ? '' : ' off')} onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
+                  <span className="avatar">{(p.full_name || '?').split(' ').filter(Boolean).slice(-2).map((x) => x[0]).join('').toUpperCase()}</span>
                   <span className="ucard-main">
                     <span className="row" style={{ gap: 6 }}><b>{p.full_name || '(chưa đặt tên)'}</b>
-                      <span className="small muted">· {p.unit}</span>{!p.active && <span className="chip bad">Đã khoá</span>}</span>
-                    <span className="ucard-roles">{p.roles.length ? p.roles.map((r) => <span key={r} className="chip idle">{ROLES[r] ?? r}</span>)
-                      : <span className="chip wait">Chưa có vai trò</span>}</span>
+                      <span className="chip idle">{p.unit}</span>{!p.active && <span className="chip bad">Đã khoá</span>}
+                      <span className={'zl ' + (p.zalo_chat_id ? 'on' : '')} title={p.zalo_chat_id ? 'Đã liên kết Zalo' + (p.zalo_name ? ': ' + p.zalo_name : '') : 'Chưa liên kết Zalo – không nhận thông báo'}>Zalo</span></span>
+                    <span className="ucard-roles">{p.roles.length ? p.roles.map((r) => <span key={r} className="chip wait">{ROLES[r] ?? r}</span>)
+                      : <span className="chip bad">Chưa có vai trò</span>}
+                      {gs.map((g) => <span key={g.id} className="chip grp-chip"><Icon name="users" size={12} />{g.name}</span>)}</span>
                   </span>
                   <Icon name="arrow" size={18} />
                 </button>
-              </li>))}
+              </li>); })}
           </ul>)}
-      </>)}
+      </div>)}
 
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}
       {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
       {tab === 'ck' && <ChecklistAdmin canEdit={can('admin_it')} />}
       {tab === 'flows' && (!steps || !people ? <Skeleton rows={4} h={90} /> : <Flows steps={steps} people={people} onSaved={load} />)}
+      </div></div>
     </>
   );
 }

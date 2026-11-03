@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sb, type Approval, type Customer, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -63,38 +63,73 @@ export default function Board() {
   const loadSteps = () => sb.from('order_steps').select('*').is('done_at', null).then(({ data }) => setOsteps((data as OStep[]) ?? []));
   useEffect(() => { loadSteps(); }, []); // eslint-disable-line
   const stepOf = (id: string, colKey: string) => osteps.find((x) => x.order_id === id && x.step === ({ qt0: 'qt0.', qt1: 'qt1.', qt2: 'qt2.', qt4: 'qt3.' } as Record<string, string>)[P.key] + colKey);
+  const [slotFix, setSlotFix] = useState<{ l: number; w: number } | null>(null); const fixRef = useRef('');
   const [landed, setLanded] = useState(''); const [eat, setEat] = useState(-1);
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Ảnh kéo: thẻ thu nhỏ, nghiêng như phong bì
-  const startDrag = (e: React.DragEvent<HTMLElement>, id: string, i: number) => {
-    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id);
-    const src = e.currentTarget; const g = src.cloneNode(true) as HTMLElement;
-    g.classList.add('kb-ghost'); g.style.width = src.offsetWidth + 'px'; document.body.appendChild(g);
-    e.dataTransfer.setDragImage(g, 40, 24); setTimeout(() => g.remove(), 0);
-    setDrag({ id, i });
+  // Kéo bằng chuột (pointer events): thẻ thu nhỏ như phong bì bám theo con trỏ, tự cuộn trang khi gần mép,
+  // thả ở bất kỳ đâu trong cột kế tiếp; khe hộp thư dính ở đầu phần cột đang thấy.
+  const dr = useRef<{ id: string; i: number; x0: number; y0: number; ox: number; oy: number; w: number; card: HTMLElement; g?: HTMLElement; on: boolean; over: number; px: number; py: number; raf: number } | null>(null);
+  // chỉ xét theo chiều ngang: con trỏ ở trên/dưới cột vẫn tính là thả vào cột đó
+  const colAt = (x: number, y: number) => {
+    const bd = document.querySelector('.kb-board')?.getBoundingClientRect(); if (!bd || y < bd.top - 40) return -1;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-col]')) { const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right) return Number(el.dataset.col); }
+    return -1; };
+  const place = (d: NonNullable<typeof dr.current>) => { if (d.g) d.g.style.transform = `translate(${d.px - d.ox * .6}px,${d.py - d.oy * .6}px) rotate(-5deg) scale(.6)`; };
+  const tick = () => {
+    const d = dr.current; if (!d?.on) return;
+    const m = 70, vy = d.py < m ? -(m - d.py) / 3 : d.py > innerHeight - m ? (d.py - innerHeight + m) / 3 : 0;
+    if (vy) window.scrollBy(0, vy);
+    const bd = document.querySelector<HTMLElement>('.kb-board'); if (bd) { const r = bd.getBoundingClientRect();
+      const vx = d.px < r.left + m ? -(r.left + m - d.px) / 3 : d.px > r.right - m ? (d.px - r.right + m) / 3 : 0; if (vx) bd.scrollLeft += vx; }
+    const c = colAt(d.px, d.py); const ok = c === d.i + 1 ? c : -1; if (ok !== d.over) { d.over = ok; setOver(ok); }
+    // cột đích cuộn khuất đầu → hộp thư bám mép trên màn hình, ngay trên cột
+    const tc = document.querySelector<HTMLElement>(`[data-col="${d.i + 1}"]`)?.getBoundingClientRect();
+    const fx = tc && tc.top + 64 < 16 && tc.bottom > 140 ? { l: Math.round(tc.left + 10), w: Math.round(tc.width - 20) } : null;
+    const key = JSON.stringify(fx); if (key !== fixRef.current) { fixRef.current = key; setSlotFix(fx); }
+    d.raf = requestAnimationFrame(tick);
   };
-  // Thả: thẻ bay vào khe hộp thư rồi mới mở hộp kiểm tra
-  const dropInto = (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    const o = (orders ?? []).find((x) => x.id === drag?.id); const d = drag;
+  const onMove = (e: PointerEvent) => {
+    const d = dr.current; if (!d) return; d.px = e.clientX; d.py = e.clientY;
+    if (!d.on) {
+      if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+      d.on = true; const g = d.card.cloneNode(true) as HTMLElement; g.classList.add('kb-ghost'); g.style.width = d.w + 'px';
+      document.body.appendChild(g); d.g = g; document.body.classList.add('kb-dragging'); setDrag({ id: d.id, i: d.i }); d.raf = requestAnimationFrame(tick);
+    }
+    place(d);
+  };
+  const onUp = () => {
+    const d = dr.current; removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onUp);
+    dr.current = null; if (!d?.on) return;
+    cancelAnimationFrame(d.raf); document.body.classList.remove('kb-dragging');
+    const eat1 = (ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation(); }; // không mở đơn sau khi kéo
+    addEventListener('click', eat1, { capture: true, once: true }); setTimeout(() => removeEventListener('click', eat1, true), 50);
+    const o = (orders ?? []).find((x) => x.id === d.id); const g = d.g!;
+    const slot = d.over >= 0 ? document.querySelector<HTMLElement>(`[data-col="${d.over}"] .kb-slot-mouth`) : null;
     setDrag(null); setOver(-1);
-    if (!o || !d) return;
-    const card = document.querySelector<HTMLElement>('[data-card="' + o.id + '"]');
-    const slot = e.currentTarget.querySelector<HTMLElement>('.kb-slot-mouth');
-    if (reduce || !card || !slot) { setMove({ o, i: d.i }); return; }
-    const r = card.getBoundingClientRect(), t = slot.getBoundingClientRect();
-    const f = card.cloneNode(true) as HTMLElement; f.classList.add('kb-fly');
-    Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px' }); document.body.appendChild(f);
-    const sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2;
-    const dx = t.left + t.width / 2 - r.left - r.width / 2, dy = t.top + t.height / 2 - r.top - r.height / 2;
-    const col = d.i + 1; setEat(col);
-    f.animate([
-      { transform: `translate(${sx}px,${sy}px) scale(.55) rotate(-6deg)`, opacity: 1 },
-      { transform: `translate(${dx}px,${dy - 40}px) scale(.42) rotate(-2deg)`, opacity: 1, offset: .55 },
-      { transform: `translate(${dx}px,${dy + 6}px) scale(.38,.05) rotate(0)`, opacity: .2 }
-    ], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)' }).finished.then(() => {
-      f.remove(); setTimeout(() => setEat(-1), 260); setMove({ o, i: d.i });
+    const from = g.getBoundingClientRect();
+    if (!o || !slot) { // thả sai chỗ: phong bì bay về
+      const r = d.card.getBoundingClientRect();
+      g.animate([{ transform: g.style.transform, opacity: 1 }, { transform: `translate(${r.left}px,${r.top}px) rotate(0) scale(1)`, opacity: .3 }], { duration: reduce ? 0 : 260, easing: 'ease-in' })
+        .finished.then(() => g.remove());
+      setSlotFix(null); fixRef.current = ''; return;
+    }
+    const col = d.over; setEat(col);
+    if (reduce) { g.remove(); setEat(-1); setMove({ o, i: d.i }); return; }
+    const t = slot.getBoundingClientRect(); const cx = t.left + t.width / 2 - from.width / 2, cy = t.top + t.height / 2 - from.height / 2;
+    g.animate([
+      { transform: g.style.transform, opacity: 1 },
+      { transform: `translate(${cx - d.w * .2}px,${cy - 40}px) rotate(-2deg) scale(.42)`, opacity: 1, offset: .55 },
+      { transform: `translate(${cx - d.w * .2}px,${cy + 4}px) rotate(0) scale(.4,.04)`, opacity: .2 }
+    ], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }).finished.then(() => {
+      g.remove(); setTimeout(() => { setEat(-1); setSlotFix(null); fixRef.current = ''; }, 260); setMove({ o, i: d.i });
     });
+  };
+  const startDrag = (e: React.PointerEvent<HTMLElement>, id: string, i: number) => {
+    if (e.button !== 0 || e.pointerType === 'touch' || i >= COLS.length - 1) return; // điện thoại dùng nút "Chuyển bước"
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    dr.current = { id, i, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, w: r.width, card: e.currentTarget, on: false, over: -1, px: e.clientX, py: e.clientY, raf: 0 };
+    addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onUp);
   };
   const reload = () => sb.from('orders').select('*').not('status', 'in', '(hoan_tat,huy)').order('due_date', { nullsFirst: false })
     .then(({ data }) => setOrders((data as Order[]) ?? []));
@@ -166,22 +201,21 @@ export default function Board() {
           return (
             <section key={c.key} className={'kb-col' + (curCol === c.key ? ' show' : '') + (c.gate ? ' gated' : '')
               + (drag ? (drag.i + 1 === i ? ' drop-ok' : drag.i === i ? '' : ' drop-no') : '') + (over === i && drag?.i === i - 1 ? ' drop-over' : '')} aria-label={c.title}
-              onDragOver={(e) => { if (drag && drag.i + 1 === i) { e.preventDefault(); setOver(i); } }}
-              onDragLeave={() => setOver(-1)}
-              onDrop={dropInto}>
+              data-col={i}>
               <header className="kb-head">
                 <span className="kb-group">{P.title} · bước {i + 1}</span>
                 <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div>
               </header>
               <div className="kb-list">
                 {((drag && drag.i + 1 === i) || eat === i) && (
-                  <div className={'kb-slot' + (over === i || eat === i ? ' open' : '') + (eat === i ? ' eat' : '')} aria-hidden="true">
+                  <div className={'kb-slot' + (over === i || eat === i ? ' open' : '') + (eat === i ? ' eat' : '') + (slotFix ? ' fixed' : '')} aria-hidden="true"
+                    style={slotFix ? { left: slotFix.l, width: slotFix.w } : undefined}>
                     <span className="kb-slot-mouth" /><span className="kb-slot-txt"><Icon name="inbox" size={16} />Thả vào đây để chuyển sang {c.title}</span>
                   </div>)}
                 {!orders ? <Skeleton rows={2} h={120} /> : list.length === 0 && <p className="kb-empty">Không có đơn ở bước này</p>}
                 {list.map(({ o, pend, myTurn, lateAppr, days, rejected, a }) => (
                   <article key={o.id} className={'kb-card' + (myTurn ? ' mine' : '') + (drag?.id === o.id ? ' dragging' : '') + (landed === o.id ? ' landed' : '')} data-card={o.id}
-                    draggable={i < COLS.length - 1} onDragStart={(e) => startDrag(e, o.id, i)} onDragEnd={() => { setDrag(null); setOver(-1); }}>
+                    onPointerDown={(e) => startDrag(e, o.id, i)} onDragStart={(e) => e.preventDefault()}>
                     <Link to={'/don/' + o.id} className="kb-link">
                       <span className="kb-code">{o.code}</span>
                       <span className="kb-proj">{o.project}</span>
