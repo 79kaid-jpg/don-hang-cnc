@@ -1,3 +1,4 @@
+import { BaseConnect } from '../components/BaseConnect';
 import { GroupsAdmin, StepDefaultsAdmin, useGroups } from '../components/StepPeople';
 import { ChecklistAdmin } from '../components/Checklist';
 import { useEffect, useMemo, useState } from 'react';
@@ -14,7 +15,7 @@ const UNITS = ['CNC', 'IPC', 'IT', 'KHAC'];
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd'>('users');
+  const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base'>('users');
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
@@ -35,7 +36,7 @@ export default function Admin() {
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
     ['sd', 'Phụ trách bước', 'Người làm, giám sát, SLA', 'clock'], ['ck', 'Checklist', 'Mục phải xong mỗi bước', 'check'],
-    ['flows', 'Chuỗi duyệt', 'Người duyệt & hạn', 'flow']];
+    ['flows', 'Chuỗi duyệt', 'Người duyệt & hạn', 'flow'], ['base', 'Kết nối BASE', 'Token API', 'share']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
@@ -92,6 +93,7 @@ export default function Admin() {
           </ul>)}
       </div>)}
 
+      {tab === 'base' && <BaseConnect canEdit={can('admin_it')} />}
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}
       {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
       {tab === 'ck' && <ChecklistAdmin canEdit={can('admin_it')} />}
