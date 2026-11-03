@@ -202,3 +202,7 @@ textarea{resize:vertical}
 .qt-tabs button.on .kb-count{background:#fff;color:var(--ink)}
 .kb-col.gated{box-shadow:inset -3px 0 0 #D9475A}
 .kb-gate{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#B42335;background:#FCEBEE;border:1px dashed #D9475A;border-radius:var(--r-sm);padding:6px 8px}
+
+.zalo-card{border-color:#BBD3F5;background:#F5F9FF}
+.zalo-badge{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#0068FF;color:#fff;font-weight:800;font-size:13px}
+.zalo-code{font-size:20px;letter-spacing:.15em;background:#fff;border:1px solid var(--line2);border-radius:6px;padding:2px 8px}

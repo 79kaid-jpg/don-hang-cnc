@@ -12,6 +12,7 @@ import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
 import Admin from './pages/Admin';
 import Install, { UpdateBar } from './pages/Install';
+import { ZaloLink } from './components/ZaloLink';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -57,6 +58,7 @@ function Shell() {
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
             <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
           <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Cài app</NavLink>
+          <NavLink to="/zalo" className="nav-item"><Icon name="bell" />Thông báo Zalo{me.zalo_chat_id ? '' : <span className="nav-badge" aria-label="chưa liên kết">!</span>}</NavLink>
           <button className="nav-item" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
         </div>
       </aside>
@@ -64,6 +66,7 @@ function Shell() {
       <header className="topbar">
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
         <b style={{ flex: 1 }}>Đơn hàng CNC</b>
+        <NavLink to="/zalo" className="btn sm icon-btn" aria-label="Thông báo Zalo"><Icon name="bell" /></NavLink>
         <NavLink to="/cai-app" className="btn sm icon-btn" aria-label="Cài app lên màn hình chính"><Icon name="download" /></NavLink>
         <span className="avatar" title={me.full_name} aria-label={me.full_name}>{initial}</span>
         <button className="btn sm icon-btn" aria-label="Đăng xuất" onClick={() => sb.auth.signOut()}><Icon name="logout" /></button>
@@ -84,6 +87,7 @@ function Shell() {
           <Route path="/don/:id" element={<OrderDetail />} />
           <Route path="/quan-tri" element={<Admin />} />
           <Route path="/cai-app" element={<Install />} />
+          <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

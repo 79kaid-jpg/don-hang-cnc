@@ -4,7 +4,7 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 if (!url || !key) console.error('Thiếu VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY');
 export const sb = createClient(url, key);
 
-export type Profile = { id: string; full_name: string; unit: string; roles: string[]; active: boolean; impersonating?: string | null };
+export type Profile = { id: string; full_name: string; unit: string; roles: string[]; active: boolean; impersonating?: string | null; zalo_chat_id?: string | null; zalo_name?: string | null };
 export type Customer = { id: string; code: string; name: string };
 export type Order = {
   id: string; code: string; kh1_id: string | null; kh2_id: string | null; project: string; channel: string;

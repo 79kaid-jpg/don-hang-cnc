@@ -6,6 +6,7 @@ import { DOC, ORDER_STATUS, dt } from '../lib/format';
 import { Chip, Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { InstallHint } from './Install';
+import { ZaloLink } from '../components/ZaloLink';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
 export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
@@ -52,6 +53,7 @@ export default function MyWork() {
         <p className="muted">{appr && orders ? `${appr.length} phiếu chờ duyệt · ${mine.length} việc đến lượt` : 'Đang tải việc của bạn…'}</p></div></div>
 
       <InstallHint />
+      <ZaloLink compact />
       <section className="card flush" aria-labelledby="h-appr">
         <div className="card-head"><h2 id="h-appr">Chờ tôi duyệt</h2>{appr && <span className="chip wait">{appr.length} phiếu</span>}</div>
         <div style={{ padding: appr && appr.length ? 0 : 12 }}>
