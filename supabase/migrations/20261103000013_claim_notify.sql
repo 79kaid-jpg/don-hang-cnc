@@ -1,0 +1,4 @@
+-- Đã áp dụng qua MCP (claim_and_step_notify, step_notify_reassign):
+-- pg_cron; order_steps.claimed_at/half_sent/over_sent; _zalo_step(); trigger order_steps_notify (vào bước / giao lại → Zalo);
+-- claim_step() "Nhận việc"; step_reminders() chạy 15 phút/lần: chưa ai nhận sau 50% SLA → nhắc nhóm, quá hạn → báo giám sát + người làm;
+-- guard_checklist: bước giao nhóm phải có người nhận mới chuyển; track_steps: giao nhóm thì để trống người làm.

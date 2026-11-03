@@ -8,6 +8,14 @@ const DOC: Record<string, [string, string]> = {
   F2: ['XNĐH', 'F2'], F3: ['Dự toán NVL (F3)', 'QT2'], PO: ['PO mua NVL', 'QT2'], F5: ['Lệnh gia công + dự toán NVL (F5)', 'QT2'],
   LGH1: ['Lệnh giao hàng chặng 1 CNC → IPC', 'GH'], LGH2: ['Lệnh giao hàng chặng 2 IPC → Hanwa', 'GH']
 };
+const STEP: Record<string, string> = {
+  'qt0.tiep_nhan': 'QT0 · Tiếp nhận', 'qt0.boc_tach': 'QT0 · Bóc tách F1', 'qt0.kiem_tra_f1': 'QT0 · Kiểm tra F1',
+  'qt1.xndh': 'QT1 · Lập XNĐH', 'qt1.cho_duyet_xndh': 'QT1 · Duyệt XNĐH', 'qt1.cho_khach': 'QT1 · KH1 → KH2 xác nhận',
+  'qt2.b1': 'QT2 · B1 Lập LGC + dự toán NVL', 'qt2.b2': 'QT2 · B2 Duyệt LGC 4 cấp', 'qt2.b3': 'QT2 · B3 Mua NVL (PO)',
+  'qt2.b4': 'QT2 · B4 Nhập kho & QC NVL', 'qt2.b5': 'QT2 · B5 Bàn giao NVL', 'qt2.b6': 'QT2 · B6 Gia công & QC TP',
+  'qt3.thong_bao': 'QT3 · B2 Thông báo giao + F8', 'qt3.lap_lgh': 'QT3 · B3 Lập lệnh giao hàng', 'qt3.cho_duyet_lgh': 'QT3 · B3 Duyệt LGH',
+  'qt3.giao_hang': 'QT3 · B4 Giao hàng + ảnh', 'qt3.ky_bbgh': 'QT3 · B5 Ký & lưu BBGH'
+};
 let cache: Record<string, string> | null = null;
 async function secrets() {
   if (!cache) { const { data } = await db.from('app_secrets').select('name, value'); cache = Object.fromEntries((data ?? []).map((r) => [r.name, r.value])); }
@@ -78,6 +86,40 @@ Deno.serve(async (req) => {
     const { data: p } = await db.from('profiles').select('zalo_chat_id').eq('id', to).maybeSingle();
     if (!p?.zalo_chat_id) return json({ ok: true, skipped: 'chưa liên kết Zalo' });
     return json({ ok: true, zalo: await send(p.zalo_chat_id, text) });
+  }
+  // 4) Bước công việc: vào bước / giao lại / có người nhận / nhắc 50% SLA / quá hạn
+  if (op === 'step') {
+    if (req.headers.get('x-notify-key') !== s.NOTIFY_KEY) return json({ error: 'forbidden' }, 403);
+    const { order_id, step, event, actor } = await req.json();
+    const { data: r } = await db.from('order_steps').select('*, orders(code, project)').eq('order_id', order_id).eq('step', step).single();
+    if (!r || r.done_at) return json({ ok: true, skipped: 'bước đã đóng' });
+    const ids = new Set<string>();
+    const gids = [r.doer_group_id, ...(event === 'overdue' ? r.supervisor_group_ids : [])].filter(Boolean);
+    const { data: gs } = gids.length ? await db.from('work_groups').select('id, name, member_ids').in('id', gids) : { data: [] };
+    const grp = (gs ?? []).find((g) => g.id === r.doer_group_id);
+    const members: string[] = grp?.member_ids ?? [];
+    if (event === 'start' || event === 'assigned' || event === 'remind_half') { if (r.doer_id) ids.add(r.doer_id); else members.forEach((m) => ids.add(m)); }
+    if (event === 'claimed') members.filter((m) => m !== actor).forEach((m) => ids.add(m));
+    if (event === 'overdue') {
+      if (r.doer_id) ids.add(r.doer_id); else members.forEach((m) => ids.add(m));
+      r.supervisor_ids.forEach((m: string) => ids.add(m));
+      (gs ?? []).filter((g) => r.supervisor_group_ids.includes(g.id)).forEach((g) => g.member_ids.forEach((m: string) => ids.add(m)));
+    }
+    if (actor) ids.delete(actor);
+    if (!ids.size) return json({ ok: true, skipped: 'không có người nhận' });
+    const { data: ps } = await db.from('profiles').select('id, full_name, zalo_chat_id').in('id', [...ids, ...(actor ? [actor] : []), ...(r.doer_id ? [r.doer_id] : [])]);
+    const name = (id: string | null) => ps?.find((p) => p.id === id)?.full_name ?? '';
+    const lbl = STEP[step] ?? step; const tab = step.startsWith('qt0') ? 'F1' : step.startsWith('qt1') ? 'F2' : step.startsWith('qt2') ? 'QT2' : 'GH';
+    const link = `${APP}#/don/${order_id}?tab=${tab}`;
+    const head = `${r.orders.code} · ${r.orders.project}\n${lbl}`;
+    const text = event === 'claimed' ? `✋ ${name(actor)} đã nhận việc\n${head}\nBạn không cần làm bước này nữa.\n${link}`
+      : event === 'overdue' ? `⏰ Quá hạn\n${head}\nHạn: ${fmt(r.due_at)} · Người làm: ${name(r.doer_id) || (grp ? 'nhóm ' + grp.name + ' (chưa ai nhận)' : 'chưa giao')}\n${link}`
+      : event === 'remind_half' ? `🔔 Nhắc: chưa ai nhận việc\n${head}\nNhóm ${grp?.name ?? ''} · hạn ${fmt(r.due_at)}\nBấm "Nhận việc" trong app: ${link}`
+      : r.doer_id ? `📌 Việc mới cho bạn\n${head}\nHạn: ${fmt(r.due_at)}\n${link}`
+      : `📌 Việc mới cho nhóm ${grp?.name ?? ''}\n${head}\nHạn: ${fmt(r.due_at)}\nAi làm thì bấm "Nhận việc": ${link}`;
+    const out = [];
+    for (const p of ps ?? []) if (ids.has(p.id) && p.zalo_chat_id) out.push(await send(p.zalo_chat_id, text));
+    return json({ ok: true, sent: out.length, to: ids.size });
   }
   return json({ error: 'unknown op' }, 400);
 });

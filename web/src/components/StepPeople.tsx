@@ -6,7 +6,7 @@ import { STEP_LABEL } from './Checklist';
 import { Icon } from './Icon';
 
 /** Người thực hiện + người giám sát + thời hạn của bước (giống giai đoạn BASE Workflow) */
-export type OStep = Assign & { order_id: string; step: string; started_at: string; due_at: string | null; done_at: string | null; done_by: string | null };
+export type OStep = Assign & { order_id: string; step: string; claimed_at: string | null; started_at: string; due_at: string | null; done_at: string | null; done_by: string | null };
 export type SDef = Assign & { step: string; role: string; approval: boolean; sla_hours: number };
 
 const initials = (n?: string) => (n || '?').split(' ').filter(Boolean).slice(-2).map((x) => x[0]).join('').toUpperCase();
@@ -42,7 +42,7 @@ export function PeoplePick({ people, groups, role, v, disabled, approval, onChan
           {fit.length > 0 && <optgroup label={'Có vai trò ' + (ROLES[role] ?? role)}>{fit.map((p) => <option key={p.id} value={'p:' + p.id}>{p.full_name}</option>)}</optgroup>}
           <optgroup label="Người khác">{rest.map((p) => <option key={p.id} value={'p:' + p.id}>{p.full_name}</option>)}</optgroup>
         </select>
-        {g && <span className="small muted">Ai trong nhóm cũng làm được: {g.member_ids.map((id) => people.find((p) => p.id === id)?.full_name).filter(Boolean).join(', ') || 'nhóm chưa có người'}</span>}
+        {g && <span className="small muted">Ai trong nhóm cũng làm được: {g.member_ids.map((id) => people.find((p) => p.id === id {g.member_ids.map((id) => people.find((p) => p.id === id)?.full_name).filter(Boolean){g.member_ids.map((id) => people.find((p) => p.id === id)?.full_name).filter(Boolean) p.active)?.full_name).filter(Boolean).join(', ') || 'nhóm chưa có người'}</span>}
       </label>
       <div className="f">Người / nhóm giám sát
         <div className="sp-sups">
@@ -88,6 +88,11 @@ export function StepPeople({ orderId, step, people }: { orderId: string; step: s
   const mine = (gid: string | null) => !!gid && !!groups.find((g) => g.id === gid)?.member_ids.includes(me?.id ?? '');
   const editable = can('admin_it') || can('admin_cnc') || can('kinh_doanh') || r.supervisor_ids.includes(me?.id ?? '') || r.doer_id === me?.id
     || mine(r.doer_group_id) || r.supervisor_group_ids.some(mine);
+  const inGrp = mine(r.doer_group_id);
+  const claim = async () => {
+    setErr(''); const { error } = await sb.rpc('claim_step', { p_order: orderId, p_step: step });
+    if (error) setErr(errText(error)); else { setOk('Bạn đã nhận việc'); load(); setTimeout(() => setOk(''), 2000); }
+  };
   const save = async (patch: Partial<Assign>) => {
     setErr(''); setOk('');
     const { error } = await sb.from('order_steps').update(patch).eq('order_id', orderId).eq('step', step);
@@ -102,6 +107,13 @@ export function StepPeople({ orderId, step, people }: { orderId: string; step: s
         {ok && <span className="small" style={{ color: 'var(--blue)' }}>{ok}</span>}
       </div>
       <PeoplePick people={list} groups={groups} role={def?.role ?? ''} approval={def?.approval} v={r} disabled={!editable} onChange={save} />
+      {r.doer_group_id && (
+        <div className={'claim' + (r.doer_id ? ' on' : '')}>
+          {r.doer_id ? <span><Avatar p={people[r.doer_id]} /> <b>{people[r.doer_id]?.full_name}</b> đã nhận việc{r.claimed_at ? ' lúc ' + dt(r.claimed_at) : ''}</span>
+            : <span><Icon name="alert" size={15} /> <b>Chưa ai nhận việc</b> – cả nhóm đã được báo qua Zalo. Phải có người nhận mới chuyển được bước.</span>}
+          {(inGrp || can('admin_it') || can('admin_cnc')) && r.doer_id !== me?.id && (
+            <button className="btn sm primary" onClick={claim}><Icon name="check" size={16} />{r.doer_id ? 'Nhận lại việc' : 'Nhận việc'}</button>)}
+        </div>)}
       {!r.doer_id && !r.doer_group_id && !def?.approval && <div className="small" style={{ color: 'var(--red)' }}><Icon name="alert" size={13} /> Chưa có người / nhóm thực hiện – phải giao mới chuyển được bước.</div>}
       {err && <div className="msg err">{err}</div>}
     </div>);
@@ -214,4 +226,35 @@ export function GroupsAdmin({ canEdit }: { canEdit: boolean }) {
           </li>))}
       </ul>
     </div>);
+}
+
+/** Việc của tôi: bước nhóm tôi chờ nhận + bước tôi đang làm */
+export function StepInbox() {
+  const { me } = useAuth(); const [groups] = useGroups();
+  const [rows, setRows] = useState<(OStep & { orders: { code: string; project: string } })[] | null>(null);
+  const [err, setErr] = useState('');
+  const load = useCallback(() => { sb.from('order_steps').select('*, orders(code, project)').is('done_at', null).order('due_at').then(({ data }) => setRows((data as never) ?? [])); }, []);
+  useEffect(() => { load(); }, [load]);
+  if (!rows || !me) return null;
+  const myG = groups.filter((g) => g.member_ids.includes(me.id)).map((g) => g.id);
+  const wait = rows.filter((r) => r.doer_group_id && !r.doer_id && myG.includes(r.doer_group_id));
+  const mine = rows.filter((r) => r.doer_id === me.id);
+  if (!wait.length && !mine.length) return null;
+  const tab = (st: string) => (st.startsWith('qt0') ? 'F1' : st.startsWith('qt1') ? 'F2' : st.startsWith('qt2') ? 'QT2' : 'GH');
+  const claim = async (r: OStep) => { setErr(''); const { error } = await sb.rpc('claim_step', { p_order: r.order_id, p_step: r.step }); if (error) setErr(errText(error)); else load(); };
+  const Row = ({ r, act }: { r: OStep & { orders: { code: string; project: string } }; act?: boolean }) => (
+    <li className="inbox-row">
+      <a href={'#/don/' + r.order_id + '?tab=' + tab(r.step)} className="inbox-main">
+        <b>{r.orders.code}</b><span className="small">{STEP_LABEL[r.step] ?? r.step}</span><span className="small muted">{r.orders.project}</span></a>
+      <DueChip due={r.due_at} />
+      {act && <button className="btn sm primary" onClick={() => claim(r)}><Icon name="check" size={16} />Nhận việc</button>}
+    </li>);
+  return (
+    <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {wait.length > 0 && <><h2 style={{ margin: 0 }}>Nhóm tôi có việc chờ nhận <span className="kb-count">{wait.length}</span></h2>
+        <ul className="inbox">{wait.map((r) => <Row key={r.order_id + r.step} r={r} act />)}</ul></>}
+      {mine.length > 0 && <><h2 style={{ margin: 0 }}>Việc tôi đang làm <span className="kb-count">{mine.length}</span></h2>
+        <ul className="inbox">{mine.map((r) => <Row key={r.order_id + r.step} r={r} />)}</ul></>}
+      {err && <div className="msg err">{err}</div>}
+    </section>);
 }

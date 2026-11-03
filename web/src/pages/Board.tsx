@@ -195,7 +195,7 @@ export default function Board() {
                     {(() => { const st = stepOf(o.id, c.key); if (!st) return null; const d = st.doer_id ? people[st.doer_id] : undefined; const dg = groups.find((g) => g.id === st.doer_group_id);
                       const supN = [...st.supervisor_group_ids.map((x) => 'Nhóm ' + (groups.find((g) => g.id === x)?.name ?? '?')), ...st.supervisor_ids.map((x) => people[x]?.full_name)]; return (
                       <div className="kb-people">
-                        {dg ? <span className="kb-doer"><GroupBadge g={dg} />Nhóm {dg.name}</span> : d ? <span className="kb-doer"><Avatar p={d} />{d.full_name}</span> : c.roles.length ? <span className="chip bad">Chưa giao người</span> : <span className="small muted">Theo chuỗi duyệt</span>}
+                        {dg ? <span className="kb-doer"><GroupBadge g={dg} />Nhóm {dg.name}{d ? <> · <Avatar p={d} />{d.full_name}</> : <span className="chip wait">Chưa ai nhận</span>}</span> : d ? <span className="kb-doer"><Avatar p={d} />{d.full_name}</span> : c.roles.length ? <span className="chip bad">Chưa giao người</span> : <span className="small muted">Theo chuỗi duyệt</span>}
                         {supN.length > 0 && <span className="kb-sup" title={'Giám sát: ' + supN.join(', ')}>
                           <Icon name="eye" size={13} />{st.supervisor_group_ids.map((x) => <GroupBadge key={x} g={groups.find((g) => g.id === x)} />)}{st.supervisor_ids.map((x) => <Avatar key={x} p={people[x]} />)}</span>}
                         <DueChip due={st.due_at} />
