@@ -5,8 +5,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
 const DOC: Record<string, [string, string]> = {
-  F2: ['XNĐH', 'F2'], F3: ['Dự toán NVL (F3)', 'QT2'], PO: ['PO mua NVL', 'QT2'], F5: ['Lệnh gia công (F5)', 'QT3'],
-  LGH1: ['LGH chặng 1', 'LS'], LGH2: ['LGH chặng 2', 'LS']
+  F2: ['XNĐH', 'F2'], F3: ['Dự toán NVL (F3)', 'QT2'], PO: ['PO mua NVL', 'QT2'], F5: ['Lệnh gia công + dự toán NVL (F5)', 'QT2'],
+  LGH1: ['Lệnh giao hàng chặng 1 CNC → IPC', 'GH'], LGH2: ['Lệnh giao hàng chặng 2 IPC → Hanwa', 'GH']
 };
 let cache: Record<string, string> | null = null;
 async function secrets() {

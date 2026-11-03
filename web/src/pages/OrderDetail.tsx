@@ -6,7 +6,7 @@ import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '.
 import { Chip, Msg, Skeleton, confirmDialog } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
-import { QT2Merged, F7 } from './Phase2';
+import { QT2Merged, QT3Giao, F7 } from './Phase2';
 
 type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_at: string | null; kh1_channel: string | null;
   kh2_confirmed_at: string | null; kh2_channel: string | null; signed_pdf_path: string | null };
@@ -14,7 +14,7 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['F1', 'F1 Chi tiết'], ['F2', 'F2 XNĐH'], ['QT2', 'QT2 Lệnh GC & NVL'], ['GH', 'QT3 Giao hàng'], ['F7', 'F7 Phát sinh'], ['LS', 'Lịch sử']] as const;
 
 export default function OrderDetail() {
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams();
@@ -88,8 +88,8 @@ export default function OrderDetail() {
       {tab === 'F1' && <F1 {...props} tot={tot} />}
       {tab === 'F2' && <F2 {...props} prices={prices} conf={conf} appr={appr.filter((a) => a.doc_type === 'F2')}
         steps={steps.filter((s) => s.doc_type === 'F2')} people={people} meId={me!.id} />}
-      {(tab === 'QT2' || tab === 'QT3' || tab === 'F7') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
-        return tab === 'F7' ? <F7 {...q} /> : <QT2Merged {...q} />; })()}
+      {(tab === 'QT2' || tab === 'QT3' || tab === 'F7' || tab === 'GH') && (() => { const q = { ...props, appr, steps, people, meId: me!.id };
+        return tab === 'F7' ? <F7 {...q} /> : tab === 'GH' ? <QT3Giao {...q} /> : <QT2Merged {...q} />; })()}
       {tab === 'LS' && (
         <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}

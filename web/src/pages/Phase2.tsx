@@ -40,6 +40,7 @@ function Chain(p: Common & { doc: string }) {
   return <ApprovalChain rows={rows} steps={st} people={p.people} meId={p.meId} onDone={() => { p.setOk('Đã ghi kết quả duyệt.'); p.load(); }} />;
 }
 
+const localDT = (iso: string) => { const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 const numIn = (v: unknown) => (v == null ? '' : String(v));
 const toNum = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.')));
 
@@ -52,7 +53,7 @@ export function QT2(p: Common & { part?: 'f3' | 'buy' }) {
   const [waste, setWaste] = useState(''); const [poF, setPoF] = useState<Row>({}); const [recv, setRecv] = useState<Record<string, Row>>({});
   const [note, setNote] = useState('');
   useEffect(() => { setWaste(numIn(plan?.waste_pct ?? 3)); }, [plan?.waste_pct]);
-  useEffect(() => { setPoF(po ?? {}); }, [po]);
+  useEffect(() => { setPoF(po ?? {}); }, [JSON.stringify(po)]); // eslint-disable-line — chỉ đặt lại khi dữ liệu thật sự đổi
   const after = () => { reload(); load(); };
   if (o.nvl_status === 'chua_bat_dau') return <div className="card muted">Nhánh NVL mở khi đơn hoàn tất QT1 (ĐK2).</div>;
   const s = o.nvl_status;
@@ -143,9 +144,9 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
   const [reserve, setReserve] = useState(''); const [woF, setWoF] = useState<Row>({}); const [hoF, setHoF] = useState<Row>({});
   const [act, setAct] = useState<Record<string, string>>({}); const [note, setNote] = useState(''); const [qcNote, setQcNote] = useState(''); const [pallets, setPallets] = useState('');
   const [pdf, setPdf] = useState<string | null>(null);
-  useEffect(() => { setReserve(numIn(wo?.reserve_pct ?? 3)); setWoF(wo ?? {}); }, [wo]);
+  useEffect(() => { setReserve(numIn(wo?.reserve_pct ?? 3)); setWoF(wo ?? {}); }, [JSON.stringify(wo)]); // eslint-disable-line
   useEffect(() => { setHoF(ho ?? {});
-    if (ho?.signed_pdf_path) sb.storage.from('files').createSignedUrl(ho.signed_pdf_path, 3600).then(({ data }) => setPdf(data?.signedUrl ?? null)); }, [ho]);
+    if (ho?.signed_pdf_path) sb.storage.from('files').createSignedUrl(ho.signed_pdf_path, 3600).then(({ data }) => setPdf(data?.signedUrl ?? null)); }, [JSON.stringify(ho)]); // eslint-disable-line
   const after = () => { reload(); load(); };
   if (o.gc_status === 'chua_bat_dau') return <div className="card muted">Nhánh gia công mở khi đơn hoàn tất QT1 (ĐK2).</div>;
   const g = o.gc_status;
@@ -287,5 +288,122 @@ export function QT2Merged(p0: Common) {
       <QT3 {...p} part="approve" />
       <QT2 {...p} part="buy" />
       <QT3 {...p} part="after" />
+    </div>);
+}
+
+/* ───────────── QT3 Giao thành phẩm: B1 nhập kho TP → B2 F8 → B3 LGH 2 chặng → B4 giao + ảnh → B5 BBGH → hoàn tất ───────────── */
+export function QT3Giao(p: Common) {
+  const { o, can, run, setErr, setOk, load } = p;
+  const [d, reload] = useRows(o, ['qc_finished', 'packing_lists', 'packing_lines', 'deliveries', 'issues']);
+  const qc = d.qc_finished?.[0]; const pk = d.packing_lists?.[0]; const pl = (d.packing_lines ?? []).sort((a, b) => a.pallet_no - b.pallet_no);
+  const dv = d.deliveries?.[0]; const openF7 = (d.issues ?? []).filter((i) => i.status === 'mo').length;
+  const [pkF, setPkF] = useState<Row>({}); const [lines, setLines] = useState<Record<string, Row>>({}); const [dvF, setDvF] = useState<Row>({});
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => { setPkF(pk ?? {}); }, [JSON.stringify(pk)]); // eslint-disable-line
+  useEffect(() => { setDvF(dv ? { ...dv, planned_at: dv.planned_at ? localDT(dv.planned_at) : '' } : {}); }, [JSON.stringify(dv)]); // eslint-disable-line
+  useEffect(() => {
+    const paths = [...(dv?.photo_paths ?? []), ...(dv?.bbgh_path ? [dv.bbgh_path] : [])] as string[];
+    if (!paths.length) { setUrls({}); return; }
+    sb.storage.from('files').createSignedUrls(paths, 3600).then(({ data }) => setUrls(Object.fromEntries((data ?? []).map((x, i) => [paths[i], x.signedUrl ?? '']))));
+  }, [dv]);
+  const g = o.gh_status;
+  if (!['thong_bao', 'lap_lgh', 'cho_duyet_lgh', 'giao_hang', 'ky_bbgh', 'hoan_tat'].includes(g))
+    return <div className="card muted">QT3 mở khi QC thành phẩm đạt (ĐK4) ở QT2-B6.</div>;
+  const after = () => { reload(); load(); };
+  const admin = can('admin_cnc'); const kho = can('kho_qc') || admin;
+  const done = (k: string) => ['thong_bao', 'lap_lgh', 'cho_duyet_lgh', 'giao_hang', 'ky_bbgh', 'hoan_tat'].indexOf(g) > ['thong_bao', 'lap_lgh', 'cho_duyet_lgh', 'giao_hang', 'ky_bbgh', 'hoan_tat'].indexOf(k);
+  const tot = pl.reduce((a, l) => ({ qty: a.qty + Number((lines[l.id]?.qty ?? l.qty) || 0), kg: a.kg + Number((lines[l.id]?.kg ?? l.kg) || 0) }), { qty: 0, kg: 0 });
+
+  const saveF8 = async () => {
+    for (const l of pl) { const r = lines[l.id]; if (!r) continue;
+      const { error } = await sb.from('packing_lines').update({ content: r.content ?? l.content, qty: Number(r.qty ?? l.qty), kg: Number(String(r.kg ?? l.kg).replace(',', '.')) }).eq('id', l.id);
+      if (error) { setErr(errText(error)); return; } }
+    const { error } = await sb.from('packing_lists').update({ planned_date: pkF.planned_date || null, place: pkF.place ?? '', note: pkF.note ?? '' }).eq('order_id', o.id);
+    if (error) setErr(errText(error)); else { setLines({}); setOk('Đã lưu packing list.'); after(); }
+  };
+  const saveF9 = async () => {
+    const { error } = await sb.from('deliveries').update({ pmkt_code: dvF.pmkt_code ?? '', vehicle: dvF.vehicle ?? '', driver: dvF.driver ?? '', planned_at: dvF.planned_at ? new Date(dvF.planned_at).toISOString() : null, note: dvF.note ?? '' }).eq('order_id', o.id);
+    if (error) setErr(errText(error)); else { setOk('Đã lưu lệnh giao hàng.'); after(); }
+  };
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: 'photo' | 'bbgh') => {
+    const files = Array.from(e.target.files ?? []); e.target.value = ''; if (!files.length) return;
+    const paths: string[] = [];
+    for (const f of files) {
+      const path = `${o.id}/f9/${kind}-${Date.now()}-${f.name}`;
+      const up = await sb.storage.from('files').upload(path, f); if (up.error) { setErr(errText(up.error)); return; }
+      paths.push(path);
+    }
+    const patch = kind === 'photo' ? { photo_paths: [...(dv?.photo_paths ?? []), ...paths] } : { bbgh_path: paths[0] };
+    const { error } = await sb.from('deliveries').update(patch).eq('order_id', o.id);
+    if (error) setErr(errText(error)); else { setOk(kind === 'photo' ? 'Đã tải ' + paths.length + ' ảnh giao hàng.' : 'Đã tải bộ LGH / BBGH đã ký.'); after(); }
+  };
+  const st = (k: string, wait: string) => <Chip s={done(k) ? 'dat' : g === k ? 'wait' : 'idle'} text={done(k) ? 'Xong' : g === k ? wait : 'Chưa tới'} />;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Box title="B1 · Nhập kho thành phẩm" right={<Chip s="dat" text="QC đạt" />}>
+        <p style={{ margin: 0 }}>{qc ? <>QC thành phẩm đạt · <b>{qc.pallets} pallet</b> · {dt(qc.checked_at)}{qc.note ? ' · ' + qc.note : ''}</> : 'Đã QC thành phẩm ở QT2-B6.'}</p>
+      </Box>
+
+      <Box title="B2 · Thông báo giao hàng + packing list (F8)" right={st('thong_bao', 'Đang lập')}>
+        {pl.length === 0 ? (
+          g === 'thong_bao' && admin ? <div className="row"><span className="muted">Chưa có packing list.</span>
+            <button className="btn primary" onClick={() => run('f8_build', { p_order: o.id }, 'Đã lập packing list.').then(reload)}>Lập packing list ({qc?.pallets ?? '?'} pallet)</button></div>
+            : <p className="muted">Chưa có packing list.</p>) : (
+          <div className="scroll"><table className="tbl" style={{ minWidth: 560 }}>
+            <thead><tr><th>Pallet</th><th>Nội dung</th><th className="n">Số tấm</th><th className="n">kg</th></tr></thead>
+            <tbody>{pl.map((l) => { const ed = g === 'thong_bao' && admin; const r = lines[l.id] ?? {};
+              const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setLines({ ...lines, [l.id]: { ...r, [k]: e.target.value } });
+              return <tr key={l.id}><td>P{String(l.pallet_no).padStart(2, '0')}</td>
+                <td>{ed ? <input aria-label={'Nội dung pallet ' + l.pallet_no} value={numIn(r.content ?? l.content)} onChange={set('content')} /> : l.content}</td>
+                <td className="n">{ed ? <input aria-label={'Số tấm pallet ' + l.pallet_no} inputMode="numeric" style={{ textAlign: 'right' }} value={numIn(r.qty ?? l.qty)} onChange={set('qty')} /> : l.qty}</td>
+                <td className="n">{ed ? <input aria-label={'kg pallet ' + l.pallet_no} inputMode="decimal" style={{ textAlign: 'right' }} value={numIn(r.kg ?? l.kg)} onChange={set('kg')} /> : num(l.kg, 1)}</td></tr>; })}
+              <tr style={{ fontWeight: 700 }}><td colSpan={2}>Tổng</td><td className="n">{tot.qty}</td><td className="n">{num(tot.kg, 1)}</td></tr></tbody>
+          </table></div>)}
+        {pk && <div className="grid2">
+          <label className="f">Ngày giao dự kiến<input type="date" disabled={!(g === 'thong_bao' && admin)} value={numIn(pkF.planned_date)} onChange={(e) => setPkF({ ...pkF, planned_date: e.target.value })} /></label>
+          <label className="f">Địa điểm giao<input disabled={!(g === 'thong_bao' && admin)} value={numIn(pkF.place)} onChange={(e) => setPkF({ ...pkF, place: e.target.value })} placeholder="Kho Hanwa…" /></label>
+        </div>}
+        {g === 'thong_bao' && admin && pl.length > 0 && <div className="row">
+          <button className="btn" onClick={saveF8}>Lưu packing list</button>
+          <button className="btn primary" onClick={() => run('f8_submit', { p_order: o.id }, 'Đã thông báo giao hàng.')}>Thông báo giao hàng</button></div>}
+      </Box>
+
+      {done('thong_bao') && (
+        <Box title="B3 · Lệnh giao hàng (F9) – duyệt 2 chặng" right={<Chip s={g === 'lap_lgh' ? 'wait' : g === 'cho_duyet_lgh' ? 'wait' : 'dat'} text={g === 'lap_lgh' ? 'Đang lập' : g === 'cho_duyet_lgh' ? 'Đang duyệt' : 'Đã duyệt'} />}>
+          <div className="grid2">
+            {([['pmkt_code', 'Mã lệnh PMKT'], ['vehicle', 'Xe (biển số)'], ['driver', 'Tài xế']] as const).map(([k, t]) => (
+              <label className="f" key={k}>{t}<input disabled={!(g === 'lap_lgh' && admin)} value={numIn(dvF[k])} onChange={(e) => setDvF({ ...dvF, [k]: e.target.value })} /></label>))}
+            <label className="f">Ngày giờ giao<input type="datetime-local" disabled={!(g === 'lap_lgh' && admin)} value={numIn(dvF.planned_at)} onChange={(e) => setDvF({ ...dvF, planned_at: e.target.value })} /></label>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>Chặng 1 CNC → IPC: Dung kiểm tra → Chị Trang duyệt. Duyệt xong tự gửi chặng 2 IPC → Hanwa: Nhung kiểm tra → Anh Kiên duyệt.</p>
+          {g === 'lap_lgh' && admin && <div className="row">
+            <button className="btn" onClick={saveF9}>Lưu lệnh giao hàng</button>
+            <button className="btn primary" onClick={() => run('submit_for_approval', { p_order: o.id, p_doc: 'LGH1' }, 'Đã gửi duyệt Lệnh giao hàng chặng 1.')}>Gửi duyệt LGH 2 chặng</button></div>}
+          <Chain {...p} doc="LGH1" />
+          <Chain {...p} doc="LGH2" />
+        </Box>)}
+
+      {['giao_hang', 'ky_bbgh', 'hoan_tat'].includes(g) && (
+        <Box title="B4 · Giao hàng, gửi ảnh" right={st('giao_hang', 'Đang giao')}>
+          <div className="row" style={{ gap: 8 }}>
+            {(dv?.photo_paths ?? []).map((ph: string, i: number) => <a key={ph} className="btn sm" href={urls[ph]} target="_blank" rel="noopener"><Icon name="file" size={16} />Ảnh {i + 1}</a>)}
+            {(dv?.photo_paths ?? []).length === 0 && <span className="muted">Chưa có ảnh giao hàng.</span>}
+          </div>
+          {g === 'giao_hang' && kho && <div className="row">
+            <label className="btn ghost"><Icon name="upload" size={18} />Tải ảnh giao hàng<input type="file" accept="image/*" multiple capture="environment" onChange={(e) => upload(e, 'photo')} className="sr-only" /></label>
+            <button className="btn primary" onClick={() => run('f9_delivered', { p_order: o.id }, 'Đã ghi nhận giao hàng.')}>Đã giao xong</button></div>}
+          {dv?.delivered_at && <p className="small muted" style={{ margin: 0 }}>Giao lúc {dt(dv.delivered_at)}</p>}
+        </Box>)}
+
+      {['ky_bbgh', 'hoan_tat'].includes(g) && (
+        <Box title="B5 · Ký & lưu bộ LGH / BBGH" right={st('ky_bbgh', 'Chờ ký')}>
+          <div>{dv?.bbgh_path ? <a className="btn sm" href={urls[dv.bbgh_path]} target="_blank" rel="noopener"><Icon name="file" size={16} />Mở LGH / BBGH đã ký</a> : <span className="muted">Chưa tải bộ LGH / BBGH đã ký.</span>}</div>
+          {openF7 > 0 && <div className="msg err"><Icon name="alert" size={18} />Còn {openF7} phiếu F7 đang mở – xử lý ở thẻ F7 trước khi hoàn tất.</div>}
+          {g === 'ky_bbgh' && kho && <div className="row">
+            <label className="btn ghost"><Icon name="upload" size={18} />Tải LGH / BBGH đã ký<input type="file" accept="application/pdf,image/*" onChange={(e) => upload(e, 'bbgh')} className="sr-only" /></label>
+            <button className="btn primary" onClick={() => run('f9_close', { p_order: o.id }, 'Đơn đã hoàn tất.')}>Hoàn tất đơn</button></div>}
+          {g === 'hoan_tat' && <div className="msg ok"><Icon name="check" size={18} />Đơn đã hoàn tất.</div>}
+        </Box>)}
     </div>);
 }

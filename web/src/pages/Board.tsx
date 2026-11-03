@@ -28,7 +28,11 @@ const PROCS: Proc[] = [
     { key: 'b5', title: 'B5 Bàn giao NVL (F6)', tab: 'QT2', next: 'Bàn giao F6', roles: ['admin_cnc'] },
     { key: 'b6', title: 'B6 Gia công + QC TP', tab: 'QT2', next: 'QC thành phẩm', roles: ['kho_qc', 'admin_cnc'], gate: 'ĐK4 QC thành phẩm đạt' }] },
   { key: 'qt4', title: 'QT3', sub: 'Giao hàng', field: 'gh_status', cols: [
-    { key: 'thong_bao', title: 'Thông báo giao', tab: 'QT3', next: 'Xem hồ sơ', roles: [] }] }
+    { key: 'thong_bao', title: 'B2 Thông báo giao + F8', tab: 'GH', next: 'Lập packing list', roles: ['admin_cnc'] },
+    { key: 'lap_lgh', title: 'B3 Lập lệnh giao hàng', tab: 'GH', next: 'Lập F9, gửi duyệt', roles: ['admin_cnc'] },
+    { key: 'cho_duyet_lgh', title: 'B3 Duyệt LGH 2 chặng', tab: 'GH', next: 'Duyệt LGH', roles: [] },
+    { key: 'giao_hang', title: 'B4 Giao hàng + ảnh', tab: 'GH', next: 'Giao, tải ảnh', roles: ['kho_qc', 'admin_cnc'] },
+    { key: 'ky_bbgh', title: 'B5 Ký & lưu BBGH', tab: 'GH', next: 'Tải BBGH, hoàn tất', roles: ['kho_qc', 'admin_cnc'] }] }
 ];
 
 type Agg = { qty: number; kg: number };

@@ -22,7 +22,11 @@ export const BRANCH_TODO: Record<string, { roles: string[]; text: string; tab: s
   mua_hang: { roles: ['mua_hang'], text: 'B3 Lập PO, gửi duyệt', tab: 'QT2' },
   nhap_kho: { roles: ['kho_qc'], text: 'B4 Nhập kho & QC NVL (F4)', tab: 'QT2' },
   ban_giao: { roles: ['admin_cnc'], text: 'B5 Bàn giao NVL (F6)', tab: 'QT2' },
-  gia_cong: { roles: ['kho_qc', 'admin_cnc'], text: 'B6 QC thành phẩm (ĐK4)', tab: 'QT2' }
+  gia_cong: { roles: ['kho_qc', 'admin_cnc'], text: 'B6 QC thành phẩm (ĐK4)', tab: 'QT2' },
+  thong_bao: { roles: ['admin_cnc'], text: 'QT3 Lập packing list F8, thông báo giao', tab: 'GH' },
+  lap_lgh: { roles: ['admin_cnc'], text: 'QT3 Lập lệnh giao hàng F9, gửi duyệt', tab: 'GH' },
+  giao_hang: { roles: ['kho_qc', 'admin_cnc'], text: 'QT3 Giao hàng, tải ảnh', tab: 'GH' },
+  ky_bbgh: { roles: ['kho_qc', 'admin_cnc'], text: 'QT3 Tải BBGH ký, hoàn tất đơn', tab: 'GH' }
 };
 
 type A = Approval & { orders: Pick<Order, 'code' | 'project'> };
@@ -35,14 +39,14 @@ export default function MyWork() {
     if (!me) return;
     sb.from('approvals').select('*, orders(code, project)').eq('approver_id', me.id).eq('status', 'cho').order('due_at')
       .then(({ data }) => setAppr((data as never) ?? []));
-    sb.from('orders').select('*').in('status', [...Object.keys(TODO), 'san_xuat']).order('due_date', { nullsFirst: false })
+    sb.from('orders').select('*').in('status', [...Object.keys(TODO), 'san_xuat', 'giao_hang']).order('due_date', { nullsFirst: false })
       .then(({ data }) => setOrders((data as Order[]) ?? []));
   }, [me]);
   type W = { o: Order; text: string; tab: string; key: string };
   const mine: W[] = [];
   for (const o of orders ?? []) {
     if (TODO[o.status]?.roles.some(can)) mine.push({ o, ...TODO[o.status], key: o.id });
-    for (const b of [o.nvl_status, o.gc_status]) if (o.status === 'san_xuat' && BRANCH_TODO[b]?.roles.some(can)) mine.push({ o, ...BRANCH_TODO[b], key: o.id + b });
+    for (const b of o.status === 'giao_hang' ? [o.gh_status] : [o.nvl_status, o.gc_status]) if (['san_xuat', 'giao_hang'].includes(o.status) && BRANCH_TODO[b]?.roles.some(can)) mine.push({ o, ...BRANCH_TODO[b], key: o.id + b });
   }
   const late = (d: string | null) => !!d && new Date(d) < new Date();
   const hello = new Date().getHours() < 12 ? 'Chào buổi sáng' : new Date().getHours() < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';

@@ -13,9 +13,10 @@ export const ORDER_STATUS: Record<string, string> = {
 export const BRANCH: Record<string, string> = {
   chua_bat_dau: 'Chưa bắt đầu', du_toan: 'Dự toán NVL', cho_duyet_f3: 'Duyệt cùng LGC', mua_hang: 'Mua hàng', cho_duyet_po: 'Chờ duyệt PO',
   nhap_kho: 'Nhập kho & QC', san_sang: 'NVL sẵn sàng', lap_lgc: 'Lập LGC', cho_duyet_lgc: 'Chờ duyệt LGC', cho_nvl: 'Chờ NVL',
-  ban_giao: 'Bàn giao NVL', gia_cong: 'Đang gia công', qc_dat: 'QC đạt', chua_giao: 'Chưa giao', thong_bao: 'Thông báo giao'
+  ban_giao: 'Bàn giao NVL', gia_cong: 'Đang gia công', qc_dat: 'QC đạt', chua_giao: 'Chưa giao', thong_bao: 'Thông báo giao + F8', lap_lgh: 'Lập lệnh giao hàng', cho_duyet_lgh: 'Duyệt LGH 2 chặng',
+  giao_hang: 'Đang giao hàng', ky_bbgh: 'Ký & lưu BBGH', hoan_tat: 'Hoàn tất'
 };
-export const DOC: Record<string, string> = { F2: 'XNĐH', F3: 'Dự toán NVL', PO: 'PO', F5: 'Lệnh gia công', LGH1: 'LGH chặng 1', LGH2: 'LGH chặng 2' };
+export const DOC: Record<string, string> = { F2: 'XNĐH', F3: 'Dự toán NVL', PO: 'PO', F5: 'Lệnh gia công', LGH1: 'LGH chặng 1 CNC → IPC', LGH2: 'LGH chặng 2 IPC → Hanwa' };
 export const ROLES: Record<string, string> = {
   admin_it: 'IT quản trị', kinh_doanh: 'Kinh doanh', ky_thuat: 'Kỹ thuật bóc tách', kiem_tra_f1: 'Kiểm tra F1',
   admin_cnc: 'Admin CNC', ke_hoach: 'Kế hoạch', mua_hang: 'Mua hàng', kho_qc: 'Kho / QC', ipc: 'IPC', duyet: 'Người duyệt', xem: 'Chỉ xem'
