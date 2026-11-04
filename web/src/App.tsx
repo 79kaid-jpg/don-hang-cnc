@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Appearance } from './components/Appearance';
-import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { scrollTop, scrollToY } from './lib/scroll';
+import { NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
 import { Icon } from './components/Icon';
@@ -44,19 +45,14 @@ function Shell() {
       && !['checkbox', 'radio', 'button', 'submit', 'range', 'color', 'file'].includes((el as HTMLInputElement).type);
     const on = (e: FocusEvent) => { if (typing(e.target)) document.body.classList.add('kb-open'); };
     const off = () => setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kb-open'); }, 80);
-    // Giữ thanh đáy bám đúng mép dưới khung nhìn thật (iOS đôi khi lệch layout viewport → thanh lơ lửng giữa màn hình)
-    const vv = window.visualViewport; let raf = 0;
-    const fix = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {
-      const n = document.querySelector<HTMLElement>('.bottom-nav'); const f = document.querySelector<HTMLElement>('.fab-m'); if (!n || !vv) return;
-      const kb = innerHeight - vv.height > 120; if (!kb) document.body.classList.remove('kb-open');
-      const dy = kb ? 0 : Math.round(vv.offsetTop + vv.height - innerHeight);
-      n.style.transform = dy ? `translate3d(0,${dy}px,0)` : 'translateZ(0)'; if (f) f.style.marginBottom = dy ? -dy + 'px' : ''; }); };
-    fix(); addEventListener('focusin', on); addEventListener('focusout', off); vv?.addEventListener('resize', fix); vv?.addEventListener('scroll', fix); addEventListener('scroll', fix, { passive: true }); addEventListener('orientationchange', fix);
-    return () => { removeEventListener('focusin', on); removeEventListener('focusout', off); vv?.removeEventListener('resize', fix); vv?.removeEventListener('scroll', fix); removeEventListener('scroll', fix); removeEventListener('orientationchange', fix); };
+    addEventListener('focusin', on); addEventListener('focusout', off);
+    return () => { removeEventListener('focusin', on); removeEventListener('focusout', off); };
   }, []);
   // Điện thoại: cuộn xuống thì thu nút nổi (Tạo đơn) cho khỏi che nội dung, cuộn lên thì hiện lại
-  useEffect(() => { let y = scrollY; const f = () => { const d = scrollY - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && scrollY > 80); y = scrollY; } };
-    addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); }, []);
+  const loc = useLocation(); const navType = useNavigationType();
+  useEffect(() => { if (navType !== 'POP') scrollToY(0); }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let y = 0; const f = () => { const t = scrollTop(); const d = t - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && t > 80); y = t; } };
+    addEventListener('scroll', f, { passive: true, capture: true }); return () => removeEventListener('scroll', f, { capture: true }); }, []);
   useEffect(() => { if (me) sb.rpc('wf_inbox').then(({ data }) => setWfN(((data ?? []) as unknown[]).length)); }, [me]);
   useEffect(() => {
     if (!me) return;

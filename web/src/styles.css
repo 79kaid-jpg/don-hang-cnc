@@ -1237,3 +1237,15 @@ html[data-fs=lg] body{zoom:1.12}
 .od-h .od-due{grid-area:due;justify-self:start}
 .od-h .od-map{grid-area:map;margin-left:0}
 @media (min-width:761px){.od-h{grid-template-areas:'code map';grid-template-columns:auto 1fr auto}.od-h h1{grid-area:auto}.od-h .od-due{grid-area:auto}.od-h .od-map{grid-area:auto}}
+
+/* ===== Điện thoại: khung ứng dụng cố định – thanh dưới nằm trong bố cục, không dùng position:fixed (tránh lỗi iOS 26/27 thanh lơ lửng) ===== */
+@media (max-width:900px){
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  #root{height:100%}
+  .app{display:flex!important;flex-direction:column;height:100dvh;height:100svh;overflow:hidden}
+  .app>.topbar{position:relative;flex:none}
+  .app>.main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:clip;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-bottom:24px}
+  .app>.bottom-nav{position:relative!important;flex:none;transform:none!important;bottom:auto}
+  .od-group .qt-tabs,.db-sticky{top:0!important}
+  .fab-m{bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}
+}

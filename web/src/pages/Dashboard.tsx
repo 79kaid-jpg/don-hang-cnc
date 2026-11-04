@@ -10,6 +10,7 @@ import { Icon } from '../components/Icon';
 import { QtTag } from '../components/QtTag';
 import { Sheet } from '../components/Sheet';
 import { Age } from '../components/Age';
+import { scrollTop, scrollToY } from '../lib/scroll';
 import { Leaderboard } from '../components/Perf';
 import { Skeleton } from '../components/ui';
 import { toast } from '../components/ui';
@@ -35,8 +36,8 @@ export default function Dashboard() {
   const back = useNavigationType() === 'POP';
   const [drill, setDrill0] = useState<Drill | null>(() => { try { if (!back) return null; return JSON.parse(sessionStorage.getItem('db-drill') ?? 'null'); } catch { return null; } });
   const setDrill = (d: Drill | null) => { setDrill0(d); try { if (d) sessionStorage.setItem('db-drill', JSON.stringify(d)); else sessionStorage.removeItem('db-drill'); } catch { /* */ } };
-  useEffect(() => { try { const y = +(sessionStorage.getItem('db-y') ?? 0); if (y && back) setTimeout(() => scrollTo(0, y), 400);
-    const f = () => sessionStorage.setItem('db-y', String(scrollY)); addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); } catch { return; } }, []);
+  useEffect(() => { try { const y = +(sessionStorage.getItem('db-y') ?? 0); if (y && back) setTimeout(() => scrollToY(y), 400);
+    const f = () => sessionStorage.setItem('db-y', String(scrollTop())); addEventListener('scroll', f, { passive: true, capture: true }); return () => removeEventListener('scroll', f, { capture: true }); } catch { return; } }, []);
   const holder = useHolders();
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').then(({ data }) => setOs((data as Order[]) ?? []));
