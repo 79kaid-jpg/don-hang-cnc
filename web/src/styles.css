@@ -730,4 +730,9 @@ g.on .sw-e{stroke:#B8954A;stroke-width:2.4}
   .sw-detail{width:100%;height:auto;max-height:80dvh;border-radius:20px 20px 0 0;animation:sheetUp .22s cubic-bezier(.2,.9,.3,1);padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 }
 @media (prefers-reduced-motion:reduce){.sw-step.cur,.sw-detail{animation:none}}
-.uli{position:relative}.as-btn{position:absolute;right:44px;top:50%;transform:translateY(-50%);z-index:1;min-height:32px;padding:4px 10px;gap:4px;font-size:13px;background:#fff}.uli .ucard{padding-right:140px}
+.uli{position:relative}.uli .ucard{padding-right:96px}
+.as-btn{position:absolute;right:44px;top:50%;z-index:1;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted,#7a6a55);cursor:pointer;transform:translateY(-50%);transition:background .18s,color .18s,border-color .18s,transform .18s,box-shadow .18s}
+.as-btn:hover{background:var(--brand,#1c1917);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(0,0,0,.15);transform:translateY(-50%) scale(1.06)}
+.as-btn:active{transform:translateY(-50%) scale(.95)}.as-btn:focus-visible{outline:2px solid var(--brand,#1c1917);outline-offset:2px}
+.as-btn::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:50%;transform:translateX(50%);white-space:nowrap;background:#1c1917;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s}
+.as-btn:hover::after,.as-btn:focus-visible::after{opacity:1}
