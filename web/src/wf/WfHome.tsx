@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
-import { Empty, Msg, Skeleton, toast } from '../components/ui';
+import { Empty, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { ISTATUS, VAI, VSTATUS, fmtDT, slaLeft, type Instance, type MyTask, type Process, type Version } from './model';
 
 type Row = Process & { versions: Version[] };
 type Tab = 'viec' | 'quy_trinh' | 'mau' | 'luot';
 
 export default function WfHome() {
-  const { can } = useAuth();
+  const { can, me } = useAuth();
   const nav = useNavigate();
   const [tab, setTab] = useState<Tab>('viec');
   const [list, setList] = useState<Row[] | null>(null);
@@ -19,7 +19,7 @@ export default function WfHome() {
   const [err, setErr] = useState('');
   const load = async () => {
     const [p, t, i] = await Promise.all([
-      sb.from('wf_processes').select('*, versions:wf_versions(id, process_id, version, status, updated_at, published_at, def)').order('created_at', { ascending: false }),
+      sb.from('wf_processes').select('*, versions:wf_versions(id, process_id, version, status, updated_at, published_at, def)').is('deleted_at', null).order('created_at', { ascending: false }),
       sb.rpc('wf_inbox'),
       sb.from('wf_instances').select('*, v:wf_versions(p:wf_processes(name))').order('started_at', { ascending: false }).limit(50)
     ]);
@@ -34,6 +34,18 @@ export default function WfHome() {
     const { data, error } = await sb.rpc('wf_process_create', { p_name: n, p_from_version: from?.id ?? null });
     if (error) return setErr(errText(error));
     toast(from ? 'Đã nhân bản mẫu' : 'Đã tạo quy trình'); nav('/quy-trinh-moi/sua/' + data);
+  };
+  const removeProc = async (r: Row) => {
+    const { data: u } = await sb.rpc('wf_process_usage', { p_process: r.id });
+    const total = (u as { total: number; running: number })?.total ?? 0, running = (u as { running: number })?.running ?? 0;
+    if (total > 0 && !can('admin_it')) return setErr(`"${r.name}" đã có ${total} công việc – chỉ quản trị (IT) mới xoá được.`);
+    const q = total > 0
+      ? `Xoá "${r.name}"? Quy trình đã có ${total} công việc${running ? `, trong đó ${running} đang chạy sẽ bị huỷ` : ''}. Lịch sử vẫn được lưu.`
+      : `Xoá "${r.name}"? Quy trình chưa có công việc nào.`;
+    if (!(await confirmDialog(q, 'Xoá quy trình'))) return;
+    const { error } = await sb.rpc('wf_process_delete', { p_process: r.id, p_note: '' });
+    if (error) return setErr(errText(error));
+    setErr(''); toast('Đã xoá quy trình'); load();
   };
   const latest = (r: Row) => [...r.versions].sort((a, b) => b.version - a.version)[0];
   const live = (r: Row) => r.versions.find((v) => v.status === 'phat_hanh');
@@ -71,6 +83,8 @@ export default function WfHome() {
               <div className="small muted">{v.def.steps.length} bước · {v.def.lanes.length} làn · bản {v.version}: {VSTATUS[v.status]}{l && l.id !== v.id ? ` (đang chạy bản ${l.version})` : ''} · sửa {fmtDT(v.updated_at)}</div></div>
             <span className={'chip ' + (l ? 'done' : 'idle')}>{l ? 'Đã phát hành' : 'Nháp'}</span>
             <Link className="btn sm" to={'/quy-trinh-moi/sua/' + r.id}><Icon name="settings" size={16} />Thiết kế</Link>
+            {(can('admin_it') || r.created_by === me?.id) &&
+              <button className="btn sm danger icon-btn" aria-label={'Xoá ' + r.name} title="Xoá quy trình" onClick={() => removeProc(r)}><Icon name="trash" size={16} /></button>}
           </div>); })}</div>)}
 
       {tab === 'mau' && (!list ? <Skeleton /> :

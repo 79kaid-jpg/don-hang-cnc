@@ -1,0 +1,5 @@
+-- Xoá quy trình (đã áp dụng qua MCP, tên migration wf_process_delete):
+-- wf_processes.deleted_at / deleted_by (xoá mềm, giữ lịch sử)
+-- wf_process_usage(p) → {total, running}
+-- wf_process_delete(p, note): chưa có công việc → người tạo hoặc IT; đã có công việc → chỉ IT, lượt đang chạy bị huỷ; mẫu không xoá được
+-- trigger wf_instances_not_deleted: không mở lượt chạy mới cho quy trình đã xoá
