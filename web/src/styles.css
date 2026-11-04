@@ -730,3 +730,4 @@ g.on .sw-e{stroke:#B8954A;stroke-width:2.4}
   .sw-detail{width:100%;height:auto;max-height:80dvh;border-radius:20px 20px 0 0;animation:sheetUp .22s cubic-bezier(.2,.9,.3,1);padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 }
 @media (prefers-reduced-motion:reduce){.sw-step.cur,.sw-detail{animation:none}}
+.uli{position:relative}.as-btn{position:absolute;right:44px;top:50%;transform:translateY(-50%);z-index:1;min-height:32px;padding:4px 10px;gap:4px;font-size:13px;background:#fff}.uli .ucard{padding-right:140px}

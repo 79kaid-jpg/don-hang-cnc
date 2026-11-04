@@ -15,7 +15,7 @@ const UNITS = ['CNC', 'IPC', 'IT', 'KHAC'];
 
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
-  const { can } = useAuth();
+  const { can, real, actAs } = useAuth(); const nav = useNavigate();
   const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base' | 'cp'>('users');
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
@@ -76,7 +76,10 @@ export default function Admin() {
         {!people ? <Skeleton rows={4} h={76} /> : shown.length === 0 ? <p className="muted">Không có người dùng khớp bộ lọc.</p> : (
           <ul className="ulist adm-ulist">
             {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); return (
-              <li key={p.id}>
+              <li key={p.id} className="uli">
+                {can('admin_it') && p.active && p.id !== real?.id && (
+                  <button className="btn sm as-btn" onClick={async () => { const e = await actAs(p.id); if (e) toast(e); else { toast('Đang dùng app với tư cách ' + p.full_name); nav('/'); } }}
+                    title={'Đăng nhập với tư cách ' + p.full_name} aria-label={'Đăng nhập với tư cách ' + p.full_name}><Icon name="eye" size={14} />Login as</button>)}
                 <button className={'ucard' + (p.active ? '' : ' off')} onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
                   <span className="avatar">{(p.full_name || '?').split(' ').filter(Boolean).slice(-2).map((x) => x[0]).join('').toUpperCase()}</span>
                   <span className="ucard-main">
