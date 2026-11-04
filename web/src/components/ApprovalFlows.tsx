@@ -13,7 +13,6 @@ type LV = { id?: string; proc: string; company: string; ord: number; name: strin
 type DG = { id?: string; user_id: string; to_user: string; from_date: string; to_date: string; note?: string | null };
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const ROLES: Record<Proc, string[]> = { QT0: ['admin', 'ky_thuat', 'kiem_tra', 'duyet'], QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet'] };
-const fmt = (n: number | null) => (n == null ? '' : new Intl.NumberFormat('vi-VN').format(n));
 
 export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
   const [proc, setProc] = useState<Proc>('QT1'); const [co, setCo] = useState('PN');
@@ -68,23 +67,16 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
         {mine.map((l) => <li key={l.id} className={'af-step extra' + (l.active ? '' : ' off')}>
           <span className="af-n cond"><Icon name="shield" size={13} /></span>
           <div className="af-b"><b>{l.name}</b>
-            <span className="small">{l.cond_field === 'none' ? 'Luôn áp dụng' : `Khi Tổng thanh toán ${l.cond_op} ${fmt(l.cond_value)} đ`} · {who(l.user_id, l.group_id)}</span></div>
+            <span className="small">Duyệt theo nội dung phiếu & ghi chú · {who(l.user_id, l.group_id)}</span></div>
           <span className="af-sla ro"><Icon name="clock" size={13} />{l.sla_h}h</span>
           {canEdit && <span className="af-act"><button className="btn sm" onClick={() => setEdit(l)}>Sửa</button><button className="btn sm" onClick={() => offLv(l)}>{l.active ? 'Tắt' : 'Bật'}</button></span>}
         </li>)}
         <li className="af-end"><Icon name="check" size={14} />{proc === 'QT0' ? 'Hoàn tất bóc tách' : company === 'HW' ? 'Chờ khách ký tay' : 'Chuyển ' + (company === 'PN' ? 'IPC' : 'Hanwha')}</li>
       </ol>
-      {canEdit && !edit && <button className="btn sm af-add" onClick={() => setEdit({ proc, company, ord: mine.length + 1, name: 'Giám đốc duyệt', cond_field: proc === 'QT1' ? 'total' : 'none', cond_op: '>', cond_value: 500000000, user_id: null, group_id: null, sla_h: 24, active: true })}>
+      {canEdit && !edit && <button className="btn sm af-add" onClick={() => setEdit({ proc, company, ord: mine.length + 1, name: 'Giám đốc duyệt', cond_field: 'none', cond_op: '>', cond_value: null, user_id: null, group_id: null, sla_h: 24, active: true })}>
         <Icon name="plus" size={15} />Thêm cấp duyệt sau bước Duyệt</button>}
       {edit && <div className="af-edit">
         <label className="f"><span>Tên cấp duyệt</span><input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>
-        <div className="af-row">
-          <label className="f"><span>Áp dụng khi</span><select value={edit.cond_field} onChange={(e) => setEdit({ ...edit, cond_field: e.target.value })}>
-            <option value="none">Luôn luôn</option>{proc === 'QT1' && <option value="total">Tổng thanh toán</option>}</select></label>
-          {edit.cond_field !== 'none' && <>
-            <label className="f" style={{ maxWidth: 90 }}><span>So sánh</span><select value={edit.cond_op} onChange={(e) => setEdit({ ...edit, cond_op: e.target.value })}><option value=">">&gt;</option><option value=">=">≥</option><option value="<">&lt;</option></select></label>
-            <label className="f"><span>Giá trị (đ)</span><input inputMode="numeric" value={fmt(edit.cond_value)} onChange={(e) => setEdit({ ...edit, cond_value: +e.target.value.replace(/\D/g, '') || 0 })} /></label></>}
-        </div>
         <div className="af-row">
           <label className="f"><span>Người / nhóm duyệt</span>{pick(edit.user_id, edit.group_id, (u, g) => setEdit({ ...edit, user_id: u, group_id: g }))}</label>
           <label className="f" style={{ maxWidth: 120 }}><span>Hạn (giờ)</span><input type="number" min={1} value={edit.sla_h} onChange={(e) => setEdit({ ...edit, sla_h: +e.target.value || 24 })} /></label>
