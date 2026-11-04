@@ -24,7 +24,9 @@ export function PerfCard() {
   const { me } = useAuth(); const { data } = usePerf();
   const [pts, setPts] = useState<{ balance: number; earned: number } | null>(null); const [wheel, setWheel] = useState(false);
   const loadPts = () => sb.rpc('my_points').then(({ data: d }) => { const r = (d as { balance: number; earned: number }[] | null)?.[0]; setPts(r ?? { balance: 0, earned: 0 }); });
-  useEffect(() => { loadPts(); }, []);
+  const [tk, setTk] = useState<TK | null>(null);
+  const loadTk = () => sb.rpc('my_tickets').then(({ data: d }) => setTk(d as TK));
+  useEffect(() => { loadPts(); loadTk(); }, []);
   const S = useMemo(() => (data ? scoresWithTrend(data) : null), [data]);
   if (!data || !S || !me) return null;
   const m = S.find((s) => s.id === me.id); const cfg = data.cfg;
@@ -42,7 +44,10 @@ export function PerfCard() {
   const tip = !m ? 'Bắt đầu xử lý hồ sơ để có điểm.' : m.overdue > 0 ? `Xử lý ${m.overdue} hồ sơ đang quá hạn để gỡ ${m.overdue * cfg.overdue_penalty} điểm phạt.`
     : m.ontime < cfg.crown_ontime ? `Ký trong ${cfg.sla_h} giờ để tăng tỉ lệ đúng hạn (đang ${Math.round(m.ontime)}%).`
     : m.returned > 0 ? 'Kiểm tra kỹ trước khi ký để không bị trả về.' : isTop ? 'Giữ phong độ để giữ vương miện!' : 'Ký nhanh hơn trung bình cùng vai trò để lên hạng.';
-  const tickets = pts ? Math.floor(pts.balance / Math.max(1, cfg.spin_cost)) : 0;
+  const tickets = tk?.balance ?? 0; const isAdmin = me.roles.includes('admin_it');
+  const canSpin = tickets > 0 || (cfg.points_spin !== false && (pts?.balance ?? 0) >= cfg.spin_cost) || isAdmin;
+  const td = tk?.today ?? {}; const tdSteps = td.steps ?? 0; const tdOk = td.ontime ?? 0; const need = Math.max(0, (cfg.tk_min_steps ?? 3) - tdSteps);
+  const tdPct = tdSteps ? Math.round((tdOk / tdSteps) * 100) : 0;
   return <section className="card pf" aria-labelledby="pf-h">
     <div className="pf-head"><h2 id="pf-h">Hiệu quả của tôi</h2><span className="small muted">{cfg.period_days} ngày gần nhất</span></div>
     {!m || !m.ranked ? <p className="muted small">Chưa đủ dữ liệu để xếp hạng (cần ít nhất {cfg.min_steps} bước đã ký trong kỳ{m ? `, bạn đang có ${m.steps}` : ''}).</p> : <>
@@ -68,11 +73,20 @@ export function PerfCard() {
     </>}
     <div className="pf-tip"><Icon name="flame" size={16} /><span>{tip}</span></div>
     {cfg.wheel_on !== false && <div className="pf-pts">
-      <div className="pf-coin"><Icon name="star" size={20} /></div>
-      <div className="pf-pts-t"><b>{pts?.balance ?? '…'} điểm thưởng</b><span className="small muted">{tickets} lượt quay · {cfg.spin_cost} điểm / lượt · +{cfg.pts_ontime} mỗi bước đúng hạn</span></div>
-      <button className="btn primary pf-spin" onClick={() => setWheel(true)} disabled={!tickets || !cfg.prizes.length}><Icon name="gift" size={18} />Quay thưởng</button>
+      <div className="pf-coin tk"><Icon name="ticket" size={20} /></div>
+      <div className="pf-pts-t"><b>{tickets} phiếu quay · {pts?.balance ?? '…'} điểm</b>
+        <span className="small muted">{cfg.tk_on === false ? `Quay bằng điểm: ${cfg.spin_cost} điểm/lượt` : `Phiếu còn hạn ${cfg.tk_valid_days ?? 14} ngày`}</span></div>
+      <button className="btn primary pf-spin" onClick={() => setWheel(true)} disabled={!canSpin || !cfg.prizes.length}><Icon name="gift" size={18} />Quay thưởng</button>
+      {cfg.tk_on !== false && <div className="pf-today">
+        <div className="pf-today-h"><b>Hôm nay</b>{(td.tickets ?? 0) > 0 ? <span className="chip done"><Icon name="ticket" size={12} />+{td.tickets} phiếu</span>
+          : <span className="small muted">{need > 0 ? `Còn ${need} bước đúng hạn để nhận phiếu` : tdPct < (cfg.tk_min_ontime ?? 90) ? `Đúng hạn ${tdPct}% – cần ≥ ${cfg.tk_min_ontime}%` : 'Đang tính…'}</span>}</div>
+        <div className="pf-today-b"><i style={{ width: Math.min(100, (tdOk / Math.max(1, cfg.tk_min_steps ?? 3)) * 100) + '%' }} /></div>
+        <span className="small muted">Nhận {cfg.tk_base ?? 1} phiếu khi ký ≥ {cfg.tk_min_steps} bước, ≥ {cfg.tk_min_ontime}% đúng hạn · +{cfg.tk_clean_bonus} nếu không bị trả về · +{cfg.tk_top_bonus} nếu vào top {cfg.tk_top_n} trong ngày · tối đa {cfg.tk_max_day}/ngày</span>
+        {tk?.days?.length ? <div className="pf-days">{[...tk.days].reverse().map((d) => <span key={d.day} className={d.tickets ? 'on' : ''} title={d.day + ': ' + d.steps + ' bước, ' + d.ontime + ' đúng hạn'}>
+          <i>{d.tickets ? '+' + d.tickets : '·'}</i><em>{d.day.slice(8, 10)}/{d.day.slice(5, 7)}</em></span>)}</div> : null}
+      </div>}
     </div>}
-    {wheel && createPortal(<Wheel prizes={cfg.prizes} cost={cfg.spin_cost} balance={pts?.balance ?? 0} onClose={() => { setWheel(false); loadPts(); }} onSpun={(b) => setPts((p) => p && { ...p, balance: b })} />, document.body)}
+    {wheel && createPortal(<Wheel prizes={cfg.prizes} cost={cfg.spin_cost} balance={pts?.balance ?? 0} tickets={tickets} pointsSpin={cfg.points_spin !== false} test={isAdmin && !tickets} onClose={() => { setWheel(false); loadPts(); loadTk(); }} />, document.body)}
   </section>;
 }
 
@@ -116,25 +130,38 @@ export function WheelArt({ prizes, rot, onSpin, busy, disabled, size = 340 }: { 
   </div>;
 }
 
-function Wheel({ prizes, cost, balance, onClose, onSpun }: { prizes: Prize[]; cost: number; balance: number; onClose: () => void; onSpun: (b: number) => void }) {
-  const [rot, setRot] = useState(0); const [busy, setBusy] = useState(false); const [res, setRes] = useState<{ prize: string; bonus: number } | null>(null); const [bal, setBal] = useState(balance);
+type TK = { balance: number; earned: number; used: number; today: { steps?: number; ontime?: number; tickets?: number; top_rank?: number }; days: { day: string; steps: number; ontime: number; tickets: number }[] };
+export function Wheel({ prizes, cost, balance, tickets, pointsSpin, test, onClose, onSpun }: { prizes: Prize[]; cost: number; balance: number; tickets: number; pointsSpin: boolean; test?: boolean;
+  onClose: () => void; onSpun?: (b: number, t: number) => void }) {
+  const { can } = useAuth(); const isAdmin = can('admin_it');
+  const [rot, setRot] = useState(0); const [busy, setBusy] = useState(false); const [res, setRes] = useState<{ prize: string; bonus: number; kind: string } | null>(null);
+  const [bal, setBal] = useState(balance); const [tk, setTk] = useState(tickets); const [testMode, setTestMode] = useState(!!test); const [n, setN] = useState(0);
   const seg = 360 / prizes.length;
+  const can_ = testMode || tk > 0 || (pointsSpin && bal >= cost);
   const spin = async () => {
     setBusy(true); setRes(null);
-    const { data, error } = await sb.rpc('spin_wheel');
+    const { data, error } = await sb.rpc('spin_wheel', { p_test: testMode });
     if (error) { toast(error.message); setBusy(false); return; }
-    const d = data as { index: number; prize: string; bonus: number; balance: number };
+    const d = data as { index: number; prize: string; bonus: number; balance: number; tickets: number; kind: string };
     const jitter = (Math.random() - .5) * seg * .6;
     setRot((r) => r - (r % 360) + 360 * 7 + (360 - (d.index * seg + seg / 2)) + jitter);
-    setTimeout(() => { setRes({ prize: d.prize, bonus: d.bonus }); setBal(d.balance); onSpun(d.balance); setBusy(false); }, 5200);
+    setTimeout(() => { setRes({ prize: d.prize, bonus: d.bonus, kind: d.kind }); setBal(d.balance); setTk(d.tickets); setN((x) => x + 1); onSpun?.(d.balance, d.tickets); setBusy(false); }, 5200);
   };
   return <div className="sw-sheet-bg wh-bg" onClick={() => !busy && onClose()}>
     <div className="wh" role="dialog" aria-modal="true" aria-label="Vòng quay may mắn" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><span className="wh-title"><Icon name="gift" size={18} />Vòng quay may mắn</span><button className="btn sm icon-btn" onClick={onClose} disabled={busy} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
-      <div className="wh-bal"><span className="pf-coin sm"><Icon name="star" size={14} /></span><b>{bal}</b> điểm<span className="muted"> · {Math.floor(bal / Math.max(1, cost))} lượt · {cost} điểm/lượt</span></div>
-      <WheelArt prizes={prizes} rot={rot} onSpin={spin} busy={busy} disabled={bal < cost} />
-      <div className={'wh-res' + (res ? ' on' : '')} aria-live="polite">{res ? <><span className="wh-confetti" aria-hidden="true" />Bạn trúng <b>{res.prize}</b>{res.bonus > 0 && <em>+{res.bonus} điểm</em>}</> : busy ? 'Chúc may mắn…' : bal < cost ? 'Chưa đủ điểm để quay' : 'Bấm QUAY ở giữa vòng'}</div>
-      <p className="small muted" style={{ margin: 0, textAlign: 'center' }}>Giải được ghi lại để quản trị trao thưởng.</p>
+      <div className="wh-bal">
+        <span className="wh-chip tk"><Icon name="ticket" size={14} /><b>{tk}</b> phiếu</span>
+        <span className="wh-chip"><Icon name="star" size={14} /><b>{bal}</b> điểm</span>
+        {isAdmin && <button role="switch" aria-checked={testMode} className={'pp-sw' + (testMode ? ' on' : '')} onClick={() => setTestMode(!testMode)} disabled={busy}><i />Quay thử</button>}
+      </div>
+      <WheelArt prizes={prizes} rot={rot} onSpin={spin} busy={busy} disabled={!can_} />
+      <div className={'wh-res' + (res ? ' on' : '')} aria-live="polite">{res ? <><span className="wh-confetti" aria-hidden="true" key={n} />{res.kind === 'test' ? 'Thử: ' : 'Bạn trúng '}<b>{res.prize}</b>{res.bonus > 0 && <em>+{res.bonus} điểm</em>}</>
+        : busy ? 'Chúc may mắn…' : testMode ? 'Chế độ quay thử – không trừ phiếu, không trao giải' : !can_ ? 'Chưa có phiếu quay – làm đúng hạn hôm nay để nhận' : tk > 0 ? 'Mỗi lượt dùng 1 phiếu' : `Mỗi lượt ${cost} điểm`}</div>
+      {testMode && <div className="wh-fast"><span className="small muted">Đã quay thử {n} lượt</span>
+        <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); for (let i = 0; i < 20; i++) { const { error } = await sb.rpc('spin_wheel', { p_test: true }); if (error) { toast(error.message); break; } }
+          setN((x) => x + 20); setBusy(false); toast('Đã quay nhanh 20 lượt – xem tỉ lệ thực tế trong Quản trị'); }}><Icon name="refresh" size={15} />Quay nhanh ×20</button></div>}
+      {!testMode && <p className="small muted" style={{ margin: 0, textAlign: 'center' }}>Giải được ghi lại để quản trị trao thưởng.</p>}
     </div></div>;
 }
 
@@ -168,9 +195,10 @@ export function Leaderboard() {
 export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
   const { data, reload } = usePerf(); const [c, setC] = useState<PerfCfg | null>(null); const [busy, setBusy] = useState(false);
   const [spins, setSpins] = useState<{ id: number; user_id: string; prize: string; cost: number; at: string }[]>([]);
-  const first = useRef(true); const [prev, setPrev] = useState(0);
+  const first = useRef(true); const [prev, setPrev] = useState(0); const [tw, setTw] = useState(false);
   useEffect(() => { if (data && first.current) { setC(data.cfg); first.current = false; } }, [data]);
-  useEffect(() => { sb.from('perf_spins').select('*').order('at', { ascending: false }).limit(30).then(({ data: d }) => setSpins((d as never[]) ?? [])); }, []);
+  const loadSpins = () => sb.from('perf_spins').select('*').order('at', { ascending: false }).limit(200).then(({ data: d }) => setSpins((d as never[]) ?? []));
+  useEffect(() => { loadSpins(); }, []);
   if (!c || !data) return <p className="muted">Đang tải…</p>;
   const set = <K extends keyof PerfCfg>(k: K, v: PerfCfg[K]) => setC({ ...c, [k]: v });
   const wsum = c.w_ontime + c.w_speed + c.w_quality + c.w_volume;
@@ -197,9 +225,20 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
     <section className="pa-card"><header><h3><Icon name="star" size={18} />Điểm thưởng</h3></header>
       <div className="pa-grid">{num('pts_ontime', 'Mỗi bước ký đúng hạn', 'điểm')}{num('pts_late', 'Mỗi bước ký trễ', 'điểm')}
         {num('pts_fast', 'Thưởng ký nhanh', 'điểm')}{num('fast_h', 'Nhanh khi dưới', 'giờ')}{num('pts_returned', 'Bị trả về', 'điểm', 'Số âm = trừ')}{num('spin_cost', 'Giá mỗi lượt quay', 'điểm')}</div></section>
+    <section className="pa-card"><header><h3><Icon name="ticket" size={18} />Phiếu quay theo hiệu quả hằng ngày</h3>
+      <button role="switch" aria-checked={c.tk_on !== false} className={'pp-sw' + (c.tk_on !== false ? ' on' : '')} disabled={!canEdit} onClick={() => set('tk_on', c.tk_on === false)}><i />{c.tk_on !== false ? 'Đang bật' : 'Đang tắt'}</button></header>
+      <div className="pa-rule"><b>Mỗi ngày</b>, ai ký ≥ <em>{c.tk_min_steps}</em> bước và đúng hạn ≥ <em>{c.tk_min_ontime}%</em> nhận <em>{c.tk_base}</em> phiếu
+        · +<em>{c.tk_clean_bonus}</em> nếu không bị trả về · +<em>{c.tk_top_bonus}</em> nếu vào top <em>{c.tk_top_n}</em> của ngày · tối đa <em>{c.tk_max_day}</em> phiếu/ngày · phiếu dùng trong <em>{c.tk_valid_days}</em> ngày.</div>
+      <div className="pa-grid">{num('tk_min_steps', 'Số bước tối thiểu / ngày', 'bước')}{num('tk_min_ontime', 'Đúng hạn tối thiểu', '%')}{num('tk_base', 'Phiếu cơ bản', 'phiếu')}
+        {num('tk_clean_bonus', 'Thưởng không bị trả về', 'phiếu')}{num('tk_top_n', 'Top trong ngày', 'người')}{num('tk_top_bonus', 'Thưởng top', 'phiếu')}
+        {num('tk_max_day', 'Tối đa mỗi ngày', 'phiếu')}{num('tk_valid_days', 'Hạn dùng phiếu', 'ngày')}</div>
+      <label className="pa-chk"><input type="checkbox" checked={c.points_spin !== false} disabled={!canEdit} onChange={(e) => set('points_spin', e.target.checked)} />Cho phép đổi <b>{c.spin_cost} điểm thưởng</b> lấy 1 lượt khi hết phiếu</label>
+    </section>
     <section className="pa-card"><header><h3><Icon name="gift" size={18} />Vòng quay may mắn</h3>
       <button role="switch" aria-checked={c.wheel_on !== false} className={'pp-sw' + (c.wheel_on !== false ? ' on' : '')} disabled={!canEdit} onClick={() => set('wheel_on', c.wheel_on === false)}><i />{c.wheel_on !== false ? 'Đang bật' : 'Đang tắt'}</button></header>
-      <p className="small muted" style={{ margin: 0 }}>Tắt thì nút “Quay thưởng” ẩn với mọi người, điểm thưởng vẫn được cộng. Bấm QUAY ở bản xem trước để thử hiệu ứng (không trừ điểm).</p>
+      <p className="small muted" style={{ margin: 0 }}>Tắt thì nút “Quay thưởng” ẩn với mọi người. Bấm QUAY ở bản xem trước để xem hiệu ứng; bấm <b>Quay thử thật</b> để máy chủ quay liên tục theo tỉ lệ đã lưu (không trừ phiếu, không trao giải).</p>
+      {canEdit && <div className="pa-ph"><span /><button className="btn sm" onClick={() => setTw(true)}><Icon name="refresh" size={16} />Quay thử thật</button></div>}
+      {tw && createPortal(<Wheel prizes={data.cfg.prizes} cost={data.cfg.spin_cost} balance={0} tickets={0} pointsSpin={false} test onClose={() => { setTw(false); loadSpins(); }} />, document.body)}
       <div className="pa-wprev"><WheelArt prizes={c.prizes.length ? c.prizes : [{ label: 'Thêm giải', weight: 1, color: '#F7F0E1' }]} rot={prev} onSpin={() => setPrev((r) => r + 1440 + Math.random() * 360)} size={260} /></div>
       <div className="pa-ph"><b>Danh sách giải</b>{canEdit && <button className="btn sm" onClick={() => set('prizes', [...c.prizes, { label: 'Giải mới', weight: 10, color: c.prizes.length % 2 ? '#3F6FCB' : '#F7F0E1', icon: 'gift' }])}><Icon name="plus" size={16} />Thêm giải</button>}</div>
       <div className="pa-prizes">
@@ -219,6 +258,10 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
       <button className="btn" onClick={() => setC({ ...DEFAULT_CFG, prizes: c.prizes })} disabled={busy}>Mặc định</button>
       <button className="btn primary" onClick={save} disabled={!dirty || busy}>{busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button></div>}
     <section className="pa-card"><header><h3><Icon name="list" size={18} />Lượt quay gần đây</h3></header>
-      {spins.length ? <ul className="pa-hist">{spins.map((s) => <li key={s.id}><b>{names[s.user_id] ?? '?'}</b><span>{s.prize}</span><span className="small muted">{new Date(s.at).toLocaleString('vi-VN')}</span></li>)}</ul> : <p className="small muted" style={{ margin: 0 }}>Chưa có ai quay.</p>}</section>
+      {(() => { const t = spins.filter((x) => (x as { kind?: string }).kind === 'test'); if (!t.length) return null;
+        const cnt: Record<string, number> = {}; t.forEach((x) => { cnt[x.prize] = (cnt[x.prize] ?? 0) + 1; }); const tw2 = Math.max(1, c.prizes.reduce((a, p) => a + p.weight, 0));
+        return <div className="pa-test"><b className="small">Kết quả quay thử ({t.length} lượt) – thực tế so với tỉ lệ cài đặt</b>
+          {c.prizes.map((p) => { const v = ((cnt[p.label] ?? 0) / t.length) * 100; return <div key={p.label} className="lb-m"><span>{p.label}</span><span className="db-ht"><i style={{ width: v + '%', background: p.color === '#F7F0E1' ? '#C9A24A' : p.color }} /></span><span className="small">{Math.round(v)}% / {Math.round((p.weight / tw2) * 100)}%</span></div>; })}</div>; })()}
+      {spins.filter((x) => (x as { kind?: string }).kind !== 'test').length ? <ul className="pa-hist">{spins.filter((x) => (x as { kind?: string }).kind !== 'test').slice(0, 30).map((s) => <li key={s.id}><b>{names[s.user_id] ?? '?'}</b><span>{s.prize}</span><span className="small muted">{new Date(s.at).toLocaleString('vi-VN')}</span></li>)}</ul> : <p className="small muted" style={{ margin: 0 }}>Chưa có ai quay.</p>}</section>
   </div>;
 }

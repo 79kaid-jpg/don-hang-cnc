@@ -10,11 +10,12 @@ export type PerfCfg = {
   volume_cap: number; overdue_penalty: number; min_steps: number;
   crown_ontime: number; crown_min_steps: number;
   pts_ontime: number; pts_late: number; pts_fast: number; fast_h: number; pts_returned: number;
-  spin_cost: number; prizes: Prize[]; wheel_on?: boolean;
+  spin_cost: number; prizes: Prize[]; wheel_on?: boolean; points_spin?: boolean;
+  tk_on?: boolean; tk_min_steps?: number; tk_min_ontime?: number; tk_base?: number; tk_clean_bonus?: number; tk_top_n?: number; tk_top_bonus?: number; tk_max_day?: number; tk_valid_days?: number;
 };
 export const DEFAULT_CFG: PerfCfg = {
   period_days: 30, sla_h: 48, w_ontime: 40, w_speed: 25, w_quality: 20, w_volume: 15, volume_cap: 1.5, overdue_penalty: 5, min_steps: 5,
-  crown_ontime: 90, crown_min_steps: 10, pts_ontime: 10, pts_late: 2, pts_fast: 5, fast_h: 8, pts_returned: -5, spin_cost: 50, prizes: [], wheel_on: true
+  crown_ontime: 90, crown_min_steps: 10, pts_ontime: 10, pts_late: 2, pts_fast: 5, fast_h: 8, pts_returned: -5, spin_cost: 50, prizes: [], wheel_on: true, points_spin: true, tk_on: true, tk_min_steps: 3, tk_min_ontime: 90, tk_base: 1, tk_clean_bonus: 1, tk_top_n: 3, tk_top_bonus: 1, tk_max_day: 3, tk_valid_days: 14
 };
 
 type D = Doc & { signs: { role: string; user: string; at: string; action: string }[]; created_at: string };
