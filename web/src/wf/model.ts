@@ -8,10 +8,16 @@ export type Step = {
   id: string; name: string; kind: StepKind; lane: string; assignee: Assignee;
   /** Người theo dõi: thấy việc ở bước này. Người quản trị giai đoạn: sửa nội dung, phân công / đổi người làm */
   watchers?: Assignee[]; managers?: Assignee[];
-  sla_hours?: number; checklist?: (string | CheckItem)[]; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
+  sla_hours?: number; checklist?: (string | CheckItem)[]; perms?: Record<string, Perm>; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
 };
 export type Lane = { id: string; name: string };
-export type Def = { lanes: Lane[]; steps: Step[] };
+export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'table';
+export type Column = { id: string; label: string; type: 'text' | 'number'; formula?: string; sum?: boolean };
+export type Field = { id: string; label: string; type: FieldType; options?: string[]; columns?: Column[]; help?: string };
+export type Perm = 'hide' | 'view' | 'edit' | 'required';
+export const PERM: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
+export const FTYPE: Record<FieldType, string> = { text: 'Chữ ngắn', textarea: 'Đoạn văn', number: 'Số', date: 'Ngày', select: 'Chọn một', table: 'Bảng' };
+export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[] };
 export type Process = { id: string; code: string; name: string; description: string; category: string; is_template: boolean; created_at: string };
 export type Version = { id: string; process_id: string; version: number; status: 'nhap' | 'phat_hanh' | 'luu_tru'; def: Def; updated_at: string; published_at: string | null };
 export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null };
@@ -86,4 +92,27 @@ export function slaLeft(due: string | null): { text: string; late: boolean } | n
   const h = (new Date(due).getTime() - Date.now()) / 36e5;
   if (h < 0) return { text: `Trễ ${Math.ceil(-h)} giờ`, late: true };
   return { text: h < 1 ? `Còn ${Math.max(1, Math.round(h * 60))} phút` : `Còn ${Math.round(h)} giờ`, late: false };
+}
+
+/** Công thức an toàn: chỉ số, mã cột, + - * / ( ). Không dùng eval. */
+export function calc(expr: string, row: Record<string, unknown>): number | null {
+  const tk = expr.match(/\d+(?:[.,]\d+)?|[A-Za-z_][\w]*|[-+*/()]/g); if (!tk) return null;
+  let i = 0;
+  const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return String(v ?? '') === '' || !isFinite(x) ? NaN : x; };
+  const atom = (): number => {
+    const t = tk[i++];
+    if (t === '(') { const v = sum(); i++; return v; }
+    if (t === '-') return -atom();
+    if (/^\d/.test(t)) return Number(t.replace(',', '.'));
+    return num(row[t]);
+  };
+  const prod = (): number => { let v = atom(); while (tk[i] === '*' || tk[i] === '/') { const o = tk[i++], r = atom(); v = o === '*' ? v * r : v / r; } return v; };
+  const sum = (): number => { let v = prod(); while (tk[i] === '+' || tk[i] === '-') { const o = tk[i++], r = prod(); v = o === '+' ? v + r : v - r; } return v; };
+  try { const v = sum(); return isFinite(v) ? Math.round(v * 1000) / 1000 : null; } catch { return null; }
+}
+/** Tính các cột công thức theo thứ tự (cột sau dùng được kết quả cột trước) */
+export function computeRow(cols: Column[], r: Record<string, unknown>) {
+  const o: Record<string, unknown> = { ...r };
+  for (const c of cols) if (c.formula) o[c.id] = calc(c.formula, o);
+  return o;
 }

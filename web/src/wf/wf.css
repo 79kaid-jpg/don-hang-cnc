@@ -69,3 +69,25 @@ a.wf-item:hover{border-color:#BFA977}
 .wf-file a,.wf-file .linkish{font-size:14px}
 .wf-assign{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-radius:var(--r-sm);background:var(--wait-bg)}
 .wf-assign select{font:inherit;min-height:40px;border:1px solid var(--line2);border-radius:var(--r-sm);padding:4px 8px;flex:1 1 200px}
+.wf-formview{display:flex;flex-direction:column;gap:14px}
+.wf-formview .f{display:flex;flex-direction:column;gap:4px}.wf-formview .f>span{font-size:13px;font-weight:600;color:var(--muted)}
+.wf-formview input,.wf-formview select,.wf-formview textarea{font:inherit;min-height:44px;padding:8px 10px;border:1px solid var(--line2);border-radius:var(--r-sm);background:#fff;width:100%;box-sizing:border-box}
+.wf-req{color:var(--red)}.wf-ro{padding:8px 10px;background:var(--soft);border-radius:var(--r-sm);white-space:pre-wrap;min-height:20px}
+.wf-tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
+.wf-tbl{border-collapse:collapse;width:100%;font-size:14px}
+.wf-tbl th,.wf-tbl td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}
+.wf-tbl th{background:var(--soft);font-size:12px;position:sticky;top:0}.wf-tbl .n{text-align:right}
+.wf-tbl td input{min-height:34px!important;padding:4px 6px!important;min-width:70px;border-color:transparent!important;background:transparent!important}
+.wf-tbl td input:focus{border-color:var(--gold)!important;background:#fff!important}.wf-tbl td.n input{text-align:right}
+.wf-tbl tfoot td{background:var(--soft);border-top:2px solid var(--line2)}.wf-calc{color:var(--blue)}
+.wf-x{border:0;background:none;color:var(--muted);padding:6px;display:inline-flex;border-radius:4px}.wf-x:hover{color:var(--red);background:var(--red-bg)}
+.wf-field{border:1px solid var(--line);border-radius:var(--r-sm)}
+.wf-cols{display:flex;flex-direction:column;gap:4px;overflow-x:auto}
+.wf-col{display:grid;grid-template-columns:90px minmax(120px,1fr) 80px minmax(120px,1fr) 28px 32px;gap:6px;align-items:center;min-width:520px}
+.wf-col.h{font-size:12px;font-weight:600;color:var(--muted)}.wf-form .wf-col input:not([type=checkbox]),.wf-form .wf-col select{min-height:36px;padding:4px 6px}
+.wf-perms{display:flex;flex-direction:column;gap:6px}
+.wf-perm{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.wf-seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden}
+.wf-seg button{border:0;background:#fff;font:inherit;font-size:13px;min-height:34px;padding:0 12px;color:var(--muted)}
+.wf-seg button+button{border-left:1px solid var(--line2)}
+.wf-seg button.on{color:#fff;background:var(--muted)}.wf-seg button.on.p-edit{background:var(--blue)}.wf-seg button.on.p-required{background:var(--red)}.wf-seg button.on.p-hide{background:#9a9384}

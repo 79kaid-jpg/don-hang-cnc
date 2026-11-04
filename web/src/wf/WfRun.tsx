@@ -4,6 +4,7 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
+import { FormView } from './Form';
 import { ISTATUS, KIND, TSTATUS, fmtDT, items, loadDirectory, slaLeft, userName, who,
   type Def, type Directory, type Instance, type Step, type Task, type Version } from './model';
 
@@ -20,6 +21,8 @@ export default function WfRun() {
   const [rights, setRights] = useState<{ do: boolean; manage: boolean; watch: boolean }>({ do: false, manage: false, watch: false });
   const [pick, setPick] = useState('');
   const [busyItem, setBusyItem] = useState('');
+  const [data, setData] = useState<Record<string, unknown>>({});
+  const [dataDirty, setDataDirty] = useState(false);
   const [ck, setCk] = useState<Record<string, boolean>>({});
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
@@ -27,7 +30,7 @@ export default function WfRun() {
   const load = async () => {
     const i = await sb.from('wf_instances').select('*').eq('id', id).single();
     if (i.error) return setErr(errText(i.error));
-    const inst = i.data as Instance; setIns(inst);
+    const inst = i.data as Instance; setIns(inst); setData((i.data as { data?: Record<string, unknown> }).data ?? {}); setDataDirty(false);
     const [v, t, e, m] = await Promise.all([
       sb.from('wf_versions').select('*, p:wf_processes(name)').eq('id', inst.version_id).single(),
       sb.from('wf_tasks').select('*').eq('instance_id', id).order('created_at'),
@@ -69,8 +72,15 @@ export default function WfRun() {
     if (error) return setErr(errText(error)); toast('Đã phân công'); load();
   };
 
+  const saveData = async (quiet = false) => {
+    if (!open || !dataDirty) return true;
+    const { error } = await sb.rpc('wf_save_data', { p_task: open.id, p_data: data });
+    if (error) { setErr(errText(error)); return false; }
+    setDataDirty(false); if (!quiet) toast('Đã lưu biểu mẫu'); return true;
+  };
   const act = async (action: 'next' | 'back' | 'fail') => {
     if (!open) return;
+    if (!(await saveData(true))) return;
     if (action !== 'next' && !note.trim()) return setErr(action === 'back' ? 'Ghi lý do trả lại' : 'Ghi lý do từ chối');
     if (action === 'fail' && !(await confirmDialog('Từ chối và dừng quy trình (Fail)? Không thể tiếp tục lượt chạy này.', 'Fail'))) return;
     const { data, error } = await sb.rpc('wf_act', { p_task: open.id, p_action: action, p_note: note, p_checklist: ck });
@@ -126,6 +136,12 @@ export default function WfRun() {
               <button className="btn sm primary" disabled={!pick} onClick={assign}>Phân công</button>
             </div>)}
 
+          {(def.fields ?? []).length > 0 && <>
+            <FormView fields={def.fields ?? []} perms={cur.perms ?? {}} data={data} locked={!canEdit} onChange={(k, v) => { setData((d) => ({ ...d, [k]: v })); setDataDirty(true); }} />
+            {canEdit && Object.values(cur.perms ?? {}).some((p) => p === 'edit' || p === 'required') &&
+              <div className="row"><button className="btn sm" disabled={!dataDirty} onClick={() => saveData()}><Icon name="check" size={16} />Lưu biểu mẫu</button>{dataDirty && <span className="chip wait">Chưa lưu</span>}</div>}
+          </>}
+
           {items(cur).length > 0 && <div className="f"><span>Checklist</span>
             {items(cur).map((c) => c.kind === 'file' ? (
               <div key={c.id} className={'wf-file' + (filesOf(c.id).length ? ' ok' : '')}>
@@ -150,6 +166,9 @@ export default function WfRun() {
             {!ckDone && <p className="small muted" style={{ margin: 0 }}>Hoàn thành đủ checklist (tích và tải file) để chuyển bước.</p>}
           </> : <p className="small muted" style={{ margin: 0 }}>{unassigned && !open?.assigned_to ? 'Chờ người quản trị giai đoạn phân công người làm.' : `Đang chờ ${open?.assigned_to ? userName(open.assigned_to, dir) : who(cur.assignee, dir)} xử lý.`}{rights.watch && !rights.manage ? ' Bạn đang theo dõi bước này.' : ''}</p>}
         </section>)}
+
+      {ins.status !== 'dang_chay' && (def.fields ?? []).length > 0 && <section className="card" aria-label="Biểu mẫu"><b>Biểu mẫu</b>
+        <FormView fields={def.fields ?? []} perms={{}} data={data} locked onChange={() => {}} /></section>}
 
       {/* Lịch sử */}
       <section className="card" aria-label="Lịch sử">

@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
-  type Assignee, type CheckItem, type Def, type Directory, type Process, type Step, type StepKind, type Version } from './model';
+  type Assignee, type CheckItem, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
 const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
 
@@ -117,6 +117,8 @@ export default function WfEditor() {
         </div>
       </section>
 
+      <FieldsEditor fields={def.fields ?? []} ro={ro} onChange={(f) => upd((d) => { d.fields = f; })} />
+
       {/* Các bước – dạng timeline dọc, dùng tốt trên cả laptop và điện thoại */}
       <section aria-label="Các bước" className="wf-flow">
         <div className="wf-node start">Bắt đầu</div>
@@ -188,6 +190,13 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
       <label className="f" style={{ maxWidth: 220 }}><span>Hạn xử lý (giờ, 0 = không hạn)</span>
         <input type="number" min={0} inputMode="numeric" value={s.sla_hours ?? 0} onChange={(e) => set({ sla_hours: Math.max(0, Number(e.target.value) || 0) })} /></label>
 
+      {(def.fields ?? []).length > 0 && <div className="f"><span>Quyền với biểu mẫu ở bước này</span>
+        <div className="wf-perms">{(def.fields ?? []).map((f) => (
+          <div key={f.id} className="wf-perm"><span>{f.label || <i className="muted">(chưa đặt tên)</i>}</span>
+            <div className="wf-seg" role="radiogroup" aria-label={'Quyền: ' + f.label}>{(Object.keys(PERM) as Perm[]).map((p) => (
+              <button key={p} role="radio" aria-checked={(s.perms?.[f.id] ?? 'view') === p} className={(s.perms?.[f.id] ?? 'view') === p ? 'on p-' + p : ''}
+                onClick={() => set({ perms: { ...(s.perms ?? {}), [f.id]: p } })}>{PERM[p]}</button>))}</div></div>))}</div></div>}
+
       <People label="Người quản trị giai đoạn" hint="Sửa nội dung bước, phân công / đổi người làm khi việc tới mà chưa xác định được người làm."
         list={s.managers ?? []} dir={dir} ro={ro} onChange={(v) => set({ managers: v })} />
       <People label="Người theo dõi" hint="Thấy các việc đang ở bước này (chỉ xem)." list={s.watchers ?? []} dir={dir} ro={ro} onChange={(v) => set({ watchers: v })} />
@@ -236,5 +245,66 @@ function People({ label, hint, list, dir, ro, onChange }: { label: string; hint:
         <select value={type} aria-label={label + ': loại'} onChange={(e) => setType(e.target.value as Assignee['type'])}><option value="user">Người</option><option value="group">Nhóm</option><option value="role">Vai trò</option></select>
         <select value="" aria-label={label + ': thêm'} onChange={(e) => { const id = e.target.value; if (id && !list.some((a) => a.type === type && a.id === id)) onChange([...list, { type, id }]); }}>
           <option value="">+ Thêm…</option>{opts?.map(([id, t]) => <option key={id} value={id}>{t}</option>)}</select></div>}
+    </div>);
+}
+
+/** Biểu mẫu dùng chung cho cả quy trình; mỗi bước đặt quyền Ẩn / Xem / Sửa / Bắt buộc */
+function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; onChange: (f: Field[]) => void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const setF = (i: number, p: Partial<Field>) => onChange(fields.map((f, j) => j === i ? { ...f, ...p } : f));
+  const add = (type: Field['type']) => {
+    const f: Field = { id: uid('f'), label: '', type, ...(type === 'table' ? { columns: [{ id: 'c1', label: 'Cột 1', type: 'text' }] } : type === 'select' ? { options: ['Có', 'Không'] } : {}) };
+    onChange([...fields, f]); setOpen(f.id);
+  };
+  return (
+    <section className="card" aria-label="Biểu mẫu">
+      <div className="row" style={{ justifyContent: 'space-between' }}><div><b>Biểu mẫu</b><div className="small muted">Các trường dữ liệu đi theo hồ sơ. Ở từng bước chọn trường nào được sửa, bắt buộc, chỉ xem hay ẩn.</div></div></div>
+      <div className="steps" style={{ marginTop: 8 }}>
+        {fields.map((f, i) => (
+          <div key={f.id} className="wf-field">
+            <button className="wf-step-h" style={{ minHeight: 44, padding: '6px 10px' }} aria-expanded={open === f.id} onClick={() => setOpen(open === f.id ? null : f.id)}>
+              <span className="wf-kind">{FTYPE[f.type]}</span><b style={{ flex: 1, textAlign: 'left' }}>{f.label || <i className="muted">Chưa đặt tên</i>}</b>
+              {f.type === 'table' && <span className="small muted">{f.columns?.length ?? 0} cột</span>}</button>
+            {open === f.id && <fieldset className="wf-form" disabled={ro}>
+              <div className="wf-2">
+                <label className="f"><span>Tên trường</span><input value={f.label} autoFocus={!f.label} onChange={(e) => setF(i, { label: e.target.value })} /></label>
+                <label className="f"><span>Kiểu</span><select value={f.type} onChange={(e) => setF(i, { type: e.target.value as Field['type'], ...(e.target.value === 'table' && !f.columns ? { columns: [{ id: 'c1', label: 'Cột 1', type: 'text' }] } : {}) })}>
+                  {Object.entries(FTYPE).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></label>
+              </div>
+              <label className="f"><span>Gợi ý nhập (tuỳ chọn)</span><input value={f.help ?? ''} onChange={(e) => setF(i, { help: e.target.value })} /></label>
+              {f.type === 'select' && <label className="f"><span>Các lựa chọn (mỗi dòng một lựa chọn)</span>
+                <textarea rows={3} value={(f.options ?? []).join('\n')} onChange={(e) => setF(i, { options: e.target.value.split('\n') })} onBlur={() => setF(i, { options: (f.options ?? []).map((o) => o.trim()).filter(Boolean) })} /></label>}
+              {f.type === 'table' && <ColumnsEditor cols={f.columns ?? []} onChange={(c) => setF(i, { columns: c })} />}
+              {!ro && <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div className="row"><button className="btn sm" disabled={i === 0} onClick={() => { const a = [...fields]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; onChange(a); }}>↑ Lên</button>
+                  <button className="btn sm" disabled={i === fields.length - 1} onClick={() => { const a = [...fields]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; onChange(a); }}>↓ Xuống</button></div>
+                <button className="btn sm danger" onClick={async () => { if (await confirmDialog(`Xoá trường "${f.label}"? Dữ liệu đã nhập ở các lượt chạy cũ vẫn giữ.`, 'Xoá')) onChange(fields.filter((_, j) => j !== i)); }}><Icon name="x" size={16} />Xoá trường</button>
+              </div>}
+            </fieldset>}
+          </div>))}
+      </div>
+      {!ro && <div className="row" style={{ marginTop: 8 }}><span className="small muted">Thêm trường:</span>
+        {(Object.keys(FTYPE) as Field['type'][]).map((t) => <button key={t} className="btn sm" onClick={() => add(t)}><Icon name="plus" size={14} />{FTYPE[t]}</button>)}</div>}
+    </section>);
+}
+
+function ColumnsEditor({ cols, onChange }: { cols: Column[]; onChange: (c: Column[]) => void }) {
+  const set = (i: number, p: Partial<Column>) => onChange(cols.map((c, j) => j === i ? { ...c, ...p } : c));
+  return (
+    <div className="f"><span>Các cột của bảng</span>
+      <small className="muted">Công thức dùng mã cột, ví dụ <code>m2_tam * so_tam</code>. Cột công thức tự tính, không nhập tay. Thứ tự cột nhập = thứ tự dán từ Excel.</small>
+      <div className="wf-cols">
+        <div className="wf-col h"><span>Mã</span><span>Tên cột</span><span>Kiểu</span><span>Công thức</span><span>Σ</span><span /></div>
+        {cols.map((c, i) => (
+          <div key={i} className="wf-col">
+            <input aria-label="Mã cột" value={c.id} onChange={(e) => set(i, { id: e.target.value.replace(/[^A-Za-z0-9_]/g, '_') })} />
+            <input aria-label="Tên cột" value={c.label} onChange={(e) => set(i, { label: e.target.value })} />
+            <select aria-label="Kiểu cột" value={c.type} onChange={(e) => set(i, { type: e.target.value as Column['type'] })}><option value="text">Chữ</option><option value="number">Số</option></select>
+            <input aria-label="Công thức" placeholder="(nhập tay)" value={c.formula ?? ''} onChange={(e) => set(i, { formula: e.target.value || undefined, ...(e.target.value ? { type: 'number' } : {}) })} />
+            <input type="checkbox" aria-label="Cộng tổng" checked={!!c.sum} onChange={(e) => set(i, { sum: e.target.checked })} />
+            <button className="wf-x" aria-label={'Xoá cột ' + c.label} onClick={() => onChange(cols.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button>
+          </div>))}
+      </div>
+      <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => onChange([...cols, { id: 'c' + (cols.length + 1), label: 'Cột ' + (cols.length + 1), type: 'text' }])}><Icon name="plus" size={14} />Thêm cột</button>
     </div>);
 }
