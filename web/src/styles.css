@@ -1405,3 +1405,12 @@ html[data-fs=lg] body{zoom:1.12}
 @media (max-width:640px){.sim-top h1{font-size:20px}.sim-grid{grid-template-columns:76px repeat(4,minmax(200px,1fr))!important}.sim-lh{font-size:11px;padding:8px 6px}.sim-body h2{font-size:17px}.sim-ctl .seg{width:100%;justify-content:center}}
 @media (prefers-reduced-motion:reduce){.sim-tok{transition:none}}
 @media (max-width:640px){.sim-ph{position:static}.sim-grid{grid-template-columns:76px repeat(4,minmax(220px,1fr))!important}.sim-board{max-height:none}}
+.sim-ctl{gap:6px;flex-wrap:nowrap}
+.sim-b{all:unset;box-sizing:border-box;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--ink);background:var(--surface);border:1px solid var(--line);cursor:pointer;transition:transform var(--t),background var(--t)}
+.sim-b:hover{background:var(--soft)}.sim-b:active{transform:scale(.92)}
+.sim-b:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.sim-b:disabled{opacity:.35;cursor:default}
+.sim-b.play{width:56px;height:56px;background:var(--gold);border-color:var(--gold);color:#fff;box-shadow:0 4px 12px rgba(126,96,36,.3)}
+.sim-b.play:hover{background:var(--gold-hover)}
+.sim-b.sp{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+@media (max-width:640px){.sim-keys{display:none}}

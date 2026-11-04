@@ -107,15 +107,20 @@ export default function Simulate() {
         </div>
       </section>}
 
-      <div className="sim-ctl">
-        <button className="btn icon" aria-label="Về đầu" onClick={() => { setI(0); setPlay(false); }}><Icon name="back" size={16} /></button>
-        <button className="btn" aria-label="Bước trước" disabled={i === 0} onClick={() => setI(i - 1)}>‹ Trước</button>
-        <button className="btn primary sim-play" onClick={() => { if (i >= steps.length - 1) setI(0); setPlay(!play); }}><Icon name={play ? 'pause' : 'run'} size={16} />{play ? 'Tạm dừng' : i ? 'Tiếp tục' : 'Chạy mô phỏng'}</button>
-        <button className="btn" aria-label="Bước sau" disabled={i >= steps.length - 1} onClick={() => setI(i + 1)}>Sau ›</button>
-        <div className="seg">{SPEEDS.map((s) => <button key={s} aria-pressed={sp === s} onClick={() => setSp(s)}>{s}×</button>)}</div>
+      <div className="sim-ctl" role="toolbar" aria-label="Điều khiển mô phỏng">
+        <button className="sim-b" aria-label="Về đầu" title="Về đầu" onClick={() => { setI(0); setPlay(false); }}><Svg d="M6 5v14M18 6l-8 6 8 6z" /></button>
+        <button className="sim-b" aria-label="Bước trước" title="Bước trước" disabled={i === 0} onClick={() => setI(i - 1)}><Svg d="m15 6-6 6 6 6" /></button>
+        <button className="sim-b play" aria-label={play ? 'Tạm dừng' : 'Chạy'} title={play ? 'Tạm dừng' : 'Chạy'} onClick={() => { if (i >= steps.length - 1) setI(0); setPlay(!play); }}>
+          {play ? <Svg d="M9 6v12M15 6v12" /> : <Svg d="M8 5.5v13l10.5-6.5z" fill />}</button>
+        <button className="sim-b" aria-label="Bước sau" title="Bước sau" disabled={i >= steps.length - 1} onClick={() => setI(i + 1)}><Svg d="m9 6 6 6-6 6" /></button>
+        <button className="sim-b sp" aria-label={'Tốc độ ' + sp + '×'} title="Đổi tốc độ" onClick={() => setSp(SPEEDS[(SPEEDS.indexOf(sp) + 1) % SPEEDS.length])}>{sp}×</button>
       </div>
       <div className="sim-bar"><i style={{ width: ((i + 1) / steps.length) * 100 + '%' }} /></div>
-      <p className="small muted" style={{ textAlign: 'center' }}>Phím ← → để chuyển bước · Space để chạy / dừng · bấm vào ô bất kỳ để nhảy tới</p>
+      <p className="small muted sim-keys" style={{ textAlign: 'center' }}>Phím ← → để chuyển bước · Space để chạy / dừng · bấm vào ô bất kỳ để nhảy tới</p>
     </div>
   );
+}
+
+function Svg({ d, fill }: { d: string; fill?: boolean }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill={fill ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
