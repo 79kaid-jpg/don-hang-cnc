@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { sb, type Order } from '../lib/supabase';
 import { PROC_NAME, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
 import { Icon } from '../components/Icon';
@@ -177,7 +178,7 @@ export default function FlowMap() {
         </div>}
       </div>
 
-      {S0 && <div className="sw-sheet-bg" onClick={() => setSel('')}><aside className="sw-detail" role="dialog" aria-label={S0.t} onClick={(e) => e.stopPropagation()}>
+      {S0 && createPortal(<div className="sw-sheet-bg" onClick={() => setSel('')}><aside className="sw-detail" role="dialog" aria-label={S0.t} onClick={(e) => e.stopPropagation()}>
         <div className="mv-head"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b style={{ fontSize: 17 }}>{S0.t}</b></span>
           <button className="btn sm icon-btn" onClick={() => setSel('')} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
         <span className={'sw-kind ' + S0.kind}>{KIND[S0.kind]} · làn {P.lanes[S0.lane]}</span>
@@ -186,7 +187,7 @@ export default function FlowMap() {
         {S0.keys && <div><b className="small">{one ? 'Đơn này' : 'Hồ sơ đang ở bước này'} ({inStep(S0).length})</b>
           <ul className="fm2-list">{inStep(S0).length === 0 ? <li className="muted small">Không có.</li> : inStep(S0).map((b) => { const o = orders.find((x) => x.id === b.order_id);
             return <li key={b.id}><Link to={'/don/' + b.order_id + '?tab=' + proc}><b>{o?.code}</b> · {b.title} <span className="small muted">{o?.project}</span><Icon name="arrow" size={16} /></Link></li>; })}</ul></div>}
-      </aside></div>}
+      </aside></div>, document.body)}
     </>
   );
 }
@@ -227,12 +228,31 @@ function Overview({ orders, bs, ds, onOpen }: { orders: Order[]; bs: Batch[]; ds
               <i className="ov-bar" /></button></li>; })}</ol>
         </section>))}
       <p className="small muted">Kẹt = hồ sơ nằm yên ở một bước từ {STUCK} ngày trở lên. Bấm một ô để xem danh sách đơn.</p>
-      {pick && <div className="sw-sheet-bg" onClick={() => setPick(null)}><aside className="sw-detail" role="dialog" aria-label={pick.s.t} onClick={(e) => e.stopPropagation()}>
-        <div className="mv-head"><span className="row" style={{ gap: 8 }}><QtTag qt={pick.p} /><b style={{ fontSize: 17 }}>{pick.s.t}</b></span>
-          <button className="btn sm icon-btn" onClick={() => setPick(null)} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
-        <span className="small muted">{pick.s.who}</span>
-        <ul className="fm2-list">{stages(pick.p).find((x) => x.s.id === pick.s.id)?.items.map(({ b, d }) => { const o = orders.find((x) => x.id === b.order_id);
-          return <li key={b.id}><Link to={'/don/' + b.order_id + '?tab=' + pick.p}><b>{o?.code}</b> · {b.title} <span className={'chip ' + (d >= STUCK ? 'bad' : 'idle')}>{d < 1 ? 'hôm nay' : Math.floor(d) + ' ngày'}</span><Icon name="arrow" size={16} /></Link></li>; })}</ul>
-      </aside></div>}
+      {pick && createPortal(<Sheet onClose={() => setPick(null)} label={pick.s.t}
+        head={<><QtTag qt={pick.p} /><b style={{ fontSize: 17 }}>{pick.s.t}</b></>} sub={pick.s.who + ' · ' + (stages(pick.p).find((x) => x.s.id === pick.s.id)?.items.length ?? 0) + ' hồ sơ'}>
+        <ul className="sh-list">{stages(pick.p).find((x) => x.s.id === pick.s.id)?.items.map(({ b, d }) => { const o = orders.find((x) => x.id === b.order_id);
+          return <li key={b.id}><Link to={'/don/' + b.order_id + '?tab=' + pick.p}>
+            <span className="sh-main"><b>{o?.code}</b><span>{b.title}</span>{o?.project && <span className="small muted">{o.project}</span>}</span>
+            <span className={'chip ' + (d >= STUCK ? 'bad' : 'idle')}>{d < 1 ? 'hôm nay' : Math.floor(d) + ' ngày'}</span><Icon name="arrow" size={18} /></Link></li>; })}</ul>
+      </Sheet>, document.body)}
     </div>);
+}
+
+/** Ngăn kéo đáy (điện thoại) / ngăn phải (máy tính): gắn thẳng vào body để không bị thanh điều hướng che; vuốt xuống để đóng */
+function Sheet({ head, sub, label, onClose, children }: { head: React.ReactNode; sub?: string; label: string; onClose: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLElement>(null); const y0 = useRef<number | null>(null);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); document.body.style.overflow = 'hidden';
+    return () => { removeEventListener('keydown', k); document.body.style.overflow = ''; }; }, [onClose]);
+  const move = (y: number) => { if (y0.current == null || !ref.current) return; const d = Math.max(0, y - y0.current); ref.current.style.transform = `translateY(${d}px)`; };
+  const end = (y: number) => { if (y0.current == null || !ref.current) return; const d = y - y0.current; y0.current = null; ref.current.style.transform = ''; if (d > 90) onClose(); };
+  return <div className="sw-sheet-bg" onClick={onClose}>
+    <aside ref={ref} className="sw-detail sh" role="dialog" aria-modal="true" aria-label={label} onClick={(e) => e.stopPropagation()}>
+      <div className="sh-top" onTouchStart={(e) => { y0.current = e.touches[0].clientY; }} onTouchMove={(e) => move(e.touches[0].clientY)} onTouchEnd={(e) => end(e.changedTouches[0].clientY)}>
+        <span className="sheet-grip" aria-hidden="true" />
+        <div className="mv-head"><span className="row" style={{ gap: 8, minWidth: 0 }}>{head}</span>
+          <button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+        {sub && <span className="small muted">{sub}</span>}
+      </div>
+      <div className="sh-body">{children}</div>
+    </aside></div>;
 }

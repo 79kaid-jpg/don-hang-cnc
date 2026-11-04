@@ -860,3 +860,17 @@ html[data-fs=lg] body{zoom:1.12}
 .nav-appear>summary{list-style:none;cursor:pointer}.nav-appear>summary::-webkit-details-marker{display:none}
 .sheet .appear{padding:4px 0 10px}
 .oc-prog{grid-template-columns:repeat(4,minmax(0,1fr))}.oc-prog .seg em{display:block}
+
+/* Ngăn chi tiết: tiêu đề cố định, danh sách cuộn, dòng bấm to */
+.sw-detail.sh{padding:0;gap:0}.sh-top{padding:14px 18px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px;flex:none}
+.sh-top .sheet-grip{display:none}.sh-body{overflow:auto;padding:12px 18px calc(18px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+.sh-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sh-list a{display:flex;align-items:center;gap:10px;min-height:64px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#FBF7EC;color:inherit;text-decoration:none;transition:background .15s}
+.sh-list a:active{background:#F3EAD4}.sh-list a:hover{background:#F7F0DE}
+.sh-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.sh-main b{font-size:16px}.sh-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:760px){
+  .sw-sheet-bg{z-index:200}
+  .sw-detail.sh{max-height:85dvh;display:flex;flex-direction:column;padding-bottom:0;transition:transform .2s}
+  .sh-top .sheet-grip{display:block;margin:0 auto 4px}
+  .sh-top{touch-action:none}
+}
