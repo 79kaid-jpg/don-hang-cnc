@@ -8,9 +8,15 @@ export type Step = {
   id: string; name: string; kind: StepKind; lane: string; assignee: Assignee;
   /** Người theo dõi: thấy việc ở bước này. Người quản trị giai đoạn: sửa nội dung, phân công / đổi người làm */
   watchers?: Assignee[]; managers?: Assignee[];
-  sla_hours?: number; checklist?: (string | CheckItem)[]; perms?: Record<string, Perm>; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
+  sla_hours?: number; checklist?: (string | CheckItem)[]; perms?: Record<string, Perm>;
+  /** Rẽ nhánh: xét lần lượt, khớp đầu tiên thì sang goto. next = bước mặc định ('' = bước kế, '__end' = kết thúc) */
+  routes?: Route[]; next?: string; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
 };
 export type Lane = { id: string; name: string };
+export type Op = 'gt' | 'ge' | 'lt' | 'le' | 'eq' | 'ne' | 'contains' | 'empty' | 'filled';
+export type Route = { id: string; field: string; op: Op; value?: string; goto: string };
+export const OPS: Record<Op, string> = { gt: 'lớn hơn', ge: 'từ (≥)', lt: 'nhỏ hơn', le: 'đến (≤)', eq: 'bằng', ne: 'khác', contains: 'có chứa', empty: 'để trống', filled: 'đã nhập' };
+export const END = '__end';
 export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'table';
 export type Column = { id: string; label: string; type: 'text' | 'number'; formula?: string; sum?: boolean };
 export type Field = { id: string; label: string; type: FieldType; options?: string[]; columns?: Column[]; help?: string };
@@ -60,6 +66,20 @@ export function validate(d: Def): { step?: string; msg: string }[] {
     if (i === 0 && s.allow_back) e.push({ step: s.id, msg: 'Bước đầu tiên không thể trả lại' });
     seen.add(s.id);
   });
+  const ids = new Set(d.steps.map((s) => s.id));
+  d.steps.forEach((s, i) => {
+    if (s.next && s.next !== END && !ids.has(s.next)) e.push({ step: s.id, msg: `Bước ${i + 1}: bước mặc định tiếp theo đã bị xoá` });
+    (s.routes ?? []).forEach((r) => {
+      if (!r.field || !r.goto) e.push({ step: s.id, msg: `Bước ${i + 1}: nhánh điều kiện chưa chọn trường hoặc bước đến` });
+      else if (r.goto !== END && !ids.has(r.goto)) e.push({ step: s.id, msg: `Bước ${i + 1}: nhánh trỏ tới bước đã bị xoá` });
+    });
+  });
+  // Nhánh cụt: bước không thể tới được từ bước đầu
+  if (d.steps.length) {
+    const seen = new Set<number>([0]); const q = [0];
+    while (q.length) { const i = q.shift()!; for (const t of targets(d, i)) { const j = d.steps.findIndex((x) => x.id === t.to); if (j >= 0 && !seen.has(j)) { seen.add(j); q.push(j); } } }
+    d.steps.forEach((s, i) => { if (!seen.has(i)) e.push({ step: s.id, msg: `Bước ${i + 1}${s.name ? ' (' + s.name + ')' : ''} không có đường nào đi tới` }); });
+  }
   d.lanes.forEach((l) => { if (!d.steps.some((s) => s.lane === l.id)) e.push({ msg: `Làn "${l.name}" chưa có bước nào` }); });
   return e;
 }
@@ -115,4 +135,25 @@ export function computeRow(cols: Column[], r: Record<string, unknown>) {
   const o: Record<string, unknown> = { ...r };
   for (const c of cols) if (c.formula) o[c.id] = calc(c.formula, o);
   return o;
+}
+
+/** Các mũi tên đi ra từ bước i: nhánh điều kiện + đường mặc định */
+export function targets(d: Def, i: number): { to: string; label?: string; branch?: boolean }[] {
+  const s = d.steps[i]; const out: { to: string; label?: string; branch?: boolean }[] = [];
+  for (const r of s.routes ?? []) if (r.goto) out.push({ to: r.goto, label: routeText(d, r), branch: true });
+  out.push({ to: s.next || (d.steps[i + 1]?.id ?? END), label: s.routes?.length ? 'còn lại' : undefined });
+  return out;
+}
+/** Danh sách trường dùng được trong điều kiện: trường thường + tổng cột số của bảng */
+export function condFields(d: Def): { id: string; label: string }[] {
+  const o: { id: string; label: string }[] = [];
+  for (const f of d.fields ?? []) {
+    if (f.type === 'table') { for (const c of f.columns ?? []) if (c.type === 'number') o.push({ id: f.id + '.' + c.id, label: `${f.label}: tổng ${c.label}` }); }
+    else o.push({ id: f.id, label: f.label || f.id });
+  }
+  return o;
+}
+export function routeText(d: Def, r: Route) {
+  const f = condFields(d).find((x) => x.id === r.field)?.label ?? r.field;
+  return `${f} ${OPS[r.op]}${r.op === 'empty' || r.op === 'filled' ? '' : ' ' + (r.value ?? '')}`;
 }

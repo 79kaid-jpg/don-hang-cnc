@@ -5,9 +5,9 @@ import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
-  type Assignee, type CheckItem, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
+  type Assignee, type CheckItem, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
-const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
+import { Canvas, LANE_COLORS } from './Canvas';
 
 export default function WfEditor() {
   const { id } = useParams();
@@ -19,6 +19,8 @@ export default function WfEditor() {
   const [name, setName] = useState('');
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  const [view, setView] = useState<'so_do' | 'ds'>(() => { try { return (localStorage.getItem('wf-view') as 'so_do' | 'ds') || (innerWidth >= 900 ? 'so_do' : 'ds'); } catch { return 'ds'; } });
+  const pickView = (v: 'so_do' | 'ds') => { setView(v); try { localStorage.setItem('wf-view', v); } catch { /* */ } };
   const [dir, setDir] = useState<Directory | null>(null);
   const [err, setErr] = useState('');
   const [showErr, setShowErr] = useState(false);
@@ -38,6 +40,8 @@ export default function WfEditor() {
   const ro = !can('admin_it') || !!proc?.is_template;
   const errors = useMemo(() => validate(def), [def]);
   const errOf = (sid: string) => errors.filter((e) => e.step === sid);
+  const errIds = new Set(errors.map((e) => e.step).filter(Boolean) as string[]);
+  const moveTo = (sid: string, lane: string, idx: number) => upd((d) => { const i = d.steps.findIndex((x) => x.id === sid); const [st] = d.steps.splice(i, 1); st.lane = lane; d.steps.splice(idx, 0, st); });
   const laneIdx = (l: string) => Math.max(0, def.lanes.findIndex((x) => x.id === l));
 
   const upd = (f: (d: Def) => void) => { if (ro) return; const d = structuredClone(def); f(d); setDef(d); setDirty(true); };
@@ -119,6 +123,25 @@ export default function WfEditor() {
 
       <FieldsEditor fields={def.fields ?? []} ro={ro} onChange={(f) => upd((d) => { d.fields = f; })} />
 
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <div className="wf-seg" role="tablist" aria-label="Kiểu xem">
+          <button role="tab" aria-selected={view === 'so_do'} className={view === 'so_do' ? 'on p-edit' : ''} onClick={() => pickView('so_do')}>Sơ đồ swimlane</button>
+          <button role="tab" aria-selected={view === 'ds'} className={view === 'ds' ? 'on p-edit' : ''} onClick={() => pickView('ds')}>Danh sách bước</button></div>
+        {!ro && view === 'so_do' && <button className="btn sm primary" onClick={() => insertAt(def.steps.length)}><Icon name="plus" size={16} />Thêm bước</button>}
+      </div>
+
+      {view === 'so_do' && <div className={'wf-design' + (open ? ' has-panel' : '')}>
+        <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo} />
+        {open && (() => { const i = def.steps.findIndex((x) => x.id === open); const st = def.steps[i]; if (!st) return null; return (
+          <aside className="card wf-panel" aria-label="Cấu hình bước">
+            <div className="row" style={{ justifyContent: 'space-between' }}><b>Bước {i + 1}</b><button className="btn sm icon-btn" aria-label="Đóng" onClick={() => setOpen(null)}><Icon name="x" size={16} /></button></div>
+            {errOf(st.id).map((e, k) => <div key={k} className="msg err small" role="alert"><Icon name="alert" size={14} />{e.msg}</div>)}
+            <StepForm s={st} i={i} n={def.steps.length} def={def} dir={dir} ro={ro} set={(p) => setStep(st.id, p)}
+              onMove={(d) => move(i, d)} onDup={() => dup(i)} onDel={async () => { await del(i); }} />
+          </aside>); })()}
+      </div>}
+
+      {view === 'ds' && <>
       {/* Các bước – dạng timeline dọc, dùng tốt trên cả laptop và điện thoại */}
       <section aria-label="Các bước" className="wf-flow">
         <div className="wf-node start">Bắt đầu</div>
@@ -149,6 +172,7 @@ export default function WfEditor() {
         })}
         <div className="wf-node end">Kết thúc · Hoàn tất</div>
       </section>
+      </>}
     </div>
   );
 }
@@ -196,6 +220,8 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
             <div className="wf-seg" role="radiogroup" aria-label={'Quyền: ' + f.label}>{(Object.keys(PERM) as Perm[]).map((p) => (
               <button key={p} role="radio" aria-checked={(s.perms?.[f.id] ?? 'view') === p} className={(s.perms?.[f.id] ?? 'view') === p ? 'on p-' + p : ''}
                 onClick={() => set({ perms: { ...(s.perms ?? {}), [f.id]: p } })}>{PERM[p]}</button>))}</div></div>))}</div></div>}
+
+      <Routing s={s} i={i} def={def} ro={ro} set={set} />
 
       <People label="Người quản trị giai đoạn" hint="Sửa nội dung bước, phân công / đổi người làm khi việc tới mà chưa xác định được người làm."
         list={s.managers ?? []} dir={dir} ro={ro} onChange={(v) => set({ managers: v })} />
@@ -306,5 +332,31 @@ function ColumnsEditor({ cols, onChange }: { cols: Column[]; onChange: (c: Colum
           </div>))}
       </div>
       <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => onChange([...cols, { id: 'c' + (cols.length + 1), label: 'Cột ' + (cols.length + 1), type: 'text' }])}><Icon name="plus" size={14} />Thêm cột</button>
+    </div>);
+}
+
+/** Sau bước này đi đâu: các nhánh điều kiện (xét lần lượt) + đường mặc định */
+function Routing({ s, i, def, ro, set }: { s: Step; i: number; def: Def; ro: boolean; set: (p: Partial<Step>) => void }) {
+  const fs = condFields(def); const routes = s.routes ?? [];
+  const stepOpts = <>{def.steps.map((x, k) => k === i ? null : <option key={x.id} value={x.id}>{k + 1}. {x.name || '(chưa đặt tên)'}</option>)}<option value={END}>■ Kết thúc quy trình</option></>;
+  const setR = (k: number, p: Partial<Route>) => set({ routes: routes.map((r, j) => j === k ? { ...r, ...p } : r) });
+  return (
+    <div className="f"><span>Sau bước này</span>
+      {routes.map((r, k) => (
+        <div key={r.id} className="wf-route">
+          <b className="small">{k === 0 ? 'Nếu' : 'Hoặc nếu'}</b>
+          <select aria-label="Trường" value={r.field} onChange={(e) => setR(k, { field: e.target.value })}><option value="">— trường —</option>{fs.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select>
+          <select aria-label="Phép so sánh" value={r.op} onChange={(e) => setR(k, { op: e.target.value as Op })}>{Object.entries(OPS).map(([o, t]) => <option key={o} value={o}>{t}</option>)}</select>
+          {r.op !== 'empty' && r.op !== 'filled' && <input aria-label="Giá trị" placeholder="giá trị" value={r.value ?? ''} onChange={(e) => setR(k, { value: e.target.value })} />}
+          <b className="small">thì sang</b>
+          <select aria-label="Bước đến" value={r.goto} onChange={(e) => setR(k, { goto: e.target.value })}><option value="">— bước —</option>{stepOpts}</select>
+          {!ro && <button className="wf-x" aria-label="Xoá nhánh" onClick={() => set({ routes: routes.filter((_, j) => j !== k) })}><Icon name="x" size={14} /></button>}
+        </div>))}
+      <div className="wf-route"><b className="small">{routes.length ? 'Còn lại thì sang' : 'Sang'}</b>
+        <select aria-label="Bước mặc định tiếp theo" value={s.next ?? ''} onChange={(e) => set({ next: e.target.value || undefined })}>
+          <option value="">Bước kế tiếp trong danh sách{def.steps[i + 1] ? ` (${def.steps[i + 1].name || i + 2})` : ' (kết thúc)'}</option>{stepOpts}</select></div>
+      {!ro && <button className="btn sm" style={{ alignSelf: 'flex-start' }} disabled={!fs.length} title={fs.length ? '' : 'Cần có trường trong Biểu mẫu để đặt điều kiện'}
+        onClick={() => set({ routes: [...routes, { id: uid('r'), field: '', op: 'gt', value: '', goto: '' }] })}><Icon name="plus" size={14} />Thêm nhánh điều kiện</button>}
+      {!fs.length && <small className="muted">Thêm trường ở Biểu mẫu để rẽ nhánh theo dữ liệu (ví dụ Tổng tiền &gt; 500.000.000 thì sang Giám đốc duyệt).</small>}
     </div>);
 }

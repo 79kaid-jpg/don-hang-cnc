@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { FormView } from './Form';
+import { computeRow } from './model';
 import { ISTATUS, KIND, TSTATUS, fmtDT, items, loadDirectory, slaLeft, userName, who,
   type Def, type Directory, type Instance, type Step, type Task, type Version } from './model';
 
@@ -74,7 +75,10 @@ export default function WfRun() {
 
   const saveData = async (quiet = false) => {
     if (!open || !dataDirty) return true;
-    const { error } = await sb.rpc('wf_save_data', { p_task: open.id, p_data: data });
+    // lưu kèm giá trị cột công thức để máy chủ dùng được trong điều kiện rẽ nhánh
+    const out: Record<string, unknown> = { ...data };
+    for (const f of def.fields ?? []) if (f.type === 'table' && Array.isArray(out[f.id])) out[f.id] = (out[f.id] as Record<string, unknown>[]).map((r) => computeRow(f.columns ?? [], r));
+    const { error } = await sb.rpc('wf_save_data', { p_task: open.id, p_data: out });
     if (error) { setErr(errText(error)); return false; }
     setDataDirty(false); if (!quiet) toast('Đã lưu biểu mẫu'); return true;
   };
