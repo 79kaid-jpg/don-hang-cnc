@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { sb } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { usePerf, scoresWithTrend, UNIT_NAME, DEFAULT_CFG, type PerfCfg, type Prize, type Score } from '../lib/perf';
-import { Icon } from './Icon';
+import { Icon, PATHS as ICON_PATH } from './Icon';
 import { toast } from './ui';
 
 const tier = (s: number) => (s >= 85 ? { t: 'Xuất sắc', c: '#2E8B57' } : s >= 70 ? { t: 'Tốt', c: '#7E6024' } : s >= 50 ? { t: 'Khá', c: '#B4690E' } : { t: 'Cần cải thiện', c: '#C2410C' });
@@ -67,11 +67,11 @@ export function PerfCard() {
       <Spark weekly={m.weekly} />
     </>}
     <div className="pf-tip"><Icon name="flame" size={16} /><span>{tip}</span></div>
-    <div className="pf-pts">
+    {cfg.wheel_on !== false && <div className="pf-pts">
       <div className="pf-coin"><Icon name="star" size={20} /></div>
       <div className="pf-pts-t"><b>{pts?.balance ?? '…'} điểm thưởng</b><span className="small muted">{tickets} lượt quay · {cfg.spin_cost} điểm / lượt · +{cfg.pts_ontime} mỗi bước đúng hạn</span></div>
       <button className="btn primary pf-spin" onClick={() => setWheel(true)} disabled={!tickets || !cfg.prizes.length}><Icon name="gift" size={18} />Quay thưởng</button>
-    </div>
+    </div>}
     {wheel && createPortal(<Wheel prizes={cfg.prizes} cost={cfg.spin_cost} balance={pts?.balance ?? 0} onClose={() => { setWheel(false); loadPts(); }} onSpun={(b) => setPts((p) => p && { ...p, balance: b })} />, document.body)}
   </section>;
 }
@@ -87,37 +87,54 @@ function Spark({ weekly }: { weekly: number[] }) {
     </svg></div>;
 }
 
-/** Vòng quay may mắn: máy chủ chọn giải, trình duyệt chỉ quay cho đẹp */
+const WICONS = ['gift', 'star', 'bolt', 'refresh', 'coffee', 'ticket', 'crown', 'check'];
+const light = (hex: string) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((x) => x + x).join('') : h, 16);
+  return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 170; };
+const ICOL = ['#C0392B', '#3F6FCB', '#C49A3C', '#2E7D4F'];
+/** Vòng quay may mắn kiểu sân khấu: vành vàng có đèn, kim đỏ, nút QUAY giữa; máy chủ chọn giải, trình duyệt chỉ quay cho đẹp */
+export function WheelArt({ prizes, rot, onSpin, busy, disabled, size = 340 }: { prizes: Prize[]; rot: number; onSpin?: () => void; busy?: boolean; disabled?: boolean; size?: number }) {
+  const n = Math.max(1, prizes.length); const seg = 360 / n; const R = 40;
+  const pt = (a: number, r: number) => [50 + r * Math.cos((a - 90) * Math.PI / 180), 50 + r * Math.sin((a - 90) * Math.PI / 180)];
+  const arc = (i: number) => { const [x0, y0] = pt(i * seg, R), [x1, y1] = pt((i + 1) * seg, R); return `M50 50 L${x0} ${y0} A${R} ${R} 0 ${seg > 180 ? 1 : 0} 1 ${x1} ${y1}Z`; };
+  return <div className={'wa' + (busy ? ' spinning' : '')} style={{ width: size, maxWidth: '86vw' }}>
+    <svg viewBox="0 0 100 100" className="wa-rim" aria-hidden="true">
+      <defs><linearGradient id="wa-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#E9C873" /><stop offset=".5" stopColor="#C9A24A" /><stop offset="1" stopColor="#A9802E" /></linearGradient></defs>
+      <circle cx="50" cy="50" r="49" fill="url(#wa-g)" /><circle cx="50" cy="50" r="41.6" fill="#1F3A2A" />
+      {Array.from({ length: 16 }, (_, i) => { const [x, y] = pt(i * 22.5, 45.3); return <circle key={i} cx={x} cy={y} r="1.7" className={'wa-bulb ' + (i % 2 ? 'b' : 'a')} />; })}
+    </svg>
+    <svg viewBox="0 0 100 100" className="wa-disc" style={{ transform: `rotate(${rot}deg)` }} aria-hidden="true">
+      {prizes.map((p, i) => { const mid = i * seg + seg / 2; const [ix, iy] = pt(mid, 33); const [tx, ty] = pt(mid, 27.2); const lt = light(p.color);
+        return <g key={i}>
+          <path d={arc(i)} fill={p.color} />
+          <circle cx={ix} cy={iy} r="5" fill="#fff" style={{ filter: 'drop-shadow(0 .6px .8px rgba(0,0,0,.25))' }} />
+          <g transform={`translate(${ix - 2.8} ${iy - 2.8}) scale(.235)`} fill="none" stroke={ICOL[i % ICOL.length]} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={ICON_PATH[p.icon ?? 'gift'] ?? ICON_PATH.gift} /></g>
+          <text x={tx} y={ty} fill={lt ? '#1F1C16' : '#fff'} fontSize={n > 8 ? 2.6 : 2.9} fontWeight="800" textAnchor="start" dominantBaseline="middle"
+            transform={`rotate(${mid + 90} ${tx} ${ty})`}>{p.label.length > 12 ? p.label.slice(0, 11) + '…' : p.label}</text></g>; })}
+    </svg>
+    <span className="wa-pin" aria-hidden="true"><i /></span>
+    <button className="wa-hub" onClick={onSpin} disabled={!onSpin || busy || disabled} aria-label="Quay">{busy ? '…' : 'QUAY'}</button>
+  </div>;
+}
+
 function Wheel({ prizes, cost, balance, onClose, onSpun }: { prizes: Prize[]; cost: number; balance: number; onClose: () => void; onSpun: (b: number) => void }) {
-  const [rot, setRot] = useState(0); const [busy, setBusy] = useState(false); const [res, setRes] = useState<string | null>(null); const [bal, setBal] = useState(balance);
-  const n = prizes.length; const seg = 360 / n;
+  const [rot, setRot] = useState(0); const [busy, setBusy] = useState(false); const [res, setRes] = useState<{ prize: string; bonus: number } | null>(null); const [bal, setBal] = useState(balance);
+  const seg = 360 / prizes.length;
   const spin = async () => {
     setBusy(true); setRes(null);
     const { data, error } = await sb.rpc('spin_wheel');
     if (error) { toast(error.message); setBusy(false); return; }
-    const d = data as { index: number; prize: string; balance: number };
-    const target = 360 * 6 + (360 - (d.index * seg + seg / 2)); // kim ở trên cùng
-    setRot((r) => r - (r % 360) + target);
-    setTimeout(() => { setRes(d.prize); setBal(d.balance); onSpun(d.balance); setBusy(false); }, 4300);
+    const d = data as { index: number; prize: string; bonus: number; balance: number };
+    const jitter = (Math.random() - .5) * seg * .6;
+    setRot((r) => r - (r % 360) + 360 * 7 + (360 - (d.index * seg + seg / 2)) + jitter);
+    setTimeout(() => { setRes({ prize: d.prize, bonus: d.bonus }); setBal(d.balance); onSpun(d.balance); setBusy(false); }, 5200);
   };
-  const arc = (i: number) => { const a0 = (i * seg - 90) * Math.PI / 180, a1 = ((i + 1) * seg - 90) * Math.PI / 180;
-    return `M50 50 L${50 + 48 * Math.cos(a0)} ${50 + 48 * Math.sin(a0)} A48 48 0 ${seg > 180 ? 1 : 0} 1 ${50 + 48 * Math.cos(a1)} ${50 + 48 * Math.sin(a1)}Z`; };
   return <div className="sw-sheet-bg wh-bg" onClick={() => !busy && onClose()}>
     <div className="wh" role="dialog" aria-modal="true" aria-label="Vòng quay may mắn" onClick={(e) => e.stopPropagation()}>
-      <div className="mv-head"><b style={{ fontSize: 18 }}>Vòng quay may mắn</b><button className="btn sm icon-btn" onClick={onClose} disabled={busy} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
-      <div className="wh-stage">
-        <span className="wh-pin" aria-hidden="true" />
-        <svg viewBox="0 0 100 100" className="wh-svg" style={{ transform: `rotate(${rot}deg)` }} aria-hidden="true">
-          {prizes.map((p, i) => { const mid = (i * seg + seg / 2 - 90) * Math.PI / 180; return <g key={i}>
-            <path d={arc(i)} fill={p.color} stroke="#fff" strokeWidth=".8" />
-            <text x={50 + 30 * Math.cos(mid)} y={50 + 30 * Math.sin(mid)} fill="#fff" fontSize="4.2" fontWeight="700" textAnchor="middle" dominantBaseline="middle"
-              transform={`rotate(${i * seg + seg / 2} ${50 + 30 * Math.cos(mid)} ${50 + 30 * Math.sin(mid)})`}>{p.label.length > 16 ? p.label.slice(0, 15) + '…' : p.label}</text></g>; })}
-          <circle cx="50" cy="50" r="8" fill="#fff" stroke="#E3DCCB" /><circle cx="50" cy="50" r="4" fill="#7E6024" />
-        </svg>
-      </div>
-      <div className={'wh-res' + (res ? ' on' : '')} aria-live="polite">{res ? <><Icon name="gift" size={18} />Bạn trúng: <b>{res}</b></> : busy ? 'Đang quay…' : `Mỗi lượt ${cost} điểm · bạn có ${bal} điểm`}</div>
-      <button className="btn primary wh-go" onClick={spin} disabled={busy || bal < cost}><Icon name="refresh" size={18} />{busy ? 'Đang quay…' : bal < cost ? 'Chưa đủ điểm' : `Quay (−${cost} điểm)`}</button>
-      <p className="small muted" style={{ margin: 0, textAlign: 'center' }}>Giải được ghi lại; quản trị sẽ liên hệ trao giải.</p>
+      <div className="mv-head"><span className="wh-title"><Icon name="gift" size={18} />Vòng quay may mắn</span><button className="btn sm icon-btn" onClick={onClose} disabled={busy} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+      <div className="wh-bal"><span className="pf-coin sm"><Icon name="star" size={14} /></span><b>{bal}</b> điểm<span className="muted"> · {Math.floor(bal / Math.max(1, cost))} lượt · {cost} điểm/lượt</span></div>
+      <WheelArt prizes={prizes} rot={rot} onSpin={spin} busy={busy} disabled={bal < cost} />
+      <div className={'wh-res' + (res ? ' on' : '')} aria-live="polite">{res ? <><span className="wh-confetti" aria-hidden="true" />Bạn trúng <b>{res.prize}</b>{res.bonus > 0 && <em>+{res.bonus} điểm</em>}</> : busy ? 'Chúc may mắn…' : bal < cost ? 'Chưa đủ điểm để quay' : 'Bấm QUAY ở giữa vòng'}</div>
+      <p className="small muted" style={{ margin: 0, textAlign: 'center' }}>Giải được ghi lại để quản trị trao thưởng.</p>
     </div></div>;
 }
 
@@ -151,7 +168,7 @@ export function Leaderboard() {
 export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
   const { data, reload } = usePerf(); const [c, setC] = useState<PerfCfg | null>(null); const [busy, setBusy] = useState(false);
   const [spins, setSpins] = useState<{ id: number; user_id: string; prize: string; cost: number; at: string }[]>([]);
-  const first = useRef(true);
+  const first = useRef(true); const [prev, setPrev] = useState(0);
   useEffect(() => { if (data && first.current) { setC(data.cfg); first.current = false; } }, [data]);
   useEffect(() => { sb.from('perf_spins').select('*').order('at', { ascending: false }).limit(30).then(({ data: d }) => setSpins((d as never[]) ?? [])); }, []);
   if (!c || !data) return <p className="muted">Đang tải…</p>;
@@ -180,17 +197,23 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
     <section className="pa-card"><header><h3><Icon name="star" size={18} />Điểm thưởng</h3></header>
       <div className="pa-grid">{num('pts_ontime', 'Mỗi bước ký đúng hạn', 'điểm')}{num('pts_late', 'Mỗi bước ký trễ', 'điểm')}
         {num('pts_fast', 'Thưởng ký nhanh', 'điểm')}{num('fast_h', 'Nhanh khi dưới', 'giờ')}{num('pts_returned', 'Bị trả về', 'điểm', 'Số âm = trừ')}{num('spin_cost', 'Giá mỗi lượt quay', 'điểm')}</div></section>
-    <section className="pa-card"><header><h3><Icon name="gift" size={18} />Giải thưởng vòng quay</h3>
-      {canEdit && <button className="btn sm" onClick={() => set('prizes', [...c.prizes, { label: 'Giải mới', weight: 10, color: '#7E6024' }])}><Icon name="plus" size={16} />Thêm giải</button>}</header>
+    <section className="pa-card"><header><h3><Icon name="gift" size={18} />Vòng quay may mắn</h3>
+      <button role="switch" aria-checked={c.wheel_on !== false} className={'pp-sw' + (c.wheel_on !== false ? ' on' : '')} disabled={!canEdit} onClick={() => set('wheel_on', c.wheel_on === false)}><i />{c.wheel_on !== false ? 'Đang bật' : 'Đang tắt'}</button></header>
+      <p className="small muted" style={{ margin: 0 }}>Tắt thì nút “Quay thưởng” ẩn với mọi người, điểm thưởng vẫn được cộng. Bấm QUAY ở bản xem trước để thử hiệu ứng (không trừ điểm).</p>
+      <div className="pa-wprev"><WheelArt prizes={c.prizes.length ? c.prizes : [{ label: 'Thêm giải', weight: 1, color: '#F7F0E1' }]} rot={prev} onSpin={() => setPrev((r) => r + 1440 + Math.random() * 360)} size={260} /></div>
+      <div className="pa-ph"><b>Danh sách giải</b>{canEdit && <button className="btn sm" onClick={() => set('prizes', [...c.prizes, { label: 'Giải mới', weight: 10, color: c.prizes.length % 2 ? '#3F6FCB' : '#F7F0E1', icon: 'gift' }])}><Icon name="plus" size={16} />Thêm giải</button>}</div>
       <div className="pa-prizes">
         <svg viewBox="0 0 42 42" className="pa-donut" aria-hidden="true">{(() => { let acc = 0; return c.prizes.map((p, i) => { const v = (p.weight / totW) * 100; const el = <circle key={i} cx="21" cy="21" r="15.9" fill="none" stroke={p.color} strokeWidth="7" strokeDasharray={v + ' ' + (100 - v)} strokeDashoffset={25 - acc} />; acc += v; return el; }); })()}</svg>
         <ul>{c.prizes.map((p, i) => <li key={i}>
           <input type="color" value={p.color} disabled={!canEdit} onChange={(e) => set('prizes', c.prizes.map((x, j) => j === i ? { ...x, color: e.target.value } : x))} aria-label="Màu" />
+          <select className="pa-ic" value={p.icon ?? 'gift'} disabled={!canEdit} onChange={(e) => set('prizes', c.prizes.map((x, j) => j === i ? { ...x, icon: e.target.value } : x))} aria-label="Biểu tượng">
+            {WICONS.map((k) => <option key={k} value={k}>{({ gift: 'Quà', star: 'Sao', bolt: 'Tia sét', refresh: 'Quay lại', coffee: 'Cà phê', ticket: 'Vé', crown: 'Vương miện', check: 'Dấu tích' } as Record<string, string>)[k]}</option>)}</select>
           <input className="pa-pl" value={p.label} disabled={!canEdit} onChange={(e) => set('prizes', c.prizes.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} aria-label="Tên giải" />
           <span className="pa-in sm"><input type="number" min={0} value={p.weight} disabled={!canEdit} onChange={(e) => set('prizes', c.prizes.map((x, j) => j === i ? { ...x, weight: +e.target.value } : x))} aria-label="Tỉ trọng" /><em>{Math.round((p.weight / totW) * 100)}%</em></span>
+          <span className="pa-in sm" title="Điểm cộng ngay khi trúng (0 = quà hiện vật)"><input type="number" value={p.points ?? 0} disabled={!canEdit} onChange={(e) => set('prizes', c.prizes.map((x, j) => j === i ? { ...x, points: +e.target.value } : x))} aria-label="Điểm cộng" /><em>+điểm</em></span>
           {canEdit && <button className="btn sm icon-btn" onClick={() => set('prizes', c.prizes.filter((_, j) => j !== i))} aria-label="Bỏ giải"><Icon name="x" size={16} /></button>}</li>)}</ul>
       </div>
-      <p className="small muted" style={{ margin: 0 }}>Giải bắt đầu bằng “+20 điểm” sẽ tự cộng điểm cho người trúng.</p></section>
+      <p className="small muted" style={{ margin: 0 }}>Cột <b>%</b> là tỉ lệ trúng. <b>+điểm</b>: số điểm cộng ngay cho người trúng (0 = quà hiện vật, quản trị trao tay). Giải tên “Quay lại” hoàn lại điểm lượt quay.</p></section>
     {canEdit && <div className="pa-save"><span className="small muted">{dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu'}{wsum !== 100 && ' · nên để tổng trọng số = 100%'}</span>
       <button className="btn" onClick={() => setC(data.cfg)} disabled={!dirty || busy}>Hoàn tác</button>
       <button className="btn" onClick={() => setC({ ...DEFAULT_CFG, prizes: c.prizes })} disabled={busy}>Mặc định</button>
