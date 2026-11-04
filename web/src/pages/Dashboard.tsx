@@ -102,17 +102,22 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="page-head"><div><h1>Thống kê</h1><p className="muted">Bấm vào số, cột hoặc thanh để xem danh sách hồ sơ. Nút <Icon name="share" size={14} /> trên mỗi thẻ để gửi ảnh qua Zalo.</p></div>
-        <ShareBtn target="#db-root" name="dashboard" label="Gửi ảnh cả trang" /></div>
-      <div className="db-bar">
-        <div className="seg" role="tablist" aria-label="Phạm vi">
-          <button role="tab" aria-selected={tab === 'me'} aria-pressed={tab === 'me'} onClick={() => setTab('me')}>Của tôi</button>
-          {boss && <button role="tab" aria-selected={tab === 'boss'} aria-pressed={tab === 'boss'} onClick={() => setTab('boss')}>Điều hành</button>}
+      <header className="db-head">
+        <div className="db-title"><h1>Thống kê</h1>
+          <span className="db-live"><i />Cập nhật {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <ShareBtn target="#db-root" name="dashboard" label="Gửi ảnh" />
+        <div className="db-ctrl">
+          {boss && <div className="db-tabs" role="tablist" aria-label="Phạm vi">
+            <span className="db-thumb" style={{ transform: tab === 'boss' ? 'translateX(100%)' : 'none' }} aria-hidden="true" />
+            <button role="tab" aria-selected={tab === 'me'} onClick={() => setTab('me')}><Icon name="inbox" size={16} />Của tôi</button>
+            <button role="tab" aria-selected={tab === 'boss'} onClick={() => setTab('boss')}><Icon name="chart" size={16} />Điều hành</button>
+          </div>}
+          <div className="db-period" role="group" aria-label="Khoảng thời gian">
+            {[7, 30, 90].map((d) => <button key={d} aria-pressed={days === d} onClick={() => setDays(d)}>{d}<small> ngày</small></button>)}
+          </div>
         </div>
-        <div className="seg" role="group" aria-label="Khoảng thời gian">
-          {[7, 30, 90].map((d) => <button key={d} aria-pressed={days === d} onClick={() => setDays(d)}>{d} ngày</button>)}
-        </div>
-      </div>
+        <p className="db-hint small muted hide-m"><Icon name="arrow" size={13} />Bấm vào số, cột hoặc thanh để xem danh sách hồ sơ · nút <Icon name="share" size={13} /> để gửi ảnh qua Zalo.</p>
+      </header>
 
       <DailyZalo />
       <div id="db-root" className="db">
@@ -191,7 +196,7 @@ export default function Dashboard() {
 const fmtH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? Math.round(h) + ' giờ' : (h / 24).toFixed(1) + ' ngày');
 
 function Kpi({ ic, tone, v, t, onClick }: { ic: string; tone: string; v: ReactNode; t: string; onClick?: () => void }) {
-  return <button className={'db-k ' + (tone === 'bad' ? 'bad' : '')} onClick={onClick} disabled={!onClick}><i className={'ov-ic ' + (tone === 'bad' ? 'stuck' : tone)}><Icon name={ic} size={20} /></i><b>{v}</b><span>{t}</span></button>;
+  return <button className={'db-k t-' + tone + (tone === 'bad' ? ' bad' : '')} onClick={onClick} disabled={!onClick}><i className={'ov-ic ' + (tone === 'bad' ? 'stuck' : tone)}><Icon name={ic} size={20} /></i><b>{v}</b><span>{t}</span></button>;
 }
 function Card({ id, title, sub, children }: { id: string; title: string; sub?: string; children: ReactNode }) {
   return <section id={id} className="db-card"><header><div><h2>{title}</h2>{sub && <span className="small muted">{sub}</span>}</div><ShareBtn target={'#' + id} name={id} icon /></header>{children}</section>;
@@ -228,7 +233,7 @@ function ShareBtn({ target, name, label, icon }: { target: string; name: string;
   };
   return <div className="db-share" ref={ref}>
     <button className={'btn sm' + (icon ? ' icon-btn' : '')} onClick={() => setMenu(!menu)} disabled={busy} aria-label={label ?? 'Gửi ảnh thẻ này'} aria-expanded={menu} title="Gửi ảnh qua Zalo / chép ảnh">
-      <Icon name={busy ? 'refresh' : 'share'} size={16} />{!icon && (label ?? 'Gửi ảnh')}</button>
+      <Icon name={busy ? 'refresh' : 'share'} size={16} />{!icon && <span>{label ?? 'Gửi ảnh'}</span>}</button>
     {menu && <div className="db-menu" role="menu">
       <button role="menuitem" onClick={() => run('share')}><span className="zl-dot">Zalo</span>Gửi qua Zalo</button>
       <button role="menuitem" onClick={() => run('copy')}><Icon name="copy" size={16} />Chép ảnh</button>
@@ -248,12 +253,13 @@ function DailyZalo() {
     if (error) toast('Không lưu được: ' + error.message); else { toast(!on ? 'Đã bật báo cáo 8h sáng qua Zalo' : 'Đã tắt báo cáo sáng'); reload(); } };
   const test = async () => { setBusy(true); const { data, error } = await sb.rpc('send_daily_report_me'); setBusy(false);
     toast(error ? 'Lỗi: ' + error.message : data ? 'Đã gửi báo cáo vào Zalo của bạn' : 'Bạn chưa liên kết Zalo'); };
-  return <div className="db-daily">
-    <span className="zl-dot">Zalo</span>
-    <span className="db-daily-t"><b>Báo cáo 8:00 sáng mỗi ngày</b><span className="small muted">{linked ? 'Bot gửi số liệu chính + link trang này vào Zalo của bạn.' : 'Liên kết Zalo trước để nhận báo cáo.'}</span></span>
+  return <div className={'db-daily' + (on && linked ? ' on' : '')}>
+    <span className="db-zl" aria-hidden="true">Zalo</span>
+    <span className="db-daily-t"><b>Báo cáo 8:00 hằng ngày</b>
+      <span className="small">{!linked ? 'Liên kết Zalo để nhận báo cáo' : on ? <><i className="db-dot" />Đang bật · bot gửi vào Zalo của bạn</> : 'Đang tắt'}</span></span>
     {linked ? <>
-      <button className="btn sm" onClick={test} disabled={busy}>Gửi thử ngay</button>
+      <button className="db-test" onClick={test} disabled={busy} aria-label="Gửi thử báo cáo ngay"><Icon name="share" size={15} /><span>Gửi thử</span></button>
       <button role="switch" aria-checked={on} className={'sw-toggle' + (on ? ' on' : '')} onClick={toggle} disabled={busy} aria-label="Nhận báo cáo 8h sáng"><i /></button>
-    </> : <Link className="btn sm primary" to="/zalo">Liên kết Zalo</Link>}
+    </> : <Link className="btn sm primary" to="/zalo">Liên kết</Link>}
   </div>;
 }
