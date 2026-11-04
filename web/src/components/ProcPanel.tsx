@@ -7,6 +7,7 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { Journey } from './Journey';
+import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
 
@@ -163,10 +164,12 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
           <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
           {editable && <button className="btn sm" disabled={!dirty} onClick={() => save()}><Icon name="check" size={15} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
+          <PrintTplButton o={o} b={b} d={d} people={people} />
           <button className="btn sm" onClick={() => printDoc(o, b, d, people)}><Icon name="print" size={15} />In / PDF</button>
         </div>
       </div>
       <Journey d={d} proc={proc} people={people} />
+      {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {!can && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       <div className="grid2">

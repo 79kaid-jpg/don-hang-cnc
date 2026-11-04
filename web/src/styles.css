@@ -1338,3 +1338,28 @@ html[data-fs=lg] body{zoom:1.12}
 @keyframes jnIn{from{opacity:0;transform:translateY(-4px)}}
 @media (max-width:640px){.jn-st.done{flex:0 0 46px;min-width:46px}.jn-st.done .jn-lb span{display:none}.jn-st.done .jn-lb b{font-size:10.5px;color:#64748b;font-weight:500}}
 @media (prefers-reduced-motion:reduce){.jn-st.now .jn-dot{animation:none}}
+/* ===== Mẫu in ===== */
+.pt-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:860px){.pt-grid{grid-template-columns:1fr}}
+.pt-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pt-list li{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.pt-list li.off{opacity:.55}
+.pt-ic{width:36px;height:36px;border-radius:10px;background:#e8f5ee;color:#15803d;display:grid;place-items:center;flex:none}
+.pt-b{flex:1;min-width:150px;display:flex;flex-direction:column}
+.pt-act{display:flex;gap:6px}
+.pt-drop{display:flex;gap:12px;align-items:center;padding:16px;border:2px dashed #cbd5e1;border-radius:12px;cursor:pointer;color:#334155}
+.pt-drop:hover{border-color:var(--brand,#2563eb);background:#f8fafc}
+.pt-vars{display:flex;flex-wrap:wrap;gap:6px}
+.pt-v{font-family:ui-monospace,monospace;font-size:12px;padding:3px 7px;border-radius:6px;background:#e8f7ee;color:#166534}
+.pt-v.bad{background:#fdecec;color:#b91c1c}
+.pt-vl{list-style:none;margin:0;padding:0;max-height:460px;overflow:auto}
+.pt-vl button{all:unset;box-sizing:border-box;display:flex;gap:8px;width:100%;padding:7px 6px;border-radius:8px;cursor:pointer;align-items:baseline}
+.pt-vl button:hover{background:#f1f5f9}
+.pt-vl code{font-size:12px;color:#1d4ed8;flex:none}.pt-vl span{font-size:12.5px;color:#64748b}
+.pt-cta{display:flex;justify-content:center;margin:-4px 0 12px}
+.pt-big{min-height:44px;padding:0 18px;font-size:15px}
+.pt-ov{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1100;display:flex;align-items:center;justify-content:center;padding:12px}
+.pt-box{background:#fff;border-radius:14px;width:min(1100px,100%);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.pt-box header{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.pt-paper{overflow:auto;padding:16px;background:#f1f5f9}
+.pt-paper>div{background:#fff;padding:18px;min-width:820px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
