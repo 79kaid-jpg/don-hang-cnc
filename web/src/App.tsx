@@ -21,6 +21,7 @@ import WfEditor from './wf/WfEditor';
 import WfRun from './wf/WfRun';
 import WfPrint from './wf/WfPrint';
 import './wf/wf.css';
+import Dashboard from './pages/Dashboard';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -58,6 +59,7 @@ function Shell() {
     { to: '/bang', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
     { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
+    { to: '/thong-ke', icon: 'chart', label: 'Thống kê', short: 'Thống kê' },
     ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
@@ -124,6 +126,7 @@ function Shell() {
           </div>)}
         <Routes>
           <Route path="/" element={<MyWork />} />
+          <Route path="/thong-ke" element={<Dashboard />} />
           <Route path="/bang" element={<Board />} />
           <Route path="/so-do" element={<FlowMap />} />
           <Route path="/don" element={<Orders />} />
