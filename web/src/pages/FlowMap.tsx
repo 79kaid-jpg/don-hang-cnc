@@ -210,9 +210,9 @@ function Overview({ orders, bs, ds, onOpen }: { orders: Order[]; bs: Batch[]; ds
   return (
     <div className="qt-panel ov">
       <div className="ov-kpi">
-        <div><b>{tot}</b><span>Hồ sơ đang chạy</span></div>
-        <div className={stuck ? 'bad' : ''}><b>{stuck}</b><span>Kẹt ≥ {STUCK} ngày</span></div>
-        <div><b>{worst && worst.items.length ? worst.p + ' · ' + worst.s.t : '—'}</b><span>Điểm nghẽn lớn nhất</span></div>
+        <div><i className="ov-ic run"><Icon name="run" size={20} /></i><b>{tot}</b><span>Hồ sơ đang chạy</span></div>
+        <div className={stuck ? 'bad' : ''}><i className={'ov-ic ' + (stuck ? 'stuck' : 'ok')}><Icon name={stuck ? 'hourglass' : 'check'} size={20} /></i><b>{stuck}</b><span>Kẹt ≥ {STUCK} ngày</span></div>
+        <div><i className="ov-ic hot"><Icon name="flame" size={20} /></i><b>{worst && worst.items.length ? worst.p + ' · ' + worst.s.t : '—'}</b><span>Điểm nghẽn lớn nhất</span></div>
       </div>
       {rows.map(({ p, st }) => (
         <section key={p} className={'ov-row q' + p.slice(2)}>
@@ -220,6 +220,7 @@ function Overview({ orders, bs, ds, onOpen }: { orders: Order[]; bs: Batch[]; ds
           <ol className="ov-stages">{st.map(({ s, items, stuck: k }) => { const n = items.length; const lane = D[p].lanes[s.lane];
             return <li key={s.id}><button className={'ov-cell' + (n ? '' : ' zero') + (k ? ' stuck' : '')} style={{ ['--h' as string]: n / max }} onClick={() => n && setPick({ p, s })} disabled={!n}
               aria-label={`${p} ${s.t}: ${n} hồ sơ, ${k} kẹt`}>
+              <span className={'ov-ic ' + (k ? 'stuck' : n ? 'run' : 'idle')} aria-hidden="true"><Icon name={k ? 'hourglass' : n ? 'run' : 'pause'} size={20} /></span>
               <span className="ov-lane">{lane}</span><span className="ov-t">{s.t}</span>
               <span className="ov-n">{n}</span>
               <span className="ov-sub">{k ? <><Icon name="alert" size={12} />{k} kẹt · lâu nhất {Math.floor(items[0].d)} ngày</> : n ? 'đúng tiến độ' : 'trống'}</span>

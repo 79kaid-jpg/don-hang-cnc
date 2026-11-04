@@ -774,3 +774,16 @@ g.on .sw-e{stroke:#B8954A;stroke-width:2.4}
 .ov-stages{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:1fr}.ov-stages li+li::before{display:none}
 .ov-cell{min-height:0;display:grid;grid-template-columns:1fr auto;grid-template-areas:'lane n' 't n' 'sub n';column-gap:10px}
 .ov-lane{grid-area:lane}.ov-t{grid-area:t}.ov-sub{grid-area:sub}.ov-n{grid-area:n;align-self:center;margin:0}}
+
+.ov-kpi>div{display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:center}.ov-kpi>div>i{grid-row:span 2}
+.ov-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.ov-ic.run{background:#e3efe6;color:#1f7a3f}.ov-ic.stuck{background:#fde3df;color:#b42318}.ov-ic.idle{background:#f1ece1;color:#a3967d}
+.ov-ic.ok{background:#e3efe6;color:#1f7a3f}.ov-ic.hot{background:#fbefd0;color:#b45309}
+.ov-cell .ov-ic{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px}
+.ov-cell .ov-ic.run svg{animation:ov-run .7s ease-in-out infinite alternate}
+.ov-cell .ov-ic.stuck svg{animation:ov-flip 2.4s ease-in-out infinite}
+@keyframes ov-run{from{transform:translateY(1px) rotate(-4deg)}to{transform:translateY(-2px) rotate(4deg)}}
+@keyframes ov-flip{0%,70%{transform:rotate(0)}85%,100%{transform:rotate(180deg)}}
+@media (prefers-reduced-motion:reduce){.ov-cell .ov-ic svg{animation:none!important}}
+@media (max-width:760px){.ov-cell{grid-template-columns:auto 1fr auto;grid-template-areas:'ic lane n' 'ic t n' 'ic sub n'}
+.ov-cell .ov-ic{position:static;grid-area:ic;align-self:center;width:40px;height:40px;margin-right:2px}}
