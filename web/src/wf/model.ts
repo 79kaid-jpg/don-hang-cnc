@@ -51,7 +51,7 @@ export const ISTATUS: Record<Instance['status'], string> = { dang_chay: 'Đang c
 export const TSTATUS: Record<Task['status'], string> = { cho: 'Đang chờ', xong: 'Đã xong', tra_lai: 'Trả lại', fail: 'Fail', huy: 'Huỷ' };
 export const ROLE_LABEL: Record<string, string> = {
   admin_cnc: 'Admin CNC', kinh_doanh: 'Kinh doanh', ky_thuat: 'Kỹ thuật', kiem_tra_f1: 'Kiểm tra', duyet: 'Duyệt', ipc: 'IPC',
-  kho_qc: 'Kho / QC', ke_hoach: 'Kế hoạch', mua_hang: 'Mua hàng', admin_it: 'IT', xem: 'Chỉ xem'
+  kho_qc: 'Kho / QC', ke_hoach: 'Kế hoạch', mua_hang: 'Mua hàng', thiet_ke_qt: 'Thiết kế quy trình', admin_it: 'IT', xem: 'Chỉ xem'
 };
 
 export const uid = (p = 's') => p + Math.random().toString(36).slice(2, 8);

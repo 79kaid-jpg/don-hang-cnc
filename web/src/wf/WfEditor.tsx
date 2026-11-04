@@ -11,7 +11,7 @@ import { Canvas, LANE_COLORS } from './Canvas';
 
 export default function WfEditor() {
   const { id } = useParams();
-  const { can } = useAuth();
+  const { can, me } = useAuth();
   const nav = useNavigate();
   const [proc, setProc] = useState<Process | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -37,7 +37,7 @@ export default function WfEditor() {
 
   const latest = versions[0];
   const live = versions.find((v) => v.status === 'phat_hanh');
-  const ro = !can('admin_it') || !!proc?.is_template;
+  const ro = !!proc?.is_template || !(can('admin_it') || (can('thiet_ke_qt') && proc?.created_by === me?.id));
   const errors = useMemo(() => validate(def), [def]);
   const errOf = (sid: string) => errors.filter((e) => e.step === sid);
   const errIds = new Set(errors.map((e) => e.step).filter(Boolean) as string[]);

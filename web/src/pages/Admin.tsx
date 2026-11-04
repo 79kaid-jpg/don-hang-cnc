@@ -180,7 +180,8 @@ const ROLE_HINT: Record<string, string> = {
   ky_thuat: 'Bóc tách F1', kiem_tra_f1: 'Kiểm tra F1 (ĐK1)',
   admin_cnc: 'Lập XNĐH, LGC, bàn giao, LGH chặng 1',
   ke_hoach: 'Dự toán NVL (giai đoạn sau)', mua_hang: 'PO (giai đoạn sau)', kho_qc: 'Nhập kho, QC, giao hàng – không thấy giá',
-  ipc: 'Phần IPC của LGC, LGH chặng 2', duyet: 'Xem giá; duyệt các cấp được gán', xem: 'Chỉ xem, có thấy giá'
+  ipc: 'Phần IPC của LGC, LGH chặng 2', duyet: 'Xem giá; duyệt các cấp được gán',
+  thiet_ke_qt: 'Tạo, sửa, chạy thử, phát hành quy trình của mình; xoá khi chưa có công việc', xem: 'Chỉ xem, có thấy giá'
 };
 
 function Flows({ steps, people, onSaved }: { steps: Step[]; people: Profile[]; onSaved: () => void }) {

@@ -25,6 +25,8 @@ function Shell() {
   const nav = useNavigate();
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
+  // Trình tạo quy trình: hiện mục menu cho người thiết kế, hoặc người đang có việc / phiếu duyệt trong quy trình mới
+  const [wfN, setWfN] = useState(0);
   // Menu trái: ẩn/hiện (nhớ theo trình duyệt); khi ẩn có nút nổi để mở menu dạng lớp phủ
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('side-hidden') === '1'; } catch { return false; } });
   const [peek, setPeek] = useState(false); const [sheet, setSheet] = useState(false);
@@ -33,6 +35,7 @@ function Shell() {
     const h = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
     window.addEventListener('busy', h); return () => window.removeEventListener('busy', h);
   }, []);
+  useEffect(() => { if (me) sb.rpc('wf_inbox').then(({ data }) => setWfN(((data ?? []) as unknown[]).length)); }, [me]);
   useEffect(() => {
     if (!me) return;
     const count = () => sb.from('approvals').select('id', { count: 'exact', head: true })
@@ -50,7 +53,7 @@ function Shell() {
     { to: '/bang', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
     { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
-    ...(can('admin_it') ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
+    ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
   const badge = (n?: number) => (n ? <span className="nav-badge" aria-label={n + ' phiếu chờ duyệt'}>{n}</span> : null);
@@ -97,7 +100,7 @@ function Shell() {
               <span style={{ minWidth: 0 }}><b style={{ display: 'block' }}>{me.full_name}</b><span className="small muted">{me.unit} · {me.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}</span></span></div>
             <nav className="sheet-list" onClick={() => setSheet(false)}>
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
-              {can('admin_it') && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}
+              {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}
               <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
               <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
               <button onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>

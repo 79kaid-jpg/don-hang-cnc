@@ -1,0 +1,4 @@
+-- Vai trò mới "thiet_ke_qt" (Thiết kế quy trình) – đã áp dụng qua MCP:
+-- _wf_can_design(p_process): admin_it, hoặc có vai trò thiet_ke_qt và là người tạo quy trình (p_process null = quyền tạo mới)
+-- wf_process_create / wf_save_draft / wf_publish / wf_start(chạy thử) đổi điều kiện has_role('admin_it') → _wf_can_design(...)
+-- Xoá: giữ luật wf_process_delete (chưa có công việc → người tạo hoặc IT; đã có công việc → chỉ IT)

@@ -58,7 +58,7 @@ export default function WfHome() {
       <div className="page-head">
         <div><h1>Trình tạo quy trình <span className="chip wait">Thử nghiệm</span></h1>
           <p className="muted">Tự thiết kế quy trình: bước, người làm, hạn xử lý, checklist. Tách riêng, không ảnh hưởng quy trình đơn hàng đang chạy.</p></div>
-        {can('admin_it') && <button className="btn primary" onClick={() => create()}><Icon name="plus" size={18} />Quy trình mới</button>}
+        {can('thiet_ke_qt') && <button className="btn primary" onClick={() => create()}><Icon name="plus" size={18} />Quy trình mới</button>}
       </div>
       <Msg err={err} />
       <div className="wf-tabs" role="tablist">
@@ -94,7 +94,7 @@ export default function WfHome() {
             <ol className="wf-mini">{v.def.steps.map((s) => <li key={s.id}>{s.name}</li>)}</ol>
             <div className="row" style={{ marginTop: 'auto' }}>
               <Link className="btn sm" to={'/quy-trinh-moi/sua/' + r.id}><Icon name="eye" size={16} />Xem</Link>
-              {can('admin_it') && <button className="btn sm primary" onClick={() => create(v, r.name.replace(/^(QT\d) · /, '$1 (bản mới) · '))}><Icon name="plus" size={16} />Nhân bản để sửa</button>}
+              {can('thiet_ke_qt') && <button className="btn sm primary" onClick={() => create(v, r.name.replace(/^(QT\d) · /, '$1 (bản mới) · '))}><Icon name="plus" size={16} />Nhân bản để sửa</button>}
             </div>
           </div>); })}</div>)}
 
