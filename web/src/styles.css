@@ -1211,3 +1211,17 @@ html[data-fs=lg] body{zoom:1.12}
 .pf2-rule{flex-basis:100%;margin:0}
 @media (max-width:420px){.pf2-hero{grid-template-columns:1fr;justify-items:center}.pf2-legend{width:100%}}
 @media (prefers-reduced-motion:reduce){.pf2-arc{animation:none}}
+/* KPI thống kê gọn: dải số liệu một khối */
+@media (max-width:760px){
+  .db-kpi,.db-kpi:has(> .db-k:nth-child(4):last-child){grid-template-columns:1fr 1fr!important;gap:0!important;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .db-kpi>.db-k{border:0!important;border-radius:0!important;box-shadow:none!important;padding:9px 10px!important;display:grid!important;grid-template-columns:30px 1fr!important;grid-template-rows:auto auto;column-gap:8px!important;row-gap:0!important;min-height:0}
+  .db-kpi>.db-k:not(:first-child){border-top:1px solid var(--line)!important}
+  .db-kpi>.db-k:nth-child(odd):not(:first-child){border-left:1px solid var(--line)!important}
+  .db-kpi>.db-k i{width:30px!important;height:30px!important;margin:0!important;grid-row:span 2!important;border-radius:9px}
+  .db-kpi>.db-k i svg{width:16px;height:16px}
+  .db-kpi>.db-k b{font-size:18px!important;line-height:1.15}
+  .db-kpi>.db-k span{font-size:11.5px!important;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .db-kpi>.db-k:first-child{grid-column:1/-1;padding:10px 12px!important}
+  .db-kpi>.db-k:first-child b{font-size:24px!important}.db-kpi>.db-k:first-child i{width:34px!important;height:34px!important}
+  .db-k.t-bad::after{width:3px}
+}
