@@ -63,20 +63,22 @@ export default function Dashboard() {
       if (b.done_at) { const d = wk(+new Date(b.done_at)); const wd = weeks.find((x) => x.w === d); if (wd) wd.done.push(item(b, 'xong ' + new Date(b.done_at).toLocaleDateString('vi-VN'))); } }
 
     // thời gian xử lý trung bình mỗi bước (từ chữ ký): khoảng cách giữa 2 lần ký liên tiếp trong một phiếu
-    const stepT: Record<string, { label: string; p: Proc; hrs: number[]; items: Item[] }> = {};
+    const stepT: Record<string, { label: string; p: Proc; hrs: number[]; items: Item[]; o: number }> = {};
+    const RO = ['admin', 'ky_thuat', 'lap', 'kiem_tra', 'duyet', 'hoan_tat'];
     const mine: { at: string; action: string; hrs: number; it: Item }[] = [];
     for (const d of ds) { const b = bs.find((x) => x.id === d.batch_id); if (!b) continue;
       const sg = [...(d.signs ?? [])].sort((a, z) => a.at.localeCompare(z.at)); let prev = d.created_at;
       for (const g of sg) { const h = Math.max(0, (+new Date(g.at) - +new Date(prev)) / 36e5); prev = g.at;
         if (+new Date(g.at) < from) continue;
         const label = (b.proc !== 'QT0' ? (d.company === 'PN' ? 'PN' : COMPANY[d.company]) + ' · ' : '') + (ROLE_NAME[g.role] ?? g.role);
-        const k = b.proc + '|' + label; (stepT[k] ??= { label, p: b.proc, hrs: [], items: [] }).hrs.push(h); stepT[k].items.push(item(b, Math.round(h) + ' giờ'));
+        const k = b.proc + '|' + label; (stepT[k] ??= { label, p: b.proc, hrs: [], items: [], o: COMPANIES.indexOf(d.company) * 10 + RO.indexOf(g.role) }).hrs.push(h); stepT[k].items.push(item(b, Math.round(h) + ' giờ'));
         if (g.user === me?.id) mine.push({ at: g.at, action: g.action, hrs: h, it: item(b, g.action === 'ky' ? 'Đã ký' : g.action === 'tra_ve' ? 'Trả về' : 'Từ chối') }); } }
-    const steps = Object.values(stepT).map((x) => ({ ...x, avg: x.hrs.reduce((a, y) => a + y, 0) / x.hrs.length })).sort((a, z) => z.avg - a.avg).slice(0, 10);
+    const steps = Object.values(stepT).map((x) => ({ ...x, avg: x.hrs.reduce((a, y) => a + y, 0) / x.hrs.length })).sort((a, z) => PROCS.indexOf(a.p) - PROCS.indexOf(z.p) || a.o - z.o);
 
     // khối lượng theo người
-    const load: Record<string, { who: string; items: Item[]; stuck: number }> = {};
-    for (const b of live) { const h = holder(b, ds); if (!h) continue; const s = isStuck(h.since); (load[h.who] ??= { who: h.who, items: [], stuck: 0 }).items.push(item(b, h.what + ' · chờ ' + waited(h.since), s)); if (s) load[h.who].stuck++; }
+    const load: Record<string, { who: string; items: Item[]; stuck: number; co: Record<string, number> }> = {};
+    for (const b of live) { const h = holder(b, ds); if (!h) continue; const s = isStuck(h.since); const L = (load[h.who] ??= { who: h.who, items: [], stuck: 0, co: {} }); L.items.push(item(b, h.what + ' · chờ ' + waited(h.since), s)); if (s) L.stuck++;
+      const st = stepOf(b, ds); const c = st.key === 'ky' || b.proc === 'QT0' ? 'PN' : st.company ?? 'PN'; L.co[c] = (L.co[c] ?? 0) + 1; }
     const people = Object.values(load).sort((a, z) => z.items.length - a.items.length);
 
     // tồn theo công ty
@@ -155,16 +157,11 @@ export default function Dashboard() {
                 <button onClick={() => open('Hoàn tất tuần đến ' + w.label, w.done)} disabled={!w.done.length} aria-label={'Hoàn tất ' + w.done.length}><span className="db-colv">{w.done.length || ''}</span><i style={{ height: (w.done.length / maxW) * 100 + '%', background: '#2E8B57' }} /></button>
                 <span className="db-coll">{w.label}</span></div>)}</div>
             </Card>
-            <Card id="c-step" title="Bước nào xử lý chậm nhất" sub={'Thời gian trung bình từ khi tới bước đến khi ký · ' + days + ' ngày'}>
-              {M.steps.length ? <div className="db-hbars">{M.steps.map((s, i) => <button key={s.p + s.label} className="db-hbar" onClick={() => open(s.p + ' · ' + s.label + ' (TB ' + fmtH(s.avg) + ')', s.items)}>
-                <span className="db-hl"><QtTag qt={s.p} />{s.label}</span>
-                <span className="db-ht"><i style={{ width: (s.avg / maxStep) * 100 + '%', background: i === 0 ? '#D4513A' : '#C9A24A' }} /></span><b>{fmtH(s.avg)}</b></button>)}</div>
-                : <p className="muted small">Chưa có chữ ký nào trong khoảng thời gian này.</p>}
+            <Card id="c-step" title="Bước nào xử lý chậm nhất" sub={'Thời gian TB từ khi tới bước đến khi ký · ' + days + ' ngày · bấm để mở rộng'}>
+              {M.steps.length ? <StepTime steps={M.steps} open={open} /> : <p className="muted small">Chưa có chữ ký nào trong khoảng thời gian này.</p>}
             </Card>
             <Card id="c-people" title="Ai đang giữ nhiều việc" sub="Hồ sơ đang chờ từng người / nhóm · đỏ = kẹt">
-              <div className="db-hbars">{M.people.map((p) => <button key={p.who} className="db-hbar" onClick={() => open(p.who, p.items, p.items.length + ' hồ sơ đang chờ')}>
-                <span className="db-hl"><span className="avatar xs">{p.who.replace(/\(.*?\)/g, '').trim()[0]}</span>{p.who}</span>
-                <span className="db-ht"><i style={{ width: (p.items.length / maxP) * 100 + '%', background: '#7E6024' }}>{p.stuck > 0 && <em style={{ width: (p.stuck / p.items.length) * 100 + '%' }} />}</i></span><b>{p.items.length}</b></button>)}</div>
+              <People people={M.people} open={open} />
             </Card>
             <Card id="c-co" title="Tồn theo công ty" sub="QT1–QT3 đang ở bên nào">
               <div className="db-donut-row">{(() => { const tot = Math.max(1, M.byCo.reduce((a, x) => a + x.items.length, 0)); let acc = 0;
@@ -281,4 +278,48 @@ function StageBars({ stages, open }: { stages: { p: Proc; label: string; items: 
         <span className="db-ht"><i style={{ width: (s.items.length / max) * 100 + '%', background: shade(i) }}>{s.stuck > 0 && <em style={{ width: (s.stuck / s.items.length) * 100 + '%' }} />}</i></span>
         <b>{s.items.length}</b></button>)}</div>}
     </div>; })}</div>;
+}
+
+const RED = '#D4513A';
+/** Mỗi quy trình 1 thanh: độ dài khúc = thời gian TB của bước; bước lâu nhất màu đỏ, các bước còn lại nhạt dần theo độ dài */
+function StepTime({ steps, open }: { steps: { p: Proc; label: string; avg: number; items: Item[] }[]; open: (t: string, items: Item[]) => void }) {
+  const [ex, setEx] = useState<Proc | null>(null);
+  const rows = PROCS.map((p) => { const st = steps.filter((s) => s.p === p); return { p, st, tot: st.reduce((a, s) => a + s.avg, 0) }; }).filter((r) => r.st.length);
+  const maxTot = Math.max(0.01, ...rows.map((r) => r.tot)); const slow = Math.max(...steps.map((s) => s.avg));
+  const tone = (st: { avg: number }[], s: { avg: number }) => { const top = Math.max(...st.map((x) => x.avg));
+    if (s.avg === top && top > 0.02) return RED; const r = [...st].sort((a, z) => z.avg - a.avg).indexOf(s as never);
+    return `color-mix(in srgb, #B8862E ${Math.max(22, 88 - r * 14)}%, #fff)`; };
+  return <div className="sb">{rows.map(({ p, st, tot }) => { const on = ex === p; const max = Math.max(0.01, ...st.map((s) => s.avg)); const top = st.find((s) => s.avg === max);
+    return <div key={p} className={'sb-row' + (on ? ' on' : '')}>
+      <button className="sb-head" onClick={() => setEx(on ? null : p)} aria-expanded={on}>
+        <span className="sb-name"><QtTag qt={p} /><b>{top && max > 0.02 ? top.label : PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</b>{top && max > 0.02 && <span className="sb-slow">chậm nhất</span>}</span>
+        <span className="sb-sum"><b>{fmtH(tot)}</b><span className="small muted">tổng</span><Icon name="arrow" size={16} /></span>
+        {tot < 0.02 ? <span className="sb-track small muted">Chưa đủ dữ liệu – các bước được ký gần như ngay</span> :
+        <span className="sb-track" aria-hidden="true"><span className="sb-stack" style={{ width: Math.max(8, (tot / maxTot) * 100) + '%' }}>
+          {st.map((s) => <i key={s.label} style={{ flexGrow: Math.max(s.avg, tot * 0.04 || 1), background: tone(st, s) }} title={s.label + ': ' + fmtH(s.avg)}>
+            {s.avg / (tot || 1) > .14 && <em style={{ color: tone(st, s) === RED ? '#fff' : '#3A2C10' }}>{fmtH(s.avg)}</em>}</i>)}</span></span>}
+      </button>
+      {on && <div className="sb-detail">{[...st].sort((a, z) => z.avg - a.avg).map((s) => <button key={s.label} className="db-hbar" onClick={() => open(p + ' · ' + s.label + ' (TB ' + fmtH(s.avg) + ')', s.items)}>
+        <span className="db-hl"><i className="sb-sw" style={{ background: tone(st, s) }} />{s.label}</span>
+        <span className="db-ht"><i style={{ width: (s.avg / max) * 100 + '%', background: tone(st, s) }} /></span><b>{fmtH(s.avg)}</b></button>)}</div>}
+    </div>; })}</div>;
+}
+
+/** Ai đang giữ việc: mặc định xếp nhiều → ít; bật "Theo công ty" thì gom PN / IPC / Hanwha, mỗi nhóm xếp nhiều → ít */
+function People({ people, open }: { people: { who: string; items: Item[]; stuck: number; co: Record<string, number> }[]; open: (t: string, items: Item[], sub?: string) => void }) {
+  const [by, setBy] = useState(false);
+  const max = Math.max(1, ...people.map((p) => p.items.length));
+  const coOf = (p: { co: Record<string, number> }) => Object.entries(p.co).sort((a, z) => z[1] - a[1])[0]?.[0] ?? 'PN';
+  const CC = { PN: '#7E6024', IPC: '#2F6FB0', HW: '#B4690E' } as Record<string, string>;
+  const row = (p: typeof people[number]) => <button key={p.who} className="db-hbar" onClick={() => open(p.who, p.items, p.items.length + ' hồ sơ đang chờ')}>
+    <span className="db-hl"><span className="avatar xs">{p.who.replace(/\(.*?\)/g, '').trim()[0]}</span>{p.who}</span>
+    <span className="db-ht"><i style={{ width: (p.items.length / max) * 100 + '%', background: by ? CC[coOf(p)] : '#7E6024' }}>{p.stuck > 0 && <em style={{ width: (p.stuck / p.items.length) * 100 + '%' }} />}</i></span><b>{p.items.length}</b></button>;
+  const groups = COMPANIES.map((c) => { const l = people.filter((p) => coOf(p) === c); return { c, l, n: l.reduce((a, p) => a + p.items.length, 0) }; }).filter((g) => g.l.length).sort((a, z) => z.n - a.n);
+  return <>
+    <div className="pp-bar"><button role="switch" aria-checked={by} className={'pp-sw' + (by ? ' on' : '')} onClick={() => setBy(!by)}><i />Theo công ty</button></div>
+    {!by ? <div className="db-hbars">{people.map(row)}</div> :
+      <div className="pp-groups">{groups.map((g) => <section key={g.c}>
+        <h3><i style={{ background: CC[g.c] }} />{COMPANY[g.c as keyof typeof COMPANY]}<span className="small muted">{g.l.length} người · {g.n} hồ sơ</span></h3>
+        <div className="db-hbars">{g.l.map(row)}</div></section>)}</div>}
+  </>;
 }

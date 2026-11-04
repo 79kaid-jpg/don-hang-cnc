@@ -988,3 +988,13 @@ html[data-fs=lg] body{zoom:1.12}
 .sb-sw{width:10px;height:10px;border-radius:3px;flex:none}
 @media (prefers-reduced-motion:reduce){.sb-detail{animation:none}}
 .sb-detail{display:flex;flex-direction:column}.sb-detail .db-hbar{width:100%;grid-template-columns:minmax(110px,44%) 1fr 32px}
+
+.sb-track{grid-column:1/-1;display:block}.sb-track .sb-stack{display:flex}
+.pp-bar{display:flex;justify-content:flex-end;margin-top:-4px}
+.pp-sw{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px 4px 4px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:inherit;min-height:34px}
+.pp-sw i{width:34px;height:22px;border-radius:11px;background:#cfc6b3;position:relative;transition:background .2s}
+.pp-sw i::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.pp-sw.on i{background:var(--gold)}.pp-sw.on i::after{transform:translateX(12px)}
+.pp-groups{display:flex;flex-direction:column;gap:10px}
+.pp-groups h3{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 8px 2px;text-transform:uppercase;letter-spacing:.03em}.pp-groups h3 i{width:10px;height:10px;border-radius:3px}.pp-groups h3 span{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.sb-stack i em{white-space:nowrap;overflow:hidden;text-overflow:clip;padding:0 3px}.db-hbar b{white-space:nowrap}.sb-slow{flex:none;font-size:11px;font-weight:700;color:#b42318;background:#fde3df;border-radius:6px;padding:1px 6px}
