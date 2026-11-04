@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -20,6 +20,18 @@ export default function WfEditor() {
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [view, setView] = useState<'so_do' | 'ds'>(() => { try { return (localStorage.getItem('wf-view') as 'so_do' | 'ds') || (innerWidth >= 900 ? 'so_do' : 'ds'); } catch { return 'ds'; } });
+  // Ngăn cấu hình bước: kéo mép trái để co giãn, nhớ độ rộng; nút mở rộng nhanh
+  const [pw, setPw] = useState(() => { try { return Number(localStorage.getItem('wf-panel-w')) || 460; } catch { return 460; } });
+  const designRef = useRef<HTMLDivElement>(null);
+  const clampW = (w: number) => Math.round(Math.min(Math.max(340, w), Math.max(360, (designRef.current?.clientWidth ?? 1200) - 280)));
+  const savePw = (w: number) => { const v = clampW(w); setPw(v); try { localStorage.setItem('wf-panel-w', String(v)); } catch { /* */ } };
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault(); const x0 = e.clientX, w0 = pw;
+    const mv = (ev: PointerEvent) => setPw(clampW(w0 + (x0 - ev.clientX)));
+    const end = (ev: PointerEvent) => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); savePw(w0 + (x0 - ev.clientX)); document.body.classList.remove('wf-resizing'); };
+    document.body.classList.add('wf-resizing'); addEventListener('pointermove', mv); addEventListener('pointerup', end);
+  };
+  const wide = pw >= 640;
   const pickView = (v: 'so_do' | 'ds') => { setView(v); try { localStorage.setItem('wf-view', v); } catch { /* */ } };
   const [dir, setDir] = useState<Directory | null>(null);
   const [err, setErr] = useState('');
@@ -130,13 +142,20 @@ export default function WfEditor() {
         {!ro && view === 'so_do' && <button className="btn sm primary" onClick={() => insertAt(def.steps.length)}><Icon name="plus" size={16} />Thêm bước</button>}
       </div>
 
-      {view === 'so_do' && <div className={'wf-design' + (open ? ' has-panel' : '')}>
+      {view === 'so_do' && <div ref={designRef} className={'wf-design' + (open ? ' has-panel' : '')} style={open ? { '--pw': pw + 'px' } as React.CSSProperties : undefined}>
         <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo}
           onAddLane={() => upd((d) => { d.lanes.push({ id: uid('l'), name: 'Làn ' + (d.lanes.length + 1) }); })}
           onRenameLane={(k, nm) => upd((d) => { if (d.lanes[k]) d.lanes[k].name = nm; })} />
         {open && (() => { const i = def.steps.findIndex((x) => x.id === open); const st = def.steps[i]; if (!st) return null; return (
           <aside className="card wf-panel" aria-label="Cấu hình bước">
-            <div className="row" style={{ justifyContent: 'space-between' }}><b>Bước {i + 1}</b><button className="btn sm icon-btn" aria-label="Đóng" onClick={() => setOpen(null)}><Icon name="x" size={16} /></button></div>
+            <div className="wf-resizer" role="separator" aria-orientation="vertical" aria-label="Kéo để đổi độ rộng ngăn cấu hình" tabIndex={0}
+              aria-valuenow={pw} aria-valuemin={340} title="Kéo để co giãn · bấm đúp để mở rộng / thu gọn"
+              onPointerDown={startResize} onDoubleClick={() => savePw(wide ? 460 : 760)}
+              onKeyDown={(e) => { if (e.key === 'ArrowLeft') savePw(pw + 40); if (e.key === 'ArrowRight') savePw(pw - 40); }}><span /></div>
+            <div className="wf-panel-h"><b>Bước {i + 1}{st.name ? ' · ' + st.name : ''}</b>
+              <span className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
+                <button className="btn sm icon-btn" aria-label={wide ? 'Thu gọn ngăn' : 'Mở rộng ngăn'} title={wide ? 'Thu gọn' : 'Mở rộng'} onClick={() => savePw(wide ? 460 : 760)}>{wide ? '⇥' : '⇤'}</button>
+                <button className="btn sm icon-btn" aria-label="Đóng" onClick={() => setOpen(null)}><Icon name="x" size={16} /></button></span></div>
             {errOf(st.id).map((e, k) => <div key={k} className="msg err small" role="alert"><Icon name="alert" size={14} />{e.msg}</div>)}
             <StepForm s={st} i={i} n={def.steps.length} def={def} dir={dir} ro={ro} set={(p) => setStep(st.id, p)}
               onMove={(d) => move(i, d)} onDup={() => dup(i)} onDel={async () => { await del(i); }} />
@@ -183,7 +202,7 @@ const Insert = ({ onClick }: { onClick: () => void }) => (
   <button className="wf-insert" onClick={onClick} aria-label="Chèn bước ở đây"><Icon name="plus" size={16} /></button>
 );
 
-function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
+export function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
   s: Step; i: number; n: number; def: Def; dir: Directory | null; ro: boolean;
   set: (p: Partial<Step>) => void; onMove: (d: number) => void; onDup: () => void; onDel: () => void;
 }) {
@@ -271,7 +290,7 @@ function People({ label, hint, list, dir, ro, onChange }: { label: string; hint:
     <div className="f"><span>{label}</span><small className="muted">{hint}</small>
       {list.length > 0 && <div className="row">{list.map((a, k) => (
         <span key={a.type + a.id} className="wf-pill">{who(a, dir)}{!ro && <button aria-label={'Bỏ ' + who(a, dir)} onClick={() => onChange(list.filter((_, x) => x !== k))}><Icon name="x" size={12} /></button>}</span>))}</div>}
-      {!ro && <div className="wf-2" style={{ gridTemplateColumns: '140px 1fr' }}>
+      {!ro && <div className="wf-2" style={{ gridTemplateColumns: 'minmax(96px,140px) minmax(0,1fr)' }}>
         <select value={type} aria-label={label + ': loại'} onChange={(e) => setType(e.target.value as Assignee['type'])}><option value="user">Người</option><option value="group">Nhóm</option><option value="role">Vai trò</option></select>
         <select value="" aria-label={label + ': thêm'} onChange={(e) => { const id = e.target.value; if (id && !list.some((a) => a.type === type && a.id === id)) onChange([...list, { type, id }]); }}>
           <option value="">+ Thêm…</option>{opts?.map(([id, t]) => <option key={id} value={id}>{t}</option>)}</select></div>}

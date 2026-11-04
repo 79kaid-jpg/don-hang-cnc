@@ -147,3 +147,29 @@ a.wf-item:hover{border-color:#BFA977}
 .wf-boxfoot span{display:inline-flex;align-items:center;gap:2px}
 .wf-boxfoot .ap{color:var(--blue);font-weight:600}.wf-boxfoot .fl{color:var(--red)}
 .wf-boxt{height:100%}
+/* Ngăn cấu hình co giãn được; nội dung tự xuống dòng, không bị che */
+.wf-design.has-panel{grid-template-columns:minmax(0,1fr) var(--pw,460px)}
+.wf-panel{position:sticky;container-type:inline-size;padding:12px 14px 14px 18px;overflow-x:hidden}
+.wf-panel *{min-width:0}
+.wf-panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:-12px;z-index:2;background:var(--surface);margin:-12px -14px 0 -18px;padding:10px 14px 10px 18px;border-bottom:1px solid var(--line)}
+.wf-panel-h b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wf-resizer{position:absolute;left:0;top:0;bottom:0;width:10px;cursor:col-resize;z-index:3;display:flex;align-items:center;justify-content:center;touch-action:none}
+.wf-resizer span{width:4px;height:44px;border-radius:4px;background:var(--line2);transition:background var(--t),height var(--t)}
+.wf-resizer:hover span,.wf-resizer:focus-visible span{background:var(--gold);height:72px}
+.wf-resizer:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+body.wf-resizing{cursor:col-resize;user-select:none}
+.wf-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.wf-form .row{flex-wrap:wrap}
+.wf-form select,.wf-form input:not([type=checkbox]){max-width:100%;text-overflow:ellipsis}
+@container (max-width:480px){
+  .wf-panel .wf-2{grid-template-columns:minmax(0,1fr)!important}
+  .wf-panel .wf-route select,.wf-panel .wf-route input{flex:1 1 100%}
+}
+@container (min-width:640px){
+  .wf-panel .wf-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
+  .wf-panel .wf-form>*{grid-column:1 / -1}
+  .wf-panel .wf-form>.wf-2{grid-column:auto}
+}
+@media (max-width:1000px){.wf-design.has-panel{grid-template-columns:1fr}.wf-resizer{display:none}}
+.wf-form .wf-route input[type=checkbox]{flex:none;width:18px;height:18px;min-height:0;padding:0;accent-color:var(--gold)}
+.wf-form .wf-route label.row{flex-wrap:nowrap;flex:none}
