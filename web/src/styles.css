@@ -1259,3 +1259,20 @@ html[data-fs=lg] body{zoom:1.12}
 .fill-t{flex:1 1 200px;display:flex;align-items:center;gap:6px;font-size:13.5px}
 .fill-bar input{width:140px;min-height:38px;font-weight:700}
 @media (max-width:760px){.fill-bar{position:sticky;bottom:calc(var(--nav-h,64px) + 8px + env(safe-area-inset-bottom,0px));z-index:12;box-shadow:0 8px 20px rgba(40,30,10,.15)}.fill-bar input{flex:1;min-width:0}}
+
+@media (max-width:760px){
+  .pp-th{flex-direction:column;align-items:stretch!important;gap:8px}
+  .pp-tools{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin:0 -2px;padding:2px}
+  .pp-tools::-webkit-scrollbar{display:none}
+  .pp-tools .btn{flex:none;min-height:36px!important;height:36px;padding:0 12px!important;font-size:13.5px!important;border-radius:999px!important;gap:5px}
+  .pp-clear{color:#B42318!important;border-color:#F3C9C2!important}
+  .fill-bar{display:grid!important;grid-template-columns:1fr 1fr 40px;gap:8px;padding:10px}
+  .fill-bar .fill-t{grid-column:1/-1;align-items:flex-start;font-size:13.5px;line-height:1.4}
+  .fill-bar .fill-t svg{flex:none;margin-top:2px}
+  .fill-bar input{grid-column:1/-1;width:100%}
+  .fill-bar .btn{min-height:40px!important;width:100%;justify-content:center}
+  .fill-bar .icon-btn{width:40px;padding:0!important}
+  .fill-bar.sug:not(:has(.btn:nth-of-type(3))){grid-template-columns:1fr 40px}
+  .pp-grid td input{min-height:36px!important;height:36px;padding:0 8px;font-size:15px}
+  .pp-grid th,.pp-grid td{padding:6px 8px}
+}

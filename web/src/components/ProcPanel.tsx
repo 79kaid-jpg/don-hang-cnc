@@ -260,23 +260,23 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   return (
     <div className="pp-tbl">
-      <div className="row between"><b>{title} <span className="small muted">· {rows.length} dòng</span></b>
-        {editable && <span className="row" style={{ gap: 6 }}>
+      <div className="row between pp-th"><b>{title} <span className="small muted">· {rows.length} dòng</span></b>
+        {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <button className="btn sm" onClick={tpl}><Icon name="download" size={14} />Mẫu Excel</button>
           <label className="btn sm"><Icon name="upload" size={14} />Tải Excel<input type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} /></label>
-          <button className="btn sm" onClick={() => setOpen(!open)}>Dán từ Excel</button>
-          {rows.length > 0 && <button className="btn sm" onClick={() => onChange([])}>Xoá hết</button>}</span>}</div>
+          <button className="btn sm" onClick={() => setOpen(!open)}><Icon name="copy" size={14} />Dán từ Excel</button>
+          {rows.length > 0 && <button className="btn sm pp-clear" onClick={() => onChange([])}><Icon name="x" size={14} />Xoá hết</button>}</span>}</div>
       {open && <div className="pp-paste"><textarea rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Chép các dòng trong Excel (có hoặc không có dòng tiêu đề) rồi dán vào đây.\nThứ tự cột: ' + inCols.map((c) => c.t).join(' · ')} />
         <button className="btn sm primary" disabled={!paste.trim()} onClick={doPaste}>Thêm vào bảng</button></div>}
       {msg && <div className="small muted">{msg}</div>}
       {hdr && <div className="fill-bar" role="dialog" aria-label={'Đặt chung ' + colT(hdr.k)}>
-        <span className="fill-t"><Icon name="list" size={15} />Đặt chung <b>{colT(hdr.k)}</b> cho {rows.length} dòng</span>
+        <span className="fill-t"><Icon name="list" size={15} /><span>Đặt chung <b>{colT(hdr.k)}</b> cho {rows.length} dòng</span></span>
         <input autoFocus value={hdr.v} inputMode="decimal" onChange={(e) => setHdr({ ...hdr, v: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter' && hdr.v.trim()) applyCol(hdr.k, hdr.v); if (e.key === 'Escape') setHdr(null); }} placeholder="Nhập giá trị" />
         <button className="btn sm primary" disabled={!hdr.v.trim()} onClick={() => applyCol(hdr.k, hdr.v)}>Áp dụng tất cả</button>
         <button className="btn sm" disabled={!hdr.v.trim()} onClick={() => applyCol(hdr.k, hdr.v, true)}>Chỉ ô trống</button>
         <button className="btn sm icon-btn" onClick={() => setHdr(null)} aria-label="Đóng"><Icon name="x" size={15} /></button></div>}
       {fill && !hdr && <div className="fill-bar sug" role="status">
-        <span className="fill-t">Áp dụng <b>{fill.v}</b> cho cả {rows.length} dòng cột <b>{colT(fill.k)}</b>?</span>
+        <span className="fill-t"><Icon name="list" size={15} /><span>Áp dụng <b>{fill.v}</b> cho cả {rows.length} dòng · <b>{colT(fill.k)}</b>?</span></span>
         <button className="btn sm primary" onClick={() => applyCol(fill.k, fill.v)}>Tất cả</button>
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
