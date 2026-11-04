@@ -72,9 +72,10 @@ export default function Simulate() {
   return (
     <div className="sim">
       <header className="sim-top">
-        <div><h1>Mô phỏng quy trình đơn hàng</h1><p className="muted small">Xem một đơn đi qua QT0 → QT3, qua 3 công ty và khách hàng. Không tạo dữ liệu thật. Người phụ trách lấy từ cấu hình hiện tại.</p></div>
+        <div><h1>Mô phỏng quy trình đơn hàng</h1></div>
         <div className="sim-opts">
-          <label className="sim-tg"><input type="checkbox" checked={withBack} onChange={(e) => setBack(e.target.checked)} /><span>Có trả về</span></label>
+          <button className="sim-tg" aria-pressed={withBack} onClick={() => setBack(!withBack)}><Icon name="back" size={13} />Trả về</button>
+          <button className="sim-tg" aria-pressed={withExtra} onClick={() => setExtra(!withExtra)}><Icon name="shield" size={13} />Duyệt thêm</button>
           <label className="sim-tg"><input type="checkbox" checked={withExtra} onChange={(e) => setExtra(e.target.checked)} /><span>Có duyệt thêm</span></label>
         </div>
       </header>

@@ -1414,3 +1414,10 @@ html[data-fs=lg] body{zoom:1.12}
 .sim-b.play:hover{background:var(--gold-hover)}
 .sim-b.sp{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 @media (max-width:640px){.sim-keys{display:none}}
+.sim-top{align-items:center}
+.sim-opts{gap:6px}
+.sim-tg{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:99px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--line);cursor:pointer;transition:all var(--t)}
+.sim-tg[aria-pressed="true"]{background:var(--gold-tint);border-color:var(--line2);color:var(--gold-ink)}
+.sim-tg[aria-pressed="false"]{opacity:.7}
+.sim-tg:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.sim-tg::before{content:'';position:absolute}
