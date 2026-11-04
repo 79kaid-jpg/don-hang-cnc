@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon';
 import { END, KIND, NTYPE, ntype, hasAppr, items, targets, who, type Assignee, type Def, type Directory, type Step } from './model';
 
 export const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
-const LW = 150, CW = 210, RH = 136, BW = 176, BH = 90, PAD = 20, TOP = 26;
+const CW = 210, RH = 136, BW = 176, BH = 90, PAD = 20, TOP = 26;
 
 /** Tên ngắn cho người làm (hiện trong hộp) */
 function short(a: Assignee | undefined, dir: Directory | null) {
@@ -28,7 +28,9 @@ export function Canvas({ def, dir, sel, errIds, ro, onSelect, onMove, onAddLane,
   onSelect: (id: string | null) => void; onMove: (id: string, lane: string, idx: number) => void;
   onAddLane: () => void; onRenameLane: (i: number, name: string) => void;
 }) {
-  const [zoom, setZoom] = useState(1);
+  const narrow = typeof window !== 'undefined' && innerWidth < 600;
+  const LW = narrow ? 108 : 150;
+  const [zoom, setZoom] = useState(narrow ? 0.8 : 1);
   const [drag, setDrag] = useState<{ id: string; dx: number; dy: number; sx: number; sy: number } | null>(null);
   const [editLane, setEditLane] = useState<number | null>(null);
   const svg = useRef<SVGSVGElement>(null);
@@ -52,7 +54,7 @@ export function Canvas({ def, dir, sel, errIds, ro, onSelect, onMove, onAddLane,
   const dropLane = (() => { if (!drag) return null; const i = def.steps.findIndex((s) => s.id === drag.id); const cy = pos(i).y + BH / 2 + drag.dy; return Math.min(lanes.length - 1, Math.max(0, Math.floor((cy - TOP) / RH))); })();
 
   const toSvg = (e: React.PointerEvent) => { const r = svg.current!.getBoundingClientRect(); return { x: (e.clientX - r.left) / zoom + X0, y: (e.clientY - r.top) / zoom }; };
-  const down = (e: React.PointerEvent, id: string) => { if (ro) return onSelect(id); (e.currentTarget as Element).setPointerCapture(e.pointerId); const p = toSvg(e); setDrag({ id, dx: 0, dy: 0, sx: p.x, sy: p.y }); };
+  const down = (e: React.PointerEvent, id: string) => { if (ro || e.pointerType === 'touch') return; /* chạm: để trình duyệt cuộn, chọn bằng onClick */ (e.currentTarget as Element).setPointerCapture(e.pointerId); const p = toSvg(e); setDrag({ id, dx: 0, dy: 0, sx: p.x, sy: p.y }); };
   const move = (e: React.PointerEvent) => { if (!drag) return; const p = toSvg(e); setDrag({ ...drag, dx: p.x - drag.sx, dy: p.y - drag.sy }); };
   const up = () => {
     if (!drag) return;
@@ -133,7 +135,7 @@ export function Canvas({ def, dir, sel, errIds, ro, onSelect, onMove, onAddLane,
               const pr = short(s.assignee, dir); const it = items(s); const nFile = it.filter((x) => x.kind === 'file').length;
               return (
                 <g key={s.id} transform={`translate(${p.x + (dg ? drag!.dx : 0)},${p.y + (dg ? drag!.dy : 0)})`} className={'wf-box' + (sel === s.id ? ' sel' : '') + (dg ? ' drag' : '') + (errIds.has(s.id) ? ' err' : '')}
-                  onPointerDown={(e) => down(e, s.id)} tabIndex={0} role="button" aria-label={`Bước ${i + 1}: ${s.name}`}
+                  onPointerDown={(e) => down(e, s.id)} onClick={() => { if (!drag) onSelect(s.id); }} tabIndex={0} role="button" aria-label={`Bước ${i + 1}: ${s.name}`}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(s.id); } }}>
                   <title>{tip(s, i, def, dir)}</title>
                   <rect className="wf-boxbg" width={BW} height={BH} rx={10} />

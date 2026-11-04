@@ -100,7 +100,9 @@ a.wf-item:hover{border-color:#BFA977}
 .wf-canvas{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .wf-canvas-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--soft)}
 .wf-canvas-scroll{overflow:auto;max-height:70vh}
-.wf-canvas svg{display:block;touch-action:none;user-select:none}
+.wf-canvas svg{display:block;touch-action:pan-x pan-y pinch-zoom;user-select:none}
+.wf-canvas-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.g-port{touch-action:none}
 .wf-lrow{fill:#fff}.wf-lrow.alt{fill:#FBF8F1}.wf-lsep{stroke:var(--line)}
 .wf-lname{height:100%;display:flex;align-items:center;font-weight:700;font-size:14px;line-height:1.25;padding-right:4px;word-break:break-word}
 .wf-box{cursor:grab;outline:none}.wf-box.drag{cursor:grabbing;opacity:.85}
@@ -258,3 +260,17 @@ body.wf-resizing{cursor:col-resize;user-select:none}
 .ft-date{--fc:#C0504D;--fb:#FBE9E8}.ft-select{--fc:#8A4FB0;--fb:#F2EAF8}.ft-table{--fc:#0F7C86;--fb:#E0F3F4}
 @media (prefers-reduced-motion:reduce){.wf-ftile{transition:none}.wf-ftile:hover{transform:none}}
 .wf-field .wf-step-h b{font-size:15px;font-weight:600}
+
+/* Điện thoại: ngăn cấu hình bước mở dạng bảng trượt từ dưới lên, sơ đồ vẫn vuốt được */
+@media (max-width:1000px){
+  .wf-design.has-panel .wf-panel{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;max-height:78vh;margin:0;border-radius:18px 18px 0 0;
+    box-shadow:0 -8px 30px rgba(40,30,10,.25);padding:0 14px calc(16px + env(safe-area-inset-bottom));animation:wf-sheet .22s ease-out}
+  .wf-design.has-panel .wf-panel-h{top:0;margin:0 -14px;padding:14px 14px 10px;border-radius:18px 18px 0 0}
+  .wf-design.has-panel .wf-panel-h::before{content:'';position:absolute;left:50%;top:6px;width:40px;height:4px;margin-left:-20px;border-radius:4px;background:var(--line2)}
+  .wf-panel-h .icon-btn[aria-label*="ngăn"]{display:none}
+  .wf-lanehead{padding:0 6px 0 10px}.wf-lanehead b{font-size:13px}
+  .wf-canvas-bar .small.muted{display:none}
+}
+@keyframes wf-sheet{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.wf-design.has-panel .wf-panel{animation:none}}
+@media (max-width:1000px){.wf-lanehead b{font-size:13px;word-break:normal;overflow-wrap:break-word;hyphens:auto}.wf-addlane{font-size:12px}}

@@ -28,7 +28,7 @@ export function GraphCanvas({ def, dir, sel, errIds, ro, onSelect, onPos, onConn
   onInsert: (e: Edge, type: NodeType) => void; onRemoveEdge: (e: Edge) => void; onAdd: (type: NodeType, p: Pt) => void;
   onLayout: () => void; onUndo: () => void; onRedo: () => void; canUndo: boolean; canRedo: boolean;
 }) {
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(typeof window !== 'undefined' && innerWidth < 600 ? 0.7 : 1);
   const [drag, setDrag] = useState<{ id: string; dx: number; dy: number; sx: number; sy: number } | null>(null);
   const [wire, setWire] = useState<{ from: string; x: number; y: number } | null>(null);
   const [selE, setSelE] = useState<string | null>(null);
@@ -118,7 +118,8 @@ export function GraphCanvas({ def, dir, sel, errIds, ro, onSelect, onPos, onConn
               <g key={s.id} transform={`translate(${p.x},${p.y})`} className={'g-node t-' + t + (sel === s.id ? ' sel' : '') + (errIds.has(s.id) ? ' err' : '') + (drag?.id === s.id ? ' drag' : '')}
                 tabIndex={0} role="button" aria-label={`${NTYPE[t]} ${i + 1}: ${s.name}`}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(s.id); } }}
-                onPointerDown={(e) => { e.stopPropagation(); setMenu(null); if (ro) { onSelect(s.id); return; } (e.currentTarget as Element).setPointerCapture(e.pointerId); const q = toSvg(e); setDrag({ id: s.id, dx: 0, dy: 0, sx: q.x, sy: q.y }); }}>
+                onClick={() => { if (!drag) onSelect(s.id); }}
+                onPointerDown={(e) => { setMenu(null); if (ro || e.pointerType === 'touch') return; e.stopPropagation(); (e.currentTarget as Element).setPointerCapture(e.pointerId); const q = toSvg(e); setDrag({ id: s.id, dx: 0, dy: 0, sx: q.x, sy: q.y }); }}>
                 <title>{`${NTYPE[t]} #${i + 1}${s.name ? ': ' + s.name : ''}${t === 'task' ? '\nNgười làm: ' + who(s.assignee, dir) : ''}`}</title>
                 <rect className="g-bg" width={NW} height={NH} rx={t === 'parallel' || t === 'join' ? NH / 2 : 10} style={{ '--nc': c } as React.CSSProperties} />
                 <rect width={44} height={NH} rx={10} fill={c} className="g-side" />
