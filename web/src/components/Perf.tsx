@@ -10,19 +10,23 @@ const tier = (s: number) => (s >= 85 ? { t: 'Xuất sắc', c: '#2E8B57' } : s >
 const fH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? h.toFixed(1).replace('.0', '') + ' giờ' : (h / 24).toFixed(1) + ' ngày');
 const avg = (l: Score[], k: keyof Score) => { const v = l.filter((s) => s.ranked).map((s) => s[k] as number); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
 
-function Ring({ v, c, size = 112 }: { v: number; c: string; size?: number }) {
-  const r = 46, C = 2 * Math.PI * r;
-  return <svg viewBox="0 0 100 100" width={size} height={size} className="pf-ring" role="img" aria-label={'Điểm ' + v}>
-    <circle cx="50" cy="50" r={r} fill="none" stroke="#EFE9DC" strokeWidth="8" />
-    <circle cx="50" cy="50" r={r} fill="none" stroke={c} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(v / 100) * C} ${C}`} transform="rotate(-90 50 50)" className="pf-ring-v" />
-    <text x="50" y="50" textAnchor="middle" fontSize="28" fontWeight="800" fill="currentColor">{v}</text>
-    <text x="50" y="66" textAnchor="middle" fontSize="10" fill="#8A7F6A">điểm</text></svg>;
+const RINGS = [['sOntime', 'Đúng hạn', '#2E9E5B'], ['sSpeed', 'Tốc độ', '#2F7BD6'], ['sQuality', 'Chất lượng', '#8A5CD1'], ['sVolume', 'Khối lượng', '#E0962B']] as const;
+/** 4 vòng đồng tâm kiểu Apple Fitness: mỗi vòng là một tiêu chí (0–100) */
+function Rings({ m, score, color, label }: { m: Score; score: number | string; color: string; label: string }) {
+  const W = 7.5, G = 2;
+  return <svg viewBox="0 0 120 120" className="pf2-rings" role="img" aria-label={'Điểm hiệu quả ' + score}>
+    {RINGS.map(([k, , c], i) => { const r = 54 - i * (W + G); const C = 2 * Math.PI * r; const v = Math.max(0, Math.min(100, m[k] as number));
+      return <g key={k}><circle cx="60" cy="60" r={r} fill="none" stroke={c} strokeOpacity=".14" strokeWidth={W} />
+        <circle cx="60" cy="60" r={r} fill="none" stroke={c} strokeWidth={W} strokeLinecap="round" strokeDasharray={`${(v / 100) * C} ${C}`} transform="rotate(-90 60 60)" className="pf2-arc" style={{ animationDelay: i * 120 + 'ms' }} /></g>; })}
+    <text x="60" y="63" textAnchor="middle" fontSize="18" fontWeight="800" fill={color}>{score}</text>
+    <text x="60" y="74" textAnchor="middle" fontSize="6" fontWeight="700" fill="#8A7F6A">{label}</text>
+  </svg>;
 }
 
-/** Thẻ "Hiệu quả của tôi" ở trang chủ: điểm, hạng, so sánh với công ty & hệ thống, xu hướng, gợi ý, điểm thưởng & vòng quay */
+/** Thẻ "Hiệu quả của tôi" – tập trung hiệu quả; phiếu quay chỉ là dòng phụ ở cuối */
 export function PerfCard() {
   const { me } = useAuth(); const { data } = usePerf();
-  const [pts, setPts] = useState<{ balance: number; earned: number } | null>(null); const [wheel, setWheel] = useState(false);
+  const [pts, setPts] = useState<{ balance: number; earned: number } | null>(null); const [wheel, setWheel] = useState(false); const [more, setMore] = useState(false);
   const loadPts = () => sb.rpc('my_points').then(({ data: d }) => { const r = (d as { balance: number; earned: number }[] | null)?.[0]; setPts(r ?? { balance: 0, earned: 0 }); });
   const [tk, setTk] = useState<TK | null>(null);
   const loadTk = () => sb.rpc('my_tickets').then(({ data: d }) => setTk(d as TK));
@@ -31,74 +35,60 @@ export function PerfCard() {
   if (!data || !S || !me) return null;
   const m = S.find((s) => s.id === me.id); const cfg = data.cfg;
   const co = S.filter((s) => s.unit === me.unit); const nRank = S.filter((s) => s.ranked).length;
-  const t = tier(m?.score ?? 0); const isTop = m?.rank === 1;
-  const metric = (label: string, ic: string, mine: number, coV: number, allV: number, fmt: (v: number) => string, better: 'hi' | 'lo') => {
-    const good = better === 'hi' ? mine >= allV : mine <= allV; const pct = better === 'hi' ? Math.min(100, mine) : Math.min(100, (allV ? (allV / Math.max(mine, .01)) * 50 : 50));
-    return <div className="pf-m"><span className="pf-ml"><Icon name={ic} size={15} />{label}</span>
-      <span className="pf-mv"><b>{fmt(mine)}</b><em className={good ? 'up' : 'down'}><Icon name={good ? 'check' : 'alert'} size={11} />{good ? 'tốt hơn TB' : 'dưới TB'}</em></span>
-      <span className="pf-mb"><i style={{ width: pct + '%', background: good ? '#2E8B57' : '#D4A017' }} />
-        <u style={{ left: (better === 'hi' ? Math.min(100, coV) : 50) + '%' }} title={'Công ty: ' + fmt(coV)} />
-        <s style={{ left: (better === 'hi' ? Math.min(100, allV) : 50) + '%' }} title={'Hệ thống: ' + fmt(allV)} /></span>
-      <span className="pf-mc small muted">Công ty {fmt(coV)} · Hệ thống {fmt(allV)}</span></div>;
+  const ranked = !!m?.ranked; const t = tier(m?.score ?? 0); const isTop = m?.rank === 1;
+  const row = (k: typeof RINGS[number][0], name: string, c: string, val: string, mine: number, allV: number, better: 'hi' | 'lo', coTxt: string) => {
+    const good = better === 'hi' ? mine >= allV : mine <= allV;
+    return <li key={k}><i style={{ background: c }} /><span className="pf2-n">{name}</span><b>{val}</b>
+      <span className={'pf2-d ' + (good ? 'up' : 'down')}>{good ? '▲' : '▼'}</span><span className="pf2-avg">{coTxt}</span></li>;
   };
-  const tip = !m ? 'Bắt đầu xử lý hồ sơ để có điểm.' : m.overdue > 0 ? `Xử lý ${m.overdue} hồ sơ đang quá hạn để gỡ ${m.overdue * cfg.overdue_penalty} điểm phạt.`
-    : m.ontime < cfg.crown_ontime ? `Ký trong ${cfg.sla_h} giờ để tăng tỉ lệ đúng hạn (đang ${Math.round(m.ontime)}%).`
-    : m.returned > 0 ? 'Kiểm tra kỹ trước khi ký để không bị trả về.' : isTop ? 'Giữ phong độ để giữ vương miện!' : 'Ký nhanh hơn trung bình cùng vai trò để lên hạng.';
+  const tip = !m ? 'Ký hồ sơ đầu tiên để bắt đầu tính điểm.' : m.overdue > 0 ? `Xử lý ${m.overdue} hồ sơ quá hạn để gỡ ${m.overdue * cfg.overdue_penalty} điểm phạt.`
+    : !ranked ? `Còn ${cfg.min_steps - m.steps} bước nữa để được xếp hạng.`
+    : m.ontime < cfg.crown_ontime ? `Ký trong ${cfg.sla_h} giờ để kéo đúng hạn lên ≥ ${cfg.crown_ontime}%.`
+    : m.returned > 0 ? 'Kiểm tra kỹ trước khi ký – bị trả về làm giảm chất lượng.' : isTop ? 'Đang dẫn đầu – giữ phong độ!' : 'Ký nhanh hơn trung bình cùng vai trò để lên hạng.';
   const tickets = tk?.balance ?? 0; const isAdmin = me.roles.includes('admin_it');
   const canSpin = tickets > 0 || (cfg.points_spin !== false && (pts?.balance ?? 0) >= cfg.spin_cost) || isAdmin;
-  const td = tk?.today ?? {}; const tdSteps = td.steps ?? 0; const tdOk = td.ontime ?? 0; const need = Math.max(0, (cfg.tk_min_steps ?? 3) - tdSteps);
-  const tdPct = tdSteps ? Math.round((tdOk / tdSteps) * 100) : 0;
-  return <section className="card pf" aria-labelledby="pf-h">
-    <div className="pf-head"><h2 id="pf-h">Hiệu quả của tôi</h2><span className="small muted">{cfg.period_days} ngày gần nhất</span></div>
-    {!m || !m.ranked ? <p className="muted small">Chưa đủ dữ liệu để xếp hạng (cần ít nhất {cfg.min_steps} bước đã ký trong kỳ{m ? `, bạn đang có ${m.steps}` : ''}).</p> : <>
-      <div className="pf-top">
-        <div className="pf-score" style={{ color: t.c }}><Ring v={m.score} c={t.c} />{isTop && <span className={'pf-crown' + (m.crown ? '' : ' off')} title={m.crown ? 'Vương miện' : 'Chưa đủ điều kiện: ' + m.crownWhy.join(', ')}><Icon name="crown" size={22} /></span>}</div>
-        <div className="pf-rank">
-          <span className="pf-tier" style={{ background: t.c }}>{t.t}</span>
-          <div className="pf-rk"><b>#{m.rank}</b><span>/{nRank} toàn hệ thống</span></div>
-          <div className="pf-rk sm"><b>#{m.rankCo}</b><span>/{m.nCo} tại {UNIT_NAME[m.unit] ?? m.unit}</span></div>
-          {m.prev != null && <span className={'pf-trend ' + (m.score >= m.prev ? 'up' : 'down')}><Icon name={m.score >= m.prev ? 'up' : 'down'} size={13} />{m.score >= m.prev ? '+' : ''}{m.score - m.prev} điểm so với kỳ trước</span>}
+  const td = tk?.today ?? {};
+  const wk = m?.weekly ?? [];
+  return <section className="card pf2" aria-labelledby="pf-h">
+    <header className="pf2-head"><div><h2 id="pf-h">Hiệu quả của tôi</h2><span className="small muted">{cfg.period_days} ngày gần nhất · so với công ty và toàn hệ thống</span></div>
+      {ranked && <span className="pf2-tier" style={{ color: t.c, borderColor: t.c }}>{t.t}</span>}</header>
+    {!m ? <p className="muted small" style={{ margin: 0 }}>Chưa có dữ liệu trong kỳ.</p> : <>
+      <div className="pf2-hero">
+        <div className="pf2-rw">
+          <Rings m={m} score={ranked ? m.score : m.steps + '/' + cfg.min_steps} color={ranked ? t.c : '#8A7F6A'} label={ranked ? 'ĐIỂM' : 'BƯỚC'} />
+          {isTop && <span className={'pf-crown' + (m.crown ? '' : ' off')} title={m.crown ? 'Vương miện' : 'Chưa đủ điều kiện: ' + m.crownWhy.join(', ')}><Icon name="crown" size={20} /></span>}
         </div>
+        <ul className="pf2-legend">
+          {row('sOntime', 'Đúng hạn', RINGS[0][2], Math.round(m.ontime) + '%', m.ontime, avg(S, 'ontime'), 'hi', 'TB ' + Math.round(avg(S, 'ontime')) + '%')}
+          {row('sSpeed', 'Tốc độ', RINGS[1][2], fH(m.avgH), m.avgH, m.roleAvgH, 'lo', 'vai trò ' + fH(m.roleAvgH))}
+          {row('sQuality', 'Chất lượng', RINGS[2][2], Math.round(m.quality) + '%', m.quality, avg(S, 'quality'), 'hi', m.returned ? m.returned + ' lần trả về' : 'không bị trả về')}
+          {row('sVolume', 'Khối lượng', RINGS[3][2], m.steps + ' bước', m.steps, avg(S, 'steps'), 'hi', 'TB ' + Math.round(avg(S, 'steps')))}
+        </ul>
       </div>
-      {isTop && !m.crown && <div className="pf-warn"><Icon name="crown" size={16} /><span><b>Hạng 1 nhưng chưa đủ điều kiện vương miện:</b> {m.crownWhy.join(' · ')}</span></div>}
-      {m.overdue > 0 && <div className="pf-warn bad"><Icon name="alert" size={16} /><span>Đang giữ <b>{m.overdue} hồ sơ quá hạn</b> · trừ {m.overdue * cfg.overdue_penalty} điểm</span></div>}
-      <div className="pf-ms">
-        {metric('Đúng hạn', 'clock', m.ontime, avg(co, 'ontime'), avg(S, 'ontime'), (v) => Math.round(v) + '%', 'hi')}
-        {metric('Tốc độ', 'run', m.avgH, avg(co, 'avgH'), avg(S, 'avgH'), fH, 'lo')}
-        {metric('Chất lượng', 'check', m.quality, avg(co, 'quality'), avg(S, 'quality'), (v) => Math.round(v) + '%', 'hi')}
-        {metric('Khối lượng', 'list', m.steps, avg(co, 'steps'), avg(S, 'steps'), (v) => Math.round(v) + ' bước', 'hi')}
+      <div className="pf2-stats">
+        <div><span>Toàn hệ thống</span><b>{ranked ? <>#{m.rank}<small>/{nRank}</small></> : '—'}</b></div>
+        <div><span>{UNIT_NAME[m.unit] ?? m.unit}</span><b>{ranked ? <>#{m.rankCo}<small>/{m.nCo}</small></> : '—'}</b></div>
+        <div><span>So kỳ trước</span><b className={m.prev == null ? '' : m.score >= m.prev ? 'up' : 'down'}>{m.prev == null || !ranked ? '—' : (m.score >= m.prev ? '+' : '') + (m.score - m.prev)}</b></div>
       </div>
-      <div className="pf-legend small muted"><span><i className="u" />TB công ty</span><span><i className="s" />TB hệ thống</span></div>
-      <Spark weekly={m.weekly} />
+      {isTop && !m.crown && <div className="pf-warn"><Icon name="crown" size={16} /><span><b>Hạng 1, chưa đủ điều kiện vương miện:</b> {m.crownWhy.join(' · ')}</span></div>}
+      {m.overdue > 0 && <div className="pf-warn bad"><Icon name="alert" size={16} /><span>Đang giữ <b>{m.overdue} hồ sơ quá hạn</b> · −{m.overdue * cfg.overdue_penalty} điểm</span></div>}
+      {wk.some((v) => v >= 0) && <div className="pf2-week"><div className="pf2-wh"><span className="small muted">Đúng hạn theo tuần</span><span className="small muted">mục tiêu {cfg.crown_ontime}%</span></div>
+        <div className="pf2-bars">{wk.map((v, i) => <span key={i} className={v < 0 ? 'nil' : v >= cfg.crown_ontime ? 'ok' : 'lo'}>
+          <i style={{ height: (v < 0 ? 4 : Math.max(6, v)) + '%' }}>{v >= 0 && <em>{v}</em>}</i><small>{i === wk.length - 1 ? 'Tuần này' : 'T-' + (wk.length - 1 - i)}</small></span>)}
+          <u style={{ bottom: `calc(${cfg.crown_ontime}% * .82 + 18px)` }} /></div></div>}
     </>}
     <div className="pf-tip"><Icon name="flame" size={16} /><span>{tip}</span></div>
-    {cfg.wheel_on !== false && <div className="pf-pts">
-      <div className="pf-coin tk"><Icon name="ticket" size={20} /></div>
-      <div className="pf-pts-t"><b>{tickets} phiếu quay · {pts?.balance ?? '…'} điểm</b>
-        <span className="small muted">{cfg.tk_on === false ? `Quay bằng điểm: ${cfg.spin_cost} điểm/lượt` : `Phiếu còn hạn ${cfg.tk_valid_days ?? 14} ngày`}</span></div>
-      <button className="btn primary pf-spin" onClick={() => setWheel(true)} disabled={!canSpin || !cfg.prizes.length}><Icon name="gift" size={18} />Quay thưởng</button>
-      {cfg.tk_on !== false && <div className="pf-today">
-        <div className="pf-today-h"><b>Hôm nay</b>{(td.tickets ?? 0) > 0 ? <span className="chip done"><Icon name="ticket" size={12} />+{td.tickets} phiếu</span>
-          : <span className="small muted">{need > 0 ? `Còn ${need} bước đúng hạn để nhận phiếu` : tdPct < (cfg.tk_min_ontime ?? 90) ? `Đúng hạn ${tdPct}% – cần ≥ ${cfg.tk_min_ontime}%` : 'Đang tính…'}</span>}</div>
-        <div className="pf-today-b"><i style={{ width: Math.min(100, (tdOk / Math.max(1, cfg.tk_min_steps ?? 3)) * 100) + '%' }} /></div>
-        <span className="small muted">Nhận {cfg.tk_base ?? 1} phiếu khi ký ≥ {cfg.tk_min_steps} bước, ≥ {cfg.tk_min_ontime}% đúng hạn · +{cfg.tk_clean_bonus} nếu không bị trả về · +{cfg.tk_top_bonus} nếu vào top {cfg.tk_top_n} trong ngày · tối đa {cfg.tk_max_day}/ngày</span>
-        {tk?.days?.length ? <div className="pf-days">{[...tk.days].reverse().map((d) => <span key={d.day} className={d.tickets ? 'on' : ''} title={d.day + ': ' + d.steps + ' bước, ' + d.ontime + ' đúng hạn'}>
-          <i>{d.tickets ? '+' + d.tickets : '·'}</i><em>{d.day.slice(8, 10)}/{d.day.slice(5, 7)}</em></span>)}</div> : null}
-      </div>}
+    {cfg.wheel_on !== false && <div className="pf2-rew">
+      <button className="pf2-rew-row" onClick={() => setMore(!more)} aria-expanded={more}>
+        <span className="pf2-tk"><Icon name="ticket" size={15} />{tickets}</span>
+        <span className="pf2-rew-t">phiếu quay{(td.tickets ?? 0) > 0 ? <em>+{td.tickets} hôm nay</em> : null}<span className="muted"> · {pts?.balance ?? '…'} điểm thưởng</span></span>
+        <Icon name="arrow" size={14} />
+      </button>
+      <button className="btn sm pf2-spin" onClick={() => setWheel(true)} disabled={!canSpin || !cfg.prizes.length}><Icon name="gift" size={15} />Quay</button>
+      {more && <p className="small muted pf2-rule">Mỗi ngày ký ≥ {cfg.tk_min_steps} bước, ≥ {cfg.tk_min_ontime}% đúng hạn → {cfg.tk_base} phiếu · +{cfg.tk_clean_bonus} nếu không bị trả về · +{cfg.tk_top_bonus} nếu top {cfg.tk_top_n} · tối đa {cfg.tk_max_day}/ngày · hạn {cfg.tk_valid_days} ngày.</p>}
     </div>}
     {wheel && createPortal(<Wheel prizes={cfg.prizes} cost={cfg.spin_cost} balance={pts?.balance ?? 0} tickets={tickets} pointsSpin={cfg.points_spin !== false} test={isAdmin && !tickets} onClose={() => { setWheel(false); loadPts(); loadTk(); }} />, document.body)}
   </section>;
-}
-
-function Spark({ weekly }: { weekly: number[] }) {
-  const pts = weekly.map((v, i) => ({ x: 8 + i * 37, y: v < 0 ? null : 50 - (v / 100) * 40, v })).filter((p) => p.y != null) as { x: number; y: number; v: number }[];
-  if (pts.length < 2) return null;
-  return <div className="pf-spark"><span className="small muted">Tỉ lệ đúng hạn 6 tuần</span>
-    <svg viewBox="0 0 200 56" preserveAspectRatio="none" aria-hidden="true">
-      <line x1="0" x2="200" y1={50 - 36} y2={50 - 36} stroke="#E3DCCB" strokeDasharray="3 3" />
-      <polyline points={pts.map((p) => p.x + ',' + p.y).join(' ')} fill="none" stroke="#7E6024" strokeWidth="2.5" strokeLinejoin="round" />
-      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 4 : 2.5} fill={i === pts.length - 1 ? '#7E6024' : '#fff'} stroke="#7E6024" strokeWidth="1.5" />)}
-    </svg></div>;
 }
 
 const WICONS = ['gift', 'star', 'bolt', 'refresh', 'coffee', 'ticket', 'crown', 'check'];
