@@ -23,6 +23,7 @@ import WfRun from './wf/WfRun';
 import WfPrint from './wf/WfPrint';
 import './wf/wf.css';
 import Dashboard from './pages/Dashboard';
+import Simulate from './pages/Simulate';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -73,6 +74,7 @@ function Shell() {
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
     { to: '/thong-ke', icon: 'chart', label: 'Thống kê', short: 'Thống kê' },
     ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
+    ...(can('admin_it') ? [{ to: '/mo-phong', icon: 'run', label: 'Mô phỏng quy trình', short: 'Mô phỏng', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
   const badge = (n?: number) => (n ? <span className="nav-badge" aria-label={n + ' phiếu chờ duyệt'}>{n}</span> : null);
@@ -121,6 +123,7 @@ function Shell() {
             <Appearance />
             <nav className="sheet-list" onClick={() => setSheet(false)}>
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
+              {can('admin_it') && <NavLink to="/mo-phong"><Icon name="run" />Mô phỏng quy trình</NavLink>}
               {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}
               <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
               <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
@@ -139,6 +142,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/thong-ke" element={<Dashboard />} />
+          {can('admin_it') && <Route path="/mo-phong" element={<Simulate />} />}
           <Route path="/bang" element={<Board />} />
           <Route path="/so-do" element={<FlowMap />} />
           <Route path="/don" element={<Orders />} />
@@ -161,7 +165,7 @@ function Shell() {
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
-        {items.filter((i) => i.to !== '/quan-tri' && i.to !== '/quy-trinh-moi').map((i) => (
+        {items.filter((i) => i.to !== '/quan-tri' && i.to !== '/quy-trinh-moi' && i.to !== '/mo-phong').map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
       <UpdateBar /><Toaster /><ConfirmHost />
