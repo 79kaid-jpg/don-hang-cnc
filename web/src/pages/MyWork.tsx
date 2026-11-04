@@ -8,7 +8,8 @@ import { Icon } from '../components/Icon';
 import { InstallHint } from './Install';
 import { ZaloLink } from '../components/ZaloLink';
 import { QtTag, qtOfDoc, qtOfTab } from '../components/QtTag';
-import { COMPANY, FINAL, STATUS, type Company, type Proc } from '../lib/proc';
+import { COMPANY, FINAL, STATUS, type Batch, type Company, type Doc, type Proc } from '../lib/proc';
+import { isStuck } from '../lib/holders';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
 export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
@@ -37,6 +38,20 @@ type M = { doc_id: string | null; batch_id: string; order_id: string; proc: Proc
 export default function MyWork() {
   const { me } = useAuth();
   const [rows, setRows] = useState<M[] | null>(null); const [fq, setFq] = useState('');
+  const [st, setSt] = useState<{ run: number; late: number; stuck: number } | null>(null);
+  const [mine, setMine] = useState<{ id: string; order_id: string; proc: Proc; code: string; title: string; action: string; at: string }[]>([]);
+  useEffect(() => { if (!me) return;
+    Promise.all([sb.from('orders').select('id, code, due_date, status'), sb.from('batches').select('id, order_id, proc, title, status'), sb.from('docs').select('id, batch_id, status_at, signs')]).then(([o, b, d]) => {
+      const os = (o.data ?? []) as Pick<Order, 'id' | 'code' | 'due_date' | 'status'>[]; const bs = (b.data ?? []) as Batch[]; const ds = (d.data ?? []) as Doc[];
+      const live = bs.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky');
+      const last = (id: string) => ds.filter((x) => x.batch_id === id).map((x) => x.status_at).sort().pop();
+      const today = new Date().toISOString().slice(0, 10);
+      setSt({ run: live.length, stuck: live.filter((x) => isStuck(last(x.id))).length,
+        late: os.filter((x) => x.due_date && x.due_date < today && !['hoan_tat', 'huy'].includes(x.status) && bs.some((y) => y.order_id === x.id && (y.status === 'dang_lam' || y.status === 'cho_ky'))).length });
+      const sg = ds.flatMap((x) => (x.signs ?? []).filter((g) => g.user === me.id).map((g) => ({ x, g }))).sort((a, z) => z.g.at.localeCompare(a.g.at)).slice(0, 6);
+      setMine(sg.map(({ x, g }) => { const bb = bs.find((y) => y.id === x.batch_id); const oo = os.find((y) => y.id === bb?.order_id);
+        return { id: x.id + g.at, order_id: bb?.order_id ?? '', proc: (bb?.proc ?? 'QT0') as Proc, code: oo?.code ?? '', title: bb?.title ?? '', action: g.action, at: g.at }; }));
+    }); }, [me]);
   useEffect(() => { if (me) sb.rpc('my_docs').then(({ data }) => setRows((data as M[]) ?? [])); }, [me]);
   const h = new Date().getHours(); const hello = h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
   const shown = (rows ?? []).filter((r) => !fq || r.proc === fq);
@@ -45,6 +60,11 @@ export default function MyWork() {
     <>
       <div className="page-head"><div><h1>{hello}, {me?.full_name}</h1>
         <p className="muted">{rows ? `${rows.length} việc đến lượt bạn` : 'Đang tải việc của bạn…'}</p></div></div>
+      {st && <div className="mw-kpi">
+        <Link to="/so-do?qt=TQ"><i className="ov-ic run"><Icon name="run" size={20} /></i><b>{st.run}</b><span>Hồ sơ đang chạy</span></Link>
+        <Link to="/so-do?qt=TQ" className={st.stuck ? 'bad' : ''}><i className={'ov-ic ' + (st.stuck ? 'stuck' : 'ok')}><Icon name={st.stuck ? 'hourglass' : 'check'} size={20} /></i><b>{st.stuck}</b><span>Kẹt ≥ 2 ngày</span></Link>
+        <Link to="/don" className={st.late ? 'bad' : ''}><i className={'ov-ic ' + (st.late ? 'stuck' : 'ok')}><Icon name="alert" size={20} /></i><b>{st.late}</b><span>Đơn quá hạn giao</span></Link>
+      </div>}
       <InstallHint />
       <ZaloLink compact />
       <section className="card flush" aria-labelledby="h-todo">
@@ -67,6 +87,14 @@ export default function MyWork() {
             </ul>)}
         </div>
       </section>
+      {mine.length > 0 && <section className="card flush" aria-labelledby="h-mine">
+        <div className="card-head"><h2 id="h-mine">Tôi đã xử lý gần đây</h2></div>
+        <ul className="worklist">{mine.map((r) => (
+          <li key={r.id}><Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
+            <QtTag qt={r.proc} /><span className="work-main"><b>{r.code}</b><span className="small muted">{r.title}</span></span>
+            <span className="small">{({ ky: 'Đã ký', tra_ve: 'Đã trả về', fail: 'Từ chối' } as Record<string, string>)[r.action] ?? r.action}<span className="muted"> · {dt(r.at)}</span></span>
+            <Icon name="arrow" size={18} /></Link></li>))}</ul>
+      </section>}
     </>
   );
 }

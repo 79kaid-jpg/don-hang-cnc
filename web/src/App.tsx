@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Appearance } from './components/Appearance';
 import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
@@ -36,6 +37,9 @@ function Shell() {
     const h = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
     window.addEventListener('busy', h); return () => window.removeEventListener('busy', h);
   }, []);
+  // Điện thoại: cuộn xuống thì thu nút nổi (Tạo đơn) cho khỏi che nội dung, cuộn lên thì hiện lại
+  useEffect(() => { let y = scrollY; const f = () => { const d = scrollY - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && scrollY > 80); y = scrollY; } };
+    addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); }, []);
   useEffect(() => { if (me) sb.rpc('wf_inbox').then(({ data }) => setWfN(((data ?? []) as unknown[]).length)); }, [me]);
   useEffect(() => {
     if (!me) return;
@@ -79,6 +83,7 @@ function Shell() {
         <div className="side-foot">
           <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
             <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
+          <details className="nav-appear"><summary className="nav-item"><Icon name="sun" />Giao diện</summary><Appearance /></details>
           <NavLink to="/cai-app" className="nav-item"><Icon name="download" />Hướng dẫn</NavLink>
           <button className="nav-item kbd-link" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => dispatchEvent(new Event('show-shortcuts'))}><Icon name="list" />Phím tắt<kbd>?</kbd></button>
           <NavLink to="/zalo" className="nav-item"><Icon name="bell" />Thông báo Zalo{me.zalo_chat_id ? '' : <span className="nav-badge" aria-label="chưa liên kết">!</span>}</NavLink>
@@ -99,6 +104,7 @@ function Shell() {
             <span className="sheet-grip" aria-hidden="true" />
             <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
               <span style={{ minWidth: 0 }}><b style={{ display: 'block' }}>{me.full_name}</b><span className="small muted">{me.unit} · {me.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}</span></span></div>
+            <Appearance />
             <nav className="sheet-list" onClick={() => setSheet(false)}>
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
               {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}

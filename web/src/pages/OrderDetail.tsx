@@ -80,7 +80,7 @@ export default function OrderDetail() {
         <div className="od-procs">
           {PROCS.map((p) => { const s = sum(p); return (
             <button key={p} className={'od-proc ' + p.toLowerCase() + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })}>
-              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls}>{s.t}</span></button>); })}
+              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls} title={s.d}>{s.t}</span>{s.d && <span className="small muted od-sd">{s.d}</span>}</button>); })}
         </div>
       </div>
       <div className="qt-group od-group"><div className="qt-tabs" role="tablist">

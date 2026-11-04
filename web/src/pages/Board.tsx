@@ -4,6 +4,7 @@ import { sb, errText, type Customer, type Order } from '../lib/supabase';
 import { dt } from '../lib/format';
 import { COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, STATUS, columnsOf, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
 import { Icon } from '../components/Icon';
+import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 
@@ -19,7 +20,7 @@ export default function Board() {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
-  const [col, setCol] = useState('');
+  const [col, setCol] = useState(''); const holder = useHolders();
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
   const load = async () => {
     const [a, b, c, d, e] = await Promise.all([
@@ -125,13 +126,13 @@ export default function Board() {
         <div><h1>Bảng Kanban</h1><p className="muted">Mỗi thẻ là một hồ sơ ({qt === 'QT0' ? 'lần bóc tách' : qt === 'QT1' ? 'XNĐH' : qt === 'QT2' ? 'lệnh gia công' : 'đợt giao'}). {qt === 'QT0' ? 'Chỉ Phương Nam CNC.' : 'Đi lần lượt Phương Nam CNC → IPC → Hanwha, cuối cùng ký tay.'}</p></div>
         <div className="row">
           <Link className="btn sm hide-m" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
-          <Link className="btn sm primary fab-m" to="/don/moi"><Icon name="plus" size={18} />Tạo đơn</Link>
+          <Link className="btn sm primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn</span></Link>
         </div>
       </div>
       <div className="row">
-        <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm" placeholder="Tìm mã đơn, dự án, lệnh…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm" placeholder="Lọc bảng: mã đơn, dự án, lệnh…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <button className="pill-toggle" aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)} title="Phím F">{onlyMine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
-        <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))}><kbd>J</kbd><kbd>K</kbd> chọn · <kbd>M</kbd> chuyển · <kbd>R</kbd> trả về · <kbd>?</kbd></button>
+        <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} title="Phím tắt: J K chọn · M chuyển · R trả về" aria-label="Xem phím tắt"><kbd>?</kbd> Phím tắt</button>
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
@@ -165,7 +166,9 @@ export default function Board() {
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link">
                           <span className="kb-code">{it.o?.code}</span><span className="kb-proj">{it.b.title}</span>
                           <span className="small muted">{[it.o?.project, cust[it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
-                        <div className="kb-meta">{it.doc && <span>Tới bước {dt(it.doc.status_at)}</span>}</div>
+                        <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
+                          {h && <span className="kb-who" title={h.what}><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</span>}
+                          {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
                         {it.mine && <div className="kb-acts">
                           {it.key === 'ky' ? <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>Tải bản {FINAL[qt].toLowerCase()} →</Link>
                             : <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>{NEXT_LABEL[it.doc?.status ?? ''] ?? 'Mở'} →</Link>}

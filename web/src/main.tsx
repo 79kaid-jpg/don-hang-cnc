@@ -5,4 +5,6 @@ import App from './App';
 import './styles.css';
 import { startPwa } from './lib/pwa';
 startPwa();
+import { applyAppearance } from './components/Appearance';
+applyAppearance(); matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyAppearance);
 createRoot(document.getElementById('root')!).render(<React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>);

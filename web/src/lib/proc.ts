@@ -84,12 +84,16 @@ export function columnsOf(p: Proc): { key: string; title: string; group?: string
 }
 
 /** Tóm tắt tiến độ một quy trình của một đơn */
-export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; cls: 'idle' | 'done' | 'bad' | 'wait' } {
-  const list = bs.filter((b) => b.proc === p); if (!list.length) return { t: 'Chưa mở', cls: 'idle' };
+/** Trạng thái thống nhất toàn app: Chưa mở · Đang làm · Chờ ký · Xong · Fail. d = chi tiết bước (để hiện phụ / tooltip) */
+export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; d: string; cls: 'idle' | 'done' | 'bad' | 'wait' | 'sign' } {
+  const list = bs.filter((b) => b.proc === p); if (!list.length) return { t: 'Chưa mở', d: '', cls: 'idle' };
   const open = list.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky');
   const done = list.filter((b) => b.status === 'hoan_tat').length;
-  if (!open.length) return { t: p === 'QT0' ? (done ? 'Đã duyệt' : 'Fail') : done + ' ' + (p === 'QT2' ? 'lệnh' : p === 'QT3' ? 'đợt' : 'bộ') + ' xong', cls: done ? 'done' : 'bad' };
+  const unit = p === 'QT0' ? 'lần' : p === 'QT2' ? 'lệnh' : p === 'QT3' ? 'đợt' : 'bộ';
+  if (!open.length) return done ? { t: 'Xong', d: done > 1 ? done + ' ' + unit + ' xong' : '', cls: 'done' } : { t: 'Fail', d: 'Bị từ chối', cls: 'bad' };
   const b = open[open.length - 1]; const st = stepOf(b, ds);
-  const lab = st.key === 'ky' ? FINAL[p] : (st.company && p !== 'QT0' ? (st.company === 'PN' ? 'PN' : COMPANY[st.company]) + ' · ' : '') + (STATUS[st.doc?.status ?? ''] ?? '');
-  return { t: (open.length > 1 ? open.length + ' đang làm · ' : '') + lab, cls: 'wait' };
+  const more = (open.length > 1 ? open.length + ' ' + unit + ' đang mở · ' : '') + (done ? done + ' xong · ' : '');
+  if (st.key === 'ky') return { t: 'Chờ ký', d: more + FINAL[p], cls: 'sign' };
+  const lab = (st.company && p !== 'QT0' ? (st.company === 'PN' ? 'PN' : COMPANY[st.company]) + ' · ' : '') + (STATUS[st.doc?.status ?? ''] ?? '');
+  return { t: 'Đang làm', d: more + lab, cls: 'wait' };
 }
