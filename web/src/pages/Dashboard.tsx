@@ -200,7 +200,7 @@ export default function Dashboard() {
   );
 }
 
-const fmtH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? Math.round(h) + ' giờ' : (h / 24).toFixed(1) + ' ngày');
+const fmtH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? Math.round(h) + 'h' : (h / 24).toFixed(1) + ' ngày');
 
 function Kpi({ ic, tone, v, t, onClick }: { ic: string; tone: string; v: ReactNode; t: string; onClick?: () => void }) {
   return <button className={'db-k t-' + tone + (tone === 'bad' ? ' bad' : '')} onClick={onClick} disabled={!onClick}><i className={'ov-ic ' + (tone === 'bad' ? 'stuck' : tone)}><Icon name={ic} size={20} /></i><b>{v}</b><span>{t}</span></button>;

@@ -7,7 +7,7 @@ import { Icon, PATHS as ICON_PATH } from './Icon';
 import { toast } from './ui';
 
 const tier = (s: number) => (s >= 85 ? { t: 'Xuất sắc', c: '#2E8B57' } : s >= 70 ? { t: 'Tốt', c: '#7E6024' } : s >= 50 ? { t: 'Khá', c: '#B4690E' } : { t: 'Cần cải thiện', c: '#C2410C' });
-const fH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? h.toFixed(1).replace('.0', '') + ' giờ' : (h / 24).toFixed(1) + ' ngày');
+const fH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? h.toFixed(1).replace('.0', '') + 'h' : (h / 24).toFixed(1) + ' ngày');
 const avg = (l: Score[], k: keyof Score) => { const v = l.filter((s) => s.ranked).map((s) => s[k] as number); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
 
 const RINGS = [['sOntime', 'Đúng hạn', '#2E9E5B'], ['sSpeed', 'Tốc độ', '#2F7BD6'], ['sQuality', 'Chất lượng', '#8A5CD1'], ['sVolume', 'Khối lượng', '#E0962B']] as const;

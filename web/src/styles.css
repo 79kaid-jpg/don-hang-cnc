@@ -1225,3 +1225,8 @@ html[data-fs=lg] body{zoom:1.12}
   .db-kpi>.db-k:first-child b{font-size:24px!important}.db-kpi>.db-k:first-child i{width:34px!important;height:34px!important}
   .db-k.t-bad::after{width:3px}
 }
+@media (max-width:760px){
+  .sb-head{padding:8px 10px;gap:6px 8px}.sb-name b{font-size:13px}.sb-sum{gap:4px}.sb-sum>b{font-size:15px}.sb-sum .small{font-size:11px}
+  .sb-slow{font-size:10px;padding:1px 5px}.sb-stack{height:24px}.sb-stack i em{font-size:11px}
+  .db-hbar b{font-size:13px}.db-hl{font-size:12.5px}
+}
