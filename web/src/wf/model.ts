@@ -3,17 +3,25 @@ import { sb } from '../lib/supabase';
 
 export type Assignee = { type: 'user' | 'group' | 'role'; id: string };
 export type StepKind = 'lap' | 'kiem_tra' | 'duyet' | 'ky';
+export type CheckItem = { id: string; text: string; kind: 'check' | 'file' };
 export type Step = {
   id: string; name: string; kind: StepKind; lane: string; assignee: Assignee;
-  sla_hours?: number; checklist?: string[]; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
+  /** Người theo dõi: thấy việc ở bước này. Người quản trị giai đoạn: sửa nội dung, phân công / đổi người làm */
+  watchers?: Assignee[]; managers?: Assignee[];
+  sla_hours?: number; checklist?: (string | CheckItem)[]; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
 };
 export type Lane = { id: string; name: string };
 export type Def = { lanes: Lane[]; steps: Step[] };
 export type Process = { id: string; code: string; name: string; description: string; category: string; is_template: boolean; created_at: string };
 export type Version = { id: string; process_id: string; version: number; status: 'nhap' | 'phat_hanh' | 'luu_tru'; def: Def; updated_at: string; published_at: string | null };
 export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null };
-export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; due_at: string | null; checklist: Record<string, boolean>; done_by: string | null; note: string; created_at: string; done_at: string | null };
-export type MyTask = { task_id: string; instance_id: string; title: string; process_name: string; step_name: string; due_at: string | null; is_test: boolean; created_at: string };
+export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null;
+  files: { item: string; name: string; path: string; at: string; by: string }[]; due_at: string | null; checklist: Record<string, boolean>; done_by: string | null; note: string; created_at: string; done_at: string | null };
+export type Vai = 'lam' | 'phan_cong' | 'quan_tri' | 'theo_doi';
+export type MyTask = { task_id: string; instance_id: string; title: string; process_name: string; step_name: string; due_at: string | null; is_test: boolean; created_at: string; assigned_to: string | null; vai: Vai };
+export const VAI: Record<Vai, string> = { lam: 'Tôi làm', phan_cong: 'Cần phân công', quan_tri: 'Tôi quản trị', theo_doi: 'Tôi theo dõi' };
+/** Mục checklist: hỗ trợ dạng chuỗi cũ */
+export const items = (s: Step): CheckItem[] => (s.checklist ?? []).map((c) => typeof c === 'string' ? { id: c, text: c, kind: 'check' } : c);
 
 export const KIND: Record<StepKind, { t: string; c: string }> = {
   lap: { t: 'Lập', c: 'k-lap' }, kiem_tra: { t: 'Kiểm tra', c: 'k-kt' }, duyet: { t: 'Duyệt', c: 'k-duyet' }, ky: { t: 'Ký', c: 'k-ky' }
@@ -38,7 +46,9 @@ export function validate(d: Def): { step?: string; msg: string }[] {
   d.steps.forEach((s, i) => {
     const n = `Bước ${i + 1}`;
     if (!s.name.trim()) e.push({ step: s.id, msg: `${n} chưa có tên` });
-    if (!s.assignee?.id) e.push({ step: s.id, msg: `${n}${s.name ? ' (' + s.name + ')' : ''} chưa có người làm` });
+    if (!s.assignee?.id && !s.managers?.length) e.push({ step: s.id, msg: `${n}${s.name ? ' (' + s.name + ')' : ''} chưa có người làm hoặc người quản trị để phân công` });
+    if (i === 0 && !s.assignee?.id) e.push({ step: s.id, msg: 'Bước đầu tiên phải có người làm' });
+    if (items(s).some((c) => !c.text.trim())) e.push({ step: s.id, msg: `${n} có mục checklist trống` });
     if (seen.has(s.id)) e.push({ step: s.id, msg: `${n} trùng mã` });
     if (s.lane && !lanes.has(s.lane)) e.push({ step: s.id, msg: `${n} thuộc làn đã xoá` });
     if (i === 0 && s.allow_back) e.push({ step: s.id, msg: 'Bước đầu tiên không thể trả lại' });
@@ -63,7 +73,7 @@ export function loadDirectory(): Promise<Directory> {
   return dirCache;
 }
 export function who(a: Assignee | undefined, dir: Directory | null): string {
-  if (!a?.id) return 'Chưa chọn người làm';
+  if (!a?.id) return 'Người quản trị phân công';
   if (!dir) return '…';
   if (a.type === 'user') return dir.users.find((u) => u.id === a.id)?.full_name ?? 'Người đã nghỉ';
   if (a.type === 'group') return 'Nhóm ' + (dir.groups.find((g) => g.id === a.id)?.name ?? '?');

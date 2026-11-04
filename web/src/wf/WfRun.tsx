@@ -4,7 +4,7 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
-import { ISTATUS, KIND, TSTATUS, fmtDT, loadDirectory, slaLeft, userName, who,
+import { ISTATUS, KIND, TSTATUS, fmtDT, items, loadDirectory, slaLeft, userName, who,
   type Def, type Directory, type Instance, type Step, type Task, type Version } from './model';
 
 type Ev = { id: number; action: string; detail: string; actor: string; real_actor: string; at: string };
@@ -17,7 +17,9 @@ export default function WfRun() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [evs, setEvs] = useState<Ev[]>([]);
   const [dir, setDir] = useState<Directory | null>(null);
-  const [mineOk, setMineOk] = useState(false);
+  const [rights, setRights] = useState<{ do: boolean; manage: boolean; watch: boolean }>({ do: false, manage: false, watch: false });
+  const [pick, setPick] = useState('');
+  const [busyItem, setBusyItem] = useState('');
   const [ck, setCk] = useState<Record<string, boolean>>({});
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
@@ -30,9 +32,9 @@ export default function WfRun() {
       sb.from('wf_versions').select('*, p:wf_processes(name)').eq('id', inst.version_id).single(),
       sb.from('wf_tasks').select('*').eq('instance_id', id).order('created_at'),
       sb.from('wf_events').select('*').eq('instance_id', id).order('id'),
-      sb.rpc('wf_my_tasks')]);
+      sb.rpc('wf_my_rights', { p_inst: id })]);
     setVer(v.data as Version & { p: { name: string } }); setTasks((t.data ?? []) as Task[]); setEvs((e.data ?? []) as Ev[]);
-    setMineOk(((m.data ?? []) as { instance_id: string }[]).some((x) => x.instance_id === id));
+    setRights((m.data as typeof rights) ?? { do: false, manage: false, watch: false }); setPick('');
     setCk({}); setNote('');
   };
   useEffect(() => { load(); loadDirectory().then(setDir); }, [id]);
@@ -40,7 +42,32 @@ export default function WfRun() {
   if (!ins || !ver) return err ? <Msg err={err} /> : <Skeleton />;
   const def: Def = ver.def; const cur: Step | undefined = def.steps[ins.step_idx];
   const open = tasks.find((t) => t.status === 'cho');
-  const canAct = ins.status === 'dang_chay' && !!open && mineOk;
+  const canAct = ins.status === 'dang_chay' && !!open && rights.do;
+  const canEdit = ins.status === 'dang_chay' && !!open && (rights.do || rights.manage);
+  const unassigned = !!open && !open.assigned_to && !cur?.assignee?.id;
+  const filesOf = (key: string) => (open?.files ?? []).filter((f) => f.item === key);
+  const upload = async (key: string, fl: FileList | null) => {
+    if (!fl?.length || !open) return; setBusyItem(key); setErr('');
+    for (const file of Array.from(fl)) {
+      const path = `wf/${ins.id}/${open.id}/${Date.now()}_${file.name.replace(/[^\w.\-]+/g, '_')}`;
+      const r = await sb.storage.from('files').upload(path, file);
+      if (r.error) { setErr(errText(r.error)); break; }
+      const { error } = await sb.rpc('wf_task_file', { p_task: open.id, p_item: key, p_name: file.name, p_path: path, p_remove: false });
+      if (error) { setErr(errText(error)); break; }
+    }
+    setBusyItem(''); load();
+  };
+  const unlink = async (path: string, name: string) => {
+    if (!open || !(await confirmDialog(`Gỡ file "${name}" khỏi bước này?`, 'Gỡ file'))) return;
+    const { error } = await sb.rpc('wf_task_file', { p_task: open.id, p_item: '', p_name: name, p_path: path, p_remove: true });
+    if (error) return setErr(errText(error)); load();
+  };
+  const openFile = async (path: string) => { const { data } = await sb.storage.from('files').createSignedUrl(path, 600); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); };
+  const assign = async () => {
+    if (!open || !pick) return;
+    const { error } = await sb.rpc('wf_assign', { p_task: open.id, p_user: pick, p_note: '' });
+    if (error) return setErr(errText(error)); toast('Đã phân công'); load();
+  };
 
   const act = async (action: 'next' | 'back' | 'fail') => {
     if (!open) return;
@@ -56,7 +83,7 @@ export default function WfRun() {
     const { error } = await sb.rpc('wf_cancel', { p_inst: ins.id, p_note: r });
     if (error) return setErr(errText(error)); toast('Đã huỷ'); load();
   };
-  const ckDone = (cur?.checklist ?? []).every((c) => ck[c]);
+  const ckDone = cur ? items(cur).every((c) => c.kind === 'file' ? filesOf(c.id).length > 0 : ck[c.id]) : true;
   const sla = open && slaLeft(open.due_at);
 
   return (
@@ -86,18 +113,42 @@ export default function WfRun() {
               <div className="small muted">Người làm: {who(cur.assignee, dir)}</div></div>
             {sla && <span className={'chip ' + (sla.late ? 'bad' : 'wait')}><Icon name="clock" size={13} />{sla.text}</span>}
           </div>
+          <div className="small muted">Đang giao cho: <b>{open?.assigned_to ? userName(open.assigned_to, dir) : who(cur.assignee, dir)}</b>
+            {cur.managers?.length ? <> · Quản trị: {cur.managers.map((m) => who(m, dir)).join(', ')}</> : null}
+            {cur.watchers?.length ? <> · Theo dõi: {cur.watchers.map((m) => who(m, dir)).join(', ')}</> : null}</div>
           {cur.guide && <p className="small" style={{ margin: 0 }}>{cur.guide}</p>}
+
+          {rights.manage && (
+            <div className="wf-assign">
+              <Icon name="users" size={18} /><b className="small">{unassigned && !open?.assigned_to ? 'Việc chưa có người làm – phân công:' : 'Đổi người làm:'}</b>
+              <select value={pick} aria-label="Chọn người làm" onChange={(e) => setPick(e.target.value)}>
+                <option value="">— Chọn người —</option>{dir?.users.map((u) => <option key={u.id} value={u.id}>{u.full_name} · {u.unit}</option>)}</select>
+              <button className="btn sm primary" disabled={!pick} onClick={assign}>Phân công</button>
+            </div>)}
+
+          {items(cur).length > 0 && <div className="f"><span>Checklist</span>
+            {items(cur).map((c) => c.kind === 'file' ? (
+              <div key={c.id} className={'wf-file' + (filesOf(c.id).length ? ' ok' : '')}>
+                <Icon name={filesOf(c.id).length ? 'check' : 'upload'} size={16} /><b className="small" style={{ flex: '1 1 160px' }}>{c.text}</b>
+                {filesOf(c.id).map((f) => <span key={f.path} className="row" style={{ gap: 4 }}>
+                  <button className="linkish" onClick={() => openFile(f.path)}>{f.name}</button>
+                  {canEdit && <button className="linkish small" aria-label={'Gỡ ' + f.name} onClick={() => unlink(f.path, f.name)}>(gỡ)</button>}</span>)}
+                {canEdit && <label className="btn sm">{busyItem === c.id ? 'Đang tải…' : 'Tải file'}<input type="file" multiple hidden onChange={(e) => upload(c.id, e.target.files)} /></label>}
+              </div>) : (
+              <label key={c.id} className="wf-toggles" style={{ flexDirection: 'row' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 40 }}>
+                  <input type="checkbox" disabled={!canAct} checked={!!ck[c.id]} onChange={(e) => setCk({ ...ck, [c.id]: e.target.checked })} />{c.text}</span></label>))}
+          </div>}
+
           {canAct ? <>
-            {!!cur.checklist?.length && <div className="wf-toggles" role="group" aria-label="Checklist">
-              {cur.checklist.map((c) => <label key={c}><input type="checkbox" checked={!!ck[c]} onChange={(e) => setCk({ ...ck, [c]: e.target.checked })} />{c}</label>)}</div>}
             <label className="f"><span>Ghi chú{cur.require_note ? ' (bắt buộc)' : ''}</span><textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ý kiến, lý do trả lại / từ chối…" /></label>
             <div className="row wf-actions">
               <button className="btn primary" disabled={!ckDone} onClick={() => act('next')}><Icon name="check" size={18} />{cur.kind === 'duyet' ? 'Duyệt' : cur.kind === 'kiem_tra' ? 'Đạt, chuyển tiếp' : 'Xong, chuyển tiếp'}</button>
               {cur.allow_back && ins.step_idx > 0 && <button className="btn" onClick={() => act('back')}><Icon name="back" size={18} />Trả lại</button>}
               {cur.allow_fail && <button className="btn danger" onClick={() => act('fail')}><Icon name="x" size={18} />Từ chối (Fail)</button>}
             </div>
-            {!ckDone && <p className="small muted" style={{ margin: 0 }}>Tích đủ checklist để chuyển bước.</p>}
-          </> : <p className="small muted" style={{ margin: 0 }}>Đang chờ {who(cur.assignee, dir)} xử lý.{can('admin_it') ? ' Dùng “Đăng nhập với tư cách” ở Quản trị để thử vai người này.' : ''}</p>}
+            {!ckDone && <p className="small muted" style={{ margin: 0 }}>Hoàn thành đủ checklist (tích và tải file) để chuyển bước.</p>}
+          </> : <p className="small muted" style={{ margin: 0 }}>{unassigned && !open?.assigned_to ? 'Chờ người quản trị giai đoạn phân công người làm.' : `Đang chờ ${open?.assigned_to ? userName(open.assigned_to, dir) : who(cur.assignee, dir)} xử lý.`}{rights.watch && !rights.manage ? ' Bạn đang theo dõi bước này.' : ''}</p>}
         </section>)}
 
       {/* Lịch sử */}
@@ -109,6 +160,7 @@ export default function WfRun() {
               <div className="row" style={{ justifyContent: 'space-between' }}><b>{t.step_name}</b><span className="small muted">{TSTATUS[t.status]}</span></div>
               <div className="small muted">Mở {fmtDT(t.created_at)}{t.done_at ? ` · xử lý ${fmtDT(t.done_at)} bởi ${userName(t.done_by, dir)}` : ''}</div>
               {t.note && <div className="small">“{t.note}”</div>}
+              {t.status !== 'cho' && t.files?.length > 0 && <div className="row small">{t.files.map((f) => <button key={f.path} className="linkish" onClick={() => openFile(f.path)}><Icon name="file" size={13} /> {f.name}</button>)}</div>}
             </li>))}
         </ol>
         <details><summary className="small muted">Nhật ký chi tiết ({evs.length})</summary>

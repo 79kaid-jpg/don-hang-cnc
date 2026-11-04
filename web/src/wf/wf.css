@@ -60,3 +60,12 @@ a.wf-item:hover{border-color:#BFA977}
   .wf-actions .btn{flex:1 1 auto}
   .wf-table th:nth-child(4),.wf-table td:nth-child(4){display:none}
 }
+.wf-pill{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border:1px solid var(--line2);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
+.wf-pill button{border:0;background:none;color:var(--muted);display:inline-flex;padding:5px;border-radius:50%}
+.wf-form .wf-ck-in{min-height:36px;flex:1;border:1px solid transparent;background:transparent}.wf-form .wf-ck-in:focus{border-color:var(--line2);background:#fff}
+.wf-form .wf-ck-kind{width:auto;min-height:36px;font-size:13px;padding:4px 6px}
+.wf-file{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px dashed var(--line2);border-radius:var(--r-sm)}
+.wf-file.ok{border-style:solid;border-color:var(--blue);background:var(--blue-bg)}
+.wf-file a,.wf-file .linkish{font-size:14px}
+.wf-assign{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-radius:var(--r-sm);background:var(--wait-bg)}
+.wf-assign select{font:inherit;min-height:40px;border:1px solid var(--line2);border-radius:var(--r-sm);padding:4px 8px;flex:1 1 200px}

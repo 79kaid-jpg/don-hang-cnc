@@ -4,8 +4,8 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
-import { KIND, ROLE_LABEL, VSTATUS, emptyDef, loadDirectory, newStep, uid, validate, who,
-  type Def, type Directory, type Process, type Step, type StepKind, type Version } from './model';
+import { KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
+  type Assignee, type CheckItem, type Def, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
 const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
 
@@ -133,7 +133,7 @@ export default function WfEditor() {
                     <span className="small muted wf-meta">
                       <span className={'wf-kind ' + KIND[s.kind].c}>{KIND[s.kind].t}</span>
                       {def.lanes.find((l) => l.id === s.lane)?.name} · {who(s.assignee, dir)}
-                      {s.sla_hours ? ` · ${s.sla_hours} giờ` : ''}{s.checklist?.length ? ` · ${s.checklist.length} điều kiện` : ''}
+                      {s.sla_hours ? ` · ${s.sla_hours} giờ` : ''}{s.checklist?.length ? ` · ${s.checklist.length} điều kiện` : ''}{s.managers?.length ? ` · ${s.managers.length} quản trị` : ''}{s.watchers?.length ? ` · ${s.watchers.length} theo dõi` : ''}
                       {s.allow_back ? ' · trả lại' : ''}{s.allow_fail ? ' · Fail' : ''}
                     </span>
                   </span>
@@ -160,7 +160,8 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
   set: (p: Partial<Step>) => void; onMove: (d: number) => void; onDup: () => void; onDel: () => void;
 }) {
   const [item, setItem] = useState('');
-  const addItem = () => { if (item.trim()) { set({ checklist: [...(s.checklist ?? []), item.trim()] }); setItem(''); } };
+  const setItems = (v: CheckItem[]) => set({ checklist: v });
+  const addItem = (kind: CheckItem['kind']) => { const t = item.trim() || (kind === 'file' ? 'Tài liệu đính kèm' : ''); if (!t) return; setItems([...items(s), { id: uid('c'), text: t, kind }]); setItem(''); };
   return (
     <fieldset className="wf-form" disabled={ro}>
       <label className="f"><span>Tên bước</span><input value={s.name} autoFocus={!s.name} placeholder="Ví dụ: Kiểm tra bản vẽ" onChange={(e) => set({ name: e.target.value })} /></label>
@@ -178,7 +179,7 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
             <option value="user">Một người</option><option value="group">Nhóm làm việc</option><option value="role">Vai trò</option></select></label>
         <label className="f"><span>Người làm</span>
           <select value={s.assignee.id} onChange={(e) => set({ assignee: { ...s.assignee, id: e.target.value } })}>
-            <option value="">— Chọn —</option>
+            <option value="">{i === 0 ? '— Chọn —' : '— Chưa xác định (người quản trị phân công) —'}</option>
             {s.assignee.type === 'user' && dir?.users.map((u) => <option key={u.id} value={u.id}>{u.full_name} · {u.unit}</option>)}
             {s.assignee.type === 'group' && dir?.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             {s.assignee.type === 'role' && dir?.roles.map((r) => <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>)}
@@ -187,12 +188,21 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
       <label className="f" style={{ maxWidth: 220 }}><span>Hạn xử lý (giờ, 0 = không hạn)</span>
         <input type="number" min={0} inputMode="numeric" value={s.sla_hours ?? 0} onChange={(e) => set({ sla_hours: Math.max(0, Number(e.target.value) || 0) })} /></label>
 
+      <People label="Người quản trị giai đoạn" hint="Sửa nội dung bước, phân công / đổi người làm khi việc tới mà chưa xác định được người làm."
+        list={s.managers ?? []} dir={dir} ro={ro} onChange={(v) => set({ managers: v })} />
+      <People label="Người theo dõi" hint="Thấy các việc đang ở bước này (chỉ xem)." list={s.watchers ?? []} dir={dir} ro={ro} onChange={(v) => set({ watchers: v })} />
+
       <div className="f"><span>Checklist bắt buộc trước khi chuyển bước</span>
-        {(s.checklist ?? []).map((c, k) => (
-          <div key={k} className="wf-ck"><Icon name="check" size={14} /><span style={{ flex: 1 }}>{c}</span>
-            {!ro && <button aria-label={'Bỏ ' + c} onClick={() => set({ checklist: s.checklist!.filter((_, x) => x !== k) })}><Icon name="x" size={14} /></button>}</div>))}
+        {items(s).map((c, k) => (
+          <div key={c.id} className="wf-ck"><Icon name={c.kind === 'file' ? 'upload' : 'check'} size={14} />
+            {ro ? <span style={{ flex: 1 }}>{c.text}</span> :
+              <input className="wf-ck-in" value={c.text} aria-label="Nội dung mục" onChange={(e) => setItems(items(s).map((x, j) => j === k ? { ...x, text: e.target.value } : x))} />}
+            <select className="wf-ck-kind" value={c.kind} aria-label="Loại mục" onChange={(e) => setItems(items(s).map((x, j) => j === k ? { ...x, kind: e.target.value as CheckItem['kind'] } : x))}>
+              <option value="check">Tích xác nhận</option><option value="file">Phải tải file</option></select>
+            {!ro && <button aria-label={'Bỏ ' + c.text} onClick={() => setItems(items(s).filter((_, x) => x !== k))}><Icon name="x" size={14} /></button>}</div>))}
         {!ro && <div className="row"><input style={{ flex: 1 }} value={item} placeholder="Thêm điều kiện, Enter để thêm" onChange={(e) => setItem(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} /><button className="btn sm" onClick={addItem}>Thêm</button></div>}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem('check'); } }} />
+          <button className="btn sm" onClick={() => addItem('check')}>+ Tích</button><button className="btn sm" onClick={() => addItem('file')}><Icon name="upload" size={14} />+ Tải file</button></div>}
       </div>
 
       <div className="wf-toggles">
@@ -212,4 +222,19 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
       </div>}
     </fieldset>
   );
+}
+
+/** Chọn nhiều người / nhóm / vai trò */
+function People({ label, hint, list, dir, ro, onChange }: { label: string; hint: string; list: Assignee[]; dir: Directory | null; ro: boolean; onChange: (v: Assignee[]) => void }) {
+  const [type, setType] = useState<Assignee['type']>('user');
+  const opts = type === 'user' ? dir?.users.map((u) => [u.id, u.full_name + ' · ' + u.unit]) : type === 'group' ? dir?.groups.map((g) => [g.id, g.name]) : dir?.roles.map((r) => [r, ROLE_LABEL[r] ?? r]);
+  return (
+    <div className="f"><span>{label}</span><small className="muted">{hint}</small>
+      {list.length > 0 && <div className="row">{list.map((a, k) => (
+        <span key={a.type + a.id} className="wf-pill">{who(a, dir)}{!ro && <button aria-label={'Bỏ ' + who(a, dir)} onClick={() => onChange(list.filter((_, x) => x !== k))}><Icon name="x" size={12} /></button>}</span>))}</div>}
+      {!ro && <div className="wf-2" style={{ gridTemplateColumns: '140px 1fr' }}>
+        <select value={type} aria-label={label + ': loại'} onChange={(e) => setType(e.target.value as Assignee['type'])}><option value="user">Người</option><option value="group">Nhóm</option><option value="role">Vai trò</option></select>
+        <select value="" aria-label={label + ': thêm'} onChange={(e) => { const id = e.target.value; if (id && !list.some((a) => a.type === type && a.id === id)) onChange([...list, { type, id }]); }}>
+          <option value="">+ Thêm…</option>{opts?.map(([id, t]) => <option key={id} value={id}>{t}</option>)}</select></div>}
+    </div>);
 }
