@@ -123,9 +123,15 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [dirty, setDirty] = useState(false);
   const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
   useEffect(() => { sb.rpc('can_act', { p_doc: d.id }).then(({ data }) => setCan(!!data)); }, [d.id, d.status]);
+  const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
+  const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
+  useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lvName = d.status === 'duyet_them' && apv ? lvs.find((l) => l.id === apv.queue[apv.idx])?.name : undefined;
   const editable = can && (proc === 'QT0' ? ['tiep_nhan', 'boc_tach', 'tao_ds'].includes(d.status) : d.status === 'lap');
+  const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
   const save = async (quiet = false) => {
-    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: h, p_tables: t, p_files: files });
+    const hh = totalOf() != null ? { ...h, tong_tt: totalOf()! } : h;
+    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: t, p_files: files });
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
   };
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
@@ -153,7 +159,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     <section className="card pp-doc">
       <div className="pp-doc-head">
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
-          <div className="small muted">Bước: <b>{STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
+          <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
           {editable && <button className="btn sm" disabled={!dirty} onClick={() => save()}><Icon name="check" size={15} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           <button className="btn sm" onClick={() => printDoc(o, b, d, people)}><Icon name="print" size={15} />In / PDF</button>
@@ -205,7 +211,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
               <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Đánh Fail' : 'Trả về'}</button></div></div>) : (<>
             {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
             {proc === 'QT0' && d.status === 'duyet' && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Từ chối · Fail</button>}
-            <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (NEXT_LABEL[d.status] ?? 'Ký') + (d.status === 'duyet' && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button></>)}
+            <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button></>)}
         </div>)}
     </section>);
 }

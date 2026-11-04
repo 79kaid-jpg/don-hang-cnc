@@ -10,6 +10,7 @@ import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../lib/auth';
 import { PerfAdmin } from '../components/Perf';
+import { ApprovalFlows } from '../components/ApprovalFlows';
 
 type Step = { id: string; doc_type: string; step_no: number; label: string; approver_id: string | null; hours: number };
 const UNITS = ['CNC', 'IPC', 'HANWHA', 'IT', 'KHAC'];
@@ -18,7 +19,7 @@ const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWHA: 'Han
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can, real, actAs } = useAuth(); const nav = useNavigate();
-  const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base' | 'cp' | 'perf'>('users');
+  const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base' | 'cp' | 'perf' | 'apv'>('users');
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
@@ -38,7 +39,7 @@ export default function Admin() {
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
-    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
+    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'flow'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
@@ -104,6 +105,7 @@ export default function Admin() {
       </div>)}
 
       {tab === 'cp' && <ChainPeopleAdmin canEdit={can('admin_it')} />}
+      {tab === 'apv' && <ApprovalFlows canEdit={can('admin_it')} />}
       {tab === 'perf' && <PerfAdmin canEdit={can('admin_it')} />}
       {tab === 'base' && <BaseConnect canEdit={can('admin_it')} />}
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}

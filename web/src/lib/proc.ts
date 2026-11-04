@@ -20,7 +20,7 @@ export const FLOW: Record<Proc, string[]> = {
 };
 export const STATUS: Record<string, string> = {
   tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt',
-  lap: 'Lập', da_duyet: 'Đã duyệt', fail: 'Fail'
+  lap: 'Lập', da_duyet: 'Đã duyệt', fail: 'Fail', duyet_them: 'Duyệt thêm'
 };
 export const ROLE_OF: Record<string, string> = { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet', lap: 'lap' };
 export const ROLE_NAME: Record<string, string> = { admin: 'Admin tiếp nhận', ky_thuat: 'Bóc tách kỹ thuật', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập', hoan_tat: 'Tải bản ký tay' };
@@ -76,7 +76,8 @@ export function stepOf(b: Batch, docs: Doc[]): { key: string; company?: Company;
   if (b.status !== 'dang_lam') return { key: b.status };
   const d = docs.filter((x) => x.batch_id === b.id).sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
   if (!d) return { key: 'none' };
-  return b.proc === 'QT0' ? { key: d.status, company: d.company, doc: d } : { key: d.company + '.' + d.status, company: d.company, doc: d };
+  const k = d.status === 'duyet_them' ? 'duyet' : d.status;
+  return b.proc === 'QT0' ? { key: k, company: d.company, doc: d } : { key: d.company + '.' + k, company: d.company, doc: d };
 }
 export function columnsOf(p: Proc): { key: string; title: string; group?: string }[] {
   if (p === 'QT0') return FLOW.QT0.map((s) => ({ key: s, title: STATUS[s] }));

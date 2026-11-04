@@ -1,0 +1,3 @@
+-- Cấp duyệt thêm có điều kiện, ủy quyền, hạn từng bước (áp dụng qua MCP 04/11/2026).
+-- Bảng: approval_levels, delegations; cột: chain_people.sla_h, docs.apv
+-- Hàm: my_ids, in_any, _doc_value, _lv_match; cập nhật _is_person, can_act, my_docs, doc_advance (trạng thái 'duyet_them').

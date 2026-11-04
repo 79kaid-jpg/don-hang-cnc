@@ -1276,3 +1276,28 @@ html[data-fs=lg] body{zoom:1.12}
   .pp-grid td input{min-height:36px!important;height:36px;padding:0 8px;font-size:15px}
   .pp-grid th,.pp-grid td{padding:6px 8px}
 }
+
+/* Luồng duyệt */
+.af{display:flex;flex-direction:column;gap:12px}
+.af-pick{display:flex;gap:8px;flex-wrap:wrap}
+.af-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.af-card header{display:flex;align-items:center;gap:8px}
+.af-flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.af-step{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#FBF8F1;flex-wrap:wrap}
+.af-step+.af-step,.af-end{margin-top:18px}.af-step+.af-step::before,.af-end::before{content:'';position:absolute;left:24px;top:-19px;height:18px;border-left:2px solid var(--line2)}
+.af-end{position:relative;display:flex;align-items:center;gap:6px;font-size:13px;color:#1F7A3F;font-weight:700;padding:6px 12px}
+.af-step.extra{background:#FFF8EA;border-color:#E6CF9A}.af-step.off{opacity:.5}
+.af-n{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid var(--line2);display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.af-n.cond{border-color:#C9A24A;color:#7A5200}
+.af-b{flex:1;min-width:150px;display:flex;flex-direction:column}.af-b .small{color:var(--muted)}
+.af-sla{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.af-sla input{width:46px;border:0!important;min-height:28px!important;height:28px;padding:0 2px;text-align:right;font-weight:700;background:none;box-shadow:none!important;font-size:16px}
+.af-act{display:flex;gap:6px}
+.af-add{align-self:flex-start}
+.af-edit{display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px dashed var(--line2);border-radius:12px;padding:12px}
+.af-row{display:flex;gap:10px;flex-wrap:wrap}.af-row>.f{flex:1;min-width:140px}
+.af-dg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.af-dg li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}.af-dg li.on{border-color:#9FCFAE;background:#F4FAF5}
+.af-dg li>span:nth-child(2){flex:1}
+/* iOS: ô nhập < 16px làm Safari tự phóng to trang khi chạm vào → trông như lệch/tràn */
+@media (max-width:900px){input,select,textarea{font-size:16px!important}}
