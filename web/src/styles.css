@@ -1422,3 +1422,5 @@ html[data-fs=lg] body{zoom:1.12}
 .sim-tg:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
 .sim-tg::before{content:'';position:absolute}
 .sim-lh{z-index:5}.sim-corner{z-index:5;position:sticky;left:0}.sim-tok{z-index:3}
+.sim-next{display:block}.sim-next svg{vertical-align:-2px;margin-right:2px}
+.sim-bar{margin-top:-6px}

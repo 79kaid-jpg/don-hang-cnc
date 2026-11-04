@@ -95,6 +95,15 @@ export default function Simulate() {
         {tok && <div className="sim-tok" style={{ transform: `translate(${tok.x}px, ${tok.y}px)`, transitionDuration: 700 / sp + 'ms' }}><Icon name="file" size={14} /></div>}
       </div>
 
+      <div className="sim-ctl" role="toolbar" aria-label="Điều khiển mô phỏng">
+        <button className="sim-b" aria-label="Về đầu" title="Về đầu" onClick={() => { setI(0); setPlay(false); }}><Svg d="M6 5v14M18 6l-8 6 8 6z" /></button>
+        <button className="sim-b" aria-label="Bước trước" title="Bước trước" disabled={i === 0} onClick={() => setI(i - 1)}><Svg d="m15 6-6 6 6 6" /></button>
+        <button className="sim-b play" aria-label={play ? 'Tạm dừng' : 'Chạy'} title={play ? 'Tạm dừng' : 'Chạy'} onClick={() => { if (i >= steps.length - 1) setI(0); setPlay(!play); }}>
+          {play ? <Svg d="M9 6v12M15 6v12" /> : <Svg d="M8 5.5v13l10.5-6.5z" fill />}</button>
+        <button className="sim-b" aria-label="Bước sau" title="Bước sau" disabled={i >= steps.length - 1} onClick={() => setI(i + 1)}><Svg d="m9 6 6 6-6 6" /></button>
+        <button className="sim-b sp" aria-label={'Tốc độ ' + sp + '×'} title="Đổi tốc độ" onClick={() => setSp(SPEEDS[(SPEEDS.indexOf(sp) + 1) % SPEEDS.length])}>{sp}×</button>
+      </div>
+      <div className="sim-bar"><i style={{ width: ((i + 1) / steps.length) * 100 + '%' }} /></div>
       {cur && <section className={'sim-card ' + cur.kind} key={cur.id}>
         <div className="sim-ic"><Icon name={ICON[cur.kind]} size={22} /></div>
         <div className="sim-body">
@@ -107,15 +116,6 @@ export default function Simulate() {
         </div>
       </section>}
 
-      <div className="sim-ctl" role="toolbar" aria-label="Điều khiển mô phỏng">
-        <button className="sim-b" aria-label="Về đầu" title="Về đầu" onClick={() => { setI(0); setPlay(false); }}><Svg d="M6 5v14M18 6l-8 6 8 6z" /></button>
-        <button className="sim-b" aria-label="Bước trước" title="Bước trước" disabled={i === 0} onClick={() => setI(i - 1)}><Svg d="m15 6-6 6 6 6" /></button>
-        <button className="sim-b play" aria-label={play ? 'Tạm dừng' : 'Chạy'} title={play ? 'Tạm dừng' : 'Chạy'} onClick={() => { if (i >= steps.length - 1) setI(0); setPlay(!play); }}>
-          {play ? <Svg d="M9 6v12M15 6v12" /> : <Svg d="M8 5.5v13l10.5-6.5z" fill />}</button>
-        <button className="sim-b" aria-label="Bước sau" title="Bước sau" disabled={i >= steps.length - 1} onClick={() => setI(i + 1)}><Svg d="m9 6 6 6-6 6" /></button>
-        <button className="sim-b sp" aria-label={'Tốc độ ' + sp + '×'} title="Đổi tốc độ" onClick={() => setSp(SPEEDS[(SPEEDS.indexOf(sp) + 1) % SPEEDS.length])}>{sp}×</button>
-      </div>
-      <div className="sim-bar"><i style={{ width: ((i + 1) / steps.length) * 100 + '%' }} /></div>
       <p className="small muted sim-keys" style={{ textAlign: 'center' }}>Phím ← → để chuyển bước · Space để chạy / dừng · bấm vào ô bất kỳ để nhảy tới</p>
     </div>
   );
