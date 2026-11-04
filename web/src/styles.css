@@ -1230,3 +1230,4 @@ html[data-fs=lg] body{zoom:1.12}
   .sb-slow{font-size:10px;padding:1px 5px}.sb-stack{height:24px}.sb-stack i em{font-size:11px}
   .db-hbar b{font-size:13px}.db-hl{font-size:12.5px}
 }
+@media (max-width:760px){body.kb-open .bottom-nav,body.kb-open .fab-m{display:none!important}.bottom-nav{will-change:transform}}

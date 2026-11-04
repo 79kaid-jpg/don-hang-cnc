@@ -38,6 +38,17 @@ function Shell() {
     const h = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
     window.addEventListener('busy', h); return () => window.removeEventListener('busy', h);
   }, []);
+  // iOS: khi bàn phím mở, thanh điều hướng đáy có thể bị đẩy lơ lửng giữa màn hình → ẩn khi đang gõ, và vẽ lại khi khung nhìn đổi kích thước
+  useEffect(() => {
+    const typing = (el: EventTarget | null) => el instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !(el as HTMLInputElement).readOnly && !(el as HTMLInputElement).disabled
+      && !['checkbox', 'radio', 'button', 'submit', 'range', 'color', 'file'].includes((el as HTMLInputElement).type);
+    const on = (e: FocusEvent) => { if (typing(e.target)) document.body.classList.add('kb-open'); };
+    const off = () => setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kb-open'); }, 80);
+    const vv = window.visualViewport; const fix = () => { const n = document.querySelector<HTMLElement>('.bottom-nav'); if (!n) return;
+      const gap = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0; n.style.transform = gap > 60 ? '' : 'translateZ(0)'; if (gap <= 60) document.body.classList.remove('kb-open'); };
+    addEventListener('focusin', on); addEventListener('focusout', off); vv?.addEventListener('resize', fix); vv?.addEventListener('scroll', fix);
+    return () => { removeEventListener('focusin', on); removeEventListener('focusout', off); vv?.removeEventListener('resize', fix); vv?.removeEventListener('scroll', fix); };
+  }, []);
   // Điện thoại: cuộn xuống thì thu nút nổi (Tạo đơn) cho khỏi che nội dung, cuộn lên thì hiện lại
   useEffect(() => { let y = scrollY; const f = () => { const d = scrollY - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && scrollY > 80); y = scrollY; } };
     addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); }, []);
