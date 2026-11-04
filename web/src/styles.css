@@ -1231,3 +1231,9 @@ html[data-fs=lg] body{zoom:1.12}
   .db-hbar b{font-size:13px}.db-hl{font-size:12.5px}
 }
 @media (max-width:760px){body.kb-open .bottom-nav,body.kb-open .fab-m{display:none!important}.bottom-nav{will-change:transform}}
+/* Chi tiết đơn: nút sơ đồ luôn ở góc phải, mã + hạn tự xuống dòng bên trái */
+.od-h{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'code map' 'due map';column-gap:10px;row-gap:4px;align-items:center}
+.od-h h1{grid-area:code;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.od-h .od-due{grid-area:due;justify-self:start}
+.od-h .od-map{grid-area:map;margin-left:0}
+@media (min-width:761px){.od-h{grid-template-areas:'code map';grid-template-columns:auto 1fr auto}.od-h h1{grid-area:auto}.od-h .od-due{grid-area:auto}.od-h .od-map{grid-area:auto}}

@@ -44,10 +44,15 @@ function Shell() {
       && !['checkbox', 'radio', 'button', 'submit', 'range', 'color', 'file'].includes((el as HTMLInputElement).type);
     const on = (e: FocusEvent) => { if (typing(e.target)) document.body.classList.add('kb-open'); };
     const off = () => setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kb-open'); }, 80);
-    const vv = window.visualViewport; const fix = () => { const n = document.querySelector<HTMLElement>('.bottom-nav'); if (!n) return;
-      const gap = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0; n.style.transform = gap > 60 ? '' : 'translateZ(0)'; if (gap <= 60) document.body.classList.remove('kb-open'); };
-    addEventListener('focusin', on); addEventListener('focusout', off); vv?.addEventListener('resize', fix); vv?.addEventListener('scroll', fix);
-    return () => { removeEventListener('focusin', on); removeEventListener('focusout', off); vv?.removeEventListener('resize', fix); vv?.removeEventListener('scroll', fix); };
+    // Giữ thanh đáy bám đúng mép dưới khung nhìn thật (iOS đôi khi lệch layout viewport → thanh lơ lửng giữa màn hình)
+    const vv = window.visualViewport; let raf = 0;
+    const fix = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {
+      const n = document.querySelector<HTMLElement>('.bottom-nav'); const f = document.querySelector<HTMLElement>('.fab-m'); if (!n || !vv) return;
+      const kb = innerHeight - vv.height > 120; if (!kb) document.body.classList.remove('kb-open');
+      const dy = kb ? 0 : Math.round(vv.offsetTop + vv.height - innerHeight);
+      n.style.transform = dy ? `translate3d(0,${dy}px,0)` : 'translateZ(0)'; if (f) f.style.marginBottom = dy ? -dy + 'px' : ''; }); };
+    fix(); addEventListener('focusin', on); addEventListener('focusout', off); vv?.addEventListener('resize', fix); vv?.addEventListener('scroll', fix); addEventListener('scroll', fix, { passive: true }); addEventListener('orientationchange', fix);
+    return () => { removeEventListener('focusin', on); removeEventListener('focusout', off); vv?.removeEventListener('resize', fix); vv?.removeEventListener('scroll', fix); removeEventListener('scroll', fix); removeEventListener('orientationchange', fix); };
   }, []);
   // Điện thoại: cuộn xuống thì thu nút nổi (Tạo đơn) cho khỏi che nội dung, cuộn lên thì hiện lại
   useEffect(() => { let y = scrollY; const f = () => { const d = scrollY - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && scrollY > 80); y = scrollY; } };
