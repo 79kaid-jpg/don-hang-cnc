@@ -83,7 +83,7 @@ export function Report({ procs }: { procs: Row[] }) {
   const proc = procs.find((p) => p.id === pid);
   const def: Def | undefined = (proc?.versions.find((v) => v.status === 'phat_hanh') ?? [...(proc?.versions ?? [])].sort((a, b) => b.version - a.version)[0])?.def;
   const shown = (runs ?? []).filter((r) => test || !r.is_test);
-  const cols = useMemo(() => (def?.steps ?? []).map((s) => ({ s, cards: shown.filter((r) => r.v.def.steps[r.step_idx]?.id === s.id) })), [def, shown]);
+  const cols = useMemo(() => (def?.steps ?? []).filter((s) => (s.type ?? 'task') === 'task' || s.type === 'subprocess').map((s) => ({ s, cards: shown.filter((r) => open.some((t) => t.instance_id === r.id && t.step_id === s.id)) })), [def, shown, open]);
   const maxAvg = Math.max(1, ...stats.map((x) => Number(x.avg_hours) || 0));
   if (!usable.length) return <Empty title="Chưa có quy trình để báo cáo" />;
   return (
@@ -102,7 +102,7 @@ export function Report({ procs }: { procs: Row[] }) {
               <div key={s.id} className="wf-kcol">
                 <div className="wf-kcol-h"><b>{k + 1}. {s.name}</b><span className="chip idle">{cards.length}</span></div>
                 <div className="small muted" style={{ padding: '0 10px 6px' }}>{who(s.assignee, dir)}</div>
-                {cards.map((r) => { const t = open.find((x) => x.instance_id === r.id); const sla = slaLeft(t?.due_at ?? null); return (
+                {cards.map((r) => { const t = open.find((x) => x.instance_id === r.id && x.step_id === s.id); const sla = slaLeft(t?.due_at ?? null); return (
                   <Link key={r.id} to={'/quy-trinh-moi/chay/' + r.id} className={'wf-kcard' + (sla?.late ? ' late' : '')}>
                     <b>{r.title}</b>
                     <span className="small muted">{t?.assigned_to ? userName(t.assigned_to, dir) : 'Chưa phân công'}{t?.appr_state === 'dang_duyet' ? ' · đang duyệt' : ''}</span>

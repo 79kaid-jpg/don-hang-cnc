@@ -6,8 +6,16 @@ export type Assignee = { type: 'user' | 'group' | 'role' | 'creator' | 'manager'
 export const REL: Record<'creator' | 'manager', string> = { creator: 'Người tạo hồ sơ', manager: 'Quản lý trực tiếp của người tạo' };
 export type StepKind = 'lap' | 'kiem_tra' | 'duyet' | 'ky';
 export type CheckItem = { id: string; text: string; kind: 'check' | 'file' };
+/** Loại nút: công việc (mặc định) · hành động tự động · tách song song · gộp · quy trình con */
+export type NodeType = 'task' | 'action' | 'parallel' | 'join' | 'subprocess';
+export const NTYPE: Record<NodeType, string> = { task: 'Công việc', action: 'Hành động', parallel: 'Tách song song', join: 'Gộp nhánh', subprocess: 'Quy trình con' };
+export type Action = { kind: 'zalo'; to: Assignee[]; text: string } | { kind: 'set'; field: string; value: string } | { kind: 'start'; process_id: string };
+export const ntype = (s?: { type?: NodeType }): NodeType => s?.type ?? 'task';
 export type Step = {
   id: string; name: string; kind: StepKind; lane: string; assignee: Assignee;
+  type?: NodeType; branches?: string[]; join_mode?: 'all' | 'any'; actions?: Action[];
+  process_id?: string; wait?: boolean; copy_in?: string[]; copy_out?: string[];
+  /** vị trí trên canvas tự do */ x?: number; y?: number;
   /** Người theo dõi: thấy việc ở bước này. Người quản trị giai đoạn: sửa nội dung, phân công / đổi người làm */
   watchers?: Assignee[]; managers?: Assignee[];
   sla_hours?: number; checklist?: (string | CheckItem)[]; perms?: Record<string, Perm>;
@@ -36,11 +44,12 @@ export type PrintCfg = { title?: string; subtitle?: string; hand_signs?: string[
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
 export const PERM: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
 export const FTYPE: Record<FieldType, string> = { text: 'Chữ ngắn', textarea: 'Đoạn văn', number: 'Số', date: 'Ngày', select: 'Chọn một', table: 'Bảng' };
-export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[]; print?: PrintCfg };
+export type Trigger = { on: 'process_done'; process_id: string };
+export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[]; print?: PrintCfg; trigger?: Trigger };
 export type Process = { id: string; code: string; name: string; description: string; category: string; is_template: boolean; created_at: string; created_by?: string; deleted_at?: string | null };
 export type Version = { id: string; process_id: string; version: number; status: 'nhap' | 'phat_hanh' | 'luu_tru'; def: Def; updated_at: string; published_at: string | null };
 export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null; order_id?: string | null; data?: Record<string, unknown> };
-export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null; appr_state: 'dang_duyet' | 'cho_sua' | null;
+export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null; kind: 'task' | 'join' | 'sub'; prev_task: string | null; join_from: string[]; appr_state: 'dang_duyet' | 'cho_sua' | null;
   files: { item: string; name: string; path: string; at: string; by: string }[]; due_at: string | null; checklist: Record<string, boolean>; done_by: string | null; note: string; created_at: string; done_at: string | null };
 export type Vai = 'lam' | 'phan_cong' | 'quan_tri' | 'theo_doi' | 'duyet';
 export type MyTask = { task_id: string; instance_id: string; title: string; process_name: string; step_name: string; due_at: string | null; is_test: boolean; created_at: string; assigned_to: string | null; vai: Vai };
@@ -69,18 +78,33 @@ export function validate(d: Def): { step?: string; msg: string }[] {
   if (!d.steps.length) e.push({ msg: 'Quy trình chưa có bước nào' });
   const seen = new Set<string>(); const lanes = new Set(d.lanes.map((l) => l.id));
   d.steps.forEach((s, i) => {
-    const n = `Bước ${i + 1}`;
-    if (!s.name.trim()) e.push({ step: s.id, msg: `${n} chưa có tên` });
-    if (!s.assignee?.id && !s.managers?.length) e.push({ step: s.id, msg: `${n}${s.name ? ' (' + s.name + ')' : ''} chưa có người làm hoặc người quản trị để phân công` });
-    if (i === 0 && !s.assignee?.id) e.push({ step: s.id, msg: 'Bước đầu tiên phải có người làm' });
-    if (items(s).some((c) => !c.text.trim())) e.push({ step: s.id, msg: `${n} có mục checklist trống` });
+    const ty = ntype(s); const n = `${ty === 'task' ? 'Bước' : 'Nút'} ${i + 1}`;
+    if (i === 0 && ty !== 'task') e.push({ step: s.id, msg: 'Nút đầu tiên phải là Công việc' });
     if (seen.has(s.id)) e.push({ step: s.id, msg: `${n} trùng mã` });
     if (s.lane && !lanes.has(s.lane)) e.push({ step: s.id, msg: `${n} thuộc làn đã xoá` });
-    if (i === 0 && s.allow_back) e.push({ step: s.id, msg: 'Bước đầu tiên không thể trả lại' });
     seen.add(s.id);
+    if (ty === 'task') {
+      if (!s.name.trim()) e.push({ step: s.id, msg: `${n} chưa có tên` });
+      if (!s.assignee?.id && !s.managers?.length) e.push({ step: s.id, msg: `${n}${s.name ? ' (' + s.name + ')' : ''} chưa có người làm hoặc người quản trị để phân công` });
+      if (i === 0 && !s.assignee?.id) e.push({ step: s.id, msg: 'Bước đầu tiên phải có người làm' });
+      if (items(s).some((c) => !c.text.trim())) e.push({ step: s.id, msg: `${n} có mục checklist trống` });
+      if (i === 0 && s.allow_back) e.push({ step: s.id, msg: 'Bước đầu tiên không thể trả lại' });
+    } else if (ty === 'parallel') {
+      if ((s.branches ?? []).length < 2) e.push({ step: s.id, msg: `${n} (tách song song) cần ít nhất 2 nhánh` });
+    } else if (ty === 'action') {
+      if (!(s.actions ?? []).length) e.push({ step: s.id, msg: `${n} (hành động) chưa có hành động nào` });
+      (s.actions ?? []).forEach((a) => {
+        if (a.kind === 'zalo' && !a.to.length) e.push({ step: s.id, msg: `${n}: gửi Zalo chưa có người nhận` });
+        if (a.kind === 'set' && !a.field) e.push({ step: s.id, msg: `${n}: gán giá trị chưa chọn trường` });
+        if (a.kind === 'start' && !a.process_id) e.push({ step: s.id, msg: `${n}: mở quy trình chưa chọn quy trình` });
+      });
+    } else if (ty === 'subprocess') {
+      if (!s.process_id) e.push({ step: s.id, msg: `${n} (quy trình con) chưa chọn quy trình` });
+    }
   });
   const ids = new Set(d.steps.map((s) => s.id));
   d.steps.forEach((s, i) => {
+    (s.branches ?? []).forEach((b) => { if (!ids.has(b)) e.push({ step: s.id, msg: `Nút ${i + 1}: nhánh song song trỏ tới nút đã xoá` }); });
     if (s.next && s.next !== END && !ids.has(s.next)) e.push({ step: s.id, msg: `Bước ${i + 1}: bước mặc định tiếp theo đã bị xoá` });
     (s.approval?.levels ?? []).forEach((l, k) => { if (!l.approvers?.length) e.push({ step: s.id, msg: `Bước ${i + 1}: cấp duyệt ${k + 1}${l.name ? ' (' + l.name + ')' : ''} chưa có người duyệt` }); });
     (s.routes ?? []).forEach((r) => {
@@ -153,8 +177,9 @@ export function computeRow(cols: Column[], r: Record<string, unknown>) {
 }
 
 /** Các mũi tên đi ra từ bước i: nhánh điều kiện + đường mặc định */
-export function targets(d: Def, i: number): { to: string; label?: string; branch?: boolean }[] {
-  const s = d.steps[i]; const out: { to: string; label?: string; branch?: boolean }[] = [];
+export function targets(d: Def, i: number): { to: string; label?: string; branch?: boolean; par?: boolean }[] {
+  const s = d.steps[i]; const out: { to: string; label?: string; branch?: boolean; par?: boolean }[] = [];
+  if (ntype(s) === 'parallel') { for (const b of s.branches ?? []) out.push({ to: b, par: true }); return out; }
   for (const r of s.routes ?? []) if (r.goto) out.push({ to: r.goto, label: routeText(d, r), branch: true });
   out.push({ to: s.next || (d.steps[i + 1]?.id ?? END), label: s.routes?.length ? 'còn lại' : undefined });
   return out;

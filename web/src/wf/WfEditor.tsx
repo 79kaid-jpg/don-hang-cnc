@@ -4,10 +4,11 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
-import { REL, KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
+import { NTYPE, ntype, type NodeType, type Action, REL, KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
   type Assignee, type CheckItem, type PrintCfg, type ApprLevel, RULE, ON_REJECT, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
 import { Canvas, LANE_COLORS } from './Canvas';
+import { GraphCanvas } from './GraphCanvas';
 
 export default function WfEditor() {
   const { id } = useParams();
@@ -19,7 +20,10 @@ export default function WfEditor() {
   const [name, setName] = useState('');
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
-  const [view, setView] = useState<'so_do' | 'ds'>(() => { try { return (localStorage.getItem('wf-view') as 'so_do' | 'ds') || (innerWidth >= 900 ? 'so_do' : 'ds'); } catch { return 'ds'; } });
+  type View = 'tu_do' | 'so_do' | 'ds';
+  const [view, setView] = useState<View>(() => { try { return (localStorage.getItem('wf-view2') as View) || (innerWidth >= 900 ? 'tu_do' : 'ds'); } catch { return 'ds'; } });
+  // Hoàn tác / làm lại
+  const past = useRef<Def[]>([]); const future = useRef<Def[]>([]); const [, bump] = useState(0);
   // Ngăn cấu hình bước: kéo mép trái để co giãn, nhớ độ rộng; nút mở rộng nhanh
   const [pw, setPw] = useState(() => { try { return Number(localStorage.getItem('wf-panel-w')) || 460; } catch { return 460; } });
   const designRef = useRef<HTMLDivElement>(null);
@@ -32,7 +36,7 @@ export default function WfEditor() {
     document.body.classList.add('wf-resizing'); addEventListener('pointermove', mv); addEventListener('pointerup', end);
   };
   const wide = pw >= 640;
-  const pickView = (v: 'so_do' | 'ds') => { setView(v); try { localStorage.setItem('wf-view', v); } catch { /* */ } };
+  const pickView = (v: View) => { setView(v); try { localStorage.setItem('wf-view2', v); } catch { /* */ } };
   const [dir, setDir] = useState<Directory | null>(null);
   const [err, setErr] = useState('');
   const [showErr, setShowErr] = useState(false);
@@ -56,7 +60,32 @@ export default function WfEditor() {
   const moveTo = (sid: string, lane: string, idx: number) => upd((d) => { const i = d.steps.findIndex((x) => x.id === sid); const [st] = d.steps.splice(i, 1); st.lane = lane; d.steps.splice(idx, 0, st); });
   const laneIdx = (l: string) => Math.max(0, def.lanes.findIndex((x) => x.id === l));
 
-  const upd = (f: (d: Def) => void) => { if (ro) return; const d = structuredClone(def); f(d); setDef(d); setDirty(true); };
+  const upd = (f: (d: Def) => void) => { if (ro) return; const d = structuredClone(def); f(d); past.current = [...past.current.slice(-49), def]; future.current = []; setDef(d); setDirty(true); };
+  const undo = () => { const p = past.current.pop(); if (!p) return; future.current.push(def); setDef(p); setDirty(true); bump((x) => x + 1); };
+  const redo = () => { const f = future.current.pop(); if (!f) return; past.current.push(def); setDef(f); setDirty(true); bump((x) => x + 1); };
+  // Thao tác trên canvas tự do
+  const mkNode = (type: NodeType, lane: string): Step => ({ ...newStep(lane), id: uid('n'), name: '', ...(type === 'task' ? {} : { type, sla_hours: 0, allow_back: false }),
+    ...(type === 'join' ? { join_mode: 'all' as const } : {}), ...(type === 'parallel' ? { branches: [] } : {}), ...(type === 'action' ? { actions: [] } : {}) });
+  /** Chốt mũi tên ngầm (bước kế trong danh sách) của nút cuối trước khi thêm nút mới vào cuối */
+  const freezeLast = (d: Def) => { const last = d.steps[d.steps.length - 1]; if (last && ntype(last) !== 'parallel' && !last.next) last.next = END; };
+  const gConnect = (from: string, to: string) => upd((d) => { const s = d.steps.find((x) => x.id === from)!;
+    if (ntype(s) === 'parallel') { if (to !== END && !(s.branches ?? []).includes(to)) s.branches = [...(s.branches ?? []).filter(Boolean), to]; } else s.next = to; });
+  const gInsert = (e: { from: string; to: string; k: number; branch?: boolean; par?: boolean }, type: NodeType) => {
+    const nid = uid('n');
+    upd((d) => {
+      const i = d.steps.findIndex((x) => x.id === e.from); const s = d.steps[i]; const n = { ...mkNode(type, s.lane), id: nid };
+      if (type === 'parallel') n.branches = e.to === END ? [] : [e.to]; else n.next = e.to;
+      if (e.par) s.branches = (s.branches ?? []).map((b, j) => j === e.k ? nid : b);
+      else if (e.branch && s.routes?.[e.k]) s.routes[e.k].goto = nid;
+      else s.next = nid;
+      if (s.x != null && s.y != null) { n.x = s.x + 130; n.y = s.y + 110; }
+      d.steps.splice(i + 1, 0, n);
+    });
+    setOpen(nid);
+  };
+  const gRemove = (e: { from: string; to: string; k: number; branch?: boolean; par?: boolean }) => upd((d) => { const s = d.steps.find((x) => x.id === e.from)!;
+    if (e.par) s.branches = (s.branches ?? []).filter((_, j) => j !== e.k); else if (e.branch) s.routes = (s.routes ?? []).filter((_, j) => j !== e.k); else s.next = END; });
+  const gAdd = (type: NodeType, p: { x: number; y: number }) => { const nid = uid('n'); upd((d) => { freezeLast(d); d.steps.push({ ...mkNode(type, d.steps[d.steps.length - 1]?.lane ?? d.lanes[0]?.id ?? ''), id: nid, x: Math.round(p.x), y: Math.round(p.y) }); }); setOpen(nid); };
   const setStep = (sid: string, patch: Partial<Step>) => upd((d) => { const s = d.steps.find((x) => x.id === sid)!; Object.assign(s, patch); });
   const insertAt = (i: number) => { const s = newStep(def.steps[i - 1]?.lane ?? def.lanes[0]?.id ?? ''); upd((d) => d.steps.splice(i, 0, s)); setOpen(s.id); };
   const move = (i: number, dlt: number) => upd((d) => { const j = i + dlt; if (j < 0 || j >= d.steps.length) return; [d.steps[i], d.steps[j]] = [d.steps[j], d.steps[i]]; });
@@ -87,7 +116,12 @@ export default function WfEditor() {
     nav('/quy-trinh-moi/chay/' + data);
   };
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (!ro && dirty) save(); } };
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (!ro && dirty) save(); }
+      const typing = /INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement)?.tagName ?? '');
+      if (!typing && !ro && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      if (!typing && !ro && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    };
     const b = (e: BeforeUnloadEvent) => { if (dirty) e.preventDefault(); };
     addEventListener('keydown', h); addEventListener('beforeunload', b);
     return () => { removeEventListener('keydown', h); removeEventListener('beforeunload', b); };
@@ -135,18 +169,25 @@ export default function WfEditor() {
 
       <FieldsEditor fields={def.fields ?? []} ro={ro} onChange={(f) => upd((d) => { d.fields = f; })} />
       <PrintEditor cfg={def.print ?? {}} name={name} ro={ro} onChange={(c) => upd((d) => { d.print = c; })} />
+      <TriggerEditor def={def} ro={ro} selfId={proc.id} onChange={(t) => upd((d) => { if (t) d.trigger = t; else delete d.trigger; })} />
 
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="wf-seg" role="tablist" aria-label="Kiểu xem">
-          <button role="tab" aria-selected={view === 'so_do'} className={view === 'so_do' ? 'on p-edit' : ''} onClick={() => pickView('so_do')}>Sơ đồ swimlane</button>
+          <button role="tab" aria-selected={view === 'tu_do'} className={view === 'tu_do' ? 'on p-edit' : ''} onClick={() => pickView('tu_do')}>Sơ đồ tự do</button>
+          <button role="tab" aria-selected={view === 'so_do'} className={view === 'so_do' ? 'on p-edit' : ''} onClick={() => pickView('so_do')}>Swimlane</button>
           <button role="tab" aria-selected={view === 'ds'} className={view === 'ds' ? 'on p-edit' : ''} onClick={() => pickView('ds')}>Danh sách bước</button></div>
         {!ro && view === 'so_do' && <button className="btn sm primary" onClick={() => insertAt(def.steps.length)}><Icon name="plus" size={16} />Thêm bước</button>}
       </div>
 
-      {view === 'so_do' && <div ref={designRef} className={'wf-design' + (open ? ' has-panel' : '')} style={open ? { '--pw': pw + 'px' } as React.CSSProperties : undefined}>
-        <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo}
+      {view !== 'ds' && <div ref={designRef} className={'wf-design' + (open ? ' has-panel' : '')} style={open ? { '--pw': pw + 'px' } as React.CSSProperties : undefined}>
+        {view === 'tu_do' ? <GraphCanvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen}
+          onPos={(sid, p) => upd((d) => { const s = d.steps.find((x) => x.id === sid); if (s) { s.x = p.x; s.y = p.y; } })}
+          onConnect={gConnect} onInsert={gInsert} onRemoveEdge={gRemove} onAdd={gAdd}
+          onLayout={() => upd((d) => { d.steps.forEach((s) => { delete s.x; delete s.y; }); })}
+          onUndo={undo} onRedo={redo} canUndo={past.current.length > 0} canRedo={future.current.length > 0} />
+        : <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo}
           onAddLane={() => upd((d) => { d.lanes.push({ id: uid('l'), name: 'Làn ' + (d.lanes.length + 1) }); })}
-          onRenameLane={(k, nm) => upd((d) => { if (d.lanes[k]) d.lanes[k].name = nm; })} />
+          onRenameLane={(k, nm) => upd((d) => { if (d.lanes[k]) d.lanes[k].name = nm; })} />}
         {open && (() => { const i = def.steps.findIndex((x) => x.id === open); const st = def.steps[i]; if (!st) return null; return (
           <aside className="card wf-panel" aria-label="Cấu hình bước">
             <div className="wf-resizer" role="separator" aria-orientation="vertical" aria-label="Kéo để đổi độ rộng ngăn cấu hình" tabIndex={0}
@@ -210,8 +251,10 @@ export function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
   const [item, setItem] = useState('');
   const setItems = (v: CheckItem[]) => set({ checklist: v });
   const addItem = (kind: CheckItem['kind']) => { const t = item.trim() || (kind === 'file' ? 'Tài liệu đính kèm' : ''); if (!t) return; setItems([...items(s), { id: uid('c'), text: t, kind }]); setItem(''); };
+  if (ntype(s) !== 'task') return <NodeForm s={s} i={i} n={n} def={def} dir={dir} ro={ro} set={set} onMove={onMove} onDup={onDup} onDel={onDel} />;
   return (
     <fieldset className="wf-form" disabled={ro}>
+      <TypePicker s={s} i={i} set={set} />
       <label className="f"><span>Tên bước</span><input value={s.name} autoFocus={!s.name} placeholder="Ví dụ: Kiểm tra bản vẽ" onChange={(e) => set({ name: e.target.value })} /></label>
       <div className="wf-2">
         <label className="f"><span>Loại bước</span>
@@ -468,5 +511,130 @@ function PrintEditor({ cfg, name, ro, onChange }: { cfg: PrintCfg; name: string;
         <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={cfg.show_history !== false} onChange={(e) => onChange({ ...cfg, show_history: e.target.checked })} />
           In kèm bảng ký điện tử (ai làm / duyệt bước nào, lúc nào)</label>
       </fieldset>}
+    </section>);
+}
+
+/** Đổi loại nút; giữ id để các mũi tên trỏ tới vẫn đúng */
+function TypePicker({ s, i, set }: { s: Step; i: number; set: (p: Partial<Step>) => void }) {
+  const ty = ntype(s);
+  return (
+    <div className="f"><span>Loại nút</span>
+      <div className="wf-seg wf-types" role="radiogroup" aria-label="Loại nút">{(Object.keys(NTYPE) as NodeType[]).map((t) => (
+        <button key={t} type="button" role="radio" aria-checked={ty === t} disabled={i === 0 && t !== 'task'} className={ty === t ? 'on p-edit' : ''}
+          onClick={() => set(t === 'task' ? { type: undefined } : { type: t, ...(t === 'join' && !s.join_mode ? { join_mode: 'all' } : {}), ...(t === 'action' && !s.actions ? { actions: [] } : {}), ...(t === 'parallel' && !s.branches ? { branches: [] } : {}) })}>
+          <Icon name={NICON[t]} size={14} />{NTYPE[t]}</button>))}</div>
+      {i === 0 && <small className="muted">Nút đầu tiên luôn là Công việc.</small>}
+    </div>);
+}
+export const NICON: Record<NodeType, string> = { task: 'checksq', action: 'bolt', parallel: 'split', join: 'merge', subprocess: 'flow' };
+
+let procCache: Promise<{ id: string; name: string; live: boolean }[]> | null = null;
+const loadProcs = () => procCache ??= Promise.resolve(sb.from('wf_processes').select('id, name, is_template, versions:wf_versions(status)').is('deleted_at', null).eq('is_template', false).order('name')
+  .then(({ data }) => ((data ?? []) as { id: string; name: string; versions: { status: string }[] }[]).map((p) => ({ id: p.id, name: p.name, live: p.versions.some((v) => v.status === 'phat_hanh') }))));
+
+/** Cấu hình nút không phải công việc: hành động / tách song song / gộp / quy trình con */
+function NodeForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
+  s: Step; i: number; n: number; def: Def; dir: Directory | null; ro: boolean;
+  set: (p: Partial<Step>) => void; onMove: (d: number) => void; onDup: () => void; onDel: () => void;
+}) {
+  const ty = ntype(s);
+  const [procs, setProcs] = useState<{ id: string; name: string; live: boolean }[]>([]);
+  useEffect(() => { loadProcs().then(setProcs); }, []);
+  const others = def.steps.filter((x) => x.id !== s.id);
+  const acts = s.actions ?? [];
+  const setA = (k: number, a: Action) => set({ actions: acts.map((x, j) => j === k ? a : x) });
+  const fieldOpts = (def.fields ?? []).map((f) => <option key={f.id} value={f.id}>{f.label || f.id}</option>);
+  const multiFields = (val: string[] | undefined, on: (v: string[] | undefined) => void, label: string) => (
+    <div className="f"><span>{label}</span>
+      <div className="row">{(def.fields ?? []).map((f) => (
+        <label key={f.id} className="wf-pill" style={{ paddingRight: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={!val?.length || val.includes(f.id)} onChange={(e) => {
+            const all = (def.fields ?? []).map((x) => x.id); const cur = val?.length ? val : all;
+            const nx = e.target.checked ? [...cur, f.id] : cur.filter((x) => x !== f.id); on(nx.length === all.length ? undefined : nx);
+          }} />{f.label || f.id}</label>))}</div>
+      <small className="muted">Mặc định chép mọi trường trùng mã giữa hai quy trình.</small></div>);
+  return (
+    <fieldset className="wf-form" disabled={ro}>
+      <TypePicker s={s} i={i} set={set} />
+      <div className="wf-2">
+        <label className="f"><span>Tên nút</span><input value={s.name} placeholder={NTYPE[ty]} onChange={(e) => set({ name: e.target.value })} /></label>
+        <label className="f"><span>Làn</span><select value={s.lane} onChange={(e) => set({ lane: e.target.value })}>{def.lanes.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+      </div>
+
+      {ty === 'parallel' && <div className="f"><span>Các nhánh chạy cùng lúc</span>
+        <small className="muted">Khi tới nút này, tất cả các nhánh được mở cùng lúc. Dùng nút "Gộp nhánh" để chờ các nhánh xong rồi đi tiếp.</small>
+        {(s.branches ?? []).map((b, k) => (
+          <div key={k} className="wf-route"><b className="small">Nhánh {k + 1}</b>
+            <select value={b} aria-label={'Nhánh ' + (k + 1)} onChange={(e) => set({ branches: (s.branches ?? []).map((x, j) => j === k ? e.target.value : x) })}>
+              <option value="">— chọn nút —</option>{others.map((x) => <option key={x.id} value={x.id}>{def.steps.indexOf(x) + 1}. {x.name || NTYPE[ntype(x)]}</option>)}</select>
+            <button className="wf-x" aria-label="Bỏ nhánh" onClick={() => set({ branches: (s.branches ?? []).filter((_, j) => j !== k) })}><Icon name="x" size={14} /></button></div>))}
+        {!ro && <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ branches: [...(s.branches ?? []), ''] })}><Icon name="plus" size={14} />Thêm nhánh</button>}
+      </div>}
+
+      {ty === 'join' && <label className="f"><span>Khi nào đi tiếp</span>
+        <select value={s.join_mode ?? 'all'} onChange={(e) => set({ join_mode: e.target.value as 'all' | 'any' })}>
+          <option value="all">Chờ tất cả các nhánh đang chạy xong</option><option value="any">Một nhánh xong là đi tiếp (huỷ các nhánh còn lại)</option></select></label>}
+
+      {ty === 'action' && <div className="f"><span>Hành động (hệ thống tự làm, không cần người bấm)</span>
+        {acts.map((a, k) => (
+          <div key={k} className="wf-level" style={{ borderLeftColor: 'var(--gold)' }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}><b className="small">{k + 1}. {a.kind === 'zalo' ? 'Gửi tin Zalo' : a.kind === 'set' ? 'Gán giá trị trường' : 'Mở hồ sơ quy trình khác'}</b>
+              {!ro && <button className="wf-x" aria-label="Xoá hành động" onClick={() => set({ actions: acts.filter((_, j) => j !== k) })}><Icon name="x" size={14} /></button>}</div>
+            {a.kind === 'zalo' && <>
+              <People rel label="Người nhận" hint="" list={a.to} dir={dir} ro={ro} onChange={(v) => setA(k, { ...a, to: v })} />
+              <label className="f"><span>Nội dung</span><textarea rows={2} value={a.text} onChange={(e) => setA(k, { ...a, text: e.target.value })} placeholder="Ví dụ: Hồ sơ {ho_so} đã được duyệt" /></label>
+              <small className="muted">Dùng được {'{ho_so}'} (tên hồ sơ), {'{quy_trinh}'}. Tin tự kèm link mở hồ sơ.</small></>}
+            {a.kind === 'set' && <div className="wf-2">
+              <label className="f"><span>Trường</span><select value={a.field} onChange={(e) => setA(k, { ...a, field: e.target.value })}><option value="">— chọn —</option>{fieldOpts}</select></label>
+              <label className="f"><span>Giá trị</span><input value={a.value} placeholder="Số, chữ, hoặc {hom_nay}" onChange={(e) => setA(k, { ...a, value: e.target.value })} /></label></div>}
+            {a.kind === 'start' && <label className="f"><span>Quy trình sẽ mở (cùng đơn hàng, chép trường trùng mã)</span>
+              <select value={a.process_id} onChange={(e) => setA(k, { ...a, process_id: e.target.value })}><option value="">— chọn —</option>
+                {procs.map((p) => <option key={p.id} value={p.id}>{p.name}{p.live ? '' : ' (chưa phát hành)'}</option>)}</select></label>}
+          </div>))}
+        {!ro && <div className="row">
+          <button className="btn sm" onClick={() => set({ actions: [...acts, { kind: 'zalo', to: [], text: '' }] })}><Icon name="bell" size={14} />Gửi Zalo</button>
+          <button className="btn sm" onClick={() => set({ actions: [...acts, { kind: 'set', field: '', value: '' }] })}><Icon name="check" size={14} />Gán giá trị</button>
+          <button className="btn sm" onClick={() => set({ actions: [...acts, { kind: 'start', process_id: '' }] })}><Icon name="flow" size={14} />Mở quy trình khác</button></div>}
+      </div>}
+
+      {ty === 'subprocess' && <>
+        <label className="f"><span>Quy trình con</span>
+          <select value={s.process_id ?? ''} onChange={(e) => set({ process_id: e.target.value })}><option value="">— chọn quy trình —</option>
+            {procs.map((p) => <option key={p.id} value={p.id}>{p.name}{p.live ? '' : ' (chưa phát hành)'}</option>)}</select></label>
+        <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={s.wait !== false} onChange={(e) => set({ wait: e.target.checked ? undefined : false })} />
+          Chờ quy trình con hoàn tất rồi mới đi tiếp (bỏ tích = mở xong đi tiếp luôn)</label>
+        {(def.fields ?? []).length > 0 && multiFields(s.copy_in, (v) => set({ copy_in: v }), 'Chép sang quy trình con')}
+        {(def.fields ?? []).length > 0 && s.wait !== false && multiFields(s.copy_out, (v) => set({ copy_out: v }), 'Nhận lại khi quy trình con xong')}
+      </>}
+
+      {ty !== 'parallel' && <Routing s={s} i={i} def={def} ro={ro} set={set} />}
+
+      {!ro && <div className="row" style={{ justifyContent: 'space-between' }}>
+        <div className="row">
+          <button className="btn sm" disabled={i === 0} onClick={() => onMove(-1)}>↑ Lên</button>
+          <button className="btn sm" disabled={i === n - 1} onClick={() => onMove(1)}>↓ Xuống</button>
+          <button className="btn sm" onClick={onDup}>Nhân bản</button>
+        </div>
+        <button className="btn sm danger" onClick={onDel}><Icon name="x" size={16} />Xoá nút</button>
+      </div>}
+    </fieldset>);
+}
+
+/** Điều kiện bắt đầu: tự mở hồ sơ khi một quy trình khác hoàn tất (cùng đơn hàng) */
+function TriggerEditor({ def, ro, onChange, selfId }: { def: Def; ro: boolean; onChange: (t: Def['trigger']) => void; selfId: string }) {
+  const [procs, setProcs] = useState<{ id: string; name: string; live: boolean }[]>([]);
+  useEffect(() => { loadProcs().then(setProcs); }, []);
+  const tg = def.trigger;
+  return (
+    <section className="card" aria-label="Điều kiện bắt đầu">
+      <div className="row" style={{ gap: 10 }}><Icon name="bolt" size={18} /><b>Điều kiện bắt đầu</b></div>
+      <fieldset className="wf-form" disabled={ro} style={{ borderTop: 0, padding: '8px 0 0' }}>
+        <label className="f"><span>Hồ sơ của quy trình này được mở khi</span>
+          <select value={tg?.process_id ?? ''} onChange={(e) => onChange(e.target.value ? { on: 'process_done', process_id: e.target.value } : undefined)}>
+            <option value="">Người dùng bấm "Tạo hồ sơ" (thủ công)</option>
+            {procs.filter((p) => p.id !== selfId).map((p) => <option key={p.id} value={p.id}>Tự động khi "{p.name}" hoàn tất{p.live ? '' : ' (chưa phát hành)'}</option>)}
+          </select></label>
+        {tg && <small className="muted">Hồ sơ mới gắn cùng đơn hàng, cùng tên, các trường đánh dấu "Lấy từ hồ sơ trước" tự điền. Vẫn mở thủ công được.</small>}
+      </fieldset>
     </section>);
 }

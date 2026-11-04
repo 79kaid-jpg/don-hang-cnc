@@ -41,12 +41,12 @@ begin perform _wf_open_task2(p_inst, p_step, null, 'task'); end $$;
 
 -- Lấy trường cần chép: mảng mã trường, hoặc mọi trường của biểu mẫu đích
 create or replace function public._wf_pick(p_data jsonb, p_def_to jsonb, p_list jsonb) returns jsonb language sql immutable as $$
-  select coalesce(jsonb_object_agg(k, p_data->k), '{}') from (
-    select case when jsonb_typeof(p_list) = 'array' and jsonb_array_length(p_list) > 0 then x #>> '{}' end k
-      from jsonb_array_elements(case when jsonb_typeof(p_list) = 'array' and jsonb_array_length(p_list) > 0 then p_list else '[null]' end) x
-    union select f->>'id' from jsonb_array_elements(coalesce(p_def_to->'fields', '[]')) f
-      where not (jsonb_typeof(p_list) = 'array' and jsonb_array_length(p_list) > 0)) q
-  where k is not null and p_data ? k $$;
+  with keys as (
+    select x #>> '{}' k from jsonb_array_elements(case when jsonb_typeof(p_list) = 'array' then p_list else '[]' end) x
+    union
+    select f->>'id' from jsonb_array_elements(coalesce(p_def_to->'fields', '[]')) f
+      where coalesce(jsonb_array_length(case when jsonb_typeof(p_list) = 'array' then p_list end), 0) = 0)
+  select coalesce(jsonb_object_agg(k, p_data->k), '{}') from keys where k is not null and coalesce(p_data, '{}') ? k $$;
 
 -- Tạo hồ sơ (không kiểm quyền – dùng nội bộ): kế thừa dữ liệu theo đơn hàng, vào nút đầu tiên
 create or replace function public._wf_create_instance(p_version uuid, p_title text, p_test boolean, p_order uuid, p_parent uuid, p_init jsonb default '{}')
@@ -66,8 +66,8 @@ begin
       end if;
     end loop;
     select code, project into o from orders where id = p_order;
-    if exists (select 1 from jsonb_array_elements(coalesce(v.def->'fields', '[]')) f where f->>'id' = 'ma_don') and not (d ? 'ma_don') then d := d || jsonb_build_object('ma_don', o.code); end if;
-    if exists (select 1 from jsonb_array_elements(coalesce(v.def->'fields', '[]')) f where f->>'id' = 'du_an') and not (d ? 'du_an') then d := d || jsonb_build_object('du_an', o.project); end if;
+    if exists (select 1 from jsonb_array_elements(coalesce(v.def->'fields', '[]')) ff where ff->>'id' = 'ma_don') and not (d ? 'ma_don') then d := d || jsonb_build_object('ma_don', o.code); end if;
+    if exists (select 1 from jsonb_array_elements(coalesce(v.def->'fields', '[]')) ff where ff->>'id' = 'du_an') and not (d ? 'du_an') then d := d || jsonb_build_object('du_an', o.project); end if;
   end if;
   d := d || coalesce(p_init, '{}');
   update wf_instances set data = d where id = i;
@@ -145,7 +145,7 @@ begin
     if j.id is null then
       tid := _wf_open_task2(p_inst, st, p_from, 'join');
       update wf_tasks set join_from = jsonb_build_array(p_from) where id = tid;
-    else update wf_tasks set join_from = join_from || jsonb_build_array(p_from) where id = j.id; tid := j.id;
+    else update wf_tasks set join_from = join_from || jsonb_build_array(p_from), prev_task = p_from where id = j.id; tid := j.id;
     end if;
     if coalesce(st->>'join_mode', 'all') = 'any' then
       perform _wf_cancel_open(p_inst, tid);

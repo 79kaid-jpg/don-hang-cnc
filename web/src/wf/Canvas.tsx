@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
-import { END, KIND, hasAppr, items, targets, who, type Assignee, type Def, type Directory, type Step } from './model';
+import { END, KIND, NTYPE, ntype, hasAppr, items, targets, who, type Assignee, type Def, type Directory, type Step } from './model';
 
 export const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
 const LW = 150, CW = 210, RH = 136, BW = 176, BH = 90, PAD = 20, TOP = 26;
@@ -141,10 +141,12 @@ export function Canvas({ def, dir, sel, errIds, ro, onSelect, onMove, onAddLane,
                   <foreignObject x={10} y={6} width={BW - 16} height={BH - 10}>
                     <div className="wf-boxt">
                       <div className="wf-boxtop">
-                        <b className="wf-boxn" style={{ background: c }}>{i + 1}</b><span className={'wf-kind ' + KIND[s.kind].c}>{KIND[s.kind].t}</span>
-                        <span className={'wf-boxwho' + (pr.warn ? ' warn' : '')}><Icon name={pr.icon} size={12} />{pr.text}</span>
+                        <b className="wf-boxn" style={{ background: c }}>{i + 1}</b>
+                        {ntype(s) === 'task' ? <><span className={'wf-kind ' + KIND[s.kind].c}>{KIND[s.kind].t}</span>
+                        <span className={'wf-boxwho' + (pr.warn ? ' warn' : '')}><Icon name={pr.icon} size={12} />{pr.text}</span></>
+                        : <span className="wf-kind k-ky">{NTYPE[ntype(s)]}</span>}
                       </div>
-                      <div className="wf-boxname">{s.name || 'Chưa đặt tên'}</div>
+                      <div className="wf-boxname">{s.name || (ntype(s) === 'task' ? 'Chưa đặt tên' : NTYPE[ntype(s)])}</div>
                       <div className="wf-boxfoot">
                         {s.sla_hours ? <span title="Hạn xử lý"><Icon name="clock" size={12} />{s.sla_hours}h</span> : null}
                         {it.length ? <span title="Checklist"><Icon name="checksq" size={12} />{it.length}</span> : null}
