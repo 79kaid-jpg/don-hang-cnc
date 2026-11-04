@@ -71,7 +71,7 @@ export default function Orders() {
                 <td data-l="Mã đơn" className="nw"><Link to={'/don/' + o.id} onClick={(e) => e.stopPropagation()}><b>{o.code}</b></Link></td>
                 <td data-l="Khách">{[cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ')}<div className="small muted">{o.project}</div></td>
                 <td data-l="Ngày giao"><span className="due-cell">{date(o.due_date)}{di.tag}</span></td>
-                <td data-l="Đang chờ">{w.length ? <span className="wait-list">{w.map((x, i) => <span key={i} className="wait-who"><span className="avatar xs">{x.who.split(' ').filter(Boolean).slice(-1)[0]?.[0]?.toUpperCase()}</span><span><b>{x.who}</b><span className="small muted">{x.what}{x.since ? ' · từ ' + date(x.since) : ''}</span></span></span>)}</span> : <span className="muted">—</span>}</td>
+                <td data-l="Đang chờ">{w.length ? <span className="wait-list">{w.map((x, i) => <span key={i} className="wait-who"><span className="avatar xs">{(x.who.replace(/\(.*?\)/g, '').trim().split(' ').filter(Boolean)[0]?.[0] ?? '?').toUpperCase()}</span><span><b>{x.who}</b><span className="small muted">{x.what}{x.since ? ' · từ ' + date(x.since) : ''}</span></span></span>)}</span> : <span className="muted">—</span>}</td>
                 {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => { const x = procSummary(p, bs.filter((b) => b.order_id === o.id), ds); return <td key={p} data-l={p}><span className={'chip ' + x.cls}>{x.t}</span></td>; })}
               </tr>); })}
           </tbody>

@@ -803,3 +803,5 @@ g.on .sw-e{stroke:#B8954A;stroke-width:2.4}
   .kb-dots{display:flex;gap:5px}.kb-dots i{width:6px;height:6px;border-radius:3px;background:#d9cdb4;transition:width .2s,background .2s}.kb-dots i.on{width:18px;background:var(--gold-ink,#7a5a1e)}
 }
 @media (max-width:760px) and (prefers-reduced-motion:reduce){.kb-board.hint{animation:none}}
+
+@media (min-width:761px){.tbl-cards td[data-l="Khách"]{min-width:200px}.tbl-cards td[data-l="Đang chờ"]{min-width:170px}.tbl-cards td[data-l^="QT"]{white-space:nowrap}}

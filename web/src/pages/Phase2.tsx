@@ -362,7 +362,7 @@ export function QT3Giao(p: Common) {
           </table></div>)}
         {pk && <div className="grid2">
           <label className="f">Ngày giao dự kiến<input type="date" disabled={!(g === 'thong_bao' && admin)} value={numIn(pkF.planned_date)} onChange={(e) => setPkF({ ...pkF, planned_date: e.target.value })} /></label>
-          <label className="f">Địa điểm giao<input disabled={!(g === 'thong_bao' && admin)} value={numIn(pkF.place)} onChange={(e) => setPkF({ ...pkF, place: e.target.value })} placeholder="Kho Hanwa…" /></label>
+          <label className="f">Địa điểm giao<input disabled={!(g === 'thong_bao' && admin)} value={numIn(pkF.place)} onChange={(e) => setPkF({ ...pkF, place: e.target.value })} placeholder="Kho Hanwha…" /></label>
         </div>}
         {g === 'thong_bao' && admin && pl.length > 0 && <div className="row">
           <button className="btn" onClick={saveF8}>Lưu packing list</button>
@@ -376,7 +376,7 @@ export function QT3Giao(p: Common) {
               <label className="f" key={k}>{t}<input disabled={!(g === 'lap_lgh' && admin)} value={numIn(dvF[k])} onChange={(e) => setDvF({ ...dvF, [k]: e.target.value })} /></label>))}
             <label className="f">Ngày giờ giao<input type="datetime-local" disabled={!(g === 'lap_lgh' && admin)} value={numIn(dvF.planned_at)} onChange={(e) => setDvF({ ...dvF, planned_at: e.target.value })} /></label>
           </div>
-          <p className="small muted" style={{ margin: 0 }}>Chặng 1 CNC → IPC: Dung kiểm tra → Chị Trang duyệt. Duyệt xong tự gửi chặng 2 IPC → Hanwa: Nhung kiểm tra → Anh Kiên duyệt.</p>
+          <p className="small muted" style={{ margin: 0 }}>Chặng 1 CNC → IPC: Dung kiểm tra → Chị Trang duyệt. Duyệt xong tự gửi chặng 2 IPC → Hanwha: Nhung kiểm tra → Anh Kiên duyệt.</p>
           {g === 'lap_lgh' && admin && <div className="row">
             <button className="btn" onClick={saveF9}>Lưu lệnh giao hàng</button>
             <button className="btn primary" onClick={() => run('submit_for_approval', { p_order: o.id, p_doc: 'LGH1' }, 'Đã gửi duyệt Lệnh giao hàng chặng 1.')}>Gửi duyệt LGH 2 chặng</button></div>}

@@ -333,7 +333,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
         <h3>Khách xác nhận · KH1 rồi KH2 (ĐK2)</h3>
         <div className="grid2">
           <div><div className="small muted">KH1 – IPC</div>{conf?.kh1_confirmed_at ? <Chip s="dat" text={'Đã xác nhận ' + dt(conf.kh1_confirmed_at) + ' · ' + conf.kh1_channel} /> : <Chip s="chua" text="Chưa xác nhận" />}</div>
-          <div><div className="small muted">KH2 – Hanwa</div>{conf?.kh2_confirmed_at ? <Chip s="dat" text={'Đã xác nhận ' + dt(conf.kh2_confirmed_at) + ' · ' + conf.kh2_channel} /> : <Chip s="chua" text="Chưa xác nhận" />}</div>
+          <div><div className="small muted">KH2 – Hanwha</div>{conf?.kh2_confirmed_at ? <Chip s="dat" text={'Đã xác nhận ' + dt(conf.kh2_confirmed_at) + ' · ' + conf.kh2_channel} /> : <Chip s="chua" text="Chưa xác nhận" />}</div>
           <div><div className="small muted">PDF XNĐH đã ký</div>{!conf?.signed_pdf_path ? <span className="muted">Chưa có</span>
             : pdfUrl === undefined ? <span className="muted small">Đang chuẩn bị…</span>
             : pdfUrl === null ? <span className="kb-late small"><Icon name="alert" size={14} />Không tìm thấy file, tải lại PDF</span>
@@ -342,7 +342,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
         {o.status === 'cho_khach' && (can('admin_cnc') || can('kinh_doanh')) && (
           <div className="row">
             {!conf?.kh1_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 1, p_channel: 'Email' }, 'Đã ghi KH1 xác nhận.')}>Ghi KH1 (IPC) xác nhận</button>}
-            {conf?.kh1_confirmed_at && !conf?.kh2_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 2, p_channel: 'Email' }, 'Đã ghi KH2 xác nhận.')}>Ghi KH2 (Hanwa) xác nhận</button>}
+            {conf?.kh1_confirmed_at && !conf?.kh2_confirmed_at && <button className="btn" onClick={() => run('confirm_customer', { p_order: o.id, p_which: 2, p_channel: 'Email' }, 'Đã ghi KH2 xác nhận.')}>Ghi KH2 (Hanwha) xác nhận</button>}
             <label className="btn ghost" ><Icon name="upload" size={18} />Tải PDF đã ký<input type="file" accept="application/pdf" onChange={uploadPdf} style={{ display: 'none' }} /></label>
             <button className="btn primary" disabled={!conf?.kh1_confirmed_at || !conf?.kh2_confirmed_at || !conf?.signed_pdf_path}
               onClick={() => run('close_qt1', { p_order: o.id }, 'ĐK2 đạt – đã mở QT2 Lệnh gia công & bàn giao NVL.')}>Hoàn tất QT1 (ĐK2)</button>
