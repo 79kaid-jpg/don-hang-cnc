@@ -913,3 +913,9 @@ html[data-fs=lg] body{zoom:1.12}
 .zl-dot{background:#0068FF;color:#fff;font-size:9px;font-weight:800;border-radius:5px;padding:3px 4px}
 @media (max-width:760px){.db-grid{grid-template-columns:1fr}.db-kpi{grid-template-columns:1fr 1fr}.db-hbar{grid-template-columns:minmax(0,45%) 1fr auto;gap:6px}.db-cols{gap:3px}.db-coll{font-size:10px}}
 .db-grid{align-items:start}
+
+.db-daily{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#F2F7FF;border:1px solid #CFE0FA;border-radius:14px;padding:10px 14px;margin-bottom:12px}
+.db-daily .zl-dot{font-size:11px;padding:6px 6px;border-radius:8px}.db-daily-t{flex:1 1 220px;display:flex;flex-direction:column}
+.sw-toggle{width:52px;height:30px;border-radius:15px;border:0;background:#cfc6b3;position:relative;cursor:pointer;transition:background .2s;flex:none}
+.sw-toggle i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.sw-toggle.on{background:#0068FF}.sw-toggle.on i{transform:translateX(22px)}

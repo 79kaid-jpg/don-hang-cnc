@@ -114,6 +114,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <DailyZalo />
       <div id="db-root" className="db">
         <div className="db-stamp">Đơn hàng CNC · {tab === 'me' ? 'Thống kê của ' + me?.full_name : 'Thống kê điều hành'} · {days} ngày · {new Date().toLocaleString('vi-VN')}</div>
         {tab === 'me' ? <>
@@ -233,5 +234,26 @@ function ShareBtn({ target, name, label, icon }: { target: string; name: string;
       <button role="menuitem" onClick={() => run('copy')}><Icon name="copy" size={16} />Chép ảnh</button>
       <button role="menuitem" onClick={() => run('save')}><Icon name="download" size={16} />Tải ảnh PNG</button>
     </div>}
+  </div>;
+}
+
+/** Bật / tắt nhận báo cáo 8h sáng qua Zalo bot; gửi thử ngay cho mình */
+function DailyZalo() {
+  const { me, reload } = useAuth(); const [busy, setBusy] = useState(false);
+  if (!me) return null;
+  const p = me as typeof me & { daily_report?: boolean | null; zalo_chat_id?: string | null };
+  const on = p.daily_report ?? (me.roles.includes('duyet') || me.roles.includes('admin_it'));
+  const linked = !!p.zalo_chat_id;
+  const toggle = async () => { setBusy(true); const { error } = await sb.rpc('set_daily_report', { p_on: !on }); setBusy(false);
+    if (error) toast('Không lưu được: ' + error.message); else { toast(!on ? 'Đã bật báo cáo 8h sáng qua Zalo' : 'Đã tắt báo cáo sáng'); reload(); } };
+  const test = async () => { setBusy(true); const { data, error } = await sb.rpc('send_daily_report_me'); setBusy(false);
+    toast(error ? 'Lỗi: ' + error.message : data ? 'Đã gửi báo cáo vào Zalo của bạn' : 'Bạn chưa liên kết Zalo'); };
+  return <div className="db-daily">
+    <span className="zl-dot">Zalo</span>
+    <span className="db-daily-t"><b>Báo cáo 8:00 sáng mỗi ngày</b><span className="small muted">{linked ? 'Bot gửi số liệu chính + link trang này vào Zalo của bạn.' : 'Liên kết Zalo trước để nhận báo cáo.'}</span></span>
+    {linked ? <>
+      <button className="btn sm" onClick={test} disabled={busy}>Gửi thử ngay</button>
+      <button role="switch" aria-checked={on} className={'sw-toggle' + (on ? ' on' : '')} onClick={toggle} disabled={busy} aria-label="Nhận báo cáo 8h sáng"><i /></button>
+    </> : <Link className="btn sm primary" to="/zalo">Liên kết Zalo</Link>}
   </div>;
 }
