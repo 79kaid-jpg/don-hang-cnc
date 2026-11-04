@@ -70,19 +70,29 @@ export default function OrderDetail() {
   const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');
   const props = { o, lines: [] as Line[], run, can, load, setErr, setOk };
   const sum = (p: Proc) => procSummary(p, bs, ds);
+  const dueCls = (d: string) => { const n = Math.ceil((new Date(d + 'T23:59:59').getTime() - Date.now()) / 864e5); return n < 0 ? 'late' : n <= 3 ? 'soon' : ''; };
   return (
     <>
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="row between">
-          <div><h1>{o.code}</h1><div className="muted">{[chain, o.project, o.due_date ? 'giao ' + date(o.due_date) : ''].filter(Boolean).join(' · ')}</div></div>
-          <Link className="btn sm" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link>
+      <div className="card od-top">
+        <div className="od-h">
+          <h1>{o.code}</h1>
+          {o.due_date && <span className={'od-due ' + dueCls(o.due_date)}><Icon name="clock" size={13} />Giao {date(o.due_date)}</span>}
+          <Link className="btn sm icon-btn od-map" to={'/so-do?don=' + o.id} aria-label="Xem trên sơ đồ" title="Xem trên sơ đồ"><Icon name="flow" size={18} /></Link>
         </div>
-        <div className="od-procs">
+        <div className="od-sub muted">{[chain, o.project].filter(Boolean).join(' · ')}</div>
+        <ol className="od-steps" aria-label="Tiến độ 4 quy trình">
           {PROCS.map((p) => { const s = sum(p); return (
-            <button key={p} className={'od-proc ' + p.toLowerCase() + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })}>
-              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls} title={s.d}>{s.t}</span>{s.d && <span className="small muted od-sd">{s.d}</span>}{s.since && <Age since={s.since} />}</button>); })}
-        </div>
+            <li key={p} className={'od-st ' + p.toLowerCase() + ' s-' + s.cls + (tab === p ? ' on' : '')}>
+              <button onClick={() => setSp({ tab: p })} aria-current={tab === p ? 'step' : undefined} title={PROC_SHORT[p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}>
+                <i className="od-dot">{s.cls === 'done' ? <Icon name="check" size={13} /> : s.cls === 'bad' ? <Icon name="x" size={13} /> : null}</i>
+                <span className="od-st-t"><b>{p}</b><span>{s.t}</span></span>
+              </button></li>); })}
+        </ol>
+        {(() => { const cur = PROCS.map((p) => ({ p, s: sum(p) })).filter((x) => x.s.since); return cur.length > 0 && <div className="od-now">
+          {cur.map(({ p, s }) => <button key={p} className="od-now-row" onClick={() => setSp({ tab: p })}>
+            <QtTag qt={p} /><span className="od-now-t"><b>{s.d || s.t}</b></span><Age since={s.since} /></button>)}
+        </div>; })()}
       </div>
       <div className="qt-group od-group"><div className="qt-tabs" role="tablist">
         {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={(tab === k ? 'on ' : '') + (k.startsWith('QT') ? 'q' + k.slice(2) : '')} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
