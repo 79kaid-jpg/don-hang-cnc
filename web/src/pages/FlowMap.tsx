@@ -77,6 +77,7 @@ const KIND: Record<Kind, string> = { start: 'Bắt đầu', step: 'Bước làm'
 
 export default function FlowMap() {
   const [sp, setSp] = useSearchParams(); const one = sp.get('don') ?? '';
+  const all = sp.get('qt') === 'TQ' || (!sp.get('qt') && !one);
   const proc = (PROCS.includes(sp.get('qt') as Proc) ? sp.get('qt') : 'QT0') as Proc;
   const setProc = (p: Proc) => { const n = new URLSearchParams(sp); n.set('qt', p); setSp(n); setSel(''); };
   const [orders, setOrders] = useState<Order[]>([]); const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
@@ -141,8 +142,10 @@ export default function FlowMap() {
         {hits.length > 0 && <ul className="fm2-hits">{hits.map((o) => <li key={o.id}><button onClick={() => { const n = new URLSearchParams(sp); n.set('don', o.id); setSp(n); setQ(''); }}><b>{o.code}</b> <span className="small muted">{o.project}</span></button></li>)}</ul>}
       </div>
       <div className="qt-group">
-        <div className="qt-tabs" role="tablist">{PROCS.map((p) => <button key={p} role="tab" aria-selected={proc === p} className={(proc === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => setProc(p)}>
+        <div className="qt-tabs" role="tablist"><button role="tab" aria-selected={all} className={all ? 'on' : ''} onClick={() => { const n = new URLSearchParams(sp); n.set('qt', 'TQ'); setSp(n); setSel(''); }}>
+          <b>Tổng quan</b><span>Đơn kẹt ở đâu</span></button>{PROCS.map((p) => <button key={p} role="tab" aria-selected={!all && proc === p} className={(!all && proc === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => setProc(p)}>
           <b>{p}</b><span>{PROC_NAME[p].replace(' & bàn giao vật liệu', '').replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span></button>)}</div>
+        {all ? <Overview orders={orders} bs={bs} ds={ds} onOpen={(p) => setProc(p)} /> :
         <div className={'qt-panel sw ' + proc.toLowerCase()} key={proc}>
           <div className="sw-top"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b>{PROC_NAME[proc]}</b></span><span className="small muted">{P.note}</span>
             <span className="sw-legend small">{(['start', 'step', 'cond', 'end', 'fail'] as Kind[]).map((k) => <span key={k}><i className={'lg ' + k} />{KIND[k]}</span>)}</span>
@@ -171,7 +174,7 @@ export default function FlowMap() {
                 {outs.map((e) => <span key={e.b} className={'sw-branch' + (e.dash ? ' dash' : '')}>{e.dash ? '↺' : '→'} {e.l ?? ''} {e.l ? '·' : ''} {P.steps.find((x) => x.id === e.b)?.t}</span>)}
               </li>); })}
           </ol>
-        </div>
+        </div>}
       </div>
 
       {S0 && <div className="sw-sheet-bg" onClick={() => setSel('')}><aside className="sw-detail" role="dialog" aria-label={S0.t} onClick={(e) => e.stopPropagation()}>
@@ -186,4 +189,49 @@ export default function FlowMap() {
       </aside></div>}
     </>
   );
+}
+
+const STUCK = 2; // ngày nằm yên ở một bước thì coi là kẹt
+const ago = (t?: string) => (t ? (Date.now() - new Date(t).getTime()) / 864e5 : 0);
+/** Tổng quan: mọi giai đoạn của QT0→QT3 trên một màn, mỗi ô = số hồ sơ đang nằm ở đó, số bị kẹt, chờ lâu nhất */
+function Overview({ orders, bs, ds, onOpen }: { orders: Order[]; bs: Batch[]; ds: Doc[]; onOpen: (p: Proc) => void }) {
+  const [pick, setPick] = useState<{ p: Proc; s: S } | null>(null);
+  const live = bs.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky');
+  const since = (b: Batch) => { const l = ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort(); return l[l.length - 1] ?? b.created_at; };
+  const stages = (p: Proc) => { const seen = new Set<string>();
+    return D[p].steps.filter((s) => s.keys && !['end', 'fail', 'start'].includes(s.kind)).sort((a, z) => a.col - z.col)
+      .filter((s) => { const k = s.keys!.join(); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map((s) => { const items = live.filter((b) => b.proc === p && s.keys!.includes(stepOf(b, ds).key)).map((b) => ({ b, d: ago(since(b)) })).sort((a, z) => z.d - a.d);
+        return { s, items, stuck: items.filter((x) => x.d >= STUCK).length }; }); };
+  const rows = PROCS.map((p) => ({ p, st: stages(p) }));
+  const max = Math.max(1, ...rows.flatMap((r) => r.st.map((x) => x.items.length)));
+  const tot = live.length, stuck = rows.reduce((a, r) => a + r.st.reduce((x, y) => x + y.stuck, 0), 0);
+  const worst = rows.flatMap((r) => r.st.map((x) => ({ p: r.p, ...x }))).sort((a, z) => z.stuck - a.stuck || z.items.length - a.items.length)[0];
+  return (
+    <div className="qt-panel ov">
+      <div className="ov-kpi">
+        <div><b>{tot}</b><span>Hồ sơ đang chạy</span></div>
+        <div className={stuck ? 'bad' : ''}><b>{stuck}</b><span>Kẹt ≥ {STUCK} ngày</span></div>
+        <div><b>{worst && worst.items.length ? worst.p + ' · ' + worst.s.t : '—'}</b><span>Điểm nghẽn lớn nhất</span></div>
+      </div>
+      {rows.map(({ p, st }) => (
+        <section key={p} className={'ov-row q' + p.slice(2)}>
+          <button className="ov-head" onClick={() => onOpen(p)}><QtTag qt={p} /><span>{PROC_NAME[p]}</span><span className="small muted">{st.reduce((a, x) => a + x.items.length, 0)} hồ sơ</span><Icon name="arrow" size={16} /></button>
+          <ol className="ov-stages">{st.map(({ s, items, stuck: k }) => { const n = items.length; const lane = D[p].lanes[s.lane];
+            return <li key={s.id}><button className={'ov-cell' + (n ? '' : ' zero') + (k ? ' stuck' : '')} style={{ ['--h' as string]: n / max }} onClick={() => n && setPick({ p, s })} disabled={!n}
+              aria-label={`${p} ${s.t}: ${n} hồ sơ, ${k} kẹt`}>
+              <span className="ov-lane">{lane}</span><span className="ov-t">{s.t}</span>
+              <span className="ov-n">{n}</span>
+              <span className="ov-sub">{k ? <><Icon name="alert" size={12} />{k} kẹt · lâu nhất {Math.floor(items[0].d)} ngày</> : n ? 'đúng tiến độ' : 'trống'}</span>
+              <i className="ov-bar" /></button></li>; })}</ol>
+        </section>))}
+      <p className="small muted">Kẹt = hồ sơ nằm yên ở một bước từ {STUCK} ngày trở lên. Bấm một ô để xem danh sách đơn.</p>
+      {pick && <div className="sw-sheet-bg" onClick={() => setPick(null)}><aside className="sw-detail" role="dialog" aria-label={pick.s.t} onClick={(e) => e.stopPropagation()}>
+        <div className="mv-head"><span className="row" style={{ gap: 8 }}><QtTag qt={pick.p} /><b style={{ fontSize: 17 }}>{pick.s.t}</b></span>
+          <button className="btn sm icon-btn" onClick={() => setPick(null)} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+        <span className="small muted">{pick.s.who}</span>
+        <ul className="fm2-list">{stages(pick.p).find((x) => x.s.id === pick.s.id)?.items.map(({ b, d }) => { const o = orders.find((x) => x.id === b.order_id);
+          return <li key={b.id}><Link to={'/don/' + b.order_id + '?tab=' + pick.p}><b>{o?.code}</b> · {b.title} <span className={'chip ' + (d >= STUCK ? 'bad' : 'idle')}>{d < 1 ? 'hôm nay' : Math.floor(d) + ' ngày'}</span><Icon name="arrow" size={16} /></Link></li>; })}</ul>
+      </aside></div>}
+    </div>);
 }
