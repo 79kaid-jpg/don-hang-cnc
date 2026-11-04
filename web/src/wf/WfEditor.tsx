@@ -345,7 +345,7 @@ function People({ label, hint, list, dir, ro, onChange, rel }: { label: string; 
 }
 
 /** Biểu mẫu dùng chung cho cả quy trình; mỗi bước đặt quyền Ẩn / Xem / Sửa / Bắt buộc */
-function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; onChange: (f: Field[]) => void }) {
+export function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; onChange: (f: Field[]) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const setF = (i: number, p: Partial<Field>) => onChange(fields.map((f, j) => j === i ? { ...f, ...p } : f));
   const add = (type: Field['type']) => {
@@ -359,7 +359,7 @@ function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; 
         {fields.map((f, i) => (
           <div key={f.id} className="wf-field">
             <button className="wf-step-h" style={{ minHeight: 44, padding: '6px 10px' }} aria-expanded={open === f.id} onClick={() => setOpen(open === f.id ? null : f.id)}>
-              <span className="wf-kind">{FTYPE[f.type]}</span><b style={{ flex: 1, textAlign: 'left' }}>{f.label || <i className="muted">Chưa đặt tên</i>}</b>
+              <span className={'wf-fbadge ft-' + f.type} title={FTYPE[f.type]}><Icon name={FICON[f.type]} size={14} /></span><b style={{ flex: 1, textAlign: 'left' }}>{f.label || <i className="muted">Chưa đặt tên</i>}</b>
               {f.type === 'table' && <span className="small muted">{f.columns?.length ?? 0} cột</span>}</button>
             {open === f.id && <fieldset className="wf-form" disabled={ro}>
               <div className="wf-2">
@@ -382,8 +382,12 @@ function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; 
             </fieldset>}
           </div>))}
       </div>
-      {!ro && <div className="row" style={{ marginTop: 8 }}><span className="small muted">Thêm trường:</span>
-        {(Object.keys(FTYPE) as Field['type'][]).map((t) => <button key={t} className="btn sm" onClick={() => add(t)}><Icon name="plus" size={14} />{FTYPE[t]}</button>)}</div>}
+      {!ro && <div className="wf-addf">
+        <span className="wf-addf-h"><Icon name="plus" size={14} />Thêm trường</span>
+        <div className="wf-addf-grid">{(Object.keys(FTYPE) as Field['type'][]).map((t) => (
+          <button key={t} type="button" className={'wf-ftile ft-' + t} onClick={() => add(t)} aria-label={'Thêm trường ' + FTYPE[t]}>
+            <span className="wf-ftile-ic"><Icon name={FICON[t]} size={18} /></span><span>{FTYPE[t]}</span></button>))}</div>
+      </div>}
     </section>);
 }
 
@@ -638,3 +642,6 @@ function TriggerEditor({ def, ro, onChange, selfId }: { def: Def; ro: boolean; o
       </fieldset>
     </section>);
 }
+
+/** Icon cho từng kiểu trường biểu mẫu */
+const FICON: Record<Field['type'], string> = { text: 'ftext', textarea: 'falign', number: 'fhash', date: 'fcal', select: 'fselect', table: 'fgrid' };

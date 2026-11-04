@@ -241,3 +241,20 @@ body.wf-resizing{cursor:col-resize;user-select:none}
 .g-menu{position:absolute;z-index:5;background:#fff;border:1px solid var(--line2);border-radius:var(--r-sm);box-shadow:0 6px 20px rgba(0,0,0,.15);display:flex;flex-direction:column;min-width:180px;padding:6px}
 .g-menu b{padding:4px 8px}.g-menu button{display:flex;align-items:center;gap:8px;border:0;background:none;font:inherit;text-align:left;padding:8px;border-radius:6px;cursor:pointer;min-height:36px}
 .g-menu button:hover,.g-menu button:focus-visible{background:var(--soft)}
+/* Thêm trường biểu mẫu: lưới ô gọn, mỗi kiểu một màu */
+.wf-addf{margin-top:12px;border:1px dashed var(--line2);border-radius:var(--r);padding:10px;background:linear-gradient(180deg,#FFFDF8,#FBF8F1)}
+.wf-addf-h{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--muted);margin:0 0 8px 2px}
+.wf-addf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (min-width:720px){.wf-addf-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.wf-ftile{--fc:#5B7083;--fb:#EEF2F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:8px 4px;border:1px solid transparent;border-radius:12px;background:#fff;
+  box-shadow:0 1px 2px rgba(40,30,10,.06);font:inherit;font-size:13px;font-weight:600;color:#3A352C;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.wf-ftile:hover{border-color:var(--fc);box-shadow:0 4px 12px rgba(40,30,10,.10);transform:translateY(-1px)}
+.wf-ftile:active{transform:translateY(0) scale(.97)}
+.wf-ftile:focus-visible{outline:2px solid var(--fc);outline-offset:2px}
+.wf-ftile-ic,.wf-fbadge{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;background:var(--fb);color:var(--fc)}
+.wf-ftile-ic{width:34px;height:34px}
+.wf-fbadge{--fc:#5B7083;--fb:#EEF2F5;width:26px;height:26px;border-radius:7px;flex:none}
+.ft-text{--fc:#2F6FB0;--fb:#E6F0FA}.ft-textarea{--fc:#3B8E5A;--fb:#E5F4EA}.ft-number{--fc:#B8862B;--fb:#FBF1DC}
+.ft-date{--fc:#C0504D;--fb:#FBE9E8}.ft-select{--fc:#8A4FB0;--fb:#F2EAF8}.ft-table{--fc:#0F7C86;--fb:#E0F3F4}
+@media (prefers-reduced-motion:reduce){.wf-ftile{transition:none}.wf-ftile:hover{transform:none}}
+.wf-field .wf-step-h b{font-size:15px;font-weight:600}
