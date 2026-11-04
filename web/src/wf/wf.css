@@ -104,9 +104,9 @@ a.wf-item:hover{border-color:#BFA977}
 .wf-lrow{fill:#fff}.wf-lrow.alt{fill:#FBF8F1}.wf-lsep{stroke:var(--line)}
 .wf-lname{height:100%;display:flex;align-items:center;font-weight:700;font-size:14px;line-height:1.25;padding-right:4px;word-break:break-word}
 .wf-box{cursor:grab;outline:none}.wf-box.drag{cursor:grabbing;opacity:.85}
-.wf-box>rect:first-child{fill:#fff;stroke:var(--line2);stroke-width:1.5;filter:drop-shadow(0 1px 2px rgba(0,0,0,.08))}
-.wf-box:hover>rect:first-child,.wf-box:focus-visible>rect:first-child{stroke:#BFA977}
-.wf-box.sel>rect:first-child{stroke:var(--gold);stroke-width:3}.wf-box.err>rect:first-child{stroke:var(--red);stroke-dasharray:5 3}
+.wf-box>.wf-boxbg{fill:#fff;stroke:var(--line2);stroke-width:1.5;filter:drop-shadow(0 1px 2px rgba(0,0,0,.08))}
+.wf-box:hover>.wf-boxbg,.wf-box:focus-visible>.wf-boxbg{stroke:#BFA977}
+.wf-box.sel>.wf-boxbg{stroke:var(--gold);stroke-width:3}.wf-box.err>.wf-boxbg{stroke:var(--red);stroke-dasharray:5 3}
 .wf-boxt{font-size:12px;line-height:1.3;display:flex;flex-direction:column;gap:2px;pointer-events:none}
 .wf-boxn{color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none}
 .wf-boxname{font-weight:700;font-size:13px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -118,3 +118,32 @@ a.wf-item:hover{border-color:#BFA977}
 .wf-node-s circle{fill:var(--blue)}.wf-node-e circle{fill:#fff;stroke:var(--ink,#3A352C);stroke-width:2}.wf-node-e circle.in{fill:var(--ink,#3A352C);stroke:none}
 .wf-node-s text,.wf-node-e text{font-size:12px;fill:var(--muted)}
 @media (max-width:1000px){.wf-design.has-panel{grid-template-columns:1fr}.wf-panel{position:static;max-height:none}}
+.wf-levels{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.wf-level{border:1px solid var(--line2);border-left:4px solid var(--blue);border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.wf-lvno{flex:none;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.wf-appr{display:flex;flex-direction:column;gap:8px}
+.wf-appr-lv{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px}
+.wf-appr-lv.cur{border-color:var(--blue);background:var(--blue-bg)}
+.wf-appr-p{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;padding:3px 0}
+
+/* Khung vẽ v2 */
+.wf-canvas-in{display:flex;position:relative}
+.wf-lanecol{position:sticky;left:0;z-index:3;flex:none;background:var(--soft);border-right:1px solid var(--line2);box-shadow:4px 0 8px -6px rgba(0,0,0,.25);display:flex;flex-direction:column}
+.wf-lanehead{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 10px 0 14px;border-left:6px solid var(--lc);border-bottom:1px solid var(--line);box-sizing:border-box;cursor:default}
+.wf-lanehead b{font-size:14px;line-height:1.25;word-break:break-word}.wf-lanehead small{color:var(--muted);font-size:12px}
+.wf-lanehead.drop{background:#F3E9D2}
+.wf-lanehead input{font:inherit;font-weight:700;width:100%;padding:4px 6px;border:1px solid var(--gold);border-radius:6px}
+.wf-addlane{border:0;border-top:1px dashed var(--line2);background:none;font:inherit;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.wf-addlane:hover{color:var(--gold);background:#fff}
+.wf-lrow.drop{fill:#F7F0DF}
+.wf-colline{stroke:#CFC8B8;stroke-width:1;stroke-dasharray:4 5}
+.wf-colno{font-size:11px;font-weight:700;fill:#A39C8C}
+.wf-dropcol{fill:rgba(184,134,43,.08)}
+.wf-boxtop{display:flex;align-items:center;gap:4px;min-width:0}
+.wf-boxtop .wf-boxwho{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);background:var(--soft);border-radius:999px;padding:1px 7px 1px 5px;max-width:84px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wf-boxtop .wf-boxwho svg{flex:none}
+.wf-boxtop .wf-boxwho.warn{color:#B4580B;background:#FDEBD8}
+.wf-boxfoot{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-top:auto}
+.wf-boxfoot span{display:inline-flex;align-items:center;gap:2px}
+.wf-boxfoot .ap{color:var(--blue);font-weight:600}.wf-boxfoot .fl{color:var(--red)}
+.wf-boxt{height:100%}

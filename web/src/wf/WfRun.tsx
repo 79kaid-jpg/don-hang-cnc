@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { FormView } from './Form';
-import { computeRow } from './model';
+import { computeRow, hasAppr, type ApprRow } from './model';
 import { ISTATUS, KIND, TSTATUS, fmtDT, items, loadDirectory, slaLeft, userName, who,
   type Def, type Directory, type Instance, type Step, type Task, type Version } from './model';
 
@@ -27,16 +27,20 @@ export default function WfRun() {
   const [ck, setCk] = useState<Record<string, boolean>>({});
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
+  const [apprs, setApprs] = useState<ApprRow[]>([]);
+  const [apNote, setApNote] = useState('');
 
   const load = async () => {
     const i = await sb.from('wf_instances').select('*').eq('id', id).single();
     if (i.error) return setErr(errText(i.error));
     const inst = i.data as Instance; setIns(inst); setData((i.data as { data?: Record<string, unknown> }).data ?? {}); setDataDirty(false);
-    const [v, t, e, m] = await Promise.all([
+    const [v, t, e, m, ap] = await Promise.all([
       sb.from('wf_versions').select('*, p:wf_processes(name)').eq('id', inst.version_id).single(),
       sb.from('wf_tasks').select('*').eq('instance_id', id).order('created_at'),
       sb.from('wf_events').select('*').eq('instance_id', id).order('id'),
-      sb.rpc('wf_my_rights', { p_inst: id })]);
+      sb.rpc('wf_my_rights', { p_inst: id }),
+      sb.from('wf_approvals').select('*, wf_tasks!inner(instance_id)').eq('wf_tasks.instance_id', id).order('created_at')]);
+    setApprs((ap.data ?? []) as ApprRow[]); setApNote('');
     setVer(v.data as Version & { p: { name: string } }); setTasks((t.data ?? []) as Task[]); setEvs((e.data ?? []) as Ev[]);
     setRights((m.data as typeof rights) ?? { do: false, manage: false, watch: false }); setPick('');
     setCk({}); setNote('');
@@ -46,7 +50,23 @@ export default function WfRun() {
   if (!ins || !ver) return err ? <Msg err={err} /> : <Skeleton />;
   const def: Def = ver.def; const cur: Step | undefined = def.steps[ins.step_idx];
   const open = tasks.find((t) => t.status === 'cho');
-  const canAct = ins.status === 'dang_chay' && !!open && rights.do;
+  const appr = hasAppr(cur);
+  const inAppr = open?.appr_state === 'dang_duyet';
+  const canAct = ins.status === 'dang_chay' && !!open && rights.do && !inAppr;
+  const curAppr = open ? apprs.filter((a) => a.task_id === open.id) : [];
+  const round = curAppr.reduce((m, a) => Math.max(m, a.round), 0);
+  const myAppr = curAppr.find((a) => a.status === 'cho' && a.approver === me?.id);
+  const submit = async () => {
+    if (!open || !(await saveData(true))) return;
+    const { data: r, error } = await sb.rpc('wf_submit_approval', { p_task: open.id, p_note: note, p_checklist: ck });
+    if (error) return setErr(errText(error)); setErr(''); toast(r === 'dat' ? 'Không cấp nào cần duyệt – đã chuyển bước' : 'Đã gửi duyệt'); load();
+  };
+  const decide = async (a: ApprRow, ok: boolean) => {
+    if (!ok && !apNote.trim()) return setErr('Ghi lý do từ chối');
+    const { data: r, error } = await sb.rpc('wf_approve', { p_appr: a.id, p_ok: ok, p_note: apNote });
+    if (error) return setErr(errText(error)); setErr('');
+    toast(ok ? (r === 'dat' ? 'Đã duyệt – đủ các cấp, chuyển bước' : r === 'cap_sau' ? 'Đã duyệt – chuyển cấp sau' : 'Đã ghi ý kiến đồng ý') : 'Đã từ chối'); load();
+  };
   const canEdit = ins.status === 'dang_chay' && !!open && (rights.do || rights.manage);
   const unassigned = !!open && !open.assigned_to && !cur?.assignee?.id;
   const filesOf = (key: string) => (open?.files ?? []).filter((f) => f.item === key);
@@ -160,15 +180,39 @@ export default function WfRun() {
                   <input type="checkbox" disabled={!canAct} checked={!!ck[c.id]} onChange={(e) => setCk({ ...ck, [c.id]: e.target.checked })} />{c.text}</span></label>))}
           </div>}
 
+          {appr && <div className="f"><span>Luồng duyệt{open?.appr_state === 'cho_sua' ? ' · bị từ chối, sửa rồi gửi duyệt lại' : inAppr ? ' · đang duyệt' : ' · chưa gửi'}</span>
+            <div className="wf-appr">{cur.approval!.levels.map((l, k) => {
+              const rows = curAppr.filter((a) => a.round === round && a.level === k);
+              const isCur = inAppr && rows.some((a) => a.status === 'cho');
+              return (
+                <div key={l.id} className={'wf-appr-lv' + (isCur ? ' cur' : '')}>
+                  <div className="row small" style={{ justifyContent: 'space-between' }}><b>{k + 1}. {l.name || 'Cấp ' + (k + 1)}</b>
+                    <span className="muted">{l.rule === 'all' ? 'Tất cả đồng ý' : l.rule === 'any' ? 'Một người là đạt' : `Tối thiểu ${l.min ?? 1} người`}{l.when ? ' · có điều kiện' : ''}</span></div>
+                  {rows.length ? rows.map((a) => (
+                    <div key={a.id} className="wf-appr-p"><Icon name="user" size={14} />{userName(a.approver, dir)}
+                      <span className={'chip ' + ({ cho: 'wait', dong_y: 'done', tu_choi: 'bad', bo_qua: 'idle' }[a.status])}>{({ cho: 'Đang chờ', dong_y: 'Đồng ý', tu_choi: 'Từ chối', bo_qua: 'Không cần' })[a.status]}</span>
+                      {a.decided_at && <span className="small muted">{fmtDT(a.decided_at)}</span>}{a.note && <span className="small">“{a.note}”</span>}</div>))
+                    : <div className="small muted">{l.approvers.map((x) => who(x, dir)).join(', ') || 'Chưa có người duyệt'}{round ? ' · không áp dụng / chưa tới' : ''}</div>}
+                </div>);
+            })}</div>
+            {myAppr && <div className="wf-now" style={{ borderLeftColor: 'var(--blue)', paddingLeft: 10 }}>
+              <b>Bạn cần duyệt: {myAppr.level_name}</b>
+              <textarea rows={2} value={apNote} onChange={(e) => setApNote(e.target.value)} placeholder="Ý kiến (bắt buộc khi từ chối)" style={{ font: 'inherit', padding: 8, border: '1px solid var(--line2)', borderRadius: 8 }} />
+              <div className="row wf-actions"><button className="btn primary" onClick={() => decide(myAppr, true)}><Icon name="check" size={18} />Đồng ý</button>
+                <button className="btn danger" onClick={() => decide(myAppr, false)}><Icon name="x" size={18} />Từ chối</button></div>
+            </div>}
+          </div>}
+
           {canAct ? <>
             <label className="f"><span>Ghi chú{cur.require_note ? ' (bắt buộc)' : ''}</span><textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ý kiến, lý do trả lại / từ chối…" /></label>
             <div className="row wf-actions">
-              <button className="btn primary" disabled={!ckDone} onClick={() => act('next')}><Icon name="check" size={18} />{cur.kind === 'duyet' ? 'Duyệt' : cur.kind === 'kiem_tra' ? 'Đạt, chuyển tiếp' : 'Xong, chuyển tiếp'}</button>
+              {appr ? <button className="btn primary" disabled={!ckDone} onClick={submit}><Icon name="shield" size={18} />{open?.appr_state === 'cho_sua' ? 'Gửi duyệt lại' : 'Gửi duyệt'}</button>
+                : <button className="btn primary" disabled={!ckDone} onClick={() => act('next')}><Icon name="check" size={18} />{cur.kind === 'duyet' ? 'Duyệt' : cur.kind === 'kiem_tra' ? 'Đạt, chuyển tiếp' : 'Xong, chuyển tiếp'}</button>}
               {cur.allow_back && ins.step_idx > 0 && <button className="btn" onClick={() => act('back')}><Icon name="back" size={18} />Trả lại</button>}
               {cur.allow_fail && <button className="btn danger" onClick={() => act('fail')}><Icon name="x" size={18} />Từ chối (Fail)</button>}
             </div>
             {!ckDone && <p className="small muted" style={{ margin: 0 }}>Hoàn thành đủ checklist (tích và tải file) để chuyển bước.</p>}
-          </> : <p className="small muted" style={{ margin: 0 }}>{unassigned && !open?.assigned_to ? 'Chờ người quản trị giai đoạn phân công người làm.' : `Đang chờ ${open?.assigned_to ? userName(open.assigned_to, dir) : who(cur.assignee, dir)} xử lý.`}{rights.watch && !rights.manage ? ' Bạn đang theo dõi bước này.' : ''}</p>}
+          </> : inAppr ? null : <p className="small muted" style={{ margin: 0 }}>{unassigned && !open?.assigned_to ? 'Chờ người quản trị giai đoạn phân công người làm.' : `Đang chờ ${open?.assigned_to ? userName(open.assigned_to, dir) : who(cur.assignee, dir)} xử lý.`}{rights.watch && !rights.manage ? ' Bạn đang theo dõi bước này.' : ''}</p>}
         </section>)}
 
       {ins.status !== 'dang_chay' && (def.fields ?? []).length > 0 && <section className="card" aria-label="Biểu mẫu"><b>Biểu mẫu</b>

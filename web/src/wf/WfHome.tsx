@@ -40,7 +40,7 @@ export default function WfHome() {
   const mine = (list ?? []).filter((r) => !r.is_template);
   const tpl = (list ?? []).filter((r) => r.is_template);
 
-  const tabs: [Tab, string, number?][] = [['viec', 'Việc của tôi', tasks?.filter((t) => t.vai === 'lam' || t.vai === 'phan_cong').length], ['quy_trinh', 'Quy trình', mine.length], ['mau', 'Thư viện mẫu', tpl.length], ['luot', 'Lượt chạy']];
+  const tabs: [Tab, string, number?][] = [['viec', 'Việc của tôi', tasks?.filter((t) => t.vai === 'lam' || t.vai === 'phan_cong' || t.vai === 'duyet').length], ['quy_trinh', 'Quy trình', mine.length], ['mau', 'Thư viện mẫu', tpl.length], ['luot', 'Lượt chạy']];
   return (
     <div className="wf" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="page-head">
@@ -55,8 +55,8 @@ export default function WfHome() {
 
       {tab === 'viec' && (!tasks ? <Skeleton /> : !tasks.length ? <Empty title="Không có việc nào đang chờ bạn" /> :
         <div className="steps">{tasks.map((t) => { const s = slaLeft(t.due_at); return (
-          <Link key={t.task_id} to={'/quy-trinh-moi/chay/' + t.instance_id} className="card wf-item">
-            <div style={{ flex: 1, minWidth: 0 }}><b>{t.step_name}</b><span className={'chip ' + (t.vai === 'phan_cong' ? 'bad' : t.vai === 'lam' ? 'wait' : 'idle')} style={{ marginLeft: 8 }}>{VAI[t.vai]}</span>{t.is_test && <span className="chip idle" style={{ marginLeft: 8 }}>Chạy thử</span>}
+          <Link key={t.task_id + t.vai + t.step_name} to={'/quy-trinh-moi/chay/' + t.instance_id} className="card wf-item">
+            <div style={{ flex: 1, minWidth: 0 }}><b>{t.step_name}</b><span className={'chip ' + (t.vai === 'phan_cong' ? 'bad' : t.vai === 'lam' || t.vai === 'duyet' ? 'wait' : 'idle')} style={{ marginLeft: 8 }}>{VAI[t.vai]}</span>{t.is_test && <span className="chip idle" style={{ marginLeft: 8 }}>Chạy thử</span>}
               <div className="small muted">{t.process_name} · {t.title}</div></div>
             {s && <span className={'chip ' + (s.late ? 'bad' : 'wait')}><Icon name="clock" size={13} />{s.text}</span>}
             <Icon name="arrow" size={18} />

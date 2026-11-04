@@ -10,13 +10,21 @@ export type Step = {
   watchers?: Assignee[]; managers?: Assignee[];
   sla_hours?: number; checklist?: (string | CheckItem)[]; perms?: Record<string, Perm>;
   /** Rẽ nhánh: xét lần lượt, khớp đầu tiên thì sang goto. next = bước mặc định ('' = bước kế, '__end' = kết thúc) */
-  routes?: Route[]; next?: string; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
+  routes?: Route[]; next?: string;
+  /** Luồng duyệt gắn vào bước: các cấp chạy nối tiếp */
+  approval?: Approval; allow_back?: boolean; allow_fail?: boolean; require_note?: boolean; guide?: string;
 };
 export type Lane = { id: string; name: string };
 export type Op = 'gt' | 'ge' | 'lt' | 'le' | 'eq' | 'ne' | 'contains' | 'empty' | 'filled';
 export type Route = { id: string; field: string; op: Op; value?: string; goto: string };
 export const OPS: Record<Op, string> = { gt: 'lớn hơn', ge: 'từ (≥)', lt: 'nhỏ hơn', le: 'đến (≤)', eq: 'bằng', ne: 'khác', contains: 'có chứa', empty: 'để trống', filled: 'đã nhập' };
 export const END = '__end';
+export type ApprLevel = { id: string; name: string; approvers: Assignee[]; rule: 'all' | 'any' | 'min'; min?: number; sla_hours?: number; when?: { field: string; op: Op; value?: string } };
+export type Approval = { levels: ApprLevel[]; on_reject: 'restart' | 'back' | 'fail' };
+export const RULE: Record<ApprLevel['rule'], string> = { all: 'Tất cả phải đồng ý', any: 'Một người đồng ý là đạt', min: 'Tối thiểu N người đồng ý' };
+export const ON_REJECT: Record<Approval['on_reject'], string> = { restart: 'Trả về người làm bước sửa, rồi duyệt lại từ cấp 1', back: 'Trả về bước trước', fail: 'Dừng quy trình (Fail)' };
+export type ApprRow = { id: string; task_id: string; round: number; level: number; level_id: string; level_name: string; approver: string; status: 'cho' | 'dong_y' | 'tu_choi' | 'bo_qua'; note: string; due_at: string | null; created_at: string; decided_at: string | null };
+export const hasAppr = (s?: Step) => !!s?.approval?.levels?.length;
 export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'table';
 export type Column = { id: string; label: string; type: 'text' | 'number'; formula?: string; sum?: boolean };
 export type Field = { id: string; label: string; type: FieldType; options?: string[]; columns?: Column[]; help?: string };
@@ -27,11 +35,11 @@ export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[] };
 export type Process = { id: string; code: string; name: string; description: string; category: string; is_template: boolean; created_at: string };
 export type Version = { id: string; process_id: string; version: number; status: 'nhap' | 'phat_hanh' | 'luu_tru'; def: Def; updated_at: string; published_at: string | null };
 export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null };
-export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null;
+export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null; appr_state: 'dang_duyet' | 'cho_sua' | null;
   files: { item: string; name: string; path: string; at: string; by: string }[]; due_at: string | null; checklist: Record<string, boolean>; done_by: string | null; note: string; created_at: string; done_at: string | null };
-export type Vai = 'lam' | 'phan_cong' | 'quan_tri' | 'theo_doi';
+export type Vai = 'lam' | 'phan_cong' | 'quan_tri' | 'theo_doi' | 'duyet';
 export type MyTask = { task_id: string; instance_id: string; title: string; process_name: string; step_name: string; due_at: string | null; is_test: boolean; created_at: string; assigned_to: string | null; vai: Vai };
-export const VAI: Record<Vai, string> = { lam: 'Tôi làm', phan_cong: 'Cần phân công', quan_tri: 'Tôi quản trị', theo_doi: 'Tôi theo dõi' };
+export const VAI: Record<Vai, string> = { lam: 'Tôi làm', phan_cong: 'Cần phân công', quan_tri: 'Tôi quản trị', theo_doi: 'Tôi theo dõi', duyet: 'Chờ tôi duyệt' };
 /** Mục checklist: hỗ trợ dạng chuỗi cũ */
 export const items = (s: Step): CheckItem[] => (s.checklist ?? []).map((c) => typeof c === 'string' ? { id: c, text: c, kind: 'check' } : c);
 
@@ -69,6 +77,7 @@ export function validate(d: Def): { step?: string; msg: string }[] {
   const ids = new Set(d.steps.map((s) => s.id));
   d.steps.forEach((s, i) => {
     if (s.next && s.next !== END && !ids.has(s.next)) e.push({ step: s.id, msg: `Bước ${i + 1}: bước mặc định tiếp theo đã bị xoá` });
+    (s.approval?.levels ?? []).forEach((l, k) => { if (!l.approvers?.length) e.push({ step: s.id, msg: `Bước ${i + 1}: cấp duyệt ${k + 1}${l.name ? ' (' + l.name + ')' : ''} chưa có người duyệt` }); });
     (s.routes ?? []).forEach((r) => {
       if (!r.field || !r.goto) e.push({ step: s.id, msg: `Bước ${i + 1}: nhánh điều kiện chưa chọn trường hoặc bước đến` });
       else if (r.goto !== END && !ids.has(r.goto)) e.push({ step: s.id, msg: `Bước ${i + 1}: nhánh trỏ tới bước đã bị xoá` });

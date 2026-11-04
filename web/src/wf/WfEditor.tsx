@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
-  type Assignee, type CheckItem, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
+  type Assignee, type CheckItem, type ApprLevel, RULE, ON_REJECT, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
 import { Canvas, LANE_COLORS } from './Canvas';
 
@@ -131,7 +131,9 @@ export default function WfEditor() {
       </div>
 
       {view === 'so_do' && <div className={'wf-design' + (open ? ' has-panel' : '')}>
-        <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo} />
+        <Canvas def={def} dir={dir} sel={open} errIds={errIds} ro={ro} onSelect={setOpen} onMove={moveTo}
+          onAddLane={() => upd((d) => { d.lanes.push({ id: uid('l'), name: 'Làn ' + (d.lanes.length + 1) }); })}
+          onRenameLane={(k, nm) => upd((d) => { if (d.lanes[k]) d.lanes[k].name = nm; })} />
         {open && (() => { const i = def.steps.findIndex((x) => x.id === open); const st = def.steps[i]; if (!st) return null; return (
           <aside className="card wf-panel" aria-label="Cấu hình bước">
             <div className="row" style={{ justifyContent: 'space-between' }}><b>Bước {i + 1}</b><button className="btn sm icon-btn" aria-label="Đóng" onClick={() => setOpen(null)}><Icon name="x" size={16} /></button></div>
@@ -220,6 +222,8 @@ function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
             <div className="wf-seg" role="radiogroup" aria-label={'Quyền: ' + f.label}>{(Object.keys(PERM) as Perm[]).map((p) => (
               <button key={p} role="radio" aria-checked={(s.perms?.[f.id] ?? 'view') === p} className={(s.perms?.[f.id] ?? 'view') === p ? 'on p-' + p : ''}
                 onClick={() => set({ perms: { ...(s.perms ?? {}), [f.id]: p } })}>{PERM[p]}</button>))}</div></div>))}</div></div>}
+
+      <ApprovalEditor s={s} def={def} dir={dir} ro={ro} set={set} />
 
       <Routing s={s} i={i} def={def} ro={ro} set={set} />
 
@@ -358,5 +362,56 @@ function Routing({ s, i, def, ro, set }: { s: Step; i: number; def: Def; ro: boo
       {!ro && <button className="btn sm" style={{ alignSelf: 'flex-start' }} disabled={!fs.length} title={fs.length ? '' : 'Cần có trường trong Biểu mẫu để đặt điều kiện'}
         onClick={() => set({ routes: [...routes, { id: uid('r'), field: '', op: 'gt', value: '', goto: '' }] })}><Icon name="plus" size={14} />Thêm nhánh điều kiện</button>}
       {!fs.length && <small className="muted">Thêm trường ở Biểu mẫu để rẽ nhánh theo dữ liệu (ví dụ Tổng tiền &gt; 500.000.000 thì sang Giám đốc duyệt).</small>}
+    </div>);
+}
+
+/** Luồng duyệt linh hoạt: nhiều cấp nối tiếp, mỗi cấp có người duyệt, quy tắc đạt, điều kiện áp dụng, hạn */
+function ApprovalEditor({ s, def, dir, ro, set }: { s: Step; def: Def; dir: Directory | null; ro: boolean; set: (p: Partial<Step>) => void }) {
+  const ap = s.approval; const levels = ap?.levels ?? []; const fs = condFields(def);
+  const setL = (k: number, p: Partial<ApprLevel>) => set({ approval: { on_reject: ap?.on_reject ?? 'restart', levels: levels.map((l, j) => j === k ? { ...l, ...p } : l) } });
+  const lv = (name: string, rule: ApprLevel['rule'] = 'all', min?: number): ApprLevel => ({ id: uid('a'), name, approvers: [], rule, min, sla_hours: 8 });
+  const preset = (ls: ApprLevel[]) => set({ approval: { on_reject: 'restart', levels: ls } });
+  const mv = (k: number, d: number) => { const a = [...levels]; [a[k], a[k + d]] = [a[k + d], a[k]]; set({ approval: { on_reject: ap?.on_reject ?? 'restart', levels: a } }); };
+  return (
+    <div className="f"><span>Luồng duyệt</span>
+      {!levels.length ? <>
+        <small className="muted">Bật khi bước cần một hoặc nhiều người duyệt. Người làm bấm "Gửi duyệt"; duyệt đủ các cấp thì quy trình tự sang bước sau.</small>
+        {!ro && <div className="row">
+          <button className="btn sm" onClick={() => preset([lv('Duyệt')])}>1 cấp</button>
+          <button className="btn sm" onClick={() => preset([lv('Trưởng bộ phận'), lv('Giám đốc')])}>2 cấp nối tiếp</button>
+          <button className="btn sm" onClick={() => preset([lv('Hội đồng', 'min', 2)])}>Hội đồng (tối thiểu 2)</button>
+          <button className="btn sm" onClick={() => preset([lv('Trưởng bộ phận'), { ...lv('Giám đốc'), when: { field: fs[0]?.id ?? '', op: 'gt', value: '500000000' } }])}>Có cấp theo điều kiện</button>
+        </div>}
+      </> : <>
+        <ol className="wf-levels">{levels.map((l, k) => (
+          <li key={l.id} className="wf-level">
+            <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+              <span className="row" style={{ flexWrap: 'nowrap', flex: 1, minWidth: 0 }}><b className="wf-lvno">{k + 1}</b>
+                <input className="wf-ck-in" aria-label="Tên cấp duyệt" value={l.name} placeholder={'Cấp ' + (k + 1)} onChange={(e) => setL(k, { name: e.target.value })} /></span>
+              {!ro && <span className="row" style={{ flexWrap: 'nowrap', gap: 2 }}>
+                <button className="wf-x" disabled={k === 0} aria-label="Lên" onClick={() => mv(k, -1)}>↑</button>
+                <button className="wf-x" disabled={k === levels.length - 1} aria-label="Xuống" onClick={() => mv(k, 1)}>↓</button>
+                <button className="wf-x" aria-label={'Xoá cấp ' + (k + 1)} onClick={() => set({ approval: levels.length > 1 ? { on_reject: ap!.on_reject, levels: levels.filter((_, j) => j !== k) } : undefined })}><Icon name="x" size={14} /></button></span>}
+            </div>
+            <People label="Người duyệt" hint="Người, nhóm hoặc vai trò; mọi thành viên của nhóm/vai trò đều nhận phiếu." list={l.approvers} dir={dir} ro={ro} onChange={(v) => setL(k, { approvers: v })} />
+            <div className="wf-2">
+              <label className="f"><span>Quy tắc đạt</span><select value={l.rule} onChange={(e) => setL(k, { rule: e.target.value as ApprLevel['rule'] })}>{Object.entries(RULE).map(([r, t]) => <option key={r} value={r}>{t}</option>)}</select></label>
+              {l.rule === 'min' ? <label className="f"><span>Số người tối thiểu</span><input type="number" min={1} value={l.min ?? 1} onChange={(e) => setL(k, { min: Math.max(1, Number(e.target.value) || 1) })} /></label>
+                : <label className="f"><span>Hạn duyệt (giờ)</span><input type="number" min={0} value={l.sla_hours ?? 0} onChange={(e) => setL(k, { sla_hours: Math.max(0, Number(e.target.value) || 0) })} /></label>}
+            </div>
+            <div className="wf-route"><label className="row small" style={{ gap: 6 }}><input type="checkbox" checked={!!l.when} disabled={!fs.length}
+              onChange={(e) => setL(k, { when: e.target.checked ? { field: fs[0]?.id ?? '', op: 'gt', value: '' } : undefined })} />Chỉ áp dụng khi</label>
+              {l.when && <>
+                <select aria-label="Trường" value={l.when.field} onChange={(e) => setL(k, { when: { ...l.when!, field: e.target.value } })}>{fs.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select>
+                <select aria-label="So sánh" value={l.when.op} onChange={(e) => setL(k, { when: { ...l.when!, op: e.target.value as Op } })}>{Object.entries(OPS).map(([o, t]) => <option key={o} value={o}>{t}</option>)}</select>
+                {l.when.op !== 'empty' && l.when.op !== 'filled' && <input aria-label="Giá trị" value={l.when.value ?? ''} onChange={(e) => setL(k, { when: { ...l.when!, value: e.target.value } })} />}
+              </>}
+              {!l.when && <small className="muted">{fs.length ? '(luôn áp dụng)' : '(cần trường trong Biểu mẫu)'}</small>}
+            </div>
+          </li>))}</ol>
+        {!ro && <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ approval: { on_reject: ap?.on_reject ?? 'restart', levels: [...levels, lv('Cấp ' + (levels.length + 1))] } })}><Icon name="plus" size={14} />Thêm cấp duyệt</button>}
+        <label className="f"><span>Khi bị từ chối</span><select value={ap?.on_reject ?? 'restart'} onChange={(e) => set({ approval: { levels, on_reject: e.target.value as 'restart' } })}>
+          {Object.entries(ON_REJECT).map(([r, t]) => <option key={r} value={r}>{t}</option>)}</select></label>
+      </>}
     </div>);
 }
