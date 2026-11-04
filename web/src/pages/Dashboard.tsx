@@ -10,6 +10,7 @@ import { Icon } from '../components/Icon';
 import { QtTag } from '../components/QtTag';
 import { Sheet } from '../components/Sheet';
 import { Age } from '../components/Age';
+import { Leaderboard } from '../components/Perf';
 import { Skeleton } from '../components/ui';
 import { toast } from '../components/ui';
 
@@ -171,6 +172,9 @@ export default function Dashboard() {
             </Card>
             <Card id="c-people" title="Ai đang giữ nhiều việc" sub="Hồ sơ đang chờ từng người / nhóm · đỏ = kẹt">
               <People people={M.people} open={open} />
+            </Card>
+            <Card id="c-rank" title="Xếp hạng hiệu quả" sub="Điểm = đúng hạn + tốc độ + chất lượng + khối lượng − phạt quá hạn · bấm để xem chi tiết">
+              <Leaderboard />
             </Card>
             <Card id="c-co" title="Tồn theo công ty" sub="QT1–QT3 đang ở bên nào">
               <div className="db-donut-row">{(() => { const tot = Math.max(1, M.byCo.reduce((a, x) => a + x.items.length, 0)); let acc = 0;

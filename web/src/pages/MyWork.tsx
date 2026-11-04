@@ -10,6 +10,7 @@ import { ZaloLink } from '../components/ZaloLink';
 import { QtTag, qtOfDoc, qtOfTab } from '../components/QtTag';
 import { COMPANY, FINAL, STATUS, type Batch, type Company, type Doc, type Proc } from '../lib/proc';
 import { isStuck } from '../lib/holders';
+import { PerfCard } from '../components/Perf';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
 export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
@@ -96,6 +97,7 @@ export default function MyWork() {
             <span className={'mw-act a-' + r.action}>{({ ky: 'Đã ký', tra_ve: 'Trả về', fail: 'Từ chối' } as Record<string, string>)[r.action] ?? r.action}</span>
             <span className="mw-time">{ago(r.at)}</span></Link></li>))}</ul>
       </section>}
+      <PerfCard />
     </>
   );
 }
