@@ -97,6 +97,21 @@ export default function Board() {
     g.animate([{ transform: g.style.transform }, { transform: `translate(${cx - d.w * .2}px,${cy - 40}px) rotate(-2deg) scale(.42)`, offset: .55 },
       { transform: `translate(${cx - d.w * .2}px,${cy + 4}px) scale(.4,.04)`, opacity: .2 }], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' })
       .finished.then(() => { g.remove(); setTimeout(() => setEat(-1), 260); open(); }); };
+  // Điện thoại: các cột xếp ngang, vuốt để xem bước trước/sau (scroll-snap), đồng bộ với thanh chọn bước
+  const boardRef = useRef<HTMLDivElement>(null); const syncing = useRef(0);
+  const mobile = () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 760px)').matches;
+  const goCol = (i: number) => { const el = boardRef.current; const c = COLS[i]; if (!c) return; setCol(c.key);
+    if (el && mobile()) { syncing.current = Date.now(); el.scrollTo({ left: (el.children[i] as HTMLElement).offsetLeft - el.offsetLeft - 0, behavior: reduce ? 'auto' : 'smooth' }); } };
+  const onBoardScroll = () => { const el = boardRef.current; if (!el || !mobile() || Date.now() - syncing.current < 600) return;
+    const w = (el.children[0] as HTMLElement)?.offsetWidth || 1; const i = Math.round(el.scrollLeft / (w + 10));
+    if (COLS[i] && COLS[i].key !== curCol) setCol(COLS[i].key); };
+  useEffect(() => { const el = boardRef.current; if (!el || !mobile()) return; const i = COLS.findIndex((c) => c.key === curCol);
+    const t = el.children[i] as HTMLElement | undefined; if (t && Math.abs(el.scrollLeft - (t.offsetLeft - el.offsetLeft)) > 8) { syncing.current = Date.now(); el.scrollTo({ left: t.offsetLeft - el.offsetLeft }); }
+    // gợi ý lần đầu: cột nhích nhẹ
+    try { if (!localStorage.getItem('kb-swipe-hint') && i < COLS.length - 1 && !reduce) { localStorage.setItem('kb-swipe-hint', '1'); el.classList.add('hint'); setTimeout(() => el.classList.remove('hint'), 1400); } } catch { /* */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qt, batches]);
+  useEffect(() => { document.querySelector('.kb-picker .on')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduce ? 'auto' : 'smooth' }); }, [curCol, reduce]);
   const startDrag = (e: React.PointerEvent<HTMLElement>, c: Card) => {
     if (e.button !== 0 || e.pointerType === 'touch' || !c.mine || (!canNext(c) && !canBack(c))) return;
     if ((e.target as HTMLElement).closest('button, input, select, a')) return;
@@ -125,10 +140,16 @@ export default function Board() {
         </div>
         <div className="qt-panel" key={qt}>
           <div className="kb-picker" role="tablist" aria-label="Chọn bước">
-            {COLS.map((c, i) => <button key={c.key} role="tab" aria-selected={curCol === c.key} className={curCol === c.key ? 'on' : ''} onClick={() => setCol(c.key)}>
+            {COLS.map((c, i) => <button key={c.key} role="tab" aria-selected={curCol === c.key} className={curCol === c.key ? 'on' : ''} onClick={() => goCol(i)}>
               {c.group ? c.group.replace('Phương Nam CNC', 'PN') + ' · ' : ''}{c.title} <span className="kb-count">{byCol(i).length}</span></button>)}
           </div>
-          <div className={'kb-board' + (qt !== 'QT0' ? ' wide' : '')}>
+          <div className="kb-swipe-nav" aria-hidden="true">
+            <button tabIndex={-1} disabled={COLS.findIndex((c) => c.key === curCol) <= 0} onClick={() => goCol(COLS.findIndex((c) => c.key === curCol) - 1)}><Icon name="back" size={16} /></button>
+            <span className="kb-dots">{COLS.map((c) => <i key={c.key} className={c.key === curCol ? 'on' : ''} />)}</span>
+            <span className="small muted">Bước {COLS.findIndex((c) => c.key === curCol) + 1}/{COLS.length} · vuốt ngang</span>
+            <button tabIndex={-1} disabled={COLS.findIndex((c) => c.key === curCol) >= COLS.length - 1} onClick={() => goCol(COLS.findIndex((c) => c.key === curCol) + 1)}><Icon name="arrow" size={16} /></button>
+          </div>
+          <div ref={boardRef} onScroll={onBoardScroll} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               return (
                 <section key={c.key} data-col={i} className={'kb-col' + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '')} aria-label={c.title}>
