@@ -1,3 +1,4 @@
+import { Age } from '../components/Age';
 import { QtTag } from '../components/QtTag';
 import ProcPanel from '../components/ProcPanel';
 import { PROC_SHORT, procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -80,7 +81,7 @@ export default function OrderDetail() {
         <div className="od-procs">
           {PROCS.map((p) => { const s = sum(p); return (
             <button key={p} className={'od-proc ' + p.toLowerCase() + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })}>
-              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls} title={s.d}>{s.t}</span>{s.d && <span className="small muted od-sd">{s.d}</span>}</button>); })}
+              <QtTag qt={p} /><span className="small"><b>{PROC_SHORT[p]}</b></span><span className={'chip ' + s.cls} title={s.d}>{s.t}</span>{s.d && <span className="small muted od-sd">{s.d}</span>}{s.since && <Age since={s.since} />}</button>); })}
         </div>
       </div>
       <div className="qt-group od-group"><div className="qt-tabs" role="tablist">

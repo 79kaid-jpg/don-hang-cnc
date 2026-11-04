@@ -85,7 +85,7 @@ export function columnsOf(p: Proc): { key: string; title: string; group?: string
 
 /** Tóm tắt tiến độ một quy trình của một đơn */
 /** Trạng thái thống nhất toàn app: Chưa mở · Đang làm · Chờ ký · Xong · Fail. d = chi tiết bước (để hiện phụ / tooltip) */
-export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; d: string; cls: 'idle' | 'done' | 'bad' | 'wait' | 'sign' } {
+export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; d: string; cls: 'idle' | 'done' | 'bad' | 'wait' | 'sign'; since?: string } {
   const list = bs.filter((b) => b.proc === p); if (!list.length) return { t: 'Chưa mở', d: '', cls: 'idle' };
   const open = list.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky');
   const done = list.filter((b) => b.status === 'hoan_tat').length;
@@ -93,7 +93,10 @@ export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; d: st
   if (!open.length) return done ? { t: 'Xong', d: done > 1 ? done + ' ' + unit + ' xong' : '', cls: 'done' } : { t: 'Fail', d: 'Bị từ chối', cls: 'bad' };
   const b = open[open.length - 1]; const st = stepOf(b, ds);
   const more = (open.length > 1 ? open.length + ' ' + unit + ' đang mở · ' : '') + (done ? done + ' xong · ' : '');
-  if (st.key === 'ky') return { t: 'Chờ ký', d: more + FINAL[p], cls: 'sign' };
+  const since = docs0(b, ds);
+  if (st.key === 'ky') return { t: 'Chờ ký', d: more + FINAL[p], cls: 'sign', since };
   const lab = (st.company && p !== 'QT0' ? (st.company === 'PN' ? 'PN' : COMPANY[st.company]) + ' · ' : '') + (STATUS[st.doc?.status ?? ''] ?? '');
-  return { t: 'Đang làm', d: more + lab, cls: 'wait' };
+  return { t: 'Đang làm', d: more + lab, cls: 'wait', since };
 }
+
+const docs0 = (b: Batch, ds: Doc[]) => ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort().pop() ?? b.created_at;

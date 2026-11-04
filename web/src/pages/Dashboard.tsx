@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigationType } from 'react-router-dom';
 import { toBlob } from 'html-to-image';
 import { sb, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -9,6 +9,7 @@ import { useHolders, isStuck, waited } from '../lib/holders';
 import { Icon } from '../components/Icon';
 import { QtTag } from '../components/QtTag';
 import { Sheet } from '../components/Sheet';
+import { Age } from '../components/Age';
 import { Skeleton } from '../components/ui';
 import { toast } from '../components/ui';
 
@@ -19,16 +20,22 @@ const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const QC: Record<Proc, string> = { QT0: '#2F6FB0', QT1: '#7A4DB3', QT2: '#B4690E', QT3: '#2E8B57' };
 const DAY = 864e5;
 type D = Doc & { signs: { role: string; user: string; at: string; action: string }[] };
-type Item = { key: string; order_id: string; code: string; title: string; proc: Proc; note?: string; bad?: boolean };
+type Item = { key: string; order_id: string; code: string; title: string; proc: Proc; note?: string; bad?: boolean; since?: string };
 type Drill = { title: string; sub?: string; items: Item[] };
 
 export default function Dashboard() {
   const { me, can } = useAuth();
   const boss = can('duyet') || can('admin_it') || can('admin_cnc');
-  const [tab, setTab] = useState<'me' | 'boss'>(boss ? 'boss' : 'me');
-  const [days, setDays] = useState(30);
+  const [tab, setTab0] = useState<'me' | 'boss'>(() => (sessionStorage.getItem('db-tab') as 'me' | 'boss') || (boss ? 'boss' : 'me'));
+  const setTab = (t: 'me' | 'boss') => { setTab0(t); try { sessionStorage.setItem('db-tab', t); } catch { /* */ } };
+  const [days, setDays0] = useState(() => +(sessionStorage.getItem('db-days') ?? 30) || 30);
+  const setDays = (d: number) => { setDays0(d); try { sessionStorage.setItem('db-days', String(d)); } catch { /* */ } };
   const [os, setOs] = useState<Order[] | null>(null); const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<D[]>([]);
-  const [drill, setDrill] = useState<Drill | null>(null);
+  const back = useNavigationType() === 'POP';
+  const [drill, setDrill0] = useState<Drill | null>(() => { try { if (!back) return null; return JSON.parse(sessionStorage.getItem('db-drill') ?? 'null'); } catch { return null; } });
+  const setDrill = (d: Drill | null) => { setDrill0(d); try { if (d) sessionStorage.setItem('db-drill', JSON.stringify(d)); else sessionStorage.removeItem('db-drill'); } catch { /* */ } };
+  useEffect(() => { try { const y = +(sessionStorage.getItem('db-y') ?? 0); if (y && back) setTimeout(() => scrollTo(0, y), 400);
+    const f = () => sessionStorage.setItem('db-y', String(scrollY)); addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); } catch { return; } }, []);
   const holder = useHolders();
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').then(({ data }) => setOs((data as Order[]) ?? []));
@@ -40,9 +47,11 @@ export default function Dashboard() {
     if (!os) return null;
     const now = Date.now(); const from = now - days * DAY; const today = new Date().toISOString().slice(0, 10);
     const oOf = (b: Batch) => os.find((o) => o.id === b.order_id);
-    const item = (b: Batch, note?: string, bad?: boolean): Item => ({ key: b.id, order_id: b.order_id, code: oOf(b)?.code ?? '', title: b.title, proc: b.proc, note, bad });
-    const live = bs.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky');
     const since = (b: Batch) => ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort().pop() ?? b.created_at;
+    const isLive = (b: Batch) => b.status === 'dang_lam' || b.status === 'cho_ky';
+    const item = (b: Batch, note?: string, bad?: boolean): Item => ({ key: b.id, order_id: b.order_id, code: oOf(b)?.code ?? '', title: b.title, proc: b.proc, bad,
+      note: isLive(b) && note?.startsWith('chờ ') ? undefined : note?.replace(/ · chờ .*$/, ''), since: isLive(b) ? since(b) : undefined });
+    const live = bs.filter(isLive);
     const stuck = live.filter((b) => isStuck(since(b)));
     const doneP = bs.filter((b) => b.status === 'hoan_tat' && b.done_at && +new Date(b.done_at) >= from);
     const lateO = os.filter((o) => o.due_date && o.due_date < today && live.some((b) => b.order_id === o.id));
@@ -94,7 +103,7 @@ export default function Dashboard() {
     return { live, stuck, doneP, lateO, avgCycle, stages, weeks, steps, people, byCo, mine, myQueue, myDays, myAvg, item, since };
   }, [os, bs, ds, days, me, holder]);
 
-  const open = (title: string, items: Item[], sub?: string) => items.length && setDrill({ title, sub, items });
+  const open = (title: string, items: Item[], sub?: string) => items.length && setDrill({ title, sub, items: [...items].sort((a, z) => (a.since ?? '9').localeCompare(z.since ?? '9')) });
   if (!M) return <><div className="page-head"><h1>Thống kê</h1></div><Skeleton rows={4} h={140} /></>;
   const maxStage = Math.max(1, ...M.stages.map((s) => s.items.length));
   const maxW = Math.max(1, ...M.weeks.map((w) => Math.max(w.made.length, w.done.length)));
@@ -198,7 +207,7 @@ function Card({ id, title, sub, children }: { id: string; title: string; sub?: s
 function List({ items }: { items: Item[] }) {
   return <ul className="sh-list">{items.map((r) => <li key={r.key}><Link to={'/don/' + r.order_id + '?tab=' + r.proc}>
     <span className="sh-main"><b>{r.code}</b><span>{r.title}</span></span>
-    {r.note && <span className={'chip ' + (r.bad ? 'bad' : 'idle')}>{r.note}</span>}<Icon name="arrow" size={18} /></Link></li>)}</ul>;
+    <span className="sh-tags">{r.note && <span className={'chip ' + (r.bad && !r.since ? 'bad' : 'idle')}>{r.note}</span>}<Age since={r.since} /></span><Icon name="arrow" size={18} /></Link></li>)}</ul>;
 }
 
 /** Chụp một vùng thành ảnh PNG → chia sẻ (điện thoại: chọn Zalo) hoặc chép vào bộ nhớ (máy tính: dán vào Zalo) hoặc tải về */

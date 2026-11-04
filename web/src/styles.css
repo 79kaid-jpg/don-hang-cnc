@@ -1003,3 +1003,11 @@ html[data-fs=lg] body{zoom:1.12}
 .db-sticky{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -4px 12px;padding:8px 4px;transition:box-shadow .2s}
 .db-sticky::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:8px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
 @media (max-width:760px){.db-sticky{top:calc(60px + env(safe-area-inset-top));margin:0 -16px 12px;padding:8px 16px}}
+
+.age{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 8px;white-space:nowrap;background:#EEF3EC;color:#2F6B3F;font-variant-numeric:tabular-nums}
+.age b{font-weight:800;margin-left:2px}
+.age.warn{background:#FBEFD0;color:#7A5200}.age.late{background:#FDE3DF;color:#9F2A12}
+.age.late svg{animation:age-blink 1.6s ease-in-out infinite}@keyframes age-blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.age.late svg{animation:none}}
+.sh-tags{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.od-proc .age{margin-top:4px;align-self:flex-start}
