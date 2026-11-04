@@ -15,6 +15,10 @@ import FlowMap from './pages/FlowMap';
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
 import { ShortcutHost } from './components/Shortcuts';
+import WfHome from './wf/WfHome';
+import WfEditor from './wf/WfEditor';
+import WfRun from './wf/WfRun';
+import './wf/wf.css';
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -46,6 +50,7 @@ function Shell() {
     { to: '/bang', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
     { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
+    ...(can('admin_it') ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
   const badge = (n?: number) => (n ? <span className="nav-badge" aria-label={n + ' phiếu chờ duyệt'}>{n}</span> : null);
@@ -92,6 +97,7 @@ function Shell() {
               <span style={{ minWidth: 0 }}><b style={{ display: 'block' }}>{me.full_name}</b><span className="small muted">{me.unit} · {me.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}</span></span></div>
             <nav className="sheet-list" onClick={() => setSheet(false)}>
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
+              {can('admin_it') && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}
               <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
               <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
               <button onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
@@ -114,6 +120,9 @@ function Shell() {
           <Route path="/don/moi" element={<NewOrder />} />
           <Route path="/don/:id" element={<OrderDetail />} />
           <Route path="/quan-tri" element={<Admin />} />
+          <Route path="/quy-trinh-moi" element={<WfHome />} />
+          <Route path="/quy-trinh-moi/sua/:id" element={<WfEditor />} />
+          <Route path="/quy-trinh-moi/chay/:id" element={<WfRun />} />
           <Route path="/cai-app" element={<Install />} />
           <Route path="/quy-trinh" element={<div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className="page-head"><div><h1>Tài liệu quy trình đơn hàng BASE</h1><p className="muted">Sơ đồ tương tác, bảng bước, điều kiện chuyển và 10 form. Bản v4 – đã gộp QT2.</p></div>
@@ -126,7 +135,7 @@ function Shell() {
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
-        {items.filter((i) => i.to !== '/quan-tri').map((i) => (
+        {items.filter((i) => i.to !== '/quan-tri' && i.to !== '/quy-trinh-moi').map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
       <UpdateBar /><Toaster /><ConfirmHost />
