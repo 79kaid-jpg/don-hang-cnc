@@ -967,3 +967,24 @@ html[data-fs=lg] body{zoom:1.12}
 .db-kpi{grid-template-columns:1.25fr 1fr 1fr}
 @media (min-width:1200px){.db-kpi{grid-template-columns:1.2fr 1fr 1fr 1fr 1fr}.db-kpi>.db-k:first-child{grid-row:auto}}
 @media (max-width:760px){.db-kpi>.db-k:first-child i{grid-row:span 2;margin:0 6px 0 0;width:48px;height:48px}.db-kpi>.db-k:first-child b{line-height:1}}
+
+/* Hồ sơ đang nằm ở đâu: thanh xếp chồng theo quy trình */
+.sb{display:flex;flex-direction:column;gap:8px}
+.sb-row{border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:box-shadow .2s,border-color .2s}
+.sb-row.on{border-color:var(--line2);box-shadow:0 6px 18px rgba(60,40,10,.08)}
+.sb-head{display:grid;grid-template-columns:1fr auto;gap:8px 10px;width:100%;padding:10px 12px;border:0;background:#fff;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.sb-head:disabled{cursor:default;opacity:.7}.sb-head:not(:disabled):hover{background:#FDFBF6}
+.sb-name{display:flex;align-items:center;gap:8px;min-width:0}.sb-name b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-sum{display:flex;align-items:center;gap:6px}.sb-sum>b{font-size:18px;font-variant-numeric:tabular-nums}.sb-sum svg{transition:transform .2s;color:var(--muted)}
+.sb-row.on .sb-sum svg{transform:rotate(90deg)}
+.sb-stack{grid-column:1/-1;display:flex;gap:2px;height:30px;border-radius:8px;overflow:hidden;background:#F3EEE3}
+.sb-stack i{display:flex;align-items:center;justify-content:center;min-width:26px;position:relative;transition:filter .15s}
+.sb-stack i.stuck{box-shadow:inset 0 -4px 0 #D4513A}
+.sb-stack i em{font-style:normal;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.sb-stack i.empty em{font-weight:500;font-size:12px;color:var(--muted)}
+.sb-head:not(:disabled):hover .sb-stack i{filter:brightness(1.05)}
+.sb-detail{border-top:1px dashed var(--line);padding:6px 4px 8px;background:#FDFBF6;animation:sb-in .22s ease-out}
+@keyframes sb-in{from{opacity:0;transform:translateY(-4px)}}
+.sb-sw{width:10px;height:10px;border-radius:3px;flex:none}
+@media (prefers-reduced-motion:reduce){.sb-detail{animation:none}}
+.sb-detail{display:flex;flex-direction:column}.sb-detail .db-hbar{width:100%;grid-template-columns:minmax(110px,44%) 1fr 32px}

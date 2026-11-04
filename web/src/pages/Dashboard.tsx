@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { toBlob } from 'html-to-image';
 import { sb, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { COMPANY, PROC_NAME, ROLE_NAME, STATUS, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
+import { COMPANIES, FLOW, COMPANY, PROC_NAME, ROLE_NAME, STATUS, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
 import { useHolders, isStuck, waited } from '../lib/holders';
 import { Icon } from '../components/Icon';
 import { QtTag } from '../components/QtTag';
@@ -50,10 +50,10 @@ export default function Dashboard() {
     const avgCycle = cycle.length ? cycle.reduce((a, x) => a + x, 0) / cycle.length : 0;
 
     // tồn theo giai đoạn
-    const stage: Record<string, { p: Proc; label: string; items: Item[]; stuck: number }> = {};
+    const stage: Record<string, { p: Proc; label: string; items: Item[]; stuck: number; o: number }> = {};
     for (const b of live) { const st = stepOf(b, ds); const label = st.key === 'ky' ? 'Chờ ký tay' : (b.proc !== 'QT0' && st.company ? (st.company === 'PN' ? 'PN' : COMPANY[st.company]) + ' · ' : '') + (STATUS[st.doc?.status ?? ''] ?? st.key);
-      const k = b.proc + '|' + label; const s = isStuck(since(b)); (stage[k] ??= { p: b.proc, label, items: [], stuck: 0 }).items.push(item(b, 'chờ ' + waited(since(b)), s)); if (s) stage[k].stuck++; }
-    const stages = Object.values(stage).sort((a, z) => PROCS.indexOf(a.p) - PROCS.indexOf(z.p) || z.items.length - a.items.length);
+      const k = b.proc + '|' + label; const s = isStuck(since(b)); (stage[k] ??= { p: b.proc, label, items: [], stuck: 0, o: st.key === 'ky' ? 999 : COMPANIES.indexOf(st.company ?? 'PN') * 50 + FLOW[b.proc].indexOf(st.doc?.status ?? '') }).items.push(item(b, 'chờ ' + waited(since(b)), s)); if (s) stage[k].stuck++; }
+    const stages = Object.values(stage).sort((a, z) => PROCS.indexOf(a.p) - PROCS.indexOf(z.p) || a.o - z.o);
 
     // thông lượng theo tuần (8 tuần)
     const wk = (t: number) => Math.floor((now - t) / (7 * DAY));
@@ -145,11 +145,8 @@ export default function Dashboard() {
             <Kpi ic="clock" tone="hot" v={M.avgCycle ? M.avgCycle.toFixed(1) + ' ngày' : '—'} t="Thời gian TB 1 hồ sơ" />
           </div>
           <div className="db-grid">
-            <Card id="c-stage" title="Hồ sơ đang nằm ở đâu" sub="Theo quy trình và bước · đỏ = kẹt">
-              <div className="db-hbars">{M.stages.map((s) => <button key={s.p + s.label} className="db-hbar" onClick={() => open(s.p + ' · ' + s.label, s.items)}>
-                <span className="db-hl"><QtTag qt={s.p} />{s.label}</span>
-                <span className="db-ht"><i style={{ width: (s.items.length / maxStage) * 100 + '%', background: QC[s.p] }}>{s.stuck > 0 && <em style={{ width: (s.stuck / s.items.length) * 100 + '%' }} />}</i></span>
-                <b>{s.items.length}</b></button>)}</div>
+            <Card id="c-stage" title="Hồ sơ đang nằm ở đâu" sub="Mỗi thanh là một quy trình, mỗi khúc màu là một bước · bấm để mở rộng">
+              <StageBars stages={M.stages} open={open} />
             </Card>
             <Card id="c-week" title="Nhịp làm việc theo tuần" sub="Hồ sơ mở mới và hoàn tất · 8 tuần">
               <div className="db-legend"><span><i style={{ background: '#C9A24A' }} />Mở mới</span><span><i style={{ background: '#2E8B57' }} />Hoàn tất</span></div>
@@ -262,4 +259,26 @@ function DailyZalo() {
       <button role="switch" aria-checked={on} className={'sw-toggle' + (on ? ' on' : '')} onClick={toggle} disabled={busy} aria-label="Nhận báo cáo 8h sáng"><i /></button>
     </> : <Link className="btn sm primary" to="/zalo">Liên kết</Link>}
   </div>;
+}
+
+/** Mỗi quy trình 1 thanh xếp chồng (mỗi bước 1 khúc, đậm → nhạt theo thứ tự bước, số trong khúc).
+ *  Bấm thanh → mở rộng thành biểu đồ cột ngang các bước của quy trình đó; bấm cột → danh sách hồ sơ. */
+function StageBars({ stages, open }: { stages: { p: Proc; label: string; items: Item[]; stuck: number }[]; open: (t: string, items: Item[]) => void }) {
+  const [ex, setEx] = useState<Proc | null>(null);
+  return <div className="sb">{PROCS.map((p) => {
+    const st = stages.filter((s) => s.p === p); const tot = st.reduce((a, s) => a + s.items.length, 0); const stuck = st.reduce((a, s) => a + s.stuck, 0);
+    const max = Math.max(1, ...st.map((s) => s.items.length)); const on = ex === p;
+    const shade = (i: number) => `color-mix(in srgb, ${QC[p]} ${Math.round(100 - (i / Math.max(1, st.length)) * 62)}%, #fff)`;
+    return <div key={p} className={'sb-row' + (on ? ' on' : '')}>
+      <button className="sb-head" onClick={() => setEx(on ? null : p)} aria-expanded={on} disabled={!tot}>
+        <span className="sb-name"><QtTag qt={p} /><b>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</b></span>
+        <span className="sb-sum">{stuck > 0 && <span className="chip bad">{stuck} kẹt</span>}<b>{tot}</b><span className="small muted">hồ sơ</span><Icon name="arrow" size={16} /></span>
+        <span className="sb-stack" aria-hidden="true">{tot ? st.map((s, i) => <i key={s.label} style={{ flexGrow: s.items.length, background: shade(i) }} className={s.stuck ? 'stuck' : ''} title={s.label + ': ' + s.items.length}>
+          <em style={{ color: i / st.length > .45 ? '#1F1C16' : '#fff' }}>{s.items.length}</em></i>) : <i className="empty" style={{ flexGrow: 1 }}><em>Không có hồ sơ</em></i>}</span>
+      </button>
+      {on && <div className="sb-detail">{st.map((s, i) => <button key={s.label} className="db-hbar" onClick={() => open(p + ' · ' + s.label, s.items)}>
+        <span className="db-hl"><i className="sb-sw" style={{ background: shade(i) }} />{s.label}</span>
+        <span className="db-ht"><i style={{ width: (s.items.length / max) * 100 + '%', background: shade(i) }}>{s.stuck > 0 && <em style={{ width: (s.stuck / s.items.length) * 100 + '%' }} />}</i></span>
+        <b>{s.items.length}</b></button>)}</div>}
+    </div>; })}</div>;
 }
