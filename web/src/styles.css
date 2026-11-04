@@ -1421,3 +1421,4 @@ html[data-fs=lg] body{zoom:1.12}
 .sim-tg[aria-pressed="false"]{opacity:.7}
 .sim-tg:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
 .sim-tg::before{content:'';position:absolute}
+.sim-lh{z-index:5}.sim-corner{z-index:5;position:sticky;left:0}.sim-tok{z-index:1}.sim-chip{position:relative;z-index:2}

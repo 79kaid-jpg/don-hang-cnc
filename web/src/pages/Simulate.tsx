@@ -76,7 +76,6 @@ export default function Simulate() {
         <div className="sim-opts">
           <button className="sim-tg" aria-pressed={withBack} onClick={() => setBack(!withBack)}><Icon name="back" size={13} />Trả về</button>
           <button className="sim-tg" aria-pressed={withExtra} onClick={() => setExtra(!withExtra)}><Icon name="shield" size={13} />Duyệt thêm</button>
-          <label className="sim-tg"><input type="checkbox" checked={withExtra} onChange={(e) => setExtra(e.target.checked)} /><span>Có duyệt thêm</span></label>
         </div>
       </header>
 
