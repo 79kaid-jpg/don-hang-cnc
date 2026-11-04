@@ -6,6 +6,7 @@ import {
   sumOf, numIn, type Batch, type Col, type Company, type Doc, type Proc, type Row
 } from '../lib/proc';
 import { Icon } from './Icon';
+import { Journey } from './Journey';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
 
@@ -165,6 +166,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
           <button className="btn sm" onClick={() => printDoc(o, b, d, people)}><Icon name="print" size={15} />In / PDF</button>
         </div>
       </div>
+      <Journey d={d} proc={proc} people={people} />
       {!can && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       <div className="grid2">
