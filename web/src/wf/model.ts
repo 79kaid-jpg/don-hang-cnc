@@ -1,7 +1,9 @@
 /** Trình tạo quy trình (thử nghiệm) – mô hình dữ liệu. Định nghĩa quy trình là JSON; engine SQL (wf_*) đọc JSON này. */
 import { sb } from '../lib/supabase';
 
-export type Assignee = { type: 'user' | 'group' | 'role'; id: string };
+/** creator = người tạo hồ sơ; manager = quản lý trực tiếp của người tạo (id cố định 'creator' / 'manager') */
+export type Assignee = { type: 'user' | 'group' | 'role' | 'creator' | 'manager'; id: string };
+export const REL: Record<'creator' | 'manager', string> = { creator: 'Người tạo hồ sơ', manager: 'Quản lý trực tiếp của người tạo' };
 export type StepKind = 'lap' | 'kiem_tra' | 'duyet' | 'ky';
 export type CheckItem = { id: string; text: string; kind: 'check' | 'file' };
 export type Step = {
@@ -27,14 +29,17 @@ export type ApprRow = { id: string; task_id: string; round: number; level: numbe
 export const hasAppr = (s?: Step) => !!s?.approval?.levels?.length;
 export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'table';
 export type Column = { id: string; label: string; type: 'text' | 'number'; formula?: string; sum?: boolean };
-export type Field = { id: string; label: string; type: FieldType; options?: string[]; columns?: Column[]; help?: string };
+/** inherit: khi mở hồ sơ gắn đơn hàng, lấy giá trị từ hồ sơ gần nhất của cùng đơn (vd. danh sách tấm từ QT0 sang QT1) */
+export type Field = { id: string; label: string; type: FieldType; options?: string[]; columns?: Column[]; help?: string; inherit?: boolean };
+/** Mẫu in A4: tiêu đề, dòng phụ, ô ký tay (người ngoài hệ thống ký trên bản in) */
+export type PrintCfg = { title?: string; subtitle?: string; hand_signs?: string[]; show_history?: boolean };
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
 export const PERM: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
 export const FTYPE: Record<FieldType, string> = { text: 'Chữ ngắn', textarea: 'Đoạn văn', number: 'Số', date: 'Ngày', select: 'Chọn một', table: 'Bảng' };
-export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[] };
+export type Def = { lanes: Lane[]; steps: Step[]; fields?: Field[]; print?: PrintCfg };
 export type Process = { id: string; code: string; name: string; description: string; category: string; is_template: boolean; created_at: string; created_by?: string; deleted_at?: string | null };
 export type Version = { id: string; process_id: string; version: number; status: 'nhap' | 'phat_hanh' | 'luu_tru'; def: Def; updated_at: string; published_at: string | null };
-export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null };
+export type Instance = { id: string; version_id: string; title: string; status: 'dang_chay' | 'hoan_tat' | 'fail' | 'huy'; is_test: boolean; step_idx: number; started_by: string; started_at: string; done_at: string | null; order_id?: string | null; data?: Record<string, unknown> };
 export type Task = { id: string; instance_id: string; step_id: string; step_name: string; status: 'cho' | 'xong' | 'tra_lai' | 'fail' | 'huy'; assigned_to: string | null; appr_state: 'dang_duyet' | 'cho_sua' | null;
   files: { item: string; name: string; path: string; at: string; by: string }[]; due_at: string | null; checklist: Record<string, boolean>; done_by: string | null; note: string; created_at: string; done_at: string | null };
 export type Vai = 'lam' | 'phan_cong' | 'quan_tri' | 'theo_doi' | 'duyet';
@@ -94,11 +99,11 @@ export function validate(d: Def): { step?: string; msg: string }[] {
 }
 
 // ── Danh bạ người làm (dùng chung cho trình sửa + màn hình chạy) ──
-export type Directory = { users: { id: string; full_name: string; unit: string; roles: string[] }[]; groups: { id: string; name: string }[]; roles: string[] };
+export type Directory = { users: { id: string; full_name: string; unit: string; roles: string[]; position?: string; manager_id?: string | null }[]; groups: { id: string; name: string }[]; roles: string[] };
 let dirCache: Promise<Directory> | null = null;
 export function loadDirectory(): Promise<Directory> {
   dirCache ??= Promise.all([
-    sb.from('profiles').select('id, full_name, unit, roles').eq('active', true).order('full_name'),
+    sb.from('profiles').select('id, full_name, unit, roles, position, manager_id').eq('active', true).order('full_name'),
     sb.from('work_groups').select('id, name').eq('active', true).order('name')
   ]).then(([u, g]) => {
     const users = (u.data ?? []) as Directory['users'];
@@ -111,6 +116,7 @@ export function who(a: Assignee | undefined, dir: Directory | null): string {
   if (!a?.id) return 'Người quản trị phân công';
   if (!dir) return '…';
   if (a.type === 'user') return dir.users.find((u) => u.id === a.id)?.full_name ?? 'Người đã nghỉ';
+  if (a.type === 'creator' || a.type === 'manager') return REL[a.type];
   if (a.type === 'group') return 'Nhóm ' + (dir.groups.find((g) => g.id === a.id)?.name ?? '?');
   return 'Vai trò ' + (ROLE_LABEL[a.id] ?? a.id);
 }

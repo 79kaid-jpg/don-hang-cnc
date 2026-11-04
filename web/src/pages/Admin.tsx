@@ -33,7 +33,7 @@ export default function Admin() {
   const noRole = (people ?? []).filter((p) => p.active && !p.roles.length).length;
 
   if (creating) return <NewUser onBack={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setOpenId(id); }} />;
-  if (open) return <UserDetail p={open} onBack={() => setOpenId(null)} onSaved={load} />;
+  if (open) return <UserDetail p={open} people={people ?? []} onBack={() => setOpenId(null)} onSaved={load} />;
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
@@ -113,11 +113,12 @@ export default function Admin() {
   );
 }
 
-function UserDetail({ p, onBack, onSaved }: { p: Profile; onBack: () => void; onSaved: () => void }) {
+function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => void; onSaved: () => void; people?: Profile[] }) {
   const { real, actAs } = useAuth(); const nav = useNavigate();
-  const [f, setF] = useState({ full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active });
+  const init = { full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active, position: p.position ?? '', manager_id: p.manager_id ?? null };
+  const [f, setF] = useState(init);
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
-  const dirty = JSON.stringify(f) !== JSON.stringify({ full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active });
+  const dirty = JSON.stringify(f) !== JSON.stringify(init);
   const isMe = p.id === real?.id;
   const save = async () => {
     setBusy(true); setErr('');
@@ -152,6 +153,13 @@ function UserDetail({ p, onBack, onSaved }: { p: Profile; onBack: () => void; on
         <label className="f">Họ tên<input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></label>
         <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
           <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div></div>
+        <label className="f">Chức vụ<input value={f.position} placeholder="Ví dụ: Trưởng phòng kỹ thuật" onChange={(e) => setF({ ...f, position: e.target.value })} /></label>
+        <label className="f">Quản lý trực tiếp
+          <select value={f.manager_id ?? ''} onChange={(e) => setF({ ...f, manager_id: e.target.value || null })}>
+            <option value="">— Không có —</option>
+            {(people ?? []).filter((x) => x.id !== p.id && x.active).map((x) => <option key={x.id} value={x.id}>{x.full_name}{x.position ? ' · ' + x.position : ''} · {x.unit}</option>)}
+          </select>
+          <span className="small muted">Dùng trong Trình tạo quy trình: bước / cấp duyệt "Quản lý trực tiếp của người tạo", và leo thang khi việc quá hạn lâu.</span></label>
         <label className="switch-row"><span><b>Cho phép đăng nhập</b><br /><span className="small muted">Tắt để khoá tài khoản mà không xoá lịch sử</span></span>
           <input type="checkbox" className="switch" checked={f.active} disabled={isMe} onChange={(e) => setF({ ...f, active: e.target.checked })} /></label>
       </section>

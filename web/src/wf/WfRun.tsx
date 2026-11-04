@@ -126,9 +126,13 @@ export default function WfRun() {
         <div><Link to="/quy-trinh-moi" className="small muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="back" size={14} />Trình tạo quy trình</Link>
           <h1>{ins.title}</h1>
           <div className="row small muted"><span>{ver.p?.name} · bản {ver.version}</span>
+            {ins.order_id && <Link to={'/don/' + ins.order_id} className="chip idle" style={{ textDecoration: 'none' }}><Icon name="file" size={13} />Mở đơn hàng</Link>}
             <span className={'chip ' + ({ dang_chay: 'wait', hoan_tat: 'done', fail: 'bad', huy: 'idle' }[ins.status])}>{ISTATUS[ins.status]}</span>
             {ins.is_test && <span className="chip idle">Chạy thử</span>}</div></div>
-        {ins.status === 'dang_chay' && (can('admin_it') || ins.started_by === me?.id) && <button className="btn sm danger" onClick={cancel}>Huỷ lượt chạy</button>}
+        <div className="row">
+          <Link className="btn sm" to={'/quy-trinh-moi/in/' + ins.id}><Icon name="print" size={16} />In A4</Link>
+          {ins.status === 'dang_chay' && (can('admin_it') || ins.started_by === me?.id) && <button className="btn sm danger" onClick={cancel}>Huỷ lượt chạy</button>}
+        </div>
       </div>
       <Msg err={err} />
 

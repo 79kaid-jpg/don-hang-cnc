@@ -4,10 +4,11 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Empty, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
+import { Report, StartDialog } from './WfReport';
 import { ISTATUS, VAI, VSTATUS, fmtDT, slaLeft, type Instance, type MyTask, type Process, type Version } from './model';
 
 type Row = Process & { versions: Version[] };
-type Tab = 'viec' | 'quy_trinh' | 'mau' | 'luot';
+type Tab = 'viec' | 'quy_trinh' | 'mau' | 'luot' | 'bao_cao';
 
 export default function WfHome() {
   const { can, me } = useAuth();
@@ -17,6 +18,7 @@ export default function WfHome() {
   const [tasks, setTasks] = useState<MyTask[] | null>(null);
   const [runs, setRuns] = useState<(Instance & { pname: string })[] | null>(null);
   const [err, setErr] = useState('');
+  const [start, setStart] = useState<string | null>(null);
   const load = async () => {
     const [p, t, i] = await Promise.all([
       sb.from('wf_processes').select('*, versions:wf_versions(id, process_id, version, status, updated_at, published_at, def)').is('deleted_at', null).order('created_at', { ascending: false }),
@@ -52,13 +54,16 @@ export default function WfHome() {
   const mine = (list ?? []).filter((r) => !r.is_template);
   const tpl = (list ?? []).filter((r) => r.is_template);
 
-  const tabs: [Tab, string, number?][] = [['viec', 'Việc của tôi', tasks?.filter((t) => t.vai === 'lam' || t.vai === 'phan_cong' || t.vai === 'duyet').length], ['quy_trinh', 'Quy trình', mine.length], ['mau', 'Thư viện mẫu', tpl.length], ['luot', 'Lượt chạy']];
+  const tabs: [Tab, string, number?][] = [['viec', 'Việc của tôi', tasks?.filter((t) => t.vai === 'lam' || t.vai === 'phan_cong' || t.vai === 'duyet').length], ['quy_trinh', 'Quy trình', mine.length], ['mau', 'Thư viện mẫu', tpl.length], ['luot', 'Lượt chạy'], ['bao_cao', 'Báo cáo']];
   return (
     <div className="wf" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="page-head">
         <div><h1>Trình tạo quy trình <span className="chip wait">Thử nghiệm</span></h1>
           <p className="muted">Tự thiết kế quy trình: bước, người làm, hạn xử lý, checklist. Tách riêng, không ảnh hưởng quy trình đơn hàng đang chạy.</p></div>
-        {can('thiet_ke_qt') && <button className="btn primary" onClick={() => create()}><Icon name="plus" size={18} />Quy trình mới</button>}
+        <div className="row">
+          <button className="btn primary" onClick={() => setStart('')}><Icon name="plus" size={18} />Tạo hồ sơ</button>
+          {can('thiet_ke_qt') && <button className="btn" onClick={() => create()}><Icon name="settings" size={18} />Quy trình mới</button>}
+        </div>
       </div>
       <Msg err={err} />
       <div className="wf-tabs" role="tablist">
@@ -82,6 +87,7 @@ export default function WfHome() {
             <div style={{ flex: 1, minWidth: 0 }}><b>{r.name}</b>
               <div className="small muted">{v.def.steps.length} bước · {v.def.lanes.length} làn · bản {v.version}: {VSTATUS[v.status]}{l && l.id !== v.id ? ` (đang chạy bản ${l.version})` : ''} · sửa {fmtDT(v.updated_at)}</div></div>
             <span className={'chip ' + (l ? 'done' : 'idle')}>{l ? 'Đã phát hành' : 'Nháp'}</span>
+            {l && <button className="btn sm primary" onClick={() => setStart(r.id)}><Icon name="plus" size={16} />Tạo hồ sơ</button>}
             <Link className="btn sm" to={'/quy-trinh-moi/sua/' + r.id}><Icon name="settings" size={16} />Thiết kế</Link>
             {(can('admin_it') || r.created_by === me?.id) &&
               <button className="btn sm danger icon-btn" aria-label={'Xoá ' + r.name} title="Xoá quy trình" onClick={() => removeProc(r)}><Icon name="trash" size={16} /></button>}
@@ -97,6 +103,9 @@ export default function WfHome() {
               {can('thiet_ke_qt') && <button className="btn sm primary" onClick={() => create(v, r.name.replace(/^(QT\d) · /, '$1 (bản mới) · '))}><Icon name="plus" size={16} />Nhân bản để sửa</button>}
             </div>
           </div>); })}</div>)}
+
+      {tab === 'bao_cao' && (!list ? <Skeleton /> : <Report procs={mine} />)}
+      {start !== null && list && <StartDialog procs={mine} preset={start || undefined} onClose={() => setStart(null)} />}
 
       {tab === 'luot' && (!runs ? <Skeleton /> : !runs.length ? <Empty title="Chưa có lượt chạy nào" /> :
         <div className="card flush"><table className="wf-table"><thead><tr><th>Lượt chạy</th><th>Quy trình</th><th>Trạng thái</th><th>Bắt đầu</th></tr></thead>

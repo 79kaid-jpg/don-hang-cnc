@@ -18,6 +18,7 @@ import { ShortcutHost } from './components/Shortcuts';
 import WfHome from './wf/WfHome';
 import WfEditor from './wf/WfEditor';
 import WfRun from './wf/WfRun';
+import WfPrint from './wf/WfPrint';
 import './wf/wf.css';
 
 function Shell() {
@@ -126,6 +127,7 @@ function Shell() {
           <Route path="/quy-trinh-moi" element={<WfHome />} />
           <Route path="/quy-trinh-moi/sua/:id" element={<WfEditor />} />
           <Route path="/quy-trinh-moi/chay/:id" element={<WfRun />} />
+          <Route path="/quy-trinh-moi/in/:id" element={<WfPrint />} />
           <Route path="/cai-app" element={<Install />} />
           <Route path="/quy-trinh" element={<div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className="page-head"><div><h1>Tài liệu quy trình đơn hàng BASE</h1><p className="muted">Sơ đồ tương tác, bảng bước, điều kiện chuyển và 10 form. Bản v4 – đã gộp QT2.</p></div>

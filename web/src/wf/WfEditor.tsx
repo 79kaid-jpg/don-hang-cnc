@@ -4,8 +4,8 @@ import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from '../components/Icon';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
-import { KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
-  type Assignee, type CheckItem, type ApprLevel, RULE, ON_REJECT, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
+import { REL, KIND, ROLE_LABEL, VSTATUS, emptyDef, items, loadDirectory, newStep, uid, validate, who,
+  type Assignee, type CheckItem, type PrintCfg, type ApprLevel, RULE, ON_REJECT, type Op, type Route, OPS, END, condFields, type Def, type Field, type Column, type Perm, PERM, FTYPE, type Directory, type Process, type Step, type StepKind, type Version } from './model';
 
 import { Canvas, LANE_COLORS } from './Canvas';
 
@@ -134,6 +134,7 @@ export default function WfEditor() {
       </section>
 
       <FieldsEditor fields={def.fields ?? []} ro={ro} onChange={(f) => upd((d) => { d.fields = f; })} />
+      <PrintEditor cfg={def.print ?? {}} name={name} ro={ro} onChange={(c) => upd((d) => { d.print = c; })} />
 
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="wf-seg" role="tablist" aria-label="Kiểu xem">
@@ -222,15 +223,18 @@ export function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
       </div>
       <div className="wf-2">
         <label className="f"><span>Người làm theo</span>
-          <select value={s.assignee.type} onChange={(e) => set({ assignee: { type: e.target.value as Step['assignee']['type'], id: '' } })}>
-            <option value="user">Một người</option><option value="group">Nhóm làm việc</option><option value="role">Vai trò</option></select></label>
+          <select value={s.assignee.type} onChange={(e) => { const t = e.target.value as Step['assignee']['type']; set({ assignee: { type: t, id: t === 'creator' || t === 'manager' ? t : '' } }); }}>
+            <option value="user">Một người</option><option value="group">Nhóm làm việc</option><option value="role">Vai trò</option>
+            <option value="creator">Người tạo hồ sơ</option>{i > 0 && <option value="manager">Quản lý trực tiếp của người tạo</option>}</select></label>
+        {s.assignee.type === 'creator' || s.assignee.type === 'manager' ? <div className="f"><span>Người làm</span>
+          <div className="wf-ro small">{s.assignee.type === 'creator' ? 'Ai mở hồ sơ thì người đó làm bước này' : 'Lấy theo ô "Quản lý trực tiếp" của người tạo (Quản trị → Người dùng). Chưa khai báo thì người quản trị giai đoạn phân công.'}</div></div> :
         <label className="f"><span>Người làm</span>
           <select value={s.assignee.id} onChange={(e) => set({ assignee: { ...s.assignee, id: e.target.value } })}>
             <option value="">{i === 0 ? '— Chọn —' : '— Chưa xác định (người quản trị phân công) —'}</option>
             {s.assignee.type === 'user' && dir?.users.map((u) => <option key={u.id} value={u.id}>{u.full_name} · {u.unit}</option>)}
             {s.assignee.type === 'group' && dir?.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             {s.assignee.type === 'role' && dir?.roles.map((r) => <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>)}
-          </select></label>
+          </select></label>}
       </div>
       <label className="f" style={{ maxWidth: 220 }}><span>Hạn xử lý (giờ, 0 = không hạn)</span>
         <input type="number" min={0} inputMode="numeric" value={s.sla_hours ?? 0} onChange={(e) => set({ sla_hours: Math.max(0, Number(e.target.value) || 0) })} /></label>
@@ -283,16 +287,16 @@ export function StepForm({ s, i, n, def, dir, ro, set, onMove, onDup, onDel }: {
 }
 
 /** Chọn nhiều người / nhóm / vai trò */
-function People({ label, hint, list, dir, ro, onChange }: { label: string; hint: string; list: Assignee[]; dir: Directory | null; ro: boolean; onChange: (v: Assignee[]) => void }) {
+function People({ label, hint, list, dir, ro, onChange, rel }: { label: string; hint: string; list: Assignee[]; dir: Directory | null; ro: boolean; onChange: (v: Assignee[]) => void; rel?: boolean }) {
   const [type, setType] = useState<Assignee['type']>('user');
-  const opts = type === 'user' ? dir?.users.map((u) => [u.id, u.full_name + ' · ' + u.unit]) : type === 'group' ? dir?.groups.map((g) => [g.id, g.name]) : dir?.roles.map((r) => [r, ROLE_LABEL[r] ?? r]);
+  const opts = (type as string) === 'rel' ? [['creator', REL.creator], ['manager', REL.manager]] : type === 'user' ? dir?.users.map((u) => [u.id, u.full_name + ' · ' + u.unit]) : type === 'group' ? dir?.groups.map((g) => [g.id, g.name]) : dir?.roles.map((r) => [r, ROLE_LABEL[r] ?? r]);
   return (
     <div className="f"><span>{label}</span><small className="muted">{hint}</small>
       {list.length > 0 && <div className="row">{list.map((a, k) => (
         <span key={a.type + a.id} className="wf-pill">{who(a, dir)}{!ro && <button aria-label={'Bỏ ' + who(a, dir)} onClick={() => onChange(list.filter((_, x) => x !== k))}><Icon name="x" size={12} /></button>}</span>))}</div>}
       {!ro && <div className="wf-2" style={{ gridTemplateColumns: 'minmax(96px,140px) minmax(0,1fr)' }}>
-        <select value={type} aria-label={label + ': loại'} onChange={(e) => setType(e.target.value as Assignee['type'])}><option value="user">Người</option><option value="group">Nhóm</option><option value="role">Vai trò</option></select>
-        <select value="" aria-label={label + ': thêm'} onChange={(e) => { const id = e.target.value; if (id && !list.some((a) => a.type === type && a.id === id)) onChange([...list, { type, id }]); }}>
+        <select value={type} aria-label={label + ': loại'} onChange={(e) => setType(e.target.value as Assignee['type'])}><option value="user">Người</option><option value="group">Nhóm</option><option value="role">Vai trò</option>{rel && <option value="rel">Theo người tạo</option>}</select>
+        <select value="" aria-label={label + ': thêm'} onChange={(e) => { const id = e.target.value; const t = ((type as string) === 'rel' ? id : type) as Assignee['type']; if (id && !list.some((a) => a.type === t && a.id === id)) onChange([...list, { type: t, id }]); }}>
           <option value="">+ Thêm…</option>{opts?.map(([id, t]) => <option key={id} value={id}>{t}</option>)}</select></div>}
     </div>);
 }
@@ -321,6 +325,9 @@ function FieldsEditor({ fields, ro, onChange }: { fields: Field[]; ro: boolean; 
                   {Object.entries(FTYPE).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></label>
               </div>
               <label className="f"><span>Gợi ý nhập (tuỳ chọn)</span><input value={f.help ?? ''} onChange={(e) => setF(i, { help: e.target.value })} /></label>
+              <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={!!f.inherit} onChange={(e) => setF(i, { inherit: e.target.checked || undefined })} />
+                <span><b>Lấy từ hồ sơ trước của cùng đơn hàng</b><br /><span className="muted">Khi mở hồ sơ gắn đơn hàng, tự điền giá trị trường cùng mã <code>{f.id}</code> từ hồ sơ gần nhất (vd. danh sách tấm QT0 → QT1).</span></span></label>
+              <label className="f"><span>Mã trường (dùng cho công thức, kế thừa, mẫu in)</span><input value={f.id} onChange={(e) => setF(i, { id: e.target.value.replace(/[^A-Za-z0-9_]/g, '_') })} /></label>
               {f.type === 'select' && <label className="f"><span>Các lựa chọn (mỗi dòng một lựa chọn)</span>
                 <textarea rows={3} value={(f.options ?? []).join('\n')} onChange={(e) => setF(i, { options: e.target.value.split('\n') })} onBlur={() => setF(i, { options: (f.options ?? []).map((o) => o.trim()).filter(Boolean) })} /></label>}
               {f.type === 'table' && <ColumnsEditor cols={f.columns ?? []} onChange={(c) => setF(i, { columns: c })} />}
@@ -412,7 +419,7 @@ function ApprovalEditor({ s, def, dir, ro, set }: { s: Step; def: Def; dir: Dire
                 <button className="wf-x" disabled={k === levels.length - 1} aria-label="Xuống" onClick={() => mv(k, 1)}>↓</button>
                 <button className="wf-x" aria-label={'Xoá cấp ' + (k + 1)} onClick={() => set({ approval: levels.length > 1 ? { on_reject: ap!.on_reject, levels: levels.filter((_, j) => j !== k) } : undefined })}><Icon name="x" size={14} /></button></span>}
             </div>
-            <People label="Người duyệt" hint="Người, nhóm hoặc vai trò; mọi thành viên của nhóm/vai trò đều nhận phiếu." list={l.approvers} dir={dir} ro={ro} onChange={(v) => setL(k, { approvers: v })} />
+            <People rel label="Người duyệt" hint="Người, nhóm, vai trò, hoặc theo người tạo (quản lý trực tiếp); mọi thành viên của nhóm/vai trò đều nhận phiếu." list={l.approvers} dir={dir} ro={ro} onChange={(v) => setL(k, { approvers: v })} />
             <div className="wf-2">
               <label className="f"><span>Quy tắc đạt</span><select value={l.rule} onChange={(e) => setL(k, { rule: e.target.value as ApprLevel['rule'] })}>{Object.entries(RULE).map(([r, t]) => <option key={r} value={r}>{t}</option>)}</select></label>
               {l.rule === 'min' ? <label className="f"><span>Số người tối thiểu</span><input type="number" min={1} value={l.min ?? 1} onChange={(e) => setL(k, { min: Math.max(1, Number(e.target.value) || 1) })} /></label>
@@ -433,4 +440,33 @@ function ApprovalEditor({ s, def, dir, ro, set }: { s: Step; def: Def; dir: Dire
           {Object.entries(ON_REJECT).map(([r, t]) => <option key={r} value={r}>{t}</option>)}</select></label>
       </>}
     </div>);
+}
+
+/** Mẫu in A4: tiêu đề, dòng phụ, ô ký tay; phần thân lấy toàn bộ biểu mẫu + lịch sử ký điện tử */
+function PrintEditor({ cfg, name, ro, onChange }: { cfg: PrintCfg; name: string; ro: boolean; onChange: (c: PrintCfg) => void }) {
+  const [open, setOpen] = useState(false);
+  const signs = cfg.hand_signs ?? [];
+  return (
+    <section className="card" aria-label="Mẫu in">
+      <button className="wf-step-h" style={{ minHeight: 40, padding: 0 }} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="print" size={18} /><span style={{ flex: 1, textAlign: 'left' }}><b>Mẫu in A4</b>
+          <span className="small muted" style={{ display: 'block' }}>{cfg.title || name} · {signs.length ? `${signs.length} ô ký tay` : 'chưa có ô ký tay'}</span></span>
+        <span className="small muted">{open ? 'Thu gọn' : 'Cấu hình'}</span></button>
+      {open && <fieldset className="wf-form" disabled={ro} style={{ marginTop: 8 }}>
+        <div className="wf-2">
+          <label className="f"><span>Tiêu đề in</span><input value={cfg.title ?? ''} placeholder={name} onChange={(e) => onChange({ ...cfg, title: e.target.value })} /></label>
+          <label className="f"><span>Dòng phụ (công ty, mã biểu mẫu…)</span><input value={cfg.subtitle ?? ''} onChange={(e) => onChange({ ...cfg, subtitle: e.target.value })} /></label>
+        </div>
+        <div className="f"><span>Ô ký tay (người ngoài hệ thống: khách hàng, kho…)</span>
+          {signs.map((x, k) => <div key={k} className="wf-ck"><Icon name="file" size={14} />
+            <input className="wf-ck-in" value={x} aria-label="Tên ô ký" onChange={(e) => onChange({ ...cfg, hand_signs: signs.map((y, j) => j === k ? e.target.value : y) })} />
+            <button aria-label={'Bỏ ' + x} onClick={() => onChange({ ...cfg, hand_signs: signs.filter((_, j) => j !== k) })}><Icon name="x" size={14} /></button></div>)}
+          <div className="row">{['Khách hàng', 'Người bàn giao vật liệu', 'Người nhận vật liệu', 'Thủ kho'].filter((x) => !signs.includes(x)).map((x) =>
+            <button key={x} className="btn sm" onClick={() => onChange({ ...cfg, hand_signs: [...signs, x] })}><Icon name="plus" size={14} />{x}</button>)}
+            <button className="btn sm" onClick={() => onChange({ ...cfg, hand_signs: [...signs, 'Ô ký'] })}><Icon name="plus" size={14} />Ô khác</button></div>
+        </div>
+        <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={cfg.show_history !== false} onChange={(e) => onChange({ ...cfg, show_history: e.target.checked })} />
+          In kèm bảng ký điện tử (ai làm / duyệt bước nào, lúc nào)</label>
+      </fieldset>}
+    </section>);
 }
