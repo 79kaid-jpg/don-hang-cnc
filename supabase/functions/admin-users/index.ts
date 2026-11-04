@@ -4,7 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 const URL_ = Deno.env.get('SUPABASE_URL')!;
 const admin = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const ROLES = ['admin_it', 'kinh_doanh', 'ky_thuat', 'kiem_tra_f1', 'admin_cnc', 'ke_hoach', 'mua_hang', 'kho_qc', 'ipc', 'duyet', 'xem'];
-const UNITS = ['CNC', 'IPC', 'IT', 'KHAC'];
+const UNITS = ['CNC', 'IPC', 'HANWHA', 'IT', 'KHAC'];
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 

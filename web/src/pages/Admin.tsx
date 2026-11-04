@@ -11,7 +11,8 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../lib/auth';
 
 type Step = { id: string; doc_type: string; step_no: number; label: string; approver_id: string | null; hours: number };
-const UNITS = ['CNC', 'IPC', 'IT', 'KHAC'];
+const UNITS = ['CNC', 'IPC', 'HANWHA', 'IT', 'KHAC'];
+const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWHA: 'Hanwha', IT: 'IT', KHAC: 'Khác' };
 
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
@@ -20,7 +21,7 @@ export default function Admin() {
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
-  const [q, setQ] = useState(''); const [fRole, setFRole] = useState(''); const [fAct, setFAct] = useState<'on' | 'off' | 'all'>('on'); const [fZ, setFZ] = useState(false);
+  const [q, setQ] = useState(''); const [fRole, setFRole] = useState(''); const [fAct, setFAct] = useState<'on' | 'off' | 'all'>('on'); const [fZ, setFZ] = useState(false); const [fU, setFU] = useState('');
   const [groups] = useGroups();
   const load = () => {
     sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? []));
@@ -40,7 +41,7 @@ export default function Admin() {
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
-  const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id));
+  const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
   return (
     <>
       <div className="page-head"><div><h1>Quản trị</h1>
@@ -65,6 +66,11 @@ export default function Admin() {
             <input aria-label="Tìm người dùng" placeholder="Tìm tên, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
           <div className="seg" role="group" aria-label="Trạng thái">{([['on', 'Hoạt động'], ['off', 'Đã khoá'], ['all', 'Tất cả']] as const).map(([k, t]) =>
             <button key={k} type="button" aria-pressed={fAct === k} onClick={() => setFAct(k)}>{t}</button>)}</div>
+        </div>
+        <div className="seg unit-seg" role="group" aria-label="Lọc theo công ty">
+          <button type="button" aria-pressed={fU === ''} onClick={() => setFU('')}>Tất cả công ty <span className="kb-count">{(people ?? []).length}</span></button>
+          {UNITS.map((u) => { const n = (people ?? []).filter((p) => p.unit === u).length; return n > 0 && (
+            <button key={u} type="button" aria-pressed={fU === u} onClick={() => setFU(fU === u ? '' : u)}><i className={'u-dot u-' + u} />{UNIT_NAME[u]} <span className="kb-count">{n}</span></button>); })}
         </div>
         <div className="adm-chips" role="group" aria-label="Lọc theo vai trò">
           <button className={'pill-toggle' + (fRole === '' ? ' on' : '')} aria-pressed={fRole === ''} onClick={() => setFRole('')}>Tất cả vai trò</button>
@@ -145,7 +151,7 @@ function UserDetail({ p, onBack, onSaved }: { p: Profile; onBack: () => void; on
         <h2>Thông tin</h2>
         <label className="f">Họ tên<input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></label>
         <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
-          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{u}</button>)}</div></div>
+          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div></div>
         <label className="switch-row"><span><b>Cho phép đăng nhập</b><br /><span className="small muted">Tắt để khoá tài khoản mà không xoá lịch sử</span></span>
           <input type="checkbox" className="switch" checked={f.active} disabled={isMe} onChange={(e) => setF({ ...f, active: e.target.checked })} /></label>
       </section>
@@ -262,7 +268,7 @@ function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) 
           <label className="f">Email đăng nhập *<input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="ten@congty.vn" autoComplete="off" /></label>
         </div>
         <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
-          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{u}</button>)}</div></div>
+          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div></div>
         <div className="row">
           <label className="f" style={{ flex: '1 1 260px' }}>Mật khẩu tạm * (từ 8 ký tự)
             <input type={show ? 'text' : 'password'} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" className="mono" /></label>

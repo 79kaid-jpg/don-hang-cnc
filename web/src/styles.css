@@ -736,3 +736,4 @@ g.on .sw-e{stroke:#B8954A;stroke-width:2.4}
 .as-btn:active{transform:translateY(-50%) scale(.95)}.as-btn:focus-visible{outline:2px solid var(--brand,#1c1917);outline-offset:2px}
 .as-btn::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:50%;transform:translateX(50%);white-space:nowrap;background:#1c1917;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s}
 .as-btn:hover::after,.as-btn:focus-visible::after{opacity:1}
+.unit-seg{flex-wrap:wrap;margin-bottom:8px}.unit-seg button{display:inline-flex;align-items:center;gap:6px}.u-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.u-CNC{background:#2563eb}.u-IPC{background:#16a34a}.u-HANWHA{background:#ea580c}.u-IT{background:#7c3aed}.u-KHAC{background:#78716c}
