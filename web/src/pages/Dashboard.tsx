@@ -108,7 +108,9 @@ export default function Dashboard() {
         <div className="db-title"><h1>Thống kê</h1>
           <span className="db-live"><i />Cập nhật {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
         <ShareBtn target="#db-root" name="dashboard" label="Gửi ảnh" />
-        <div className="db-ctrl">
+        <p className="db-hint small muted hide-m"><Icon name="arrow" size={13} />Bấm vào số, cột hoặc thanh để xem danh sách hồ sơ · nút <Icon name="share" size={13} /> để gửi ảnh qua Zalo.</p>
+      </header>
+        <div className="db-ctrl db-sticky">
           {boss && <div className="db-tabs" role="tablist" aria-label="Phạm vi">
             <span className="db-thumb" style={{ transform: tab === 'boss' ? 'translateX(100%)' : 'none' }} aria-hidden="true" />
             <button role="tab" aria-selected={tab === 'me'} onClick={() => setTab('me')}><Icon name="inbox" size={16} />Của tôi</button>
@@ -118,8 +120,6 @@ export default function Dashboard() {
             {[7, 30, 90].map((d) => <button key={d} aria-pressed={days === d} onClick={() => setDays(d)}>{d}<small> ngày</small></button>)}
           </div>
         </div>
-        <p className="db-hint small muted hide-m"><Icon name="arrow" size={13} />Bấm vào số, cột hoặc thanh để xem danh sách hồ sơ · nút <Icon name="share" size={13} /> để gửi ảnh qua Zalo.</p>
-      </header>
 
       <DailyZalo />
       <div id="db-root" className="db">
