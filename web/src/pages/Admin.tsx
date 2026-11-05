@@ -3,7 +3,7 @@ import { BaseConnect } from '../components/BaseConnect';
 import { GroupsAdmin, StepDefaultsAdmin, useGroups } from '../components/StepPeople';
 import { ChecklistAdmin } from '../components/Checklist';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { DOC, ROLES } from '../lib/format';
 import { Msg, Skeleton, confirmDialog, toast } from '../components/ui';
@@ -20,7 +20,13 @@ const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWHA: 'Han
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can, real, actAs } = useAuth(); const nav = useNavigate();
-  const [tab, setTab] = useState<'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl'>('users');
+  type Tab = 'users' | 'groups' | 'flows' | 'ck' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl';
+  const [asp, setAsp] = useSearchParams(); const tParam = asp.get('t') as Tab | null;
+  const tab: Tab = tParam ?? 'users';
+  const setTab = (t: Tab) => { const n = new URLSearchParams(asp); n.set('t', t); setAsp(n); };
+  const [mob, setMob] = useState(() => matchMedia('(max-width:900px)').matches);
+  useEffect(() => { const m = matchMedia('(max-width:900px)'); const f = () => setMob(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); }, []);
+  const home = mob && !tParam;
   const [people, setPeople] = useState<Profile[] | null>(null);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
@@ -40,67 +46,70 @@ export default function Admin() {
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
-    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'flow'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
+    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
   const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
+  const NAV: [string, (typeof TABS)[number][]][] = [['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
+    ['Quy trình', TABS.filter((t) => ['cp', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['perf', 'base'].includes(t[0]))]];
+  const cur = TABS.find((t) => t[0] === tab);
+  const ini = (n: string) => (n || '?').replace(/\(.*?\)/g, '').split(' ').filter((x) => /\p{L}/u.test(x)).slice(-2).map((x) => x[0]).join('').toUpperCase() || '?';
+  const filtered = fRole !== '' || fZ || fU !== '' || fAct !== 'on' || q !== '';
   return (
-    <>
-      <div className="page-head"><div><h1>Quản trị</h1>
-        <p className="muted">Tài khoản, vai trò, nhóm, người phụ trách từng bước, checklist và chuỗi duyệt.</p></div>
-        {can('admin_it') && tab === 'users' && <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Tạo người dùng</button>}
-      </div>
-      {people && <div className="adm-stats">
-        <button className="adm-stat" onClick={() => { setTab('users'); setFRole(''); setFAct('on'); setFZ(false); }}><b>{act.length}</b><span>Đang hoạt động</span></button>
-        <button className={'adm-stat' + (noRole ? ' warn' : '')} onClick={() => { setTab('users'); setFRole('_none'); setFAct('on'); setFZ(false); }}><b>{noRole}</b><span>Chưa có vai trò</span></button>
-        <button className={'adm-stat' + (noZalo ? ' warn' : '')} onClick={() => { setTab('users'); setFRole(''); setFAct('on'); setQ(''); setFZ(true); }}><b>{noZalo}</b><span>Chưa liên kết Zalo</span></button>
-        <button className="adm-stat" onClick={() => setTab('groups')}><b>{groups.filter((g) => g.active).length}</b><span>Nhóm</span></button>
-      </div>}
-      <div className="qt-group od-group adm-group"><div className="qt-tabs" role="tablist" aria-label="Mục quản trị">
-        {TABS.map(([k, t, sub, ic]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
-            <b><Icon name={ic as never} size={15} /> {t}</b><span>{sub}</span></button>))}
-      </div><div className="qt-panel od-panel adm-panel" key={tab}>
+    <div className={'adm2' + (home ? ' home' : mob ? ' sub' : '')}>
+      {home && <header className="adm2-mhome"><h1>Quản trị</h1><p className="muted small">{act.length} người dùng · {noZalo} chưa liên kết Zalo</p></header>}
+      {mob && !home && <button className="adm2-back" onClick={() => { if ((history.state?.idx ?? 0) > 0) history.back(); else setAsp(new URLSearchParams(), { replace: true }); }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>Quản trị</button>}
+      <nav className="adm2-nav" aria-label="Mục quản trị">
+        <div className="adm2-title"><Icon name="settings" size={18} /><b>Quản trị</b></div>
+        {NAV.map(([g, items]) => <div key={g} className="adm2-sec"><span className="adm2-sec-t">{g}</span>
+          {items.map(([k, t, sub, ic]) => <button key={k} aria-current={tab === k ? 'page' : undefined} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} title={sub}>
+            <span className="adm2-ic"><Icon name={ic as never} size={17} /></span><span className="adm2-lb"><b>{t}</b><small>{sub}</small></span>{k === 'users' && noZalo > 0 && <i className="adm2-badge">{noZalo}</i>}
+            <svg className="adm2-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg></button>)}</div>)}
+      </nav>
+      <section className="adm2-main">
+        <header className="adm2-head"><div><h1>{cur?.[1]}</h1><p className="muted small">{cur?.[2]}</p></div>
+          {can('admin_it') && tab === 'users' && <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Tạo người dùng</button>}</header>
 
       {tab === 'users' && (<div className="adm-users">
-        <div className="row">
-          <label className="search" style={{ flex: '1 1 260px', maxWidth: 'none' }}><Icon name="search" size={18} />
-            <input aria-label="Tìm người dùng" placeholder="Tìm tên, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        {people && <div className="adm2-stats">
+          <button onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFU(''); setQ(''); }}><b>{act.length}</b><span>Đang hoạt động</span></button>
+          <button className={noRole ? 'warn' : ''} onClick={() => { setFRole('_none'); setFAct('on'); setFZ(false); }}><b>{noRole}</b><span>Chưa có vai trò</span></button>
+          <button className={(noZalo ? 'warn' : '') + (fZ ? ' on' : '')} onClick={() => { setFRole(''); setFAct('on'); setFZ(!fZ); }}><b>{noZalo}</b><span>Chưa liên kết Zalo</span></button>
+          <button onClick={() => setTab('groups')}><b>{groups.filter((g) => g.active).length}</b><span>Nhóm</span></button>
+        </div>}
+        <div className="adm2-filters">
+          <label className="search adm2-q"><Icon name="search" size={17} />
+            <input aria-label="Tìm người dùng" placeholder="Tìm tên, email, vai trò…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <select aria-label="Công ty" value={fU} onChange={(e) => setFU(e.target.value)}>
+            <option value="">Tất cả công ty ({(people ?? []).length})</option>
+            {UNITS.map((u) => { const n = (people ?? []).filter((p) => p.unit === u).length; return n > 0 && <option key={u} value={u}>{UNIT_NAME[u]} ({n})</option>; })}</select>
+          <select aria-label="Vai trò" value={fRole} onChange={(e) => setFRole(e.target.value)}>
+            <option value="">Tất cả vai trò</option>
+            {Object.entries(ROLES).map(([k, t]) => roleCount(k) > 0 && <option key={k} value={k}>{t} ({roleCount(k)})</option>)}
+            {noRole > 0 && <option value="_none">Chưa có vai trò ({noRole})</option>}</select>
           <div className="seg" role="group" aria-label="Trạng thái">{([['on', 'Hoạt động'], ['off', 'Đã khoá'], ['all', 'Tất cả']] as const).map(([k, t]) =>
             <button key={k} type="button" aria-pressed={fAct === k} onClick={() => setFAct(k)}>{t}</button>)}</div>
         </div>
-        <div className="seg unit-seg" role="group" aria-label="Lọc theo công ty">
-          <button type="button" aria-pressed={fU === ''} onClick={() => setFU('')}>Tất cả công ty <span className="kb-count">{(people ?? []).length}</span></button>
-          {UNITS.map((u) => { const n = (people ?? []).filter((p) => p.unit === u).length; return n > 0 && (
-            <button key={u} type="button" aria-pressed={fU === u} onClick={() => setFU(fU === u ? '' : u)}><i className={'u-dot u-' + u} />{UNIT_NAME[u]} <span className="kb-count">{n}</span></button>); })}
-        </div>
-        <div className="adm-chips" role="group" aria-label="Lọc theo vai trò">
-          <button className={'pill-toggle' + (fRole === '' ? ' on' : '')} aria-pressed={fRole === ''} onClick={() => setFRole('')}>Tất cả vai trò</button>
-          {Object.entries(ROLES).map(([k, t]) => roleCount(k) > 0 && (
-            <button key={k} className={'pill-toggle' + (fRole === k ? ' on' : '')} aria-pressed={fRole === k} onClick={() => setFRole(fRole === k ? '' : k)}>{t} <span className="kb-count">{roleCount(k)}</span></button>))}
-          <button className={'pill-toggle' + (fZ ? ' on' : '')} aria-pressed={fZ} onClick={() => setFZ(!fZ)}>Chưa liên kết Zalo</button>
-          {noRole > 0 && <button className={'pill-toggle' + (fRole === '_none' ? ' on' : '')} aria-pressed={fRole === '_none'} onClick={() => setFRole('_none')}>Chưa có vai trò <span className="kb-count">{noRole}</span></button>}
-        </div>
-        {!people ? <Skeleton rows={4} h={76} /> : shown.length === 0 ? <p className="muted">Không có người dùng khớp bộ lọc.</p> : (
-          <ul className="ulist adm-ulist">
-            {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); return (
-              <li key={p.id} className="uli">
-                {can('admin_it') && p.active && p.id !== real?.id && (
-                  <button className="as-btn" onClick={async () => { const e = await actAs(p.id); if (e) toast(e); else { toast('Đang dùng app với tư cách ' + p.full_name); nav('/'); } }}
-                    data-tip="Login as" aria-label={'Đăng nhập với tư cách ' + p.full_name}><Icon name="login" size={18} /></button>)}
-                <button className={'ucard' + (p.active ? '' : ' off')} onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
-                  <span className="avatar">{(p.full_name || '?').split(' ').filter(Boolean).slice(-2).map((x) => x[0]).join('').toUpperCase()}</span>
-                  <span className="ucard-main">
-                    <span className="row" style={{ gap: 6 }}><b>{p.full_name || '(chưa đặt tên)'}</b>
-                      <span className="chip idle">{p.unit}</span>{!p.active && <span className="chip bad">Đã khoá</span>}
-                      <span className={'zl ' + (p.zalo_chat_id ? 'on' : '')} title={p.zalo_chat_id ? 'Đã liên kết Zalo' + (p.zalo_name ? ': ' + p.zalo_name : '') : 'Chưa liên kết Zalo – không nhận thông báo'}>Zalo</span></span>
-                    <span className="ucard-roles">{p.roles.length ? p.roles.map((r) => <span key={r} className="chip wait">{ROLES[r] ?? r}</span>)
-                      : <span className="chip bad">Chưa có vai trò</span>}
-                      {gs.map((g) => <span key={g.id} className="chip grp-chip"><Icon name="users" size={12} />{g.name}</span>)}</span>
-                  </span>
-                  <Icon name="arrow" size={18} />
+        <div className="adm2-count small muted">{shown.length} người{filtered && <> · <button className="link" onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFU(''); setQ(''); }}>Xoá bộ lọc</button></>}</div>
+        {!people ? <Skeleton rows={4} h={64} /> : shown.length === 0 ? <div className="adm2-empty"><Icon name="users" size={26} /><p>Không có người dùng khớp bộ lọc.</p></div> : (
+          <ul className="adm2-list" role="list">
+            {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); const tags = [...p.roles.map((r) => ROLES[r] ?? r)];
+              return (
+              <li key={p.id} className={'adm2-row' + (p.active ? '' : ' off')}>
+                <button className="adm2-open" onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
+                  <span className={'adm2-av u-' + p.unit}>{ini(p.full_name)}</span>
+                  <span className="adm2-who"><b>{p.full_name || '(chưa đặt tên)'}</b>
+                    <span className="small muted">{UNIT_NAME[p.unit] ?? p.unit}{p.position ? ' · ' + p.position : ''}{!p.active && <span className="chip bad sm">Đã khoá</span>}</span></span>
+                  <span className="adm2-tags">{tags.length ? <>{tags.slice(0, 3).map((t) => <span key={t} className="adm2-tag">{t}</span>)}{tags.length > 3 && <span className="adm2-tag more">+{tags.length - 3}</span>}</>
+                    : <span className="adm2-tag bad">Chưa có vai trò</span>}
+                    {gs.slice(0, 2).map((g) => <span key={g.id} className="adm2-tag grp"><Icon name="users" size={11} />{g.name}</span>)}</span>
+                  <span className={'adm2-zl' + (p.zalo_chat_id ? ' on' : '')} title={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'} aria-label={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}>Z</span>
+                  <Icon name="arrow" size={16} />
                 </button>
+                {can('admin_it') && p.active && p.id !== real?.id ? (
+                  <button className="adm2-as" onClick={async () => { const e = await actAs(p.id); if (e) toast(e); else { toast('Đang dùng app với tư cách ' + p.full_name); nav('/'); } }}
+                    data-tip="Login as" aria-label={'Đăng nhập với tư cách ' + p.full_name}><Icon name="login" size={17} /></button>) : <span className="adm2-as ph" />}
               </li>); })}
           </ul>)}
       </div>)}
@@ -114,8 +123,7 @@ export default function Admin() {
       {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
       {tab === 'ck' && <ChecklistAdmin canEdit={can('admin_it')} />}
       {tab === 'flows' && (!steps || !people ? <Skeleton rows={4} h={90} /> : <Flows steps={steps} people={people} onSaved={load} />)}
-      </div></div>
-    </>
+      </section></div>
   );
 }
 

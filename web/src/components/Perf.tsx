@@ -243,7 +243,7 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
           {canEdit && <button className="btn sm icon-btn" onClick={() => set('prizes', c.prizes.filter((_, j) => j !== i))} aria-label="Bỏ giải"><Icon name="x" size={16} /></button>}</li>)}</ul>
       </div>
       <p className="small muted" style={{ margin: 0 }}>Cột <b>%</b> là tỉ lệ trúng. <b>+điểm</b>: số điểm cộng ngay cho người trúng (0 = quà hiện vật, quản trị trao tay). Giải tên “Quay lại” hoàn lại điểm lượt quay.</p></section>
-    {canEdit && <div className="pa-save"><span className="small muted">{dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu'}{wsum !== 100 && ' · nên để tổng trọng số = 100%'}</span>
+    {canEdit && dirty && <div className="pa-save"><span className="small muted">{dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu'}{wsum !== 100 && ' · nên để tổng trọng số = 100%'}</span>
       <button className="btn" onClick={() => setC(data.cfg)} disabled={!dirty || busy}>Hoàn tác</button>
       <button className="btn" onClick={() => setC({ ...DEFAULT_CFG, prizes: c.prizes })} disabled={busy}>Mặc định</button>
       <button className="btn primary" onClick={save} disabled={!dirty || busy}>{busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button></div>}
