@@ -1,0 +1,2 @@
+-- (applied via MCP) QT0 hoàn tất → báo Zalo người lập XNĐH (QT1 · PN · lap) + người được ủy quyền
+-- see function public.qt0_done_zalo() and trigger batches_qt0_done_zalo (after update of status on batches)

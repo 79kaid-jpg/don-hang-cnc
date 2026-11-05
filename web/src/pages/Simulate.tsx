@@ -33,7 +33,7 @@ export default function Simulate() {
           const role = ROLE_OF[st]; const c = cp.find((x) => x.proc === proc && x.company === co && x.role === role);
           const kind: Step['kind'] = st === 'kiem_tra' ? 'check' : st === 'duyet' ? 'approve' : 'work';
           const say = proc === 'QT0'
-            ? { tiep_nhan: 'Admin nhận bản vẽ, kiểm tra đủ hồ sơ rồi chuyển cho kỹ thuật.', boc_tach: 'Kỹ thuật bóc tách bản vẽ: vật liệu, độ dày, kích thước từng tấm.', tao_ds: 'Admin nhập danh sách tấm vào phiếu (bảng, file đính kèm).', kiem_tra: 'Người kiểm tra soát lại danh sách. Sai → trả về kèm lý do.', duyet: 'Người duyệt xác nhận bóc tách. Dữ liệu được chép sang QT1 làm cơ sở báo giá.' }[st]!
+            ? { tiep_nhan: 'Admin nhận bản vẽ, kiểm tra đủ hồ sơ rồi chuyển cho kỹ thuật.', boc_tach: 'Kỹ thuật bóc tách bản vẽ: vật liệu, độ dày, kích thước từng tấm.', tao_ds: 'Admin nhập danh sách tấm vào phiếu (bảng, file đính kèm).', kiem_tra: 'Người kiểm tra soát lại danh sách. Sai → trả về kèm lý do.', duyet: 'Người duyệt xác nhận bóc tách → QT0 hoàn tất. Hệ thống báo Zalo cho người lập XNĐH của Phương Nam: vào QT1 bấm "Mở XNĐH mới" và chọn lấy danh sách tấm QT0 (có thể gom nhiều lần bóc tách trước khi báo giá).' }[st]!
             : st === 'lap' ? `${COMPANY[co as 'PN']} lập phiếu ${FORM[proc]}${co === 'PN' ? '' : ' – dữ liệu đã được chép sẵn từ công ty trước, chỉ cần chỉnh giá / số lượng của mình'}.`
             : st === 'kiem_tra' ? 'Kiểm tra nội dung phiếu và ghi chú của đơn. Đạt → gửi duyệt; sai → trả về người lập kèm lý do.'
             : 'Người duyệt đọc thông tin phiếu và ghi chú rồi duyệt hoặc trả về. Duyệt xong phiếu được khoá.';
