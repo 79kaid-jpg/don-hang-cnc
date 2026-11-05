@@ -88,7 +88,7 @@ function Shell() {
       {busy && <div className="busy" role="progressbar" aria-label="Đang xử lý" />}
       <aside className="side" aria-label="Điều hướng">
         <div className="brand"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
-          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>Đơn hàng CNC</div><div className="small muted">CNC → IPC → Hanwha</div></div>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>PMS</div><div className="small muted">CNC → IPC → Hanwha</div></div>
           <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Ghim menu' : 'Ẩn menu'} title={hidden ? 'Ghim menu' : 'Ẩn menu (mở lại bằng nút ☰ góc trái)'} onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
         <button className="side-search" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
           <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
@@ -109,7 +109,7 @@ function Shell() {
 
       <header className="topbar">
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
-        <b className="tb-title">Đơn hàng CNC</b>
+        <b className="tb-title">PMS</b>
         <button className="tb-btn" aria-label="Tìm đơn" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}><Icon name="search" size={21} /></button>
         <NavLink to="/zalo" className="tb-btn" aria-label="Thông báo Zalo"><Icon name="bell" size={21} />{!me.zalo_chat_id && <i className="tb-dot" aria-hidden="true" />}</NavLink>
         <button className="tb-av" aria-label={'Tài khoản ' + me.full_name} aria-expanded={sheet} onClick={() => setSheet(true)}>{initial}</button>

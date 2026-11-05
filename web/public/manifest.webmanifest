@@ -1,6 +1,6 @@
 {
-  "name": "Đơn hàng CNC",
-  "short_name": "Đơn hàng",
+  "name": "PMS",
+  "short_name": "PMS",
   "description": "Quy trình đơn hàng CNC → IPC → Hanwa",
   "start_url": "./",
   "scope": "./",

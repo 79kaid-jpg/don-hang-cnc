@@ -1,4 +1,4 @@
-// Bot Zalo "Đơn hàng CNC": liên kết tài khoản + gửi thông báo duyệt.
+// Bot Zalo "PMS": liên kết tài khoản + gửi thông báo duyệt.
 // Bí mật (token bot, khoá) đọc từ bảng app_secrets bằng service role, không nằm trong mã nguồn.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       const { data: p } = await db.from('profiles').select('full_name').eq('id', c.user_id).single();
       await send(chat, `Đã liên kết Zalo với tài khoản ${p?.full_name}. Từ giờ bạn sẽ nhận thông báo khi đến lượt duyệt phiếu.`);
     } else {
-      await send(chat, 'Xin chào! Đây là bot thông báo của app Đơn hàng CNC.\nĐể nhận thông báo duyệt: mở app → Liên kết Zalo → gửi mã 6 số cho bot này.\n' + APP);
+      await send(chat, 'Xin chào! Đây là bot thông báo của app PMS.\nĐể nhận thông báo duyệt: mở app → Liên kết Zalo → gửi mã 6 số cho bot này.\n' + APP);
     }
     return json({ ok: true });
   }

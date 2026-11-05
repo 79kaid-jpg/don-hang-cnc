@@ -69,7 +69,7 @@ export default function Install() {
         {tab === 'desktop' && (
           <ol className="ins-steps">
             <Step n={1}>Mở app bằng <b>Chrome</b> hoặc <b>Edge</b>.</Step>
-            <Step n={2}>Bấm biểu tượng <b>cài đặt</b> <span className="kbd"><Icon name="download" size={16} /></span> ở cuối thanh địa chỉ, hoặc menu <b>⋮ → Cài đặt Đơn hàng CNC</b>.</Step>
+            <Step n={2}>Bấm biểu tượng <b>cài đặt</b> <span className="kbd"><Icon name="download" size={16} /></span> ở cuối thanh địa chỉ, hoặc menu <b>⋮ → Cài đặt PMS</b>.</Step>
             <Step n={3}>App mở trong cửa sổ riêng, ghim được vào thanh tác vụ (Windows) hoặc Dock (Mac).</Step>
           </ol>)}
       </div>

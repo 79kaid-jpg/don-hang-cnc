@@ -269,7 +269,7 @@ function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) 
       <h1 style={{ margin: 0 }}>Đã tạo tài khoản</h1>
       <div className="msg ok"><Icon name="check" size={18} /><span>Gửi cho người dùng thông tin đăng nhập dưới đây (qua Zalo / trực tiếp). Mật khẩu chỉ hiện lần này.</span></div>
       <div className="newu-cred"><span className="small muted">Email</span><b>{done.email}</b><span className="small muted">Mật khẩu tạm</span><b className="mono">{done.pw}</b></div>
-      <div className="row"><button className="btn" onClick={() => navigator.clipboard?.writeText(`App Đơn hàng CNC: https://79kaid-jpg.github.io/don-hang-cnc/\nEmail: ${done.email}\nMật khẩu tạm: ${done.pw}`)}><Icon name="file" size={16} />Chép thông tin</button>
+      <div className="row"><button className="btn" onClick={() => navigator.clipboard?.writeText(`App PMS: https://79kaid-jpg.github.io/don-hang-cnc/\nEmail: ${done.email}\nMật khẩu tạm: ${done.pw}`)}><Icon name="file" size={16} />Chép thông tin</button>
         <button className="btn primary" onClick={() => onDone(done.id)}>Xong, mở hồ sơ</button></div>
     </section>);
   const ok = f.full_name.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim()) && f.password.length >= 8;

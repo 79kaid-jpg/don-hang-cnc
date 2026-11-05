@@ -13,7 +13,7 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <form className="card login" onSubmit={go} noValidate>
-        <div className="row"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" /><div><h1 style={{ fontSize: 22 }}>Đơn hàng CNC</h1><div className="small muted">CNC → IPC → Hanwha</div></div></div>
+        <div className="row"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" /><div><h1 style={{ fontSize: 22 }}>PMS</h1><div className="small muted">CNC → IPC → Hanwha</div></div></div>
         <label className="f">Email
           <input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" inputMode="email" />
         </label>

@@ -134,7 +134,7 @@ export default function Dashboard() {
 
       <DailyZalo />
       <div id="db-root" className="db">
-        <div className="db-stamp">Đơn hàng CNC · {tab === 'me' ? 'Thống kê của ' + me?.full_name : 'Thống kê điều hành'} · {days} ngày · {new Date().toLocaleString('vi-VN')}</div>
+        <div className="db-stamp">PMS · {tab === 'me' ? 'Thống kê của ' + me?.full_name : 'Thống kê điều hành'} · {days} ngày · {new Date().toLocaleString('vi-VN')}</div>
         {tab === 'me' ? <>
           <div className="db-kpi">
             <Kpi ic="inbox" tone="run" v={M.myQueue.reduce((a, p) => a + p.items.length, 0)} t="Đang chờ tôi" onClick={() => open('Hồ sơ đang chờ tôi', M.myQueue.flatMap((p) => p.items))} />
