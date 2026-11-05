@@ -1,5 +1,5 @@
 // Service worker: trang & version.json luôn lấy mới từ mạng; file build (có hash) lưu cache để mở nhanh / khi mạng yếu.
-const CACHE = 'dhcnc-v1';
+const CACHE = 'dhcnc-v2';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);
