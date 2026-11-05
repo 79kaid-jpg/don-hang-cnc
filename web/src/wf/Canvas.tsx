@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { END, KIND, NTYPE, ntype, hasAppr, items, targets, who, type Assignee, type Def, type Directory, type Step } from './model';
 
-export const LANE_COLORS = ['#B8862B', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
+export const LANE_COLORS = ['#2F5A88', '#2F6FB0', '#3B8E5A', '#8A4FB0', '#C0504D', '#5B7083'];
 const CW = 210, RH = 136, BW = 176, BH = 90, PAD = 20, TOP = 26;
 
 /** Tên ngắn cho người làm (hiện trong hộp) */

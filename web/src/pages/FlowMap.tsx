@@ -167,7 +167,7 @@ export default function FlowMap() {
               {P.steps.map((s) => <div key={s.id} className="sw-cell" style={{ gridRow: s.lane + 1, gridColumn: s.col + 2 }}><Step s={s} /></div>)}
               <svg className="sw-svg" width={box.w} height={box.h} aria-hidden="true">
                 <defs><marker id="sw-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8F8470" /></marker>
-                  <marker id="sw-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#B8954A" /></marker></defs>
+                  <marker id="sw-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5B8FCB" /></marker></defs>
                 {paths.map((p, i) => <g key={i} className={p.on ? 'on' : ''}><path d={p.d} className={'sw-e' + (p.dash ? ' dash' : '')} markerEnd={`url(#${p.on ? 'sw-a2' : 'sw-a'})`} />
                   {p.l && <text x={p.lx} y={p.ly} className="sw-el">{p.l}</text>}</g>)}
               </svg>

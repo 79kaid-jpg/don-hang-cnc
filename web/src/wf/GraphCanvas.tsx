@@ -68,7 +68,7 @@ export function GraphCanvas({ def, dir, sel, errIds, ro, onSelect, onPos, onConn
     }
     if (wire) { const to = hitNode(toSvg(e)); if (to && to !== wire.from) onConnect(wire.from, to); setWire(null); }
   };
-  const nodeColor = (t: NodeType) => ({ task: 'var(--blue)', action: '#B8862B', parallel: '#8A4FB0', join: '#8A4FB0', subprocess: '#C0504D' })[t];
+  const nodeColor = (t: NodeType) => ({ task: 'var(--blue)', action: '#2F5A88', parallel: '#8A4FB0', join: '#8A4FB0', subprocess: '#C0504D' })[t];
   const curE = edges.find((e) => eid(e) === selE);
 
   return (

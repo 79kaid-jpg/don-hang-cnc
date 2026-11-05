@@ -162,9 +162,9 @@ export default function Dashboard() {
               <StageBars stages={M.stages} open={open} />
             </Card>
             <Card id="c-week" title="Nhịp làm việc theo tuần" sub="Hồ sơ mở mới và hoàn tất · 8 tuần">
-              <div className="db-legend"><span><i style={{ background: '#C9A24A' }} />Mở mới</span><span><i style={{ background: '#2E8B57' }} />Hoàn tất</span></div>
+              <div className="db-legend"><span><i style={{ background: '#3A6EA5' }} />Mở mới</span><span><i style={{ background: '#2E8B57' }} />Hoàn tất</span></div>
               <div className="db-cols two">{M.weeks.map((w) => <div key={w.w} className="db-col2">
-                <button onClick={() => open('Mở mới tuần đến ' + w.label, w.made)} disabled={!w.made.length} aria-label={'Mở mới ' + w.made.length}><span className="db-colv">{w.made.length || ''}</span><i style={{ height: (w.made.length / maxW) * 100 + '%', background: '#C9A24A' }} /></button>
+                <button onClick={() => open('Mở mới tuần đến ' + w.label, w.made)} disabled={!w.made.length} aria-label={'Mở mới ' + w.made.length}><span className="db-colv">{w.made.length || ''}</span><i style={{ height: (w.made.length / maxW) * 100 + '%', background: '#3A6EA5' }} /></button>
                 <button onClick={() => open('Hoàn tất tuần đến ' + w.label, w.done)} disabled={!w.done.length} aria-label={'Hoàn tất ' + w.done.length}><span className="db-colv">{w.done.length || ''}</span><i style={{ height: (w.done.length / maxW) * 100 + '%', background: '#2E8B57' }} /></button>
                 <span className="db-coll">{w.label}</span></div>)}</div>
             </Card>
@@ -179,9 +179,9 @@ export default function Dashboard() {
             </Card>
             <Card id="c-co" title="Tồn theo công ty" sub="QT1–QT3 đang ở bên nào">
               <div className="db-donut-row">{(() => { const tot = Math.max(1, M.byCo.reduce((a, x) => a + x.items.length, 0)); let acc = 0;
-                const col = { PN: '#7E6024', IPC: '#2F6FB0', HW: '#B4690E' } as const;
+                const col = { PN: '#3A6EA5', IPC: '#2F6FB0', HW: '#B4690E' } as const;
                 return <><svg viewBox="0 0 42 42" className="db-donut" role="img" aria-label="Tồn theo công ty">
-                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#EFE9DC" strokeWidth="6" />
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#E9ECEF" strokeWidth="6" />
                   {M.byCo.map((x) => { const v = (x.items.length / tot) * 100; const el = <circle key={x.c} cx="21" cy="21" r="15.9" fill="none" stroke={col[x.c]} strokeWidth="6" strokeDasharray={v + ' ' + (100 - v)} strokeDashoffset={25 - acc} style={{ cursor: 'pointer' }} onClick={() => open(COMPANY[x.c], x.items)} />; acc += v; return el; })}
                   <text x="21" y="23" textAnchor="middle" fontSize="8" fontWeight="800">{tot}</text></svg>
                   <ul className="db-dl">{M.byCo.map((x) => <li key={x.c}><button onClick={() => open(COMPANY[x.c], x.items)}><i style={{ background: col[x.c] }} />{COMPANY[x.c]}<b>{x.items.length}</b></button></li>)}</ul></>; })()}</div>
@@ -222,7 +222,7 @@ function ShareBtn({ target, name, label, icon }: { target: string; name: string;
   const shot = async () => {
     const el = document.querySelector<HTMLElement>(target); if (!el) throw new Error('Không thấy vùng cần chụp');
     el.classList.add('db-shooting');
-    try { const b = await toBlob(el, { pixelRatio: 2, backgroundColor: '#F6F3EC', skipFonts: true, filter: (n) => !(n instanceof HTMLElement && n.classList?.contains('db-share')) });
+    try { const b = await toBlob(el, { pixelRatio: 2, backgroundColor: '#F3F4F6', skipFonts: true, filter: (n) => !(n instanceof HTMLElement && n.classList?.contains('db-share')) });
       if (!b) throw new Error('Không tạo được ảnh'); return b; } finally { el.classList.remove('db-shooting'); }
   };
   const run = async (mode: 'share' | 'copy' | 'save') => {
@@ -285,7 +285,7 @@ function StageBars({ stages, open }: { stages: { p: Proc; label: string; items: 
         <span className="sb-name"><QtTag qt={p} /><b>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</b></span>
         <span className="sb-sum">{stuck > 0 && <span className="chip bad">{stuck} kẹt</span>}<b>{tot}</b><span className="small muted">hồ sơ</span><Icon name="arrow" size={16} /></span>
         <span className="sb-stack" aria-hidden="true">{tot ? st.map((s, i) => <i key={s.label} style={{ flexGrow: s.items.length, background: shade(i) }} className={s.stuck ? 'stuck' : ''} title={s.label + ': ' + s.items.length}>
-          <em style={{ color: i / st.length > .45 ? '#1F1C16' : '#fff' }}>{s.items.length}</em></i>) : <i className="empty" style={{ flexGrow: 1 }}><em>Không có hồ sơ</em></i>}</span>
+          <em style={{ color: i / st.length > .45 ? '#1B1F24' : '#fff' }}>{s.items.length}</em></i>) : <i className="empty" style={{ flexGrow: 1 }}><em>Không có hồ sơ</em></i>}</span>
       </button>
       {on && <div className="sb-detail">{st.map((s, i) => <button key={s.label} className="db-hbar" onClick={() => open(p + ' · ' + s.label, s.items)}>
         <span className="db-hl"><i className="sb-sw" style={{ background: shade(i) }} />{s.label}</span>
@@ -324,10 +324,10 @@ function People({ people, open }: { people: { who: string; items: Item[]; stuck:
   const [by, setBy] = useState(false);
   const max = Math.max(1, ...people.map((p) => p.items.length));
   const coOf = (p: { co: Record<string, number> }) => Object.entries(p.co).sort((a, z) => z[1] - a[1])[0]?.[0] ?? 'PN';
-  const CC = { PN: '#7E6024', IPC: '#2F6FB0', HW: '#B4690E' } as Record<string, string>;
+  const CC = { PN: '#3A6EA5', IPC: '#2F6FB0', HW: '#B4690E' } as Record<string, string>;
   const row = (p: typeof people[number]) => <button key={p.who} className="db-hbar" onClick={() => open(p.who, p.items, p.items.length + ' hồ sơ đang chờ')}>
     <span className="db-hl"><span className="avatar xs">{p.who.replace(/\(.*?\)/g, '').trim()[0]}</span>{p.who}</span>
-    <span className="db-ht"><i style={{ width: (p.items.length / max) * 100 + '%', background: by ? CC[coOf(p)] : '#7E6024' }}>{p.stuck > 0 && <em style={{ width: (p.stuck / p.items.length) * 100 + '%' }} />}</i></span><b>{p.items.length}</b></button>;
+    <span className="db-ht"><i style={{ width: (p.items.length / max) * 100 + '%', background: by ? CC[coOf(p)] : '#3A6EA5' }}>{p.stuck > 0 && <em style={{ width: (p.stuck / p.items.length) * 100 + '%' }} />}</i></span><b>{p.items.length}</b></button>;
   const groups = COMPANIES.map((c) => { const l = people.filter((p) => coOf(p) === c); return { c, l, n: l.reduce((a, p) => a + p.items.length, 0) }; }).filter((g) => g.l.length).sort((a, z) => z.n - a.n);
   return <>
     <div className="pp-bar"><button role="switch" aria-checked={by} className={'pp-sw' + (by ? ' on' : '')} onClick={() => setBy(!by)}><i />Theo công ty</button></div>

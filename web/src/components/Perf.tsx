@@ -6,7 +6,7 @@ import { usePerf, scoresWithTrend, UNIT_NAME, DEFAULT_CFG, type PerfCfg, type Pr
 import { Icon, PATHS as ICON_PATH } from './Icon';
 import { toast } from './ui';
 
-const tier = (s: number) => (s >= 85 ? { t: 'Xuất sắc', c: '#2E8B57' } : s >= 70 ? { t: 'Tốt', c: '#7E6024' } : s >= 50 ? { t: 'Khá', c: '#B4690E' } : { t: 'Cần cải thiện', c: '#C2410C' });
+const tier = (s: number) => (s >= 85 ? { t: 'Xuất sắc', c: '#2E8B57' } : s >= 70 ? { t: 'Tốt', c: '#3A6EA5' } : s >= 50 ? { t: 'Khá', c: '#B4690E' } : { t: 'Cần cải thiện', c: '#C2410C' });
 const fH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? h.toFixed(1).replace('.0', '') + 'h' : (h / 24).toFixed(1) + ' ngày');
 const avg = (l: Score[], k: keyof Score) => { const v = l.filter((s) => s.ranked).map((s) => s[k] as number); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
 
@@ -112,7 +112,7 @@ export function WheelArt({ prizes, rot, onSpin, busy, disabled, size = 340 }: { 
           <path d={arc(i)} fill={p.color} />
           <circle cx={ix} cy={iy} r="5" fill="#fff" style={{ filter: 'drop-shadow(0 .6px .8px rgba(0,0,0,.25))' }} />
           <g transform={`translate(${ix - 2.8} ${iy - 2.8}) scale(.235)`} fill="none" stroke={ICOL[i % ICOL.length]} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={ICON_PATH[p.icon ?? 'gift'] ?? ICON_PATH.gift} /></g>
-          <text x={tx} y={ty} fill={lt ? '#1F1C16' : '#fff'} fontSize={n > 8 ? 2.6 : 2.9} fontWeight="800" textAnchor="start" dominantBaseline="middle"
+          <text x={tx} y={ty} fill={lt ? '#1B1F24' : '#fff'} fontSize={n > 8 ? 2.6 : 2.9} fontWeight="800" textAnchor="start" dominantBaseline="middle"
             transform={`rotate(${mid + 90} ${tx} ${ty})`}>{p.label.length > 12 ? p.label.slice(0, 11) + '…' : p.label}</text></g>; })}
     </svg>
     <span className="wa-pin" aria-hidden="true"><i /></span>

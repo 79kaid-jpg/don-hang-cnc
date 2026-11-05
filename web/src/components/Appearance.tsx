@@ -8,7 +8,7 @@ export function applyAppearance() {
   const th = get('ui-theme', 'light') as Th; const fs = get('ui-fs', 'md') as Fs;
   const dark = th === 'dark' || (th === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'; document.documentElement.dataset.fs = fs;
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#1b1813' : '#EFE6D2');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#1b1813' : '#E4ECF5');
 }
 export function Appearance() {
   const [th, setTh] = useState<Th>(get('ui-theme', 'light') as Th); const [fs, setFs] = useState<Fs>(get('ui-fs', 'md') as Fs);
