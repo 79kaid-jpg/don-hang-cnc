@@ -137,11 +137,19 @@ Deno.serve(async (req) => {
     const FIN: Record<string, string> = { QT1: 'khách ký xác nhận', QT2: 'ký bàn giao / nhận vật liệu', QT3: 'khách ký nhận hàng' };
     let company = d.company, role = ROLE[d.status], what = '';
     if (d.status === 'da_duyet' && proc !== 'QT0' && d.company === 'HW') { company = 'PN'; role = 'hoan_tat'; what = `Cả 3 công ty đã duyệt. Bước cuối: ${FIN[proc]} – in bản, ký tay, tải lên.`; }
+    let lvName = '';
+    if (d.status === 'duyet_them') { const lid = d.apv?.queue?.[d.apv?.idx ?? 0]; const { data: lv } = await db.from('approval_levels').select('*').eq('id', lid).maybeSingle();
+      if (!lv) return json({ ok: true, skipped: 'no level' }); role = 'level'; lvName = lv.name; STL.duyet_them = lv.name; (d as Record<string, unknown>)._lv = lv; }
     if (!role) return json({ ok: true, skipped: d.status });
-    const { data: cp } = await db.from('chain_people').select('*').eq('proc', proc).eq('company', company).in('role', role === 'hoan_tat' ? ['hoan_tat', 'lap'] : [role]);
+    const lv0 = (d as Record<string, unknown>)._lv as { user_id: string | null; group_id: string | null } | undefined;
+    const { data: cp } = lv0 ? { data: [lv0] } : await db.from('chain_people').select('*').eq('proc', proc).eq('company', company).in('role', role === 'hoan_tat' ? ['hoan_tat', 'lap'] : [role]);
     const ids = new Set<string>();
     for (const c of cp ?? []) { if (c.user_id) ids.add(c.user_id); if (c.group_id) { const { data: g } = await db.from('work_groups').select('member_ids, active').eq('id', c.group_id).single(); if (g?.active) g.member_ids.forEach((m: string) => ids.add(m)); } }
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: dl } = await db.from('delegations').select('user_id, to_user').lte('from_date', today).gte('to_date', today);
+    for (const x of dl ?? []) if (ids.has(x.user_id)) ids.add(x.to_user);
     const last = (d.signs ?? []).at(-1); if (last?.user) ids.delete(last.user);
+    void lvName;
     if (!ids.size) return json({ ok: true, skipped: 'không có người nhận' });
     const back = last?.action === 'tra_ve';
     const link = `${APP}#/don/${b.order_id}?tab=${proc}`;

@@ -89,6 +89,13 @@ export default function FlowMap() {
     sb.from('batches').select('*').neq('status', 'huy').then(({ data }) => setBs((data as Batch[]) ?? []));
     sb.from('docs').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
   }, []);
+  // chọn một đơn → tự mở QT mà đơn đang chạy (thay vì giữ tab cũ nơi đơn chưa có hồ sơ)
+  const jumped = useRef('');
+  useEffect(() => { if (!one || !bs.length || jumped.current === one) return; jumped.current = one;
+    const mine = bs.filter((b) => b.order_id === one); if (!mine.length) return;
+    const live = mine.filter((b) => ['dang_lam', 'cho_ky'].includes(b.status)).map((b) => b.proc).sort();
+    const target = (live[0] ?? mine.map((b) => b.proc).sort().pop()) as Proc;
+    if (target && target !== sp.get('qt')) { const n = new URLSearchParams(sp); n.set('qt', target); setSp(n, { replace: true }); } }, [one, bs]); // eslint-disable-line react-hooks/exhaustive-deps
   const O = orders.find((o) => o.id === one);
   const P = D[proc];
   // hồ sơ đang ở từng khoá bước
@@ -151,7 +158,7 @@ export default function FlowMap() {
         <div className={'qt-panel sw ' + proc.toLowerCase()} key={proc}>
           <div className="sw-top"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b>{PROC_NAME[proc]}</b></span><span className="small muted">{P.note}</span>
             <span className="sw-legend small">{(['start', 'step', 'cond', 'end', 'fail'] as Kind[]).map((k) => <span key={k}><i className={'lg ' + k} />{KIND[k]}</span>)}</span>
-            {O && <span className="small">Đang xem <b>{O.code}</b>: <i className="lg done" /> đã qua · <i className="lg cur" /> đang ở</span>}</div>
+            {O && <span className="small">Đang xem <b>{O.code}</b>: <i className="lg done" /> đã qua · <i className="lg cur" /> đang ở{!bs.some((b) => b.order_id === one && b.proc === proc) && <b style={{ color: 'var(--wait)' }}> · đơn chưa tới {proc}</b>}</span>}</div>
 
           {/* Máy tính: làn ngang */}
           <div className="sw-desk">
