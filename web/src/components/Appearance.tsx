@@ -15,13 +15,15 @@ export function Appearance() {
   useEffect(() => { try { localStorage.setItem('ui-theme', th); localStorage.setItem('ui-fs', fs); } catch { /* */ } applyAppearance(); }, [th, fs]);
   return (
     <div className="appear">
-      <div className="seg" role="group" aria-label="Chế độ màu">
-        {([['light', 'Sáng', 'sun'], ['dark', 'Tối', 'moon'], ['auto', 'Theo máy', 'settings']] as const).map(([k, t, ic]) =>
-          <button key={k} type="button" aria-pressed={th === k} onClick={() => setTh(k)}><Icon name={ic} size={15} />{t}</button>)}
-      </div>
-      <div className="seg" role="group" aria-label="Cỡ chữ">
-        <button type="button" aria-pressed={fs === 'md'} onClick={() => setFs('md')}>Aa Vừa</button>
-        <button type="button" aria-pressed={fs === 'lg'} onClick={() => setFs('lg')} style={{ fontSize: 17 }}>Aa Lớn</button>
-      </div>
+      <div className="ap-row"><span className="ap-lb">Màu</span>
+        <div className="ap-seg" role="radiogroup" aria-label="Chế độ màu">
+          {([['light', 'Sáng', 'sun'], ['dark', 'Tối', 'moon'], ['auto', 'Tự động', 'settings']] as const).map(([k, t, ic]) =>
+            <button key={k} type="button" role="radio" aria-checked={th === k} title={k === 'auto' ? 'Theo cài đặt của máy' : t} onClick={() => setTh(k)}><Icon name={ic} size={15} /><span>{t}</span></button>)}
+        </div></div>
+      <div className="ap-row"><span className="ap-lb">Cỡ chữ</span>
+        <div className="ap-seg" role="radiogroup" aria-label="Cỡ chữ">
+          <button type="button" role="radio" aria-checked={fs === 'md'} title="Chữ vừa" onClick={() => setFs('md')}><span className="ap-a1">A</span><span>Vừa</span></button>
+          <button type="button" role="radio" aria-checked={fs === 'lg'} title="Chữ lớn" onClick={() => setFs('lg')}><span className="ap-a2">A</span><span>Lớn</span></button>
+        </div></div>
     </div>);
 }
