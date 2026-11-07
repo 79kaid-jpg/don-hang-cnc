@@ -103,6 +103,20 @@ export default function Board() {
   const mobile = () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 760px)').matches;
   const goCol = (i: number) => { const el = boardRef.current; const c = COLS[i]; if (!c) return; setCol(c.key);
     if (el && mobile()) { syncing.current = Date.now(); el.scrollTo({ left: (el.children[i] as HTMLElement).offsetLeft - el.offsetLeft - 0, behavior: reduce ? 'auto' : 'smooth' }); } };
+  // Máy tính: bảng cao vừa màn hình (cột tự cuộn dọc) → thanh cuộn ngang luôn thấy; mũi tên, kéo nền để lướt, lăn chuột trên tiêu đề cột = lướt ngang
+  const [edge, setEdge] = useState({ l: false, r: false });
+  const updEdge = () => { const el = boardRef.current; if (!el) return; const l = el.scrollLeft > 4, r = el.scrollLeft + el.clientWidth < el.scrollWidth - 4; setEdge((e) => (e.l === l && e.r === r ? e : { l, r })); };
+  const panBy = (dir: number) => { const el = boardRef.current; if (!el) return; const w = (el.children[0] as HTMLElement)?.offsetWidth || 260; el.scrollBy({ left: dir * (w + 12) * 2, behavior: reduce ? 'auto' : 'smooth' }); };
+  const panStart = (e: React.MouseEvent) => { const el = boardRef.current; if (!el || e.button !== 0 || mobile()) return; const t = e.target as HTMLElement;
+    if (t.closest('.kb-card, a, button, input, select')) return; const x0 = e.clientX, s0 = el.scrollLeft; el.classList.add('panning');
+    const mv = (ev: MouseEvent) => { el.scrollLeft = s0 - (ev.clientX - x0); }; const up = () => { el.classList.remove('panning'); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); };
+    addEventListener('mousemove', mv); addEventListener('mouseup', up); };
+  useEffect(() => { const el = boardRef.current; if (!el) return;
+    const fit = () => { const top = el.getBoundingClientRect().top + (document.querySelector('.app')?.scrollTop ?? scrollY); el.style.setProperty('--kb-top', Math.max(0, top) + 'px'); updEdge(); };
+    fit(); const ro = new ResizeObserver(fit); ro.observe(el); addEventListener('resize', fit);
+    const wh = (ev: WheelEvent) => { if (mobile() || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return; if ((ev.target as HTMLElement).closest('.kb-head')) { el.scrollLeft += ev.deltaY; ev.preventDefault(); } };
+    el.addEventListener('wheel', wh, { passive: false });
+    return () => { ro.disconnect(); removeEventListener('resize', fit); el.removeEventListener('wheel', wh); }; }, [qt, batches]); // eslint-disable-line react-hooks/exhaustive-deps
   const onBoardScroll = () => { const el = boardRef.current; if (!el || !mobile() || Date.now() - syncing.current < 600) return;
     const w = (el.children[0] as HTMLElement)?.offsetWidth || 1; const i = Math.round(el.scrollLeft / (w + 10));
     if (COLS[i] && COLS[i].key !== curCol) setCol(COLS[i].key); };
@@ -150,7 +164,10 @@ export default function Board() {
             <span className="small muted">Bước {COLS.findIndex((c) => c.key === curCol) + 1}/{COLS.length} · vuốt ngang</span>
             <button tabIndex={-1} disabled={COLS.findIndex((c) => c.key === curCol) >= COLS.length - 1} onClick={() => goCol(COLS.findIndex((c) => c.key === curCol) + 1)}><Icon name="arrow" size={16} /></button>
           </div>
-          <div ref={boardRef} onScroll={onBoardScroll} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '')}>
+          <div className="kb-wrap">
+          {edge.l && <button className="kb-arrow l" aria-label="Cột bên trái" onClick={() => panBy(-1)}><Icon name="back" size={18} /></button>}
+          {edge.r && <button className="kb-arrow r" aria-label="Cột bên phải" onClick={() => panBy(1)}><Icon name="arrow" size={18} /></button>}
+          <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               return (
                 <section key={c.key} data-col={i} className={'kb-col' + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '')} aria-label={c.title}>
@@ -179,6 +196,7 @@ export default function Board() {
                   </div>
                 </section>);
             })}
+          </div>
           </div>
         </div>
       </div>

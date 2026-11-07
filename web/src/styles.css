@@ -1588,3 +1588,20 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
   .app.side-hidden.side-peek .side{position:fixed}
 }
 @media (min-width:901px){.app.side-hidden:not(.side-peek) .nav-item{font-size:0!important}}
+/* ===== Kanban máy tính: vừa màn hình, cuộn ngang dễ ===== */
+.kb-wrap{position:relative}
+.kb-arrow{position:absolute;top:50%;z-index:6;width:40px;height:40px;margin-top:-20px;border-radius:50%;border:1px solid var(--line2);background:var(--surface);color:var(--ink);display:none;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(20,28,40,.16);transition:transform var(--t)}
+.kb-arrow:hover{transform:scale(1.08);border-color:var(--steel)}.kb-arrow:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.kb-arrow.l{left:-14px}.kb-arrow.r{right:-14px}
+@media (min-width:761px){
+  .kb-arrow{display:grid}
+  .kb-board{height:calc(100vh - var(--kb-top,240px) - 16px);min-height:360px;align-items:stretch!important;scrollbar-width:thin;scroll-padding:0 8px;cursor:grab}
+  .kb-board.panning{cursor:grabbing;user-select:none;scroll-behavior:auto}
+  .kb-board .kb-col{min-height:0;overflow:hidden}
+  .kb-board .kb-head{cursor:ew-resize}
+  .kb-board .kb-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:2px;scrollbar-width:thin}
+  .kb-board .kb-card{cursor:pointer}
+  .kb-board.fade-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+  .kb-board.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent)}
+  .kb-board.fade-l:not(.fade-r){-webkit-mask-image:linear-gradient(90deg,transparent,#000 40px);mask-image:linear-gradient(90deg,transparent,#000 40px)}
+}
