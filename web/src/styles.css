@@ -1619,3 +1619,13 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .sheet .ap-seg button{min-height:40px;font-size:13.5px}
 .ap-a1,.ap-a2{all:unset;font-family:var(--font-d);font-weight:700;line-height:1}.ap-a1{font-size:12px}.ap-a2{font-size:16px}
 .appear .ap-seg button:not([aria-checked="true"]){color:var(--muted)!important;font-weight:600!important}
+/* nút trên thẻ Kanban: 1 nút chính + 2 nút icon */
+.kb-acts{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;align-items:stretch}
+.kb-acts .kb-next{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:center;min-height:38px}
+.kb-ib{all:unset;box-sizing:border-box;flex:none;width:38px;height:38px;border-radius:9px;display:grid;place-items:center;cursor:pointer;border:1px solid var(--line2);background:var(--surface);transition:background var(--t),border-color var(--t),transform var(--t)}
+.kb-ib:active{transform:scale(.92)}.kb-ib:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.kb-ib.kb-move{color:#15803d}.kb-ib.kb-move:hover{background:#ecfdf3;border-color:#86efac}
+.kb-ib.kb-back{color:#b45309}.kb-ib.kb-back:hover{background:#fff7ed;border-color:#fdba74}
+.kb-card .kb-acts{display:flex!important;flex-direction:row!important;grid-template-columns:none!important}.kb-card .kb-acts>*{width:auto;grid-column:auto!important}.kb-card .kb-acts .kb-ib{width:38px!important}
+.kb-card .kb-acts .kb-next{display:block!important;text-align:center;line-height:36px;padding:0 8px!important;font-size:13px}
+.kb-card .kb-acts .kb-next{padding:0 4px!important;font-size:12.5px;text-overflow:clip}

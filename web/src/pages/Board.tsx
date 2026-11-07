@@ -195,9 +195,9 @@ export default function Board() {
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
                         {it.mine && <div className="kb-acts">
                           {it.key === 'ky' ? <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>Tải bản {FINAL[qt].toLowerCase()} →</Link>
-                            : <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>{NEXT_LABEL[it.doc?.status ?? ''] ?? 'Mở'} →</Link>}
-                          {canNext(it) && <button className="btn sm kb-move" onClick={() => setDlg({ c: it, action: 'next' })}><Icon name="arrow" size={16} />Ký nhanh</button>}
-                          {canBack(it) && <button className="btn sm kb-back" onClick={() => setDlg({ c: it, action: 'back' })}><Icon name="back" size={16} />Trả về</button>}
+                            : <Link className="btn sm primary kb-next" title={(NEXT_LABEL[it.doc?.status ?? ''] ?? 'Mở') + ' – mở hồ sơ'} to={'/don/' + it.b.order_id + '?tab=' + qt}>{({ tiep_nhan: 'Bóc tách', boc_tach: 'Tạo DS tấm', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Gửi duyệt', duyet: 'Duyệt', lap: 'Gửi kiểm tra' } as Record<string, string>)[it.doc?.status ?? ''] ?? 'Mở'}</Link>}
+                          {canNext(it) && <button className="kb-ib kb-move" aria-label="Ký nhanh" title="Ký nhanh (M)" onClick={() => setDlg({ c: it, action: 'next' })}><Icon name="check" size={17} /></button>}
+                          {canBack(it) && <button className="kb-ib kb-back" aria-label="Trả về" title="Trả về (R)" onClick={() => setDlg({ c: it, action: 'back' })}><Icon name="back" size={17} /></button>}
                         </div>}
                       </article>))}
                   </div>
