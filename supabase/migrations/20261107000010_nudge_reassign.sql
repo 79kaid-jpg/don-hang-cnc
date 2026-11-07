@@ -152,7 +152,7 @@ end $$;
 create or replace function public._reply(p_uid uuid, p_doc uuid, p_text text, p_via text) returns uuid language plpgsql security definer set search_path = public as $$
 declare n order_msgs; oid uuid; nm text; rid uuid;
 begin
-  select * into n from order_msgs where doc_id = p_doc and kind = 'nudge' and replied_at is null and p_uid = any(_with_deleg(to_users)) order by at desc limit 1;
+  select * into n from order_msgs where doc_id = p_doc and kind in ('nudge','reassign') and replied_at is null and p_uid = any(_with_deleg(to_users)) order by at desc limit 1;
   select b.order_id into oid from docs d join batches b on b.id = d.batch_id where d.id = p_doc;
   insert into order_msgs(order_id, doc_id, kind, from_user, to_users, text, via, meta)
     values (oid, p_doc, 'reply', p_uid, case when n.id is null then '{}' else array[n.from_user] end, trim(p_text), p_via,
@@ -160,7 +160,7 @@ begin
   if n.id is not null then
     update order_msgs set replied_at = now() where id = n.id;
     select full_name into nm from profiles where id = p_uid;
-    perform _zsend(array[n.from_user], '💬 ' || coalesce(nm, '') || ' trả lời nhắc việc:' || E'\n“' || trim(p_text) || E'”\n' || _doc_line(p_doc));
+    perform _zsend(array[n.from_user], '💬 ' || coalesce(nm, '') || ' trả lời ' || case n.kind when 'reassign' then 'việc được giao' else 'nhắc việc' end || ':' || E'\n“' || trim(p_text) || E'”\n' || _doc_line(p_doc));
   end if;
   return rid;
 end $$;
@@ -177,7 +177,7 @@ declare uid uuid; n order_msgs; c text;
 begin
   select id into uid from profiles where zalo_chat_id = p_chat and active limit 1;
   if uid is null or coalesce(trim(p_text), '') = '' then return null; end if;
-  select * into n from order_msgs where kind = 'nudge' and at > now() - interval '48 hours' and uid = any(_with_deleg(to_users)) order by (replied_at is null) desc, at desc limit 1;
+  select * into n from order_msgs where kind in ('nudge','reassign') and at > now() - interval '48 hours' and uid = any(_with_deleg(to_users)) order by (replied_at is null) desc, at desc limit 1;
   if n.id is null then return null; end if;
   perform _reply(uid, n.doc_id, p_text, 'zalo');
   select o.code into c from orders o where o.id = n.order_id;
