@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const chat = m?.chat?.id ? String(m.chat.id) : null;
     if (!chat) return json({ ok: true });
     const text = String(m.text ?? '').trim();
-    const code = text.match(/\b(\d{6})\b/)?.[1];
+    const code = text.match(/^(\d{6})$/)?.[1];
     if (code) {
       const { data: c } = await db.from('zalo_link_codes').select('user_id, expires_at').eq('code', code).maybeSingle();
       if (!c || new Date(c.expires_at) < new Date()) { await send(chat, 'Mã không đúng hoặc đã hết hạn. Vào app → Tài khoản → Liên kết Zalo để lấy mã mới.'); return json({ ok: true }); }

@@ -66,6 +66,10 @@ create or replace function public._doc_line(p_doc uuid) returns text language sq
   from docs d join batches b on b.id = d.batch_id join orders o on o.id = b.order_id where d.id = p_doc;
 $$;
 
+create or replace function public._short_code(p_doc uuid) returns text language sql stable security definer set search_path = public as $$
+  select regexp_replace(o.code, '^.*-0*', '') from docs d join batches b on b.id = d.batch_id join orders o on o.id = b.order_id where d.id = p_doc;
+$$;
+
 -- Quản lý trực tiếp của người giữ phiếu, hoặc admin
 create or replace function public.can_manage_doc(p_doc uuid) returns boolean language sql stable security definer set search_path = public as $$
   select has_role('admin_it') or exists (select 1 from profiles p where p.id = any(doc_holders(p_doc)) and p.manager_id = app_uid());
@@ -131,7 +135,7 @@ begin
   select full_name into me from profiles where id = app_uid();
   insert into order_msgs(order_id, doc_id, kind, from_user, to_users, text) values (oid, p_doc, 'nudge', app_uid(), ids, trim(p_text)) returning id into mid;
   return _zsend(_with_deleg(ids), '🔔 Nhắc việc từ ' || coalesce(me, 'quản lý') || E'\n' || _doc_line(p_doc) || E'\n\n“' || trim(p_text) || '”'
-    || E'\n\nTrả lời tin này (VD: Dạ, OK) – phản hồi sẽ ghi vào đơn hàng.');
+    || E'\n\nTrả lời: gõ số đơn + nội dung, VD: "' || _short_code(p_doc) || ' dạ"');
 end $$;
 
 create or replace function public.reassign_doc(p_doc uuid, p_user uuid, p_note text) returns void language plpgsql security definer set search_path = public as $$
@@ -146,7 +150,7 @@ begin
   select full_name into me from profiles where id = app_uid();
   insert into order_msgs(order_id, doc_id, kind, from_user, to_users, text, meta)
     values (oid, p_doc, 'reassign', app_uid(), array[p_user], trim(p_note), jsonb_build_object('to_name', who));
-  perform _zsend(_with_deleg(array[p_user]), '📌 ' || coalesce(me, 'Quản lý') || ' giao việc cho bạn' || E'\n' || _doc_line(p_doc) || E'\nLý do: ' || trim(p_note));
+  perform _zsend(_with_deleg(array[p_user]), '📌 ' || coalesce(me, 'Quản lý') || ' giao việc cho bạn' || E'\n' || _doc_line(p_doc) || E'\nLý do: ' || trim(p_note) || E'\n\nTrả lời: gõ số đơn + nội dung, VD: "' || _short_code(p_doc) || ' ok"');
 end $$;
 
 create or replace function public._reply(p_uid uuid, p_doc uuid, p_text text, p_via text) returns uuid language plpgsql security definer set search_path = public as $$
@@ -173,15 +177,26 @@ end $$;
 
 -- Gọi từ webhook Zalo (service role): ghi trả lời vào nhắc việc gần nhất trong 48h
 create or replace function public.zalo_reply(p_chat text, p_text text) returns text language plpgsql security definer set search_path = public as $$
-declare uid uuid; n order_msgs; c text;
+declare uid uuid; n order_msgs; c text; num text; t text := trim(coalesce(p_text, ''));
 begin
   select id into uid from profiles where zalo_chat_id = p_chat and active limit 1;
-  if uid is null or coalesce(trim(p_text), '') = '' then return null; end if;
-  select * into n from order_msgs where kind in ('nudge','reassign') and at > now() - interval '48 hours' and uid = any(_with_deleg(to_users)) order by (replied_at is null) desc, at desc limit 1;
+  if uid is null or t = '' then return null; end if;
+  -- "223 ok" / "ĐH-202611-223 dạ" → chọn đúng đơn
+  num := substring(t from '^#?(?:ĐH-\d{6}-)?(\d{1,4})\y');
+  if num is not null then
+    select m.* into n from order_msgs m join orders o on o.id = m.order_id
+      where m.kind in ('nudge','reassign') and m.at > now() - interval '7 days' and uid = any(_with_deleg(m.to_users))
+        and o.code ~ ('-0*' || num || '$') order by (m.replied_at is null) desc, m.at desc limit 1;
+    if n.id is not null then t := trim(regexp_replace(t, '^#?(?:ĐH-\d{6}-)?\d{1,4}\s*[:.,-]?\s*', '')); end if;
+  end if;
+  if n.id is null then
+    select * into n from order_msgs where kind in ('nudge','reassign') and at > now() - interval '48 hours' and uid = any(_with_deleg(to_users)) order by (replied_at is null) desc, at desc limit 1;
+  end if;
   if n.id is null then return null; end if;
-  perform _reply(uid, n.doc_id, p_text, 'zalo');
+  if t = '' then t := p_text; end if;
+  perform _reply(uid, n.doc_id, t, 'zalo');
   select o.code into c from orders o where o.id = n.order_id;
-  return '✓ Đã ghi phản hồi vào đơn ' || c || '.';
+  return '✓ Đã ghi phản hồi vào đơn ' || c || '.' || E'\nMẹo: ghi số đơn ở đầu để chọn đúng đơn, VD: "' || regexp_replace(c, '^.*-0*', '') || ' ok".';
 end $$;
 
 -- Nhắc SLA: 75% → người làm; quá hạn → người làm + quản lý, 24h/lần, tối đa 3 lần
