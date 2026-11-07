@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { sb, type Profile } from '../lib/supabase';
+import { sb, errText, type Profile } from '../lib/supabase';
+import { toast } from './ui';
 import { dt } from '../lib/format';
 import { COMPANY, FLOW, ROLE_NAME, ROLE_OF, STATUS, type Doc, type Proc } from '../lib/proc';
 import { Icon } from './Icon';
@@ -13,7 +14,7 @@ const short = (n: string) => n.split(' ').slice(-2).join(' ');
 const fmtLeft = (h: number) => (Math.abs(h) >= 24 ? Math.round(Math.abs(h) / 24) + ' ngày' : Math.max(1, Math.round(Math.abs(h))) + 'h');
 
 /** Hành trình duyệt: stepper + timeline (bấm để mở) */
-export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[]; idx: number } }; proc: Proc; people: Record<string, Profile> }) {
+export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[]; idx: number }; assignee?: string | null; assign_note?: string | null }; proc: Proc; people: Record<string, Profile> }) {
   const [cp, setCp] = useState<CP[]>([]); const [lvs, setLvs] = useState<LV[]>([]); const [gs, setGs] = useState<Record<string, string>>({});
   const [dl, setDl] = useState<{ user_id: string; to_user: string }[]>([]); const [open, setOpen] = useState(false);
   const company = proc === 'QT0' ? 'PN' : d.company;
@@ -45,6 +46,7 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
     sign: [...signs].reverse().find((x) => x.level === l.id && x.action === 'ky') }));
   const endLabel = proc === 'QT0' ? 'Hoàn tất' : d.company === 'HW' ? 'Khách ký tay' : 'Chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW'];
   const cur = steps.find((s) => s.state === 'now');
+  if (cur && d.assignee) cur.who = short(people[d.assignee]?.full_name ?? '…') + ' (giao lại)';
   const el = (Date.now() - +new Date(d.status_at)) / 36e5; const left = cur ? cur.sla - el : 0;
   const tone = !cur ? 'ok' : left < 0 ? 'late' : left < cur.sla * 0.25 ? 'warn' : 'ok';
   const fail = d.status === 'fail';
@@ -76,6 +78,62 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
           <div><b>{e.t}</b> · {people[e.who]?.full_name ?? '…'}<span className="small muted"> · {dt(e.at)}</span>{e.note && <div className="jn-note">{e.note}</div>}</div>
         </li>)}
       </ul>}
+      {(cur || d.status !== 'da_duyet') && !fail && <Talk d={d} people={people} open={!!cur} />}
+    </div>
+  );
+}
+
+type Msg = { id: string; kind: string; from_user: string | null; to_users: string[]; text: string; via: string; meta: Record<string, string | number>; at: string; replied_at: string | null };
+const KIND: Record<string, [string, string]> = { nudge: ['Nhắc việc', 'bell'], reply: ['Phản hồi', 'chat'], reassign: ['Giao lại', 'users'], auto: ['Tự động', 'clock'], note: ['Ghi chú', 'file'] };
+
+/** Trao đổi: nhắc việc / giao lại / phản hồi của người làm (cả qua Zalo) */
+function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; open: boolean }) {
+  const [ms, setMs] = useState<Msg[]>([]); const [mgr, setMgr] = useState(false);
+  const [mode, setMode] = useState<'' | 'nudge' | 'reassign'>(''); const [txt, setTxt] = useState(''); const [to, setTo] = useState(''); const [rep, setRep] = useState('');
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const load = () => sb.from('order_msgs').select('*').eq('doc_id', d.id).order('at').then(({ data }) => setMs((data as Msg[]) ?? []));
+  useEffect(() => { load(); if (open) sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => setMgr(!!data)); else setMgr(false);
+    const ch = sb.channel('msgs-' + d.id).on('postgres_changes', { event: '*', schema: 'public', table: 'order_msgs', filter: 'doc_id=eq.' + d.id }, () => load()).subscribe();
+    return () => { sb.removeChannel(ch); }; }, [d.id, d.status, open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nm = (u: string | null) => (u ? short(people[u]?.full_name ?? '…') : 'Hệ thống');
+  const run = async (fn: string, args: Record<string, unknown>, ok: string) => { setBusy(true); setErr('');
+    const { data, error } = await sb.rpc(fn, args); setBusy(false);
+    if (error) { setErr(errText(error)); return false; }
+    toast(fn === 'nudge' ? (data ? ok + ' · đã gửi Zalo ' + data + ' người' : ok + ' · người nhận chưa liên kết Zalo') : ok); load(); return true; };
+  const lastNudge = [...ms].reverse().find((m) => m.kind === 'nudge');
+  const waitH = lastNudge && !lastNudge.replied_at ? (Date.now() - +new Date(lastNudge.at)) / 36e5 : 0;
+  const users = Object.values(people).filter((p) => p.active !== false).sort((a, z) => a.full_name.localeCompare(z.full_name));
+  if (!ms.length && !open) return null;
+  return (
+    <div className="tk">
+      <div className="tk-head"><b><Icon name="chat" size={14} />Trao đổi</b>
+        {lastNudge && <span className={'tk-st ' + (lastNudge.replied_at ? 'ok' : waitH >= 4 ? 'late' : 'wait')}>{lastNudge.replied_at ? 'Đã phản hồi' : waitH >= 4 ? 'Chưa phản hồi ' + fmtLeft(waitH) : 'Chờ phản hồi'}</span>}
+        {mgr && <span className="tk-acts">
+          <button className={'btn sm' + (mode === 'nudge' ? ' primary' : '')} onClick={() => { setMode(mode === 'nudge' ? '' : 'nudge'); setErr(''); }}><Icon name="bell" size={14} />Nhắc việc</button>
+          <button className={'btn sm' + (mode === 'reassign' ? ' primary' : '')} onClick={() => { setMode(mode === 'reassign' ? '' : 'reassign'); setErr(''); }}><Icon name="users" size={14} />Giao lại</button>
+        </span>}
+      </div>
+      {mode === 'nudge' && <div className="tk-form">
+        <textarea rows={2} autoFocus placeholder="Nội dung gửi Zalo cho người đang làm, VD: Em xử lý gấp trong sáng nay nhé" value={txt} onChange={(e) => setTxt(e.target.value)} maxLength={500} />
+        <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setMode('')}>Huỷ</button>
+          <button className="btn primary" disabled={busy || !txt.trim()} onClick={async () => { if (await run('nudge', { p_doc: d.id, p_text: txt }, 'Đã nhắc')) { setTxt(''); setMode(''); } }}>{busy ? 'Đang gửi…' : 'Gửi Zalo'}</button></div>
+      </div>}
+      {mode === 'reassign' && <div className="tk-form">
+        <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Giao cho"><option value="">– Giao cho ai –</option>{users.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}</select>
+        <textarea rows={2} placeholder="Lý do giao lại *" value={txt} onChange={(e) => setTxt(e.target.value)} maxLength={300} />
+        <p className="small muted" style={{ margin: 0 }}>Chỉ áp dụng cho bước hiện tại của phiếu này. Bước sau quay về người phụ trách theo quy trình.</p>
+        <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setMode('')}>Huỷ</button>
+          <button className="btn primary" disabled={busy || !to || !txt.trim()} onClick={async () => { if (await run('reassign_doc', { p_doc: d.id, p_user: to, p_note: txt }, 'Đã giao lại cho ' + people[to]?.full_name)) { setTxt(''); setTo(''); setMode(''); location.reload(); } }}>{busy ? 'Đang giao…' : 'Giao lại'}</button></div>
+      </div>}
+      {err && <div className="msg err" role="alert"><Icon name="alert" size={16} /><span>{err}</span></div>}
+      {ms.length > 0 && <ul className="tk-list">{ms.map((m) => { const [lb, ic] = KIND[m.kind] ?? [m.kind, 'file'];
+        return <li key={m.id} className={'tk-m ' + m.kind}><span className="tk-ic"><Icon name={ic} size={12} /></span>
+          <div><div className="tk-meta"><b>{nm(m.from_user)}</b> · {lb}{m.kind === 'reassign' && m.meta?.to_name ? ' → ' + m.meta.to_name : ''}{m.via === 'zalo' ? <span className="tk-via">Zalo</span> : null}<span className="small muted"> · {dt(m.at)}</span></div>
+            <div className="tk-txt">{m.text}</div></div></li>; })}</ul>}
+      {open && <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (await run('reply_msg', { p_doc: d.id, p_text: rep }, 'Đã gửi')) setRep(''); }}>
+        <input placeholder="Trả lời / ghi chú…" value={rep} onChange={(e) => setRep(e.target.value)} maxLength={500} />
+        <button className="btn sm primary icon-btn" disabled={busy || !rep.trim()} aria-label="Gửi"><Icon name="arrow" size={16} /></button>
+      </form>}
     </div>
   );
 }

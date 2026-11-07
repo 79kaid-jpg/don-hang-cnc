@@ -60,6 +60,8 @@ Deno.serve(async (req) => {
       const { data: p } = await db.from('profiles').select('full_name').eq('id', c.user_id).single();
       await send(chat, `Đã liên kết Zalo với tài khoản ${p?.full_name}. Từ giờ bạn sẽ nhận thông báo khi đến lượt duyệt phiếu.`);
     } else {
+      const { data: ack } = await db.rpc('zalo_reply', { p_chat: chat, p_text: text });
+      if (ack) { await send(chat, ack); return json({ ok: true }); }
       await send(chat, 'Xin chào! Đây là bot thông báo của app PMS.\nĐể nhận thông báo duyệt: mở app → Liên kết Zalo → gửi mã 6 số cho bot này.\n' + APP);
     }
     return json({ ok: true });

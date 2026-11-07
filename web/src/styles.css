@@ -1629,3 +1629,27 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .kb-card .kb-acts{display:flex!important;flex-direction:row!important;grid-template-columns:none!important}.kb-card .kb-acts>*{width:auto;grid-column:auto!important}.kb-card .kb-acts .kb-ib{width:38px!important}
 .kb-card .kb-acts .kb-next{display:block!important;text-align:center;line-height:36px;padding:0 8px!important;font-size:13px}
 .kb-card .kb-acts .kb-next{padding:0 4px!important;font-size:12.5px;text-overflow:clip}
+
+/* ===== Trao đổi · Nhắc việc · Giao lại ===== */
+.tk{border-top:1px solid var(--line);padding:10px 12px 12px;display:grid;gap:8px}
+.tk-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tk-head>b{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.tk-st{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--soft,#eef1f4)}
+.tk-st.ok{color:#1d7a46;background:#e3f4ea}.tk-st.wait{color:#8a5a00;background:#fff3d6}.tk-st.late{color:#b42318;background:#fde7e4}
+.tk-acts{margin-left:auto;display:flex;gap:6px}
+.tk-acts .btn{min-height:32px}
+.tk-form{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.tk-form textarea,.tk-form select{width:100%}
+.tk-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:260px;overflow:auto}
+.tk-m{display:flex;gap:8px;font-size:13px}
+.tk-ic{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--soft,#eef1f4);color:var(--muted)}
+.tk-m.nudge .tk-ic{background:#fff3d6;color:#8a5a00}.tk-m.reply .tk-ic{background:#e3f4ea;color:#1d7a46}
+.tk-m.reassign .tk-ic{background:#e6eef8;color:var(--steel,#3A6EA5)}.tk-m.auto .tk-ic{background:#fde7e4;color:#b42318}
+.tk-meta{font-size:12px}
+.tk-txt{white-space:pre-wrap;margin-top:2px}
+.tk-via{margin-left:6px;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;background:#0068ff;color:#fff}
+.tk-reply{display:flex;gap:6px}
+.tk-reply input{flex:1;min-height:36px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tk-st.ok,:root:not([data-theme=light]) .tk-m.reply .tk-ic{background:#173a26}
+ :root:not([data-theme=light]) .tk-st.wait,:root:not([data-theme=light]) .tk-m.nudge .tk-ic{background:#3a2f12}
+ :root:not([data-theme=light]) .tk-st.late,:root:not([data-theme=light]) .tk-m.auto .tk-ic{background:#3d1a16}}

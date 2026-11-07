@@ -4,6 +4,7 @@ import { COMPANIES, COMPANY, PROC_NAME, ROLE_NAME, type Proc } from '../lib/proc
 import { useGroups } from './StepPeople';
 import { QtTag } from './QtTag';
 import { Icon } from './Icon';
+import { confirmDialog, toast } from './ui';
 
 /** Quản trị: ai lập / kiểm tra / duyệt cho từng quy trình × công ty (chỉ Admin IT sửa) */
 type CP = { proc: string; company: string; role: string; user_id: string | null; group_id: string | null };
@@ -16,7 +17,18 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
   const set = async (p: string, c: string, r: string, v: string) => {
     setErr('');
     const rec = { proc: p, company: c, role: r, user_id: v.startsWith('p:') ? v.slice(2) : null, group_id: v.startsWith('g:') ? v.slice(2) : null };
-    const { error } = await sb.from('chain_people').upsert(rec); if (error) setErr(errText(error)); else load();
+    const { error } = await sb.from('chain_people').upsert(rec); if (error) { setErr(errText(error)); return; } load();
+    if (!rec.user_id) return;
+    // Phiếu đang mở ở bước này: hỏi có giao luôn cho người mới (kèm Zalo) không
+    const { data: ds } = await sb.from('docs').select('id, status, batches!inner(proc, status)').eq('company', c).eq('batches.proc', p).eq('batches.status', 'dang_lam');
+    const ROLE: Record<string, string> = p === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
+    const n = ((ds as { status: string }[]) ?? []).filter((d) => ROLE[d.status] === r).length;
+    if (!n) return;
+    const who = people.find((u) => u.id === rec.user_id)?.full_name ?? '';
+    if (await confirmDialog(`Có ${n} phiếu đang mở ở bước này. Chuyển cả ${n} phiếu cho ${who} và báo Zalo?`, 'Chuyển phiếu', true)) {
+      const { data, error: e2 } = await sb.rpc('reassign_open', { p_proc: p, p_company: c, p_role: r, p_user: rec.user_id });
+      if (e2) setErr(errText(e2)); else toast(`Đã chuyển ${data} phiếu cho ${who}`);
+    }
   };
   const Cell = ({ p, c, r }: { p: string; c: string; r: string }) => { const x = get(p, c, r); const v = x?.group_id ? 'g:' + x.group_id : x?.user_id ? 'p:' + x.user_id : '';
     return <select value={v} disabled={!canEdit} onChange={(e) => set(p, c, r, e.target.value)} className={!v ? 'need' : ''} aria-label={p + ' ' + c + ' ' + r}>
