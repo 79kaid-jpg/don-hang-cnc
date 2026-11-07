@@ -128,8 +128,15 @@ export default function Board() {
   }, [qt, batches]);
   useEffect(() => { document.querySelector('.kb-picker .on')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduce ? 'auto' : 'smooth' }); }, [curCol, reduce]);
   const startDrag = (e: React.PointerEvent<HTMLElement>, c: Card) => {
-    if (e.button !== 0 || e.pointerType === 'touch' || !c.mine || (!canNext(c) && !canBack(c))) return;
-    if ((e.target as HTMLElement).closest('button, input, select, a')) return;
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    const tg = e.target as HTMLElement; if (tg.closest('button, input, select') || (tg.closest('a') && !tg.closest('a.kb-link'))) return;
+    if (!c.mine || (!canNext(c) && !canBack(c))) { // không phải lượt mình: báo khi người dùng thử kéo
+      const x0 = e.clientX, y0 = e.clientY, card = e.currentTarget;
+      const mv = (ev: PointerEvent) => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 10) return; off();
+        toast(!c.mine ? 'Chưa đến lượt bạn – chỉ người phụ trách bước này mới kéo được thẻ' : 'Hồ sơ này không chuyển bước được từ đây');
+        card.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 260 }); };
+      const off = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', off); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', off); return; }
     const r = e.currentTarget.getBoundingClientRect();
     dr.current = { c, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, w: r.width, card: e.currentTarget, on: false, over: -1, px: e.clientX, py: e.clientY, raf: 0 };
     addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onUp); };
@@ -180,7 +187,7 @@ export default function Board() {
                     {list.map((it) => (
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
-                        <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link">
+                        <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
                           <span className="kb-code">{it.o?.code}</span><span className="kb-proj">{it.b.title}</span>
                           <span className="small muted">{[it.o?.project, cust[it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>

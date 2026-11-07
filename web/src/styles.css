@@ -1605,3 +1605,4 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
   .kb-board.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent)}
   .kb-board.fade-l:not(.fade-r){-webkit-mask-image:linear-gradient(90deg,transparent,#000 40px);mask-image:linear-gradient(90deg,transparent,#000 40px)}
 }
+@media (min-width:761px){.kb-board .kb-card.mine{cursor:grab}.kb-board .kb-card.mine:active{cursor:grabbing}.kb-link{-webkit-user-drag:none}}
