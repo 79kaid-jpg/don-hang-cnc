@@ -1569,3 +1569,22 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .adm2-nav button span.adm2-ic{flex:0 0 auto}
 @media (max-width:900px){.adm2.home .adm2-ic{flex:0 0 34px!important;width:34px}}
 @media (max-width:900px){.pa-wbar i{overflow:hidden}.pa-wbar span{white-space:nowrap;font-size:10.5px}}
+/* ===== Menu thu gọn: thanh icon ===== */
+@media (min-width:901px){
+  .app.side-hidden{grid-template-columns:68px minmax(0,1fr)}
+  .app.side-hidden .main{padding-left:var(--sp6,32px)}
+  .app.side-hidden:not(.side-peek) .side{position:sticky;transform:none;width:68px;padding:var(--sp4) 10px;box-shadow:none;overflow-x:hidden}
+  .app.side-hidden:not(.side-peek) .side .brand{flex-direction:column;gap:10px}
+  .app.side-hidden:not(.side-peek) .side .brand>div{display:none}
+  .app.side-hidden:not(.side-peek) .side .side-hide{transform:scaleX(-1)}
+  .app.side-hidden:not(.side-peek) .nav-item,.app.side-hidden:not(.side-peek) .side-search{font-size:0;justify-content:center;padding:0;width:48px;min-height:44px;margin:0 auto;gap:0;position:relative}
+  .app.side-hidden:not(.side-peek) .side-search{border-color:transparent;background:transparent}
+  .app.side-hidden:not(.side-peek) .side-search span,.app.side-hidden:not(.side-peek) .side-search kbd,.app.side-hidden:not(.side-peek) .nav-item kbd{display:none}
+  .app.side-hidden:not(.side-peek) .nav-item svg,.app.side-hidden:not(.side-peek) .side-search svg{width:21px;height:21px}
+  .app.side-hidden:not(.side-peek) .nav-badge{position:absolute;top:4px;right:4px;min-width:16px;height:16px;font-size:10px;padding:0 4px}
+  .app.side-hidden:not(.side-peek) .who{justify-content:center}
+  .app.side-hidden:not(.side-peek) .who>span:not(.avatar){display:none}
+  .app.side-hidden:not(.side-peek) .nav-appear>*:not(summary){display:none}
+  .app.side-hidden.side-peek .side{position:fixed}
+}
+@media (min-width:901px){.app.side-hidden:not(.side-peek) .nav-item{font-size:0!important}}
