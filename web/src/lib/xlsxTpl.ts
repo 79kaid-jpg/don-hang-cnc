@@ -126,6 +126,12 @@ function shiftFormula(f: string, at: number, k: number) {
   });
 }
 
+/** Độ rộng (số ký tự) của ô, tính cả vùng gộp ô ngang */
+function colWidthChars(ws: ExcelJS.Worksheet, row: number, col: number) {
+  const mg: string[] = (ws.model as unknown as { merges: string[] }).merges ?? []; let c2 = col;
+  for (const m of mg) { const [a, z] = m.split(':'); if (+a.replace(/\D/g, '') === row && colN(a.replace(/\d/g, '')) === col && z) c2 = colN(z.replace(/\d/g, '')); }
+  let w = 0; for (let k = col; k <= c2; k++) w += ws.getColumn(k).width ?? 9; return Math.max(3, w - 1);
+}
 export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS.Workbook> {
   const E = await XL(); const wb = new E.Workbook(); await wb.xlsx.load(buf);
   wb.eachSheet((ws) => {
@@ -150,12 +156,16 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
       for (const m of merges) { const [a, z] = m.split(':'); const ra = +a.replace(/\D/g, ''), rz = +z.replace(/\D/g, ''); const ca = a.replace(/\d/g, ''), cz = z.replace(/\d/g, '');
         if (ra === L.row && rz === L.row) { for (let i = 0; i <= k; i++) ws.mergeCells(`${ca}${L.row + i}:${cz}${L.row + i}`); }
         else ws.mergeCells(`${ca}${ra > L.row ? ra + k : ra}:${cz}${rz > L.row ? rz + k : rz}`); }
-      for (let i = 0; i <= k; i++) { const it = items[i] ?? {}; const r = ws.getRow(L.row + i);
+      for (let i = 0; i <= k; i++) { const it = items[i] ?? {}; const r = ws.getRow(L.row + i); let lines = 1;
         r.eachCell({ includeEmpty: false }, (c) => { const s = cellText(c); if (!items.length && typeof c.value === 'string') { c.value = ''; return; } if (!s.includes('{')) return;
           if (!items.length) { c.value = ''; return; }
           const only = s.match(/^\s*(?:\{#[a-z0-9_]+\})?\s*\{([a-z0-9_]+)\.([a-z0-9_]+)\}\s*$/i);
           if (only && typeof it[only[2]] === 'number') { c.value = it[only[2]] as number; return; }
-          c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(data.vars[name] ?? ''))); });
+          c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(data.vars[name] ?? '')));
+          // chữ dài hơn độ rộng cột → tự xuống dòng, dòng cao lên tương ứng
+          const txt = String(c.value ?? ''); const wch = colWidthChars(ws, L.row + i, Number(c.col));
+          if (txt.length > wch) { c.alignment = { ...(c.alignment ?? {}), wrapText: true, vertical: c.alignment?.vertical ?? 'middle' }; lines = Math.max(lines, Math.ceil(txt.length / wch)); } });
+        if (lines > 1) r.height = Math.max(r.height ?? 15, lines * 13.5 + 3);
         r.commit(); }
     }
     for (const n of blank) { const r = ws.getRow(n + shiftOf(n)); r.eachCell({ includeEmpty: true }, (c) => { if (c.value == null || cellText(c) === '') c.style = {}; }); }
@@ -215,7 +225,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
       const f = cell.font ?? {}; const a = cell.alignment ?? {}; const b = cell.border ?? {}; const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
       const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
-        a.wrapText ? 'white-space:pre-wrap;overflow-wrap:anywhere' : 'white-space:pre;overflow:hidden;text-overflow:clip', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
+        a.wrapText ? 'white-space:pre-wrap;overflow-wrap:anywhere' : 'white-space:pre-wrap;overflow-wrap:break-word', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');
       // Như Excel: chữ không xuống dòng được tràn sang các ô trống bên phải
       let spill = 1;
