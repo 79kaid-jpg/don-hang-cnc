@@ -143,8 +143,8 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
         if (ra === L.row && rz === L.row) { for (let i = 0; i <= k; i++) ws.mergeCells(`${ca}${L.row + i}:${cz}${L.row + i}`); }
         else ws.mergeCells(`${ca}${ra > L.row ? ra + k : ra}:${cz}${rz > L.row ? rz + k : rz}`); }
       for (let i = 0; i <= k; i++) { const it = items[i] ?? {}; const r = ws.getRow(L.row + i);
-        r.eachCell({ includeEmpty: false }, (c) => { const s = cellText(c); if (!s.includes('{')) return;
-          if (!items.length) { c.value = s.replace(RE, ''); return; }
+        r.eachCell({ includeEmpty: false }, (c) => { const s = cellText(c); if (!items.length && typeof c.value === 'string') { c.value = ''; return; } if (!s.includes('{')) return;
+          if (!items.length) { c.value = ''; return; }
           const only = s.match(/^\s*(?:\{#[a-z0-9_]+\})?\s*\{([a-z0-9_]+)\.([a-z0-9_]+)\}\s*$/i);
           if (only && typeof it[only[2]] === 'number') { c.value = it[only[2]] as number; return; }
           c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(data.vars[name] ?? ''))); });
