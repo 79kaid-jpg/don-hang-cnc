@@ -1,7 +1,7 @@
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
 import type { Customer, Order, Profile } from './supabase';
-import { hdrOf, colsOf } from './fields';
+import { hdrOf, colsOf, fieldsOf } from './fields';
 import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
 
 export type TplData = { vars: Record<string, string | number>; tables: Record<string, Record<string, string | number>[]> };
@@ -41,6 +41,8 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   };
   for (const [k] of hdrOf(b.proc as Proc)) vars[k] = d.header?.[k] ?? '';
   for (const k of Object.keys(d.header ?? {})) if (vars[k] == null) vars[k] = d.header[k];
+  for (const [k, v] of Object.entries((o as Order & { extra?: Record<string, string> }).extra ?? {})) if (vars[k] == null) vars[k] = v;
+  if (vars.han_bao_gia == null) vars.han_bao_gia = fd(o.quote_due ?? undefined);
   for (const r of ['lap', 'kiem_tra', 'duyet', 'admin', 'ky_thuat']) { const s = sg(r); vars['nguoi_' + r] = nm(s?.user); vars['ngay_' + r] = fd(s?.at); }
   const tables: TplData['tables'] = {};
   for (const [key, def] of PROC_TABLES[b.proc as Proc]) {
@@ -61,6 +63,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
     { k: 'ma_don', t: 'Mã đơn hàng' }, { k: 'du_an', t: 'Dự án' }, { k: 'khach_hang', t: 'Khách hàng' }, { k: 'ma_kh', t: 'Mã khách hàng' }, { k: 'ma_so_thue', t: 'Mã số thuế KH' }, { k: 'dia_chi', t: 'Địa chỉ KH' }, { k: 'nguoi_lien_he', t: 'Người liên hệ KH' }, { k: 'dien_thoai', t: 'Điện thoại KH' }, { k: 'email_kh', t: 'Email KH' }, { k: 'kh1', t: 'KH1' }, { k: 'kh2', t: 'KH2' },
     { k: 'lien_he', t: 'Liên hệ' }, { k: 'han_giao', t: 'Hạn giao' }, { k: 'cong_ty', t: 'Công ty của phiếu' }, { k: 'lo', t: 'Tên lô / đợt' },
     { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' }];
+  for (const f of fieldsOf('F0', 'header')) if (!f.sys) L.push({ k: f.key, t: 'F0 · ' + f.label });
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }
   if (proc === 'QT1') L.push({ k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });

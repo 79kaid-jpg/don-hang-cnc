@@ -1,0 +1,20 @@
+import { fieldsOf, f0Perm, useFields } from '../lib/fields';
+import type { Profile } from '../lib/supabase';
+
+type V = Record<string, string | null | undefined>;
+/** Các ô F0 · Thông tin đơn hàng theo Quản trị → Trường dữ liệu (ô có sẵn lưu trên đơn, ô thêm mới lưu trong orders.extra) */
+export function OrderFields({ vals, extra, onVal, onExtra, disabled, people }: {
+  vals: V; extra: Record<string, string>; onVal: (k: string, v: string) => void; onExtra: (k: string, v: string) => void; disabled?: boolean; people: Profile[] }) {
+  useFields();
+  return <>{fieldsOf('F0', 'header').filter((f) => f0Perm(f) !== 'hide').map((f) => {
+    const v = (f.sys ? vals[f.key] : extra[f.key]) ?? ''; const on = (x: string) => (f.sys ? onVal(f.key, x) : onExtra(f.key, x)); const req = f0Perm(f) === 'required';
+    const lab = <span>{f.label}{req && <b className="req" aria-label="bắt buộc"> *</b>}</span>;
+    const wide = f.type === 'textarea';
+    return <label key={f.key} className={'f' + (wide ? ' f-wide' : '')} style={wide ? { gridColumn: '1 / -1' } : undefined}>{lab}
+      {f.type === 'select' ? <select disabled={disabled} value={v} onChange={(e) => on(e.target.value)}>{!f.options.includes(v) && <option value={v}>{v || '—'}</option>}{f.options.map((o) => <option key={o}>{o}</option>)}</select>
+        : f.type === 'person' ? <select disabled={disabled} value={v} onChange={(e) => on(e.target.value)}><option value="">[chưa giao]</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select>
+        : f.type === 'textarea' ? <textarea rows={3} disabled={disabled} value={v} onChange={(e) => on(e.target.value)} />
+        : <input type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} required={req} disabled={disabled} value={v} onChange={(e) => on(e.target.value)}
+            placeholder={f.key === 'contact' ? 'Tên · số điện thoại' : undefined} />}
+      {f.help && <small className="muted">{f.help}</small>}</label>; })}</>;
+}

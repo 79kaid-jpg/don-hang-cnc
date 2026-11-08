@@ -5,12 +5,13 @@ import { HEADER, PROC_TABLES, TABLES, FLOW, type Col, type Company, type Proc } 
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
 export type Area = 'header' | 'col' | 'file';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
-export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file';
-export type FDef = { id?: string; proc: Proc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
+export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person';
+export type FProc = Proc | 'F0';
+export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>> };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
-export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp' };
+export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng' };
 /** Bước mà người làm được nhập liệu theo mặc định */
 export const EDIT_STEPS: Record<Proc, string[]> = { QT0: ['tiep_nhan', 'boc_tach', 'tao_ds'], QT1: ['lap'], QT2: ['lap'], QT3: ['lap'] };
 export const companiesOf = (p: Proc): Company[] => (p === 'QT0' ? ['PN'] : ['PN', 'IPC', 'HW']);
@@ -29,7 +30,8 @@ export function useFields() {
 }
 
 // Mặc định theo mã nguồn (khi chưa tải được cấu hình)
-const defaults = (p: Proc): FDef[] => {
+const defaults = (p: FProc): FDef[] => {
+  if (p === 'F0') return [];
   const base = { proc: p, options: [] as string[], help: '', active: true, perms: {}, decimals: null as number | null };
   const out: FDef[] = [];
   HEADER[p].forEach(([k, l, t], i) => out.push({ ...base, area: 'header', tbl: '', key: k, label: l, type: t === 'num' ? 'number' : t === 'date' ? 'date' : 'text', ord: i, sys: false }));
@@ -39,11 +41,11 @@ const defaults = (p: Proc): FDef[] => {
   return out;
 };
 
-export function allFields(p: Proc): FDef[] {
+export function allFields(p: FProc): FDef[] {
   const s = store?.filter((f) => f.proc === p);
   return (s && s.length ? s : defaults(p)).slice().sort((a, z) => a.ord - z.ord);
 }
-export const fieldsOf = (p: Proc, area: Area, tbl = '') => allFields(p).filter((f) => f.active && f.area === area && (area !== 'col' || f.tbl === tbl));
+export const fieldsOf = (p: FProc, area: Area, tbl = '') => allFields(p).filter((f) => f.active && f.area === area && (area !== 'col' || f.tbl === tbl));
 
 /** Quyền của trường ở bước `status` cho công ty `co` */
 export function permOf(f: FDef, co: string, status: string, p: Proc): Perm {
@@ -66,3 +68,6 @@ export function colsOf(p: Proc, tbl: string): Col[] {
 export const tablesOf = (p: Proc) => PROC_TABLES[p].map(([key, def]) => ({ key, title: TABLES[def].t }));
 
 export const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'truong';
+
+/** F0: Ẩn / Bắt buộc (một giá trị cho cả đơn) */
+export const f0Perm = (f: FDef): Perm => (f.perms?.['*']?.['*'] as Perm) ?? 'edit';

@@ -1,5 +1,6 @@
 import { Age } from '../components/Age';
 import { CustomerPicker } from '../components/CustomerPicker';
+import { OrderFields } from '../components/OrderFields';
 import { QtTag } from '../components/QtTag';
 import ProcPanel from '../components/ProcPanel';
 import { PROC_SHORT, procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -116,8 +117,9 @@ type P = { o: Order; lines: Line[]; can: (r: string) => boolean; load: () => voi
   run: (fn: string, a: Record<string, unknown>, m: string) => Promise<void>; setErr: (s: string) => void; setOk: (s: string) => void };
 
 function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<string, Customer>; people: Record<string, Profile> }) {
-  const editable = (can('kinh_doanh') || can('admin_cnc')) && ['tiep_nhan', 'boc_tach', 'kiem_tra_f1', 'xndh'].includes(o.status);
-  const [f, setF] = useState({ project: o.project, contact: o.contact, channel: o.channel, description: o.description, due_date: o.due_date ?? '', quote_due: o.quote_due ?? '' });
+  const editable = can('admin_it') || ((can('kinh_doanh') || can('admin_cnc')) && ['tiep_nhan', 'boc_tach', 'kiem_tra_f1', 'xndh'].includes(o.status));
+  const [f, setF] = useState({ project: o.project, contact: o.contact, channel: o.channel, description: o.description, due_date: o.due_date ?? '', quote_due: o.quote_due ?? '', extractor_id: o.extractor_id ?? '' });
+  const [extra, setExtra] = useState<Record<string, string>>(((o as Order & { extra?: Record<string, string> }).extra) ?? {});
   const [files, setFiles] = useState<{ name: string; url: string }[]>([]);
   const listFiles = useCallback(async () => {
     const { data } = await sb.storage.from('files').list(o.id + '/f0');
@@ -128,7 +130,7 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
   }, [o.id]);
   useEffect(() => { listFiles(); }, [listFiles]);
   const save = async () => {
-    const { error } = await sb.from('orders').update({ ...f, due_date: f.due_date || null, quote_due: f.quote_due || null }).eq('id', o.id);
+    const { error } = await sb.from('orders').update({ ...f, extra, due_date: f.due_date || null, quote_due: f.quote_due || null, extractor_id: f.extractor_id || null }).eq('id', o.id);
     if (error) setErr(errText(error)); else { setOk('Đã lưu F0.'); load(); }
   };
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,13 +149,8 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
           ? <CustomerPicker value={o.customer_id ?? ''} list={Object.values(cust)} onChange={async (c) => { if (!c || c.id === o.customer_id) return;
               const { error } = await sb.rpc('set_order_customer', { p_order: o.id, p_customer: c.id }); if (error) setErr(errText(error)); else { setOk('Đã đổi khách hàng: ' + c.name); load(); } }} />
           : <b>{cust[o.customer_id ?? '']?.name ?? 'Chưa có khách hàng'}</b>}</div>
-        <div><div className="small muted">Người bóc tách</div><b>{people[o.extractor_id ?? '']?.full_name ?? '[chưa giao]'}</b></div>
-        <label className="f">Dự án<input disabled={!editable} value={f.project} onChange={set('project')} /></label>
-        <label className="f">Người liên hệ<input disabled={!editable} value={f.contact} onChange={set('contact')} /></label>
-        <label className="f">Kênh<select disabled={!editable} value={f.channel} onChange={set('channel')}><option>Email</option><option>Điện thoại</option><option>Hệ thống</option></select></label>
-        <label className="f">Ngày cần báo giá<input type="date" disabled={!editable} value={f.quote_due} onChange={set('quote_due')} /></label>
-        <label className="f">Ngày cần giao<input type="date" disabled={!editable} value={f.due_date} onChange={set('due_date')} /></label>
-        <label className="f" style={{ gridColumn: '1 / -1' }}>Mô tả yêu cầu<textarea rows={3} disabled={!editable} value={f.description} onChange={set('description')} /></label>
+        <OrderFields vals={f} extra={extra} disabled={!editable} people={Object.values(people).filter((p) => p.roles?.includes('ky_thuat') || p.id === f.extractor_id)}
+          onVal={(k, v) => setF((x) => ({ ...x, [k]: v }))} onExtra={(k, v) => setExtra((x) => ({ ...x, [k]: v }))} />
       </div>
       {o.supplement_note && <div className="msg err"><b>Nội dung cần bổ sung (F1 không đạt):</b> {o.supplement_note}</div>}
       <div>
