@@ -62,7 +62,7 @@ export default function Orders() {
                 {due && <span className={'chip ' + ({ late: 'bad', soon: 'warn', done: 'done', off: 'idle' } as Record<string, string>)[due.cls]}><Icon name={due.ic} size={13} />{due.t}</span>}
                 <span className="oc-due small muted"><Icon name="clock" size={13} />{date(o.due_date)}</span>
               </div>
-              <div className="oc-proj">{o.project}<span className="small muted"> · {[cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ')}</span></div>
+              <div className="oc-proj">{o.project}<span className="small muted"> · {cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')]?.name ?? 'Chưa có khách hàng'}</span></div>
               <div className="oc-prog" aria-label="Tiến độ 4 quy trình">
                 {steps.map((s) => <span key={s.p} className={'seg ' + s.cls} title={s.p + ' ' + PROC_NAME[s.p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}><b>{s.p}</b><i /><em>{s.t}{s.d ? <small> · {s.d}</small> : null}</em></span>)}
               </div>

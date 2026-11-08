@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { sb, errText, type Order, type Profile } from '../lib/supabase';
+import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
 import { buildData, downloadWb, fillXlsx, printHtml, scanVars, toHtml, varList, type Tpl } from '../lib/xlsxTpl';
 import { Icon } from './Icon';
@@ -21,8 +21,8 @@ export function useTpl(proc: string, company: string) {
 }
 
 async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
-  const { data } = await sb.from('customers').select('id, name'); const cust = Object.fromEntries(((data as { id: string; name: string }[]) ?? []).map((c) => [c.id, c.name]));
-  const wb = await fillXlsx(await loadBuf(t), buildData(o, b, d, people, cust)); return { wb, html: toHtml(wb) };
+  const { data } = await sb.from('customers').select('*'); const cs = (data as Customer[]) ?? []; const cust = Object.fromEntries(cs.map((c) => [c.id, c.name]));
+  const wb = await fillXlsx(await loadBuf(t), buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)))); return { wb, html: toHtml(wb) };
 }
 
 function Preview({ html, title, onXlsx, onClose }: { html: string; title: string; onXlsx: () => void; onClose: () => void }) {

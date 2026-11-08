@@ -1,4 +1,5 @@
 import { Age } from '../components/Age';
+import { CustomerPicker } from '../components/CustomerPicker';
 import { QtTag } from '../components/QtTag';
 import ProcPanel from '../components/ProcPanel';
 import { PROC_SHORT, procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -67,7 +68,7 @@ export default function OrderDetail() {
     addEventListener('keydown', k); return () => removeEventListener('keydown', k);
   });
   if (!o) return <Skeleton rows={4} h={72} />;
-  const chain = [cust[o.kh1_id ?? '']?.name, cust[o.kh2_id ?? '']?.name].filter(Boolean).join(' → ');
+  const chain = cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')]?.name ?? '';
   const props = { o, lines: [] as Line[], run, can, load, setErr, setOk };
   const sum = (p: Proc) => procSummary(p, bs, ds);
   const dueCls = (d: string) => { const n = Math.ceil((new Date(d + 'T23:59:59').getTime() - Date.now()) / 864e5); return n < 0 ? 'late' : n <= 3 ? 'soon' : ''; };
@@ -142,7 +143,10 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="grid2">
-        <div><div className="small muted">KH1 → KH2</div><b>{cust[o.kh1_id ?? '']?.name} → {cust[o.kh2_id ?? '']?.name ?? '—'}</b></div>
+        <div className="f"><span className="small muted">Khách hàng</span>{can('kinh_doanh') || can('admin_cnc')
+          ? <CustomerPicker value={o.customer_id ?? ''} list={Object.values(cust)} onChange={async (c) => { if (!c || c.id === o.customer_id) return;
+              const { error } = await sb.rpc('set_order_customer', { p_order: o.id, p_customer: c.id }); if (error) setErr(errText(error)); else { setOk('Đã đổi khách hàng: ' + c.name); load(); } }} />
+          : <b>{cust[o.customer_id ?? '']?.name ?? 'Chưa có khách hàng'}</b>}</div>
         <div><div className="small muted">Người bóc tách</div><b>{people[o.extractor_id ?? '']?.full_name ?? '[chưa giao]'}</b></div>
         <label className="f">Dự án<input disabled={!editable} value={f.project} onChange={set('project')} /></label>
         <label className="f">Người liên hệ<input disabled={!editable} value={f.contact} onChange={set('contact')} /></label>

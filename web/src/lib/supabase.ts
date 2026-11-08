@@ -5,9 +5,9 @@ if (!url || !key) console.error('Thiếu VITE_SUPABASE_URL / VITE_SUPABASE_ANON_
 export const sb = createClient(url, key);
 
 export type Profile = { id: string; full_name: string; unit: string; roles: string[]; active: boolean; impersonating?: string | null; zalo_chat_id?: string | null; zalo_name?: string | null; position?: string; manager_id?: string | null };
-export type Customer = { id: string; code: string; name: string };
+export type Customer = { id: string; code: string; name: string; tax_code?: string | null; address?: string | null; contact?: string | null; phone?: string | null; email?: string | null; note?: string | null; active?: boolean };
 export type Order = {
-  id: string; code: string; kh1_id: string | null; kh2_id: string | null; project: string; channel: string;
+  id: string; code: string; customer_id?: string | null; kh1_id: string | null; kh2_id: string | null; project: string; channel: string;
   contact: string; description: string; quote_due: string | null; due_date: string | null; extractor_id: string | null;
   supplement_note: string; status: string; f1_result: string; nvl_status: string; gc_status: string; gh_status: string;
   created_at: string;

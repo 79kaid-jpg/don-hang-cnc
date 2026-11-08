@@ -189,7 +189,7 @@ export default function Board() {
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
                           <span className="kb-code">{it.o?.code}</span><span className="kb-proj">{it.b.title}</span>
-                          <span className="small muted">{[it.o?.project, cust[it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
+                          <span className="small muted">{[it.o?.project, cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <span className="kb-who" title={h.what}><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</span>}
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>

@@ -1,6 +1,6 @@
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
-import type { Order, Profile } from './supabase';
+import type { Customer, Order, Profile } from './supabase';
 import { hdrOf, colsOf } from './fields';
 import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
 
@@ -28,13 +28,13 @@ export function soChu(v: number) {
 }
 
 /* ---------- dữ liệu của một phiếu ---------- */
-export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, cust: Record<string, string>): TplData {
+export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, cust: Record<string, string>, kh?: Customer | null): TplData {
   const nm = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
   const fd = (s?: string) => (s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
   const sg = (r: string) => [...(d.signs ?? [])].reverse().find((x) => x.role === r && x.action === 'ky');
   const lastAt = sg('duyet')?.at ?? d.status_at; const dt = new Date(lastAt);
   const vars: Record<string, string | number> = {
-    ma_don: o.code, du_an: o.project, khach_hang: cust[o.kh2_id ?? ''] ?? cust[o.kh1_id ?? ''] ?? '', kh1: cust[o.kh1_id ?? ''] ?? '', kh2: cust[o.kh2_id ?? ''] ?? '',
+    ma_don: o.code, du_an: o.project, khach_hang: cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')] ?? '', ma_kh: kh?.code ?? '', ma_so_thue: kh?.tax_code ?? '', dia_chi: kh?.address ?? '', nguoi_lien_he: kh?.contact ?? '', dien_thoai: kh?.phone ?? '', email_kh: kh?.email ?? '', kh1: cust[o.kh1_id ?? ''] ?? '', kh2: cust[o.kh2_id ?? ''] ?? '',
     lien_he: o.contact ?? '', mo_ta: o.description ?? '', han_giao: fd(o.due_date ?? undefined), lo: b.title, cong_ty: { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwha' }[d.company] ?? d.company,
     ngay: String(dt.getDate()).padStart(2, '0'), thang: String(dt.getMonth() + 1).padStart(2, '0'), nam: dt.getFullYear(), ngay_in: fd(new Date().toISOString()), ngay_duyet_full: fd(lastAt),
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; ')
@@ -58,7 +58,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
 /** Danh sách biến có thể dùng cho một quy trình (để hiện trong Quản trị) */
 export function varList(proc: Proc): { k: string; t: string }[] {
   const L: { k: string; t: string }[] = [
-    { k: 'ma_don', t: 'Mã đơn hàng' }, { k: 'du_an', t: 'Dự án' }, { k: 'khach_hang', t: 'Khách hàng (KH cuối)' }, { k: 'kh1', t: 'KH1' }, { k: 'kh2', t: 'KH2' },
+    { k: 'ma_don', t: 'Mã đơn hàng' }, { k: 'du_an', t: 'Dự án' }, { k: 'khach_hang', t: 'Khách hàng' }, { k: 'ma_kh', t: 'Mã khách hàng' }, { k: 'ma_so_thue', t: 'Mã số thuế KH' }, { k: 'dia_chi', t: 'Địa chỉ KH' }, { k: 'nguoi_lien_he', t: 'Người liên hệ KH' }, { k: 'dien_thoai', t: 'Điện thoại KH' }, { k: 'email_kh', t: 'Email KH' }, { k: 'kh1', t: 'KH1' }, { k: 'kh2', t: 'KH2' },
     { k: 'lien_he', t: 'Liên hệ' }, { k: 'han_giao', t: 'Hạn giao' }, { k: 'cong_ty', t: 'Công ty của phiếu' }, { k: 'lo', t: 'Tên lô / đợt' },
     { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' }];
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });

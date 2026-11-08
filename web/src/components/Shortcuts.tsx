@@ -96,7 +96,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     ...(can('admin_it') ? [{ t: 'Quản trị', to: '/quan-tri', k: 'G Q' }] : []), { t: 'Hướng dẫn', to: '/cai-app', k: 'G H' }, { t: 'Thông báo Zalo', to: '/zalo', k: 'G Z' }], [can]);
   const toks = norm(q).split(/\s+/).filter(Boolean);
   const hit = (s: string) => toks.every((t) => norm(s).includes(t));
-  const os = orders.filter((o) => !toks.length || hit([o.code, o.project, cust[o.kh1_id ?? ''], cust[o.kh2_id ?? ''], ORDER_STATUS[o.status]].join(' '))).slice(0, 8);
+  const os = orders.filter((o) => !toks.length || hit([o.code, o.project, cust[o.customer_id ?? ''], cust[o.kh1_id ?? ''], cust[o.kh2_id ?? ''], ORDER_STATUS[o.status]].join(' '))).slice(0, 8);
   const ps = pages.filter((p) => toks.length && hit(p.t));
   const all = [...os.map((o) => ({ key: o.id, to: '/don/' + o.id, main: o.code, sub: [o.project, ORDER_STATUS[o.status]].filter(Boolean).join(' · '), k: '' })),
     ...(toks.length ? ps : pages).map((p) => ({ key: p.to, to: p.to, main: p.t, sub: 'Trang', k: p.k }))];
