@@ -289,6 +289,8 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     setMsg(`Đã áp dụng ${v} cho ${n} dòng · cột ${cols.find((c) => c.k === k)?.t}`);
   };
   const offer = (k: string, v: string) => { if (!FILL_COLS.includes(k) || !v.trim() || rows.length < 2) return; if (rows.some((r) => String(r[k] ?? '') !== v)) setFill({ k, v }); };
+  // Cột tự giãn theo nội dung dài nhất (tối đa 48 ký tự), không hẹp hơn mặc định
+  const wOf = (c: Col) => Math.min(48, Math.max(c.w ?? 7, ...rows.map((r) => String(r[c.k] ?? '').length + 3)));
   const colT = (k: string) => cols.find((c) => c.k === k)?.t ?? '';
   const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
   const fromAoa = (aoa: string[][]) => {
@@ -344,7 +346,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
           {rows.map((r, i) => <tr key={i}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input value={String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} onChange={(e) => set(i, c.k, e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: (c.w ?? 7) + 'ch' }} />
+                onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
               : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
