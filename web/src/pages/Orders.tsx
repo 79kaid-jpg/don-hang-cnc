@@ -1,3 +1,4 @@
+import { LoginAs } from '../components/LoginAs';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, type Customer, type Order } from '../lib/supabase';
@@ -71,8 +72,8 @@ export default function Orders() {
               <div className="oc-prog" aria-label="Tiến độ 4 quy trình">
                 {steps.map((s) => <span key={s.p} className={'seg ' + s.cls} title={s.p + ' ' + PROC_NAME[s.p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}><b>{s.p}</b><i /><em>{s.t}{s.d ? <small> · {s.d}</small> : null}</em></span>)}
               </div>
-              <div className="oc-who">{hs.length ? hs.map((h, i) => <span key={i} className={'wait-who' + (isStuck(h.since) ? ' stuck' : '')}><span className="avatar xs">{initialOf(h.who)}</span>
-                <span><b>{h.who}</b><span className="small muted">{h.what}{h.since ? ' · chờ ' + waited(h.since) : ''}</span></span></span>) : <span className="small muted">{due?.cls === 'done' ? 'Đã xong cả 4 quy trình' : 'Không ai đang giữ'}</span>}</div>
+              <div className="oc-who">{hs.length ? hs.map((h, i) => <span key={i} className={'wait-who' + (isStuck(h.since) ? ' stuck' : '')}><LoginAs uid={h.uid} name={h.who} className="avatar xs">{initialOf(h.who)}</LoginAs>
+                <span><LoginAs uid={h.uid} name={h.who}><b>{h.who}</b></LoginAs><span className="small muted">{h.what}{h.since ? ' · chờ ' + waited(h.since) : ''}</span></span></span>) : <span className="small muted">{due?.cls === 'done' ? 'Đã xong cả 4 quy trình' : 'Không ai đang giữ'}</span>}</div>
             </div></li>))}
         </ul>)}
     </>

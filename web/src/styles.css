@@ -1832,3 +1832,5 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .kb-due.soon{color:#b45309;background:#fffbeb}.kb-due.late{color:#b91c1c;background:#fef2f2}
 .kb-pj{font-size:14.5px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
 .kb-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.login-as{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}.login-as:hover{text-decoration:underline;color:var(--accent,#2563eb)}button.login-as.kb-who{display:inline-flex;align-items:center;gap:6px}button.login-as.avatar{display:inline-grid;place-items:center}

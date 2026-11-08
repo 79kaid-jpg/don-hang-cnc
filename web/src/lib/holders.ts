@@ -3,7 +3,7 @@ import { sb } from './supabase';
 import { stepOf, ROLE_OF, ROLE_NAME, type Batch, type Doc } from './proc';
 
 type CP = { proc: string; company: string; role: string; user_id: string | null; group_id: string | null };
-export type Holder = { who: string; what: string; since?: string };
+export type Holder = { who: string; what: string; since?: string; uid?: string | null };
 
 /** Ai đang giữ hồ sơ: bước hiện tại → người/nhóm phụ trách (chain_people) */
 export function useHolders() {
@@ -20,7 +20,7 @@ export function useHolders() {
     const role = st.key === 'ky' ? 'hoan_tat' : ROLE_OF[st.doc?.status ?? ''];
     if (!role) return null;
     const r = cp.find((c) => c.proc === b.proc && c.company === company && c.role === role);
-    return { who: r ? names[r.user_id ?? r.group_id ?? ''] ?? '…' : 'Chưa giao người', what: b.proc + ' · ' + ROLE_NAME[role], since: st.doc?.status_at };
+    return { uid: st.doc?.assignee ?? r?.user_id ?? null, who: st.doc?.assignee ? names[st.doc.assignee] ?? '…' : r ? names[r.user_id ?? r.group_id ?? ''] ?? '…' : 'Chưa giao người', what: b.proc + ' · ' + ROLE_NAME[role], since: st.doc?.status_at };
   };
 }
 export const initialOf = (n: string) => (n.replace(/\(.*?\)/g, '').trim().split(' ').filter(Boolean)[0]?.[0] ?? '?').toUpperCase();

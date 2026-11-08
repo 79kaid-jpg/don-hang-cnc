@@ -1,3 +1,4 @@
+import { LoginAs } from '../components/LoginAs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, errText, type Customer, type Order } from '../lib/supabase';
@@ -210,7 +211,7 @@ export default function Board() {
                           return <span key={co} className={'kb-co ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
-                          {h && <span className="kb-who" title={h.what}><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</span>}
+                          {h && <LoginAs uid={h.uid} name={h.who} className="kb-who"><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</LoginAs>}
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
                         {it.act && <div className="kb-acts">
                           {it.key === 'ky' ? <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>Tải bản {FINAL[qt].toLowerCase()} →</Link>
