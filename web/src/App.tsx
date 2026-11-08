@@ -17,6 +17,7 @@ import FlowMap from './pages/FlowMap';
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
 import { Bell } from './components/Bell';
+import { AccountMenu } from './components/AccountMenu';
 import { ShortcutHost } from './components/Shortcuts';
 import WfHome from './wf/WfHome';
 import WfEditor from './wf/WfEditor';
@@ -97,15 +98,7 @@ function Shell() {
           {items.map((i) => (
             <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" title={i.label} onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
         </nav>
-        <div className="side-foot">
-          <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
-            <span style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{me.full_name}</b><span className="small muted">{me.unit}</span></span></div>
-          <details className="nav-appear"><summary className="nav-item" title="Giao diện"><Icon name="sun" />Giao diện</summary><Appearance /></details>
-          <NavLink to="/cai-app" className="nav-item" title="Hướng dẫn"><Icon name="download" />Hướng dẫn</NavLink>
-          <button title="Phím tắt" className="nav-item kbd-link" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => dispatchEvent(new Event('show-shortcuts'))}><Icon name="list" />Phím tắt<kbd>?</kbd></button>
-          <NavLink to="/zalo" className="nav-item" title="Thông báo Zalo"><Icon name="bell" />Thông báo Zalo{me.zalo_chat_id ? '' : <span className="nav-badge" aria-label="chưa liên kết">!</span>}</NavLink>
-          <button className="nav-item" title="Đăng xuất" style={{ border: 0, background: 'transparent', font: 'inherit' }} onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
-        </div>
+        <AccountMenu me={me} initial={initial} />
       </aside>
 
       <header className="topbar">
