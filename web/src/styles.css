@@ -1756,3 +1756,9 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .acc-out button,.acc-out svg{color:#b42318}
 .app.side-hidden:not(.side-peek) .acc-id,.app.side-hidden:not(.side-peek) .acc-chev{display:none}
 .app.side-hidden:not(.side-peek) .acc-btn{justify-content:center;padding:8px 0}
+
+/* ===== Lưu nháp ===== */
+.pp-save{display:inline-flex;align-items:center;gap:10px;margin-right:auto;flex-wrap:wrap}
+.pp-dirty{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#1d7a46}
+.pp-dirty.on{color:#8a5a00;font-weight:600}
+.pp-dirty i{width:8px;height:8px;border-radius:50%;background:#f59e0b}

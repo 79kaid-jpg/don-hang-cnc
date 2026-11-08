@@ -10,7 +10,7 @@ import { Journey } from './Journey';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
-import { toast } from './ui';
+import { confirmDialog, toast } from './ui';
 import { useAuth } from '../lib/auth';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -147,6 +147,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: t, p_files: files });
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
   };
+  useUnsavedGuard(dirty);
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
@@ -228,12 +229,39 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
             <label className="f">{ask === 'fail' ? 'Lý do Fail (hao hụt lớn, vượt dự toán, không sản xuất được…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
             <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
               <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Đánh Fail' : 'Trả về'}</button></div></div>) : (<>
+            <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
             {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
             {proc === 'QT0' && d.status === 'duyet' && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Từ chối · Fail</button>}
             <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button></>)}
         </div>)}
+      {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       <Journey d={d} proc={proc} people={people} />
     </section>);
+}
+
+/** Trạng thái lưu + nút Lưu nháp cạnh nút Ký */
+function SaveState({ editable, dirty, busy, onSave }: { editable: boolean; dirty: boolean; busy: boolean; onSave: () => void }) {
+  if (!editable) return null;
+  return <span className="pp-save">
+    <span className={'pp-dirty' + (dirty ? ' on' : '')} role="status">{dirty ? <><i aria-hidden="true" />Có thay đổi chưa lưu</> : <><Icon name="check" size={14} />Đã lưu</>}</span>
+    <button className="btn" disabled={!dirty || busy} onClick={onSave}>Lưu nháp</button></span>;
+}
+
+/** Còn thay đổi chưa lưu: hỏi trước khi rời trang (đóng tab, bấm liên kết trong app) */
+function useUnsavedGuard(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) return;
+    const bu = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    const click = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a || a.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey || a.closest('.pp-files')) return;
+      const href = a.getAttribute('href') ?? ''; if (!href.startsWith('#')) return;
+      e.preventDefault(); e.stopPropagation();
+      confirmDialog('Phiếu còn thay đổi chưa lưu. Rời trang sẽ mất các thay đổi này.', 'Rời trang, bỏ thay đổi').then((ok) => { if (ok) location.hash = href.slice(1); });
+    };
+    addEventListener('beforeunload', bu); document.addEventListener('click', click, true);
+    return () => { removeEventListener('beforeunload', bu); document.removeEventListener('click', click, true); };
+  }, [dirty]);
 }
 
 function Qt1Total({ rows, vat }: { rows: Row[]; vat: number }) {
