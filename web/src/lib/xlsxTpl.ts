@@ -133,6 +133,10 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
     const loops: { row: number; key: string }[] = [];
     ws.eachRow((r, n) => r.eachCell((c) => { const m = cellText(c).match(/\{#([a-z0-9_]+)\}/i); if (m) loops.push({ row: n, key: m[1] }); }));
     loops.sort((a, z) => z.row - a.row);
+    // dòng trống (không chữ, không viền) trong mẫu – exceljs đôi khi để lại viền rác khi chèn dòng, sẽ dọn lại sau
+    const blank: number[] = []; const last = ws.rowCount + 3;
+    for (let n = 1; n <= last; n++) { let used = false; ws.getRow(n).eachCell((c) => { const b = c.border ?? {}; if ((c.value != null && cellText(c) !== '') || b.top || b.bottom || b.left || b.right) used = true; }); if (!used) blank.push(n); }
+    const shiftOf = (n: number) => loops.reduce((a, L) => a + (L.row < n ? Math.max(0, (data.tables[L.key] ?? []).length - 1) : 0), 0);
     for (const L of loops) {
       const items = data.tables[L.key] ?? []; const k = Math.max(0, items.length - 1);
       const merges: string[] = [...((ws.model as unknown as { merges: string[] }).merges ?? [])];
@@ -154,6 +158,7 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
           c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(data.vars[name] ?? ''))); });
         r.commit(); }
     }
+    for (const n of blank) { const r = ws.getRow(n + shiftOf(n)); r.eachCell({ includeEmpty: true }, (c) => { if (c.value == null || cellText(c) === '') c.style = {}; }); }
     // ảnh: ô chỉ chứa {ben_ban_logo} / {kh_logo} → đặt ảnh vừa khít vùng ô (giữ tỉ lệ)
     const mg: string[] = (ws.model as unknown as { merges: string[] }).merges ?? [];
     ws.eachRow((r, rn) => r.eachCell((c, cn) => { const m = cellText(c).match(/^\s*\{([a-z0-9_]+_logo)\}\s*$/i); if (!m) return; c.value = '';
@@ -214,10 +219,10 @@ export function toHtml(wb: ExcelJS.Workbook): string {
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');
       // Như Excel: chữ không xuống dòng được tràn sang các ô trống bên phải
       let spill = 1;
-      if (!sp && v && !a.wrapText && (a.horizontal ?? 'left') === 'left' && typeof raw !== 'number') {
+      if (!sp && v && !a.wrapText && (a.horizontal ?? 'left') === 'left' && typeof raw !== 'number' && !b.right?.style) {
         for (const n of vcols.filter((x) => x > c)) { if (hide.has(r + ':' + n)) { if (skip.has(n)) continue; break; }
           const nv = ws.getCell(r, n).value; if (nv != null && String(nv).trim() !== '') break;
-          const ns = span[r + ':' + n]; if (ns && ns[0] > 1) break;
+          const ns = span[r + ':' + n]; if (ns && ns[0] > 1) break; const nb = ws.getCell(r, n).border; if (nb?.left?.style || nb?.right?.style) break;
           skip.add(n); spill++; if (ns) vcols.filter((x) => x > n && x < n + ns[1]).forEach((x) => { skip.add(x); spill++; }); } }
       h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st}">${esc(v)}</td>`; }
     h += '</tr>'; }
