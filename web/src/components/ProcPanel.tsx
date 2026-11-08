@@ -144,7 +144,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
   const [ship, setShip] = useState<string[]>([]); const [carriers, setCarriers] = useState<Customer[]>([]);
-  useEffect(() => { if (hFields.some((f) => f.type === 'carrier')) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasCarrier = hFields.some((f) => f.type === 'carrier');
+  useEffect(() => { if (hasCarrier) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc, hasCarrier]); // eslint-disable-line react-hooks/exhaustive-deps
   const plates = carriers.find((c) => c.id === h.dvvc)?.vehicles ?? [];
   useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'dk_giao')) return;
     sb.from('customers').select('*').then(({ data }) => { const cs = (data as Customer[]) ?? []; const { buyer } = parties(o, d.company, proc, cs);
