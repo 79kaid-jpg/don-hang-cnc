@@ -87,7 +87,7 @@ export default function FlowMap() {
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').order('created_at', { ascending: false }).then(({ data }) => setOrders((data as Order[]) ?? []));
     sb.from('batches').select('*').neq('status', 'huy').then(({ data }) => setBs((data as Batch[]) ?? []));
-    sb.from('docs').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
+    sb.from('docs_v').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
   }, []);
   // chọn một đơn → tự mở QT mà đơn đang chạy (thay vì giữ tab cũ nơi đơn chưa có hồ sơ)
   const jumped = useRef('');

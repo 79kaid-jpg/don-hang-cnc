@@ -42,7 +42,7 @@ export default function Dashboard() {
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').then(({ data }) => setOs((data as Order[]) ?? []));
     sb.from('batches').select('*').neq('status', 'huy').then(({ data }) => setBs((data as Batch[]) ?? []));
-    sb.from('docs').select('id, batch_id, company, status, status_at, created_at, signs').then(({ data }) => setDs((data as D[]) ?? []));
+    sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at, signs').then(({ data }) => setDs((data as D[]) ?? []));
   }, []);
 
   const M = useMemo(() => {

@@ -8,7 +8,8 @@ export type Perm = 'hide' | 'view' | 'edit' | 'required';
 export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier';
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
-  decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>> };
+  decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>>;
+  /** Trường nhạy cảm: chỉ người được cấp mới xem (máy chủ che giá trị) */ restricted?: boolean; view_roles?: string[]; view_users?: string[]; view_approver?: boolean };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
 export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển' };

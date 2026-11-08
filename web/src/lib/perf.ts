@@ -32,7 +32,7 @@ export function usePerf() {
   const [st, setSt] = useState<{ cfg: PerfCfg; people: Profile[]; bs: Batch[]; ds: D[]; cp: CP[]; groups: { id: string; member_ids: string[] }[] } | null>(null);
   const load = () => Promise.all([
     sb.from('perf_config').select('cfg').eq('id', 1).maybeSingle(), sb.from('profiles').select('*').eq('active', true),
-    sb.from('batches').select('*').neq('status', 'huy'), sb.from('docs').select('id, batch_id, company, status, status_at, created_at, signs'),
+    sb.from('batches').select('*').neq('status', 'huy'), sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at, signs'),
     sb.from('chain_people').select('proc, company, role, user_id, group_id'), sb.from('work_groups').select('id, member_ids')
   ]).then(([c, p, b, d, cp, g]) => setSt({ cfg: { ...DEFAULT_CFG, ...((c.data?.cfg as PerfCfg) ?? {}) }, people: (p.data as Profile[]) ?? [], bs: (b.data as Batch[]) ?? [],
     ds: (d.data as D[]) ?? [], cp: (cp.data as CP[]) ?? [], groups: (g.data as { id: string; member_ids: string[] }[]) ?? [] }));

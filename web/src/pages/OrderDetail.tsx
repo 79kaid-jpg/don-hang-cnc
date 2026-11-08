@@ -49,7 +49,7 @@ export default function OrderDetail() {
     setCust(Object.fromEntries(((h.data as Customer[]) ?? []).map((x) => [x.id, x])));
     setEvents((i.data as Ev[]) ?? []);
     const b = (j.data as Batch[]) ?? []; setBs(b);
-    if (b.length) { const { data } = await sb.from('docs').select('*').in('batch_id', b.map((x) => x.id)); setDs((data as Doc[]) ?? []); } else setDs([]);
+    if (b.length) { const { data } = await sb.from('docs_v').select('*').in('batch_id', b.map((x) => x.id)); setDs((data as Doc[]) ?? []); } else setDs([]);
   }, [id]);
   useEffect(() => { load(); }, [load]);
 

@@ -31,7 +31,7 @@ export default function Board() {
   const load = async () => {
     const [a, b, c, d, e] = await Promise.all([
       sb.from('batches').select('*').or(`status.in.(dang_lam,cho_ky),and(status.in.(hoan_tat,fail),done_at.gte.${new Date(Date.now() - 14 * 864e5).toISOString()})`).order('created_at'),
-      sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs').select('*')]);
+      sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs_v').select('*')]);
     setBatches((a.data as Batch[]) ?? []); setOrders(Object.fromEntries(((b.data as Order[]) ?? []).map((x) => [x.id, x])));
     setCust(Object.fromEntries(((c.data as Customer[]) ?? []).map((x) => [x.id, x]))); setMine((d.data as Mine[]) ?? []); setDocs((e.data as Doc[]) ?? []);
   };

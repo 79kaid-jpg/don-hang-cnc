@@ -14,6 +14,7 @@ import { useAuth } from '../lib/auth';
 import { PerfAdmin } from '../components/Perf';
 import { ApprovalFlows } from '../components/ApprovalFlows';
 import { PrintTemplates } from '../components/PrintTpl';
+import { UserAccount, UserDataAccess } from '../components/UserSecurity';
 
 type Step = { id: string; doc_type: string; step_no: number; label: string; approver_id: string | null; hours: number };
 const UNITS = ['CNC', 'IPC', 'HANWA', 'IT', 'KHAC'];
@@ -191,6 +192,8 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
           </label>))}
       </section>
 
+      <UserDataAccess p={p} roles={f.roles} />
+      <UserAccount p={p} isMe={isMe} onDeleted={() => { onSaved(); onBack(); }} />
       <Msg err={err} />
       <div className="savebar">
         <span className="small muted" style={{ flex: 1 }}>{dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu'}</span>
@@ -201,13 +204,14 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
 }
 
 const ROLE_HINT: Record<string, string> = {
-  admin_it: 'Toàn quyền, quản trị, đăng nhập với tư cách người khác',
+  admin_it: 'Toàn quyền, thấy dữ liệu cả 3 công ty, quản trị, đăng nhập với tư cách người khác',
+  giam_doc: 'Thấy các trường nhạy cảm (giá, tiền) của công ty mình – theo cấu hình Trường dữ liệu',
   kinh_doanh: 'Tạo đơn, F0, sửa F1, lập XNĐH, ghi khách xác nhận',
   ky_thuat: 'Bóc tách F1', kiem_tra_f1: 'Kiểm tra F1 (ĐK1)',
   admin_cnc: 'Lập XNĐH, LGC, bàn giao, LGH chặng 1',
-  ke_hoach: 'Dự toán NVL (giai đoạn sau)', mua_hang: 'PO (giai đoạn sau)', kho_qc: 'Nhập kho, QC, giao hàng – không thấy giá',
-  ipc: 'Phần IPC của LGC, LGH chặng 2', duyet: 'Xem giá; duyệt các cấp được gán',
-  thiet_ke_qt: 'Tạo, sửa, chạy thử, phát hành quy trình của mình; xoá khi chưa có công việc', xem: 'Chỉ xem, có thấy giá'
+  ke_hoach: 'Dự toán NVL (giai đoạn sau)', mua_hang: 'PO (giai đoạn sau)', kho_qc: 'Nhập kho, QC, giao hàng',
+  ipc: 'Phần IPC của LGC, LGH chặng 2', duyet: 'Duyệt các cấp được gán (người duyệt QT1 thấy giá của công ty mình)',
+  thiet_ke_qt: 'Tạo, sửa, chạy thử, phát hành quy trình của mình; xoá khi chưa có công việc', xem: 'Chỉ xem hồ sơ của công ty mình (không thấy giá)'
 };
 
 function Flows({ steps, people, onSaved }: { steps: Step[]; people: Profile[]; onSaved: () => void }) {

@@ -92,7 +92,7 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
   const dl = async (t: Tpl) => { const b = await loadBuf(t); const u = URL.createObjectURL(new Blob([b])); const a = document.createElement('a'); a.href = u; a.download = t.file_name ?? 'mau.xlsx'; a.click(); };
   const test = async (t: Tpl) => { setBusy(true);
     try {
-      let q = sb.from('docs').select('*, batches!inner(*)').eq('batches.proc', proc).order('status_at', { ascending: false }).limit(1); if (t.company) q = q.eq('company', t.company);
+      let q = sb.from('docs_v').select('*, batches!inner(*)').eq('batches.proc', proc).order('status_at', { ascending: false }).limit(1); if (t.company) q = q.eq('company', t.company);
       const { data: ds } = await q; const d = (ds as (Doc & { batches: Batch })[] | null)?.[0]; if (!d) { toast('Chưa có phiếu ' + proc + ' nào để thử'); setBusy(false); return; }
       const { data: o } = await sb.from('orders').select('*').eq('id', d.batches.order_id).single(); const { data: ps } = await sb.from('profiles').select('*');
       const people = Object.fromEntries(((ps as Profile[]) ?? []).map((p) => [p.id, p]));

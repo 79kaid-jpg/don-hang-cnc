@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { sb, errText } from '../lib/supabase';
+import { sb, errText, type Profile } from '../lib/supabase';
+import { ROLES } from '../lib/format';
 import { COMPANY, PROC_NAME, STATUS, type Proc } from '../lib/proc';
 import { f0Perm, type FProc, allFields, companiesOf, defaultPerm, loadFields, slug, stepsOf, tablesOf, useFields, PERM_NAME, TYPE_NAME, type Area, type FDef, type FType, type Perm } from '../lib/fields';
 import { Icon } from './Icon';
@@ -65,7 +66,7 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
     if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; setX({ ...x, perms: p }); };
   const setAll = (s: string, v: string) => { const p = { ...(x.perms ?? {}) }; for (const c of cos) { const row = { ...(p[c] ?? {}) }; if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; } setX({ ...x, perms: p }); };
   const save = async () => { setBusy(true);
-    const { error } = await sb.from('proc_fields').update({ label: x.label.trim() || f.label, type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, updated_at: new Date().toISOString() }).eq('id', f.id!);
+    const { error } = await sb.from('proc_fields').update({ label: x.label.trim() || f.label, type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, restricted: !!x.restricted, view_roles: x.view_roles ?? [], view_users: x.view_users ?? [], view_approver: !!x.view_approver, updated_at: new Date().toISOString() }).eq('id', f.id!);
     setBusy(false); if (error) return toast(errText(error)); toast('Đã lưu ' + x.label); loadFields(); };
   const del = async () => { if (!(await confirmDialog(`Ẩn hẳn “${f.label}”? Dữ liệu đã nhập vẫn được giữ, có thể bật lại.`, 'Ẩn trường'))) return;
     await sb.from('proc_fields').update({ active: false }).eq('id', f.id!); loadFields(); };
@@ -75,7 +76,7 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
         {canEdit && <span className="fa-mv"><button className="link-btn" disabled={first} onClick={() => onMove(-1)} aria-label="Lên"><Chev up /></button>
           <button className="link-btn" disabled={last} onClick={() => onMove(1)} aria-label="Xuống"><Chev /></button></span>}
         <button className="fa-main" onClick={onOpen} aria-expanded={open}>
-          <span className="fa-lb">{f.label}{!f.active && <span className="fa-tag">đã ẩn</span>}{f.sys && <span className="fa-tag">{proc === 'F0' ? 'có sẵn' : 'tự tính'}</span>}</span>
+          <span className="fa-lb">{f.label}{f.restricted && <span className="fa-tag lock" title="Trường nhạy cảm – chỉ người được cấp quyền mới thấy">🔒 hạn chế</span>}{!f.active && <span className="fa-tag">đã ẩn</span>}{f.sys && <span className="fa-tag">{proc === 'F0' ? 'có sẵn' : 'tự tính'}</span>}</span>
           <span className="small muted">{f0 && f0Perm(x) !== 'edit' && <span className="fa-req">{PERM_NAME[f0Perm(x)]} · </span>}{TYPE_NAME[f.type]}{f.area !== 'file' ? ' · {' + (f.area === 'col' ? f.tbl + '.' : '') + f.key + '}' : ''}
             {reqs.length > 0 && <span className="fa-req"> · Bắt buộc: {reqs.slice(0, 3).join(', ')}{reqs.length > 3 ? '…' : ''}</span>}{hides > 0 && ' · ẩn ' + hides + ' ô'}</span>
         </button>
@@ -103,6 +104,7 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
                 <option value="">{PERM_NAME[defaultPerm(proc, s)]} (mặc định)</option>
                 {PERMS.filter((p) => !(f.sys && (p === 'edit' || p === 'required'))).map((p) => <option key={p} value={p}>{PERM_NAME[p]}</option>)}</select></td>; })}</tr>)}</tbody>
         </table></div></>}
+        {!f0 && <ViewAccess x={x} setX={setX} canEdit={canEdit} />}
         {canEdit && <div className="row fa-act">
           {!f.sys && (f.active ? <button className="btn sm" onClick={del}><Icon name="eyeoff" size={15} />Ẩn trường</button>
             : <button className="btn sm" onClick={() => setX({ ...x, active: true })}><Icon name="eye" size={15} />Bật lại</button>)}
@@ -111,4 +113,31 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
           <button className="btn sm primary" disabled={!dirty || busy} onClick={save}>{busy ? 'Đang lưu…' : dirty ? 'Lưu' : 'Đã lưu'}</button></div>}
       </div>}
     </li>);
+}
+
+/** Ai được xem trường này (thực thi ở máy chủ). Không bật = ai xem được hồ sơ thì thấy. */
+let peopleCache: Profile[] | null = null;
+function ViewAccess({ x, setX, canEdit }: { x: FDef; setX: (f: FDef) => void; canEdit: boolean }) {
+  const [people, setPeople] = useState<Profile[]>(peopleCache ?? []);
+  useEffect(() => { if (!peopleCache) sb.from('profiles').select('*').eq('active', true).order('full_name').then(({ data }) => { peopleCache = (data as Profile[]) ?? []; setPeople(peopleCache); }); }, []);
+  const roles = x.view_roles ?? []; const users = x.view_users ?? [];
+  const tog = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((a) => a !== v) : [...arr, v]);
+  return (
+    <div className="fa-va">
+      <label className="switch-row"><span><b>Trường nhạy cảm (hạn chế người xem)</b><br /><span className="small muted">Bật để chỉ những người dưới đây thấy và nhập được. Người khác không thấy cột / ô này, kể cả trên bản in và PDF. Admin IT luôn thấy.</span></span>
+        <input type="checkbox" className="switch" disabled={!canEdit} checked={!!x.restricted} onChange={(e) => setX({ ...x, restricted: e.target.checked })} /></label>
+      {x.restricted && <>
+        <label className="role-row"><input type="checkbox" disabled={!canEdit} checked={!!x.view_approver} onChange={(e) => setX({ ...x, view_approver: e.target.checked })} />
+          <span><b>Người duyệt của công ty đó</b><br /><span className="small muted">Người phụ trách bước Duyệt / Duyệt thêm của quy trình này</span></span></label>
+        <div className="f"><span>Vai trò được xem <span className="small muted">(trong cùng công ty)</span></span>
+          <div className="chips">{Object.entries(ROLES).filter(([k]) => k !== 'admin_it').map(([k, t]) => (
+            <button key={k} type="button" disabled={!canEdit} className={'pill-toggle' + (roles.includes(k) ? ' on' : '')} aria-pressed={roles.includes(k)} onClick={() => setX({ ...x, view_roles: tog(roles, k) })}>{t}</button>))}</div></div>
+        <div className="f"><span>Người cụ thể được xem</span>
+          <div className="chips">{users.map((id) => { const p = people.find((q) => q.id === id); return (
+            <span key={id} className="pill-toggle on">{p?.full_name ?? id.slice(0, 8)} · {p?.unit}{canEdit && <button type="button" className="link-btn" aria-label="Bỏ" onClick={() => setX({ ...x, view_users: users.filter((u) => u !== id) })}>✕</button>}</span>); })}
+            {canEdit && <select value="" aria-label="Thêm người" onChange={(e) => e.target.value && setX({ ...x, view_users: [...users, e.target.value] })}>
+              <option value="">+ Thêm người…</option>{people.filter((p) => !users.includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.full_name} · {p.unit}</option>)}</select>}</div>
+          <span className="small muted">Người cụ thể chỉ thấy ở hồ sơ của công ty họ (công ty khác vẫn bị chặn).</span></div>
+      </>}
+    </div>);
 }

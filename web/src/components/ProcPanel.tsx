@@ -26,13 +26,13 @@ export default function ProcPanel({ o, proc, people }: { o: Order; proc: Proc; p
   const load = useCallback(async () => {
     const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
     const bs = (b as Batch[]) ?? []; setBatches(bs);
-    if (bs.length) { const { data: d } = await sb.from('docs').select('*').in('batch_id', bs.map((x) => x.id)); setDocs((d as Doc[]) ?? []); } else setDocs([]);
+    if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); setDocs((d as Doc[]) ?? []); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
   const B = batches?.find((x) => x.id === bid) ?? batches?.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches?.at(-1);
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
   const cur = [...bDocs].sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
-  const D = bDocs.find((d) => d.company === co) ?? cur;
+  const D = bDocs.find((d) => d.company === co) ?? (cur?.can_view === false ? bDocs.filter((x) => x.can_view !== false).at(-1) ?? cur : cur);
   if (!batches) return <div className="card muted">Đang tải {proc}…</div>;
   return (
     <div className="pp">
@@ -54,7 +54,9 @@ export default function ProcPanel({ o, proc, people }: { o: Order; proc: Proc; p
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
         {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Thất bại – đã dừng. {B.proc === 'QT0' ? 'Mở “lần bóc tách mới”' : 'Mở lượt mới'} nếu cần làm lại.</span></div>}
         {B && B.proc === 'QT2' && <Check5 b={B} />}
-        {D && B && <DocView key={D.id + D.status} o={o} b={B} d={D} people={people} onChanged={load} />}
+        {D && B && D.can_view === false && <div className="card lock-card"><Icon name="shield" size={22} /><div><b>Hồ sơ của {COMPANY[D.company]}</b><br />
+          <span className="small muted">Bạn chỉ xem được hồ sơ của công ty mình. Tiến độ: {D.status === 'da_duyet' ? 'đã duyệt' : D.status === 'fail' ? 'thất bại' : 'đang xử lý'}.</span></div></div>}
+        {D && B && D.can_view !== false && <DocView key={D.id + D.status} o={o} b={B} d={D} people={people} onChanged={load} />}
       </>)}
     </div>);
 }
@@ -138,7 +140,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const pm = (f: FDef) => permOf(f, d.company, d.status, proc);
   const adm = useAuth().can('admin_it');
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
-  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide');
+  const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
+  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
   const [ship, setShip] = useState<string[]>([]); const [carriers, setCarriers] = useState<Customer[]>([]);
   useEffect(() => { if (hFields.some((f) => f.type === 'carrier')) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -148,7 +151,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
-    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' ? [] : [{ ...c, ro: !adm && !(p === 'edit' || p === 'required'), req: p === 'required' }]; });
+    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: !adm && !(p === 'edit' || p === 'required'), req: p === 'required' }]; });
     return { key, title: TABLES[def].t, cols, ed: adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan')) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
@@ -247,7 +250,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {tblDefs.map(({ key, title, cols, ed }) => (
         <TableEdit key={key} title={title} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${o.code}-${proc}-${key}`} />))}
-      {proc === 'QT1' && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
+      {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
       <div className="pp-notes">

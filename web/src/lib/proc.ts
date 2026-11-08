@@ -2,7 +2,7 @@
 export type Proc = 'QT0' | 'QT1' | 'QT2' | 'QT3';
 export type Company = 'PN' | 'IPC' | 'HW';
 export type Row = Record<string, string | number | null>;
-export type Doc = { id: string; batch_id: string; company: Company; status: string; header: Record<string, string>; tables: Record<string, Row[]>;
+export type Doc = { can_view?: boolean; hidden?: string[]; id: string; batch_id: string; company: Company; status: string; header: Record<string, string>; tables: Record<string, Row[]>;
   files: { kind: string; name: string; path: string; at?: string }[]; notes: { role: string; user: string; at: string; text: string }[];
   signs: { role: string; user: string; at: string; action: string; note?: string }[]; status_at: string; created_at: string };
 export type Batch = { id: string; order_id: string; proc: Proc; seq: number; title: string; status: 'dang_lam' | 'cho_ky' | 'hoan_tat' | 'fail' | 'huy';

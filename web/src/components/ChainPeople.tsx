@@ -20,7 +20,7 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
     const { error } = await sb.from('chain_people').upsert(rec); if (error) { setErr(errText(error)); return; } load();
     if (!rec.user_id) return;
     // Phiếu đang mở ở bước này: hỏi có giao luôn cho người mới (kèm Zalo) không
-    const { data: ds } = await sb.from('docs').select('id, status, batches!inner(proc, status)').eq('company', c).eq('batches.proc', p).eq('batches.status', 'dang_lam');
+    const { data: ds } = await sb.from('docs_v').select('id, status, batches!inner(proc, status)').eq('company', c).eq('batches.proc', p).eq('batches.status', 'dang_lam');
     const ROLE: Record<string, string> = p === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
     const n = ((ds as { status: string }[]) ?? []).filter((d) => ROLE[d.status] === r).length;
     if (!n) return;

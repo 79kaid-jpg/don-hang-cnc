@@ -20,7 +20,7 @@ export default function Orders() {
   useEffect(() => {
     sb.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => setRows((data as Order[]) ?? []));
     sb.from('batches').select('*').then(({ data }) => setBs((data as Batch[]) ?? []));
-    sb.from('docs').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
+    sb.from('docs_v').select('id, batch_id, company, status, status_at').then(({ data }) => setDs((data as Doc[]) ?? []));
     sb.from('customers').select('*').then(({ data }) => setCust(Object.fromEntries(((data as Customer[]) ?? []).map((c) => [c.id, c]))));
   }, []);
   const info = (o: Order) => {

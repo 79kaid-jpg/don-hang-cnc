@@ -42,7 +42,7 @@ export default function MyWork() {
   const [st, setSt] = useState<{ run: number; late: number; stuck: number } | null>(null);
   const [mine, setMine] = useState<{ id: string; order_id: string; proc: Proc; code: string; title: string; action: string; at: string }[]>([]);
   useEffect(() => { if (!me) return;
-    Promise.all([sb.from('orders').select('id, code, due_date, status'), sb.from('batches').select('id, order_id, proc, title, status'), sb.from('docs').select('id, batch_id, status_at, signs')]).then(([o, b, d]) => {
+    Promise.all([sb.from('orders').select('id, code, due_date, status'), sb.from('batches').select('id, order_id, proc, title, status'), sb.from('docs_v').select('id, batch_id, status_at, signs')]).then(([o, b, d]) => {
       const os = (o.data ?? []) as Pick<Order, 'id' | 'code' | 'due_date' | 'status'>[]; const bs = (b.data ?? []) as Batch[]; const ds = (d.data ?? []) as Doc[];
       const live = bs.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky');
       const last = (id: string) => ds.filter((x) => x.batch_id === id).map((x) => x.status_at).sort().pop();

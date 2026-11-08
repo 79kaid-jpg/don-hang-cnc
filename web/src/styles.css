@@ -736,7 +736,7 @@ g.on .sw-e{stroke:#5B8FCB;stroke-width:2.4}
 .as-btn:active{transform:translateY(-50%) scale(.95)}.as-btn:focus-visible{outline:2px solid var(--brand,#1c1917);outline-offset:2px}
 .as-btn::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:50%;transform:translateX(50%);white-space:nowrap;background:#1c1917;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s}
 .as-btn:hover::after,.as-btn:focus-visible::after{opacity:1}
-.unit-seg{flex-wrap:wrap;margin-bottom:8px}.unit-seg button{display:inline-flex;align-items:center;gap:6px}.u-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.u-CNC{background:#2563eb}.u-IPC{background:#16a34a}.u-HANWHA{background:#ea580c}.u-IT{background:#7c3aed}.u-KHAC{background:#78716c}
+.unit-seg{flex-wrap:wrap;margin-bottom:8px}.unit-seg button{display:inline-flex;align-items:center;gap:6px}.u-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.u-CNC{background:#2563eb}.u-IPC{background:#16a34a}.u-HANWA{background:#ea580c}.u-IT{background:#7c3aed}.u-KHAC{background:#78716c}
 
 .tbl-cards tr.st-done{background:#f0f7f1}.tbl-cards tr.st-done td:first-child{box-shadow:inset 4px 0 0 #2f8a4b}
 .tbl-cards tr.st-late{background:#fdf2f1}.tbl-cards tr.st-late td:first-child{box-shadow:inset 4px 0 0 #c2410c}
@@ -1485,7 +1485,7 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .adm2-open>svg{color:#A9B0B9}
 .adm2-av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:#E6E9ED;color:#3E4651;position:relative}
 .adm2-av::after{content:'';position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface);background:#A9B0B9}
-.adm2-av.u-CNC::after{background:#3A6EA5}.adm2-av.u-IPC::after{background:#16A34A}.adm2-av.u-HANWHA::after{background:#EA580C}.adm2-av.u-IT::after{background:#7C3AED}
+.adm2-av.u-CNC::after{background:#3A6EA5}.adm2-av.u-IPC::after{background:#16A34A}.adm2-av.u-HANWA::after{background:#EA580C}.adm2-av.u-IT::after{background:#7C3AED}
 .adm2-who{display:flex;flex-direction:column;min-width:0}
 .adm2-who b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .adm2-who .small{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1820,3 +1820,8 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .kb-co.ok{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}
 .kb-co.bad{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
 .kb-co.cur{color:#b45309;border-color:#fde68a;background:#fffbeb}
+
+.lock-card{display:flex;gap:12px;align-items:center;color:var(--muted,#64748b)}
+.fa-va{display:flex;flex-direction:column;gap:10px;margin-top:12px;padding:12px;border:1px dashed var(--line,#e2e8f0);border-radius:10px}
+.fa-va .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fa-tag.lock{background:#fef3c7;color:#92400e}
