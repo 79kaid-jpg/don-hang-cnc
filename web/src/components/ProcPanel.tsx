@@ -14,7 +14,7 @@ import { parties } from '../lib/xlsxTpl';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
-import { Menu, confirmDialog, toast } from './ui';
+import { confirmDialog, toast } from './ui';
 import { useAuth } from '../lib/auth';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -215,11 +215,10 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
           <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
-          {editable && <button className="btn sm" disabled={!dirty} onClick={() => save()}><Icon name="check" size={15} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
+          {editable && <button className="btn xs" disabled={!dirty} onClick={() => save()}><Icon name="check" size={13} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           <PrintTplButton o={o} b={b} d={d} people={people} fallback={() => printDoc(o, b, d, people)} />
-          <Menu icon="more" title="Thao tác khác" items={[
-            { label: 'In bản mặc định của app', icon: 'print', hint: 'Không theo mẫu Excel', onClick: () => printDoc(o, b, d, people) },
-            adm && editable && d.status !== 'da_duyet' && { label: 'Nạp dữ liệu mẫu', icon: 'bolt', hint: 'Admin: điền nhanh ô trống & bảng trống', onClick: fillDemo, sep: true }]} />
+          <button className="btn xs icon-only" title="In bản mặc định của app (không theo mẫu Excel)" aria-label="In bản mặc định" onClick={() => printDoc(o, b, d, people)}><Icon name="file" size={13} /></button>
+          {adm && editable && d.status !== 'da_duyet' && <button className="btn xs icon-only" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" aria-label="Nạp dữ liệu mẫu" onClick={fillDemo}><Icon name="bolt" size={13} /></button>}
         </div>
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
@@ -248,7 +247,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
           <div key={k} className="pp-fk"><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
             <span className="row" style={{ gap: 6 }}>{files.filter((f) => f.kind === k).map((f) => <FileLink key={f.path} f={f} />)}
               {files.filter((f) => f.kind === k).length === 0 && <span className="small muted">chưa có</span>}
-              {canEd({ key: k, label: lab, ...f } as FDef) && <label className="btn sm"><Icon name="upload" size={14} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
+              {canEd({ key: k, label: lab, ...f } as FDef) && <label className="btn xs"><Icon name="upload" size={13} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
       </div>
 
       {tblDefs.map(({ key, title, cols, ed, treq }) => (
@@ -404,13 +403,11 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
       <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span></b>
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
-          <Menu label="Nhập Excel" icon="sheet" items={[
-            { label: 'Tải file Excel lên…', icon: 'upload', hint: 'Đọc theo tên cột ở dòng tiêu đề', onClick: () => fileRef.current?.click() },
-            { label: 'Dán dữ liệu đã chép…', icon: 'copy', hint: 'Hoặc bấm vào một ô rồi nhấn Ctrl+V', onClick: () => setOpen(true) },
-            { label: 'Tải file mẫu', icon: 'download', hint: 'Đúng các cột của bảng này, có 3 dòng ví dụ', onClick: tpl, sep: true }]} />
-          <Menu icon="more" title="Thao tác khác" items={[
-            isAdm && { label: 'Nạp dữ liệu mẫu', icon: 'bolt', hint: 'Admin: thêm 3 dòng ví dụ', onClick: addSample },
-            rows.length > 0 && { label: 'Xoá hết các dòng', icon: 'trash', danger: true, onClick: clearAll, sep: true }]} /></span>}</div>
+          <button className="btn xs" title="Tải file Excel lên (đọc theo tên cột)" onClick={() => fileRef.current?.click()}><Icon name="upload" size={13} />Tải lên</button>
+          <button className="btn xs" title="Dán dữ liệu đã chép từ Excel – hoặc bấm vào một ô rồi Ctrl+V" onClick={() => setOpen(!open)}><Icon name="copy" size={13} />Dán</button>
+          <button className="btn xs" title="Tải file mẫu: đúng các cột của bảng, có 3 dòng ví dụ" onClick={tpl}><Icon name="download" size={13} />Mẫu</button>
+          {isAdm && <button className="btn xs icon-only" title="Admin: nạp 3 dòng dữ liệu mẫu" aria-label="Nạp dữ liệu mẫu" onClick={addSample}><Icon name="bolt" size={13} /></button>}
+          {rows.length > 0 && <button className="btn xs icon-only danger-h" title="Xoá hết các dòng" aria-label="Xoá hết các dòng" onClick={clearAll}><Icon name="trash" size={13} /></button>}</span>}</div>
       {open && <div className="pp-paste"><textarea rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Chép các dòng trong Excel (có hoặc không có dòng tiêu đề) rồi dán vào đây.\nThứ tự cột như bảng: ' + cols.map((c) => c.t).join(' · ')} />
         <button className="btn sm primary" disabled={!paste.trim()} onClick={doPaste}>Thêm vào bảng</button></div>}
       {msg && <div className="small muted">{msg}</div>}

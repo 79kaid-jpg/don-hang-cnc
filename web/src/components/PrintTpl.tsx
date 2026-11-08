@@ -58,11 +58,11 @@ function Preview({ html, title, landscape = true, onXlsx, onTpl, onClose }: { ht
 /** Nút trên phiếu: điền mẫu → xem trước → tải Excel / in PDF */
 export function PrintTplButton({ o, b, d, people, big, fallback }: { o: Order; b: Batch; d: Doc; people: Record<string, Profile>; big?: boolean; fallback?: () => void }) {
   const t = useTpl(b.proc, d.company); const [pv, setPv] = useState<{ html: string; landscape?: boolean; wb: Awaited<ReturnType<typeof render>>['wb'] } | null>(null); const [busy, setBusy] = useState(false);
-  if (!t) return fallback ? <button className="btn sm" onClick={fallback} title="In / lưu PDF (bản in mặc định – chưa có mẫu Excel)"><Icon name="print" size={15} />In</button> : null;
+  if (!t) return fallback ? <button className="btn xs" onClick={fallback} title="In / lưu PDF (bản in mặc định – chưa có mẫu Excel)"><Icon name="print" size={13} />In</button> : null;
   const name = safe(`${t.name}_${o.code}_${d.company}`) + '.xlsx';
   const go = async () => { setBusy(true); try { setPv(await render(t, o, b, d, people)); } catch (e) { toast(errText(e as Error)); } setBusy(false); };
   return <>
-    <button className={'btn sm' + (big ? ' primary pt-big' : '')} disabled={busy} onClick={go}><Icon name={big ? 'file' : 'print'} size={15} />{busy ? 'Đang tạo…' : big ? 'In mẫu cho khách ký' : 'In'}</button>
+    <button className={big ? 'btn sm primary pt-big' : 'btn xs'} disabled={busy} onClick={go} title={big ? undefined : 'In theo mẫu Excel / lưu PDF'}><Icon name={big ? 'file' : 'print'} size={big ? 15 : 13} />{busy ? 'Đang tạo…' : big ? 'In mẫu cho khách ký' : 'In'}</button>
     {pv && <Preview html={pv.html} landscape={pv.landscape} title={t.name + ' · ' + o.code} onXlsx={() => downloadWb(pv.wb, name)} onClose={() => setPv(null)} />}
   </>;
 }

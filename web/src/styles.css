@@ -1847,3 +1847,9 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .mnu-hint{display:block;font-size:12px;color:var(--muted,#64748b);margin-top:1px}
 .mnu-sep{height:1px;background:var(--line,#e2e8f0);margin:5px 4px}
 .req-star{color:var(--red,#dc2626);font-weight:700}
+
+/* Nút nhỏ gọn cho thanh công cụ phiếu / bảng */
+.btn.xs{height:30px;min-height:30px;padding:0 10px;gap:5px;font-size:13px;font-weight:500;border-radius:8px}
+.btn.xs.icon-only{width:30px;padding:0;justify-content:center}
+.btn.xs.danger-h:hover{color:var(--red,#dc2626);border-color:var(--red,#dc2626)}
+.pp-tools{gap:4px!important}
