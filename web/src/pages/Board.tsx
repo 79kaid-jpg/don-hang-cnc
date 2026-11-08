@@ -195,8 +195,13 @@ export default function Board() {
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
-                          <span className="kb-code">{it.o?.code}</span><span className="kb-proj">{it.b.title}</span>
-                          <span className="small muted">{[it.o?.project, cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
+                          <span className="kb-top"><span className="kb-code">{it.o?.code}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
+                            const n = Math.ceil((new Date(dd + 'T23:59:59').getTime() - Date.now()) / 864e5); const done = ['hoan_tat', 'fail'].includes(it.b.status);
+                            const cls = done ? '' : n < 0 ? ' late' : n <= 3 ? ' soon' : '';
+                            return <span className={'kb-due' + cls} title={'Hạn giao ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />Giao {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                              {!done && (n < 0 ? ' · trễ ' + -n + 'n' : n <= 3 ? (n === 0 ? ' · hôm nay' : ' · còn ' + n + 'n') : '')}</span>; })()}</span>
+                          <span className="kb-pj">{(it.o?.project ?? '').replace(/^\[(TEST|MẪU)\]\s*/i, '') || '—'}</span>
+                          <span className="small muted kb-sub">{[it.b.title, (() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
                         {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
                           const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
