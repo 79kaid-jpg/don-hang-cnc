@@ -324,6 +324,7 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 const FILL_COLS = ['don_gia'];
 function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: string; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
   const inCols = cols.filter((c) => !c.calc && !c.ro);
+  const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const set = (i: number, k: string, v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   // Áp dụng một giá trị cho cả cột: từ ô vừa sửa (gợi ý) hoặc từ nút ở tiêu đề cột
@@ -370,6 +371,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     <div className="pp-tbl">
       <div className="row between pp-th"><b>{title} <span className="small muted">· {rows.length} dòng</span></b>
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
+          {isAdm && <button className="btn sm" title="Admin: thêm 3 dòng dữ liệu mẫu vào bảng này" onClick={() => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); }}><Icon name="bolt" size={14} />Nạp dữ liệu</button>}
           <button className="btn sm" onClick={tpl}><Icon name="download" size={14} />Mẫu Excel</button>
           <label className="btn sm"><Icon name="upload" size={14} />Tải Excel<input type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} /></label>
           <button className="btn sm" onClick={() => setOpen(!open)}><Icon name="copy" size={14} />Dán từ Excel</button>
