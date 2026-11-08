@@ -47,9 +47,18 @@ export function CustomerForm({ init, list, onClose, onSaved }: { init: Partial<C
   const dupName = f.name?.trim() && others.find((c) => norm(c.name) === norm(f.name!.trim()));
   const dupTax = f.tax_code?.trim() && others.find((c) => c.tax_code && c.tax_code.trim() === f.tax_code!.trim());
   const dupCode = f.code?.trim() && others.find((c) => c.code.toUpperCase() === f.code!.trim().toUpperCase());
+  const [logo, setLogo] = useState<{ file: File; url: string } | null>(null); const [logoUrl, setLogoUrl] = useState('');
+  useEffect(() => { if (f.logo_path) sb.storage.from('files').createSignedUrl(f.logo_path, 3600).then(({ data }) => setLogoUrl(data?.signedUrl ?? '')); else setLogoUrl(''); }, [f.logo_path]);
+  const pickLogo = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+    if (!/^image\/(png|jpe?g|svg\+xml|webp)$/.test(file.type)) { setErr('Logo phải là ảnh PNG, JPG, SVG hoặc WEBP'); return; }
+    if (file.size > 8 * 1024 * 1024) { setErr('Logo tối đa 8 MB'); return; }
+    setErr(''); setLogo({ file, url: URL.createObjectURL(file) }); };
   const save = async () => { setBusy(true); setErr('');
+    let logo_path = f.logo_path ?? null;
+    if (logo) { const ext = logo.file.name.split('.').pop()?.toLowerCase() || 'png'; const path = `logos/${(f.code ?? 'kh').trim().toUpperCase()}-${Date.now()}.${ext}`;
+      const up = await sb.storage.from('files').upload(path, logo.file, { contentType: logo.file.type }); if (up.error) { setBusy(false); setErr(errText(up.error)); return; } logo_path = path; }
     const row = { code: f.code!.trim().toUpperCase(), name: f.name!.trim(), tax_code: f.tax_code?.trim() || null, address: f.address?.trim() || null, contact: f.contact?.trim() || null,
-      phone: f.phone?.trim() || null, email: f.email?.trim() || null, note: f.note?.trim() || null };
+      phone: f.phone?.trim() || null, email: f.email?.trim() || null, note: f.note?.trim() || null, logo_path };
     const r = init.id ? await sb.from('customers').update(row).eq('id', init.id).select('*').single() : await sb.from('customers').insert(row).select('*').single();
     setBusy(false); if (r.error) setErr(errText(r.error)); else onSaved(r.data as Customer); };
   return (
@@ -63,6 +72,12 @@ export function CustomerForm({ init, list, onClose, onSaved }: { init: Partial<C
         <label className="f">Người liên hệ<input value={f.contact ?? ''} onChange={set('contact')} /></label>
         <label className="f">Điện thoại<input value={f.phone ?? ''} onChange={set('phone')} inputMode="tel" /></label>
         <label className="f f-wide">Email<input type="email" value={f.email ?? ''} onChange={set('email')} /></label>
+        <div className="f f-wide"><span>Logo <small className="muted">· in ở đầu chứng từ khi công ty này là bên bán</small></span>
+          <div className="cp-logo">
+            <span className="cp-logo-box">{logo?.url || logoUrl ? <img src={logo?.url || logoUrl} alt={'Logo ' + (f.name ?? '')} /> : <span className="small muted">Chưa có logo</span>}</span>
+            <span className="row" style={{ gap: 6 }}><label className="btn sm"><Icon name="upload" size={14} />{logo || f.logo_path ? 'Đổi logo' : 'Tải logo'}<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden onChange={pickLogo} /></label>
+              {(logo || f.logo_path) && <button type="button" className="btn sm" onClick={() => { setLogo(null); setF({ ...f, logo_path: null }); }}>Bỏ logo</button>}</span>
+          </div></div>
       </div>
       {(dupName || dupTax || dupCode) && <div className="msg warn" role="alert"><Icon name="alert" size={16} /><span>
         {dupTax ? `MST đã thuộc “${dupTax.name}”. ` : ''}{dupName ? `Đã có khách tên “${dupName.name}”. ` : ''}{dupCode ? `Mã ${dupCode.code} đã dùng cho “${dupCode.name}”.` : ''}</span></div>}

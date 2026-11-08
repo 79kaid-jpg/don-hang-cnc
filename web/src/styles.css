@@ -1784,3 +1784,12 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .pp-grid tbody td[colspan]{text-align:left;width:auto;color:inherit;padding:8px 10px}
 input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!important;box-shadow:0 0 0 2px rgba(217,45,32,.12)}
 .f-err{color:#b42318;font-size:12px}
+.cp-logo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cp-logo-box{width:160px;height:72px;border:1px dashed var(--line);border-radius:10px;display:grid;place-items:center;background:repeating-conic-gradient(#f3f4f6 0 25%,#fff 0 50%) 0 0/14px 14px;overflow:hidden}
+.cp-logo-box img{max-width:92%;max-height:86%;object-fit:contain}
+.ca-nm{display:flex;align-items:center;gap:10px}
+.ca-logo{flex:none;width:56px;height:32px;border-radius:6px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;overflow:hidden;font-size:10.5px;font-weight:700;color:var(--muted)}
+.ca-logo img{max-width:90%;max-height:85%;object-fit:contain}
+.cp-logo-box,.ca-logo{display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box}
+.cp-logo-box img,.ca-logo img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
+.cp-logo-box img{max-width:150px!important;max-height:62px!important;width:auto!important;height:auto!important;min-height:0!important}
