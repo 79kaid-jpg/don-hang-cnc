@@ -1853,3 +1853,5 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .btn.xs.icon-only{width:30px;padding:0;justify-content:center}
 .btn.xs.danger-h:hover{color:var(--red,#dc2626);border-color:var(--red,#dc2626)}
 .pp-tools{gap:4px!important}
+/* Sidebar (và popup Thông báo bên trong) luôn nằm trên nội dung trang */
+.side{z-index:45}
