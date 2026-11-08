@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
 
-const PROCS: Proc[] = ['QT1', 'QT2', 'QT3', 'QT0'];
+const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const CO: Record<string, string> = { '': 'Cả 3 công ty', PN: 'Phương Nam', IPC: 'IPC', HW: 'Hanwha' };
 const loadBuf = async (t: Tpl) => { const { data, error } = await sb.storage.from('files').download(t.path); if (error || !data) throw error ?? new Error('Không tải được mẫu'); return data.arrayBuffer(); };
 const safe = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^\w.-]+/g, '_');
@@ -62,7 +62,7 @@ export function PrintTplButton({ o, b, d, people, big }: { o: Order; b: Batch; d
 
 /** Quản trị → Mẫu in */
 export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
-  const [proc, setProc] = useState<Proc>('QT2'); const [list, setList] = useState<Tpl[]>([]);
+  const [proc, setProc] = useState<Proc>('QT1'); const [list, setList] = useState<Tpl[]>([]);
   const [up, setUp] = useState<{ file: File; buf: ArrayBuffer; vars: string[]; name: string; company: string } | null>(null); const [busy, setBusy] = useState(false);
   const [pv, setPv] = useState<{ html: string; wb: Awaited<ReturnType<typeof render>>['wb']; t: Tpl } | null>(null);
   const known = new Set(varList(proc).map((v) => v.k));
