@@ -168,6 +168,10 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
         if (lines > 1) r.height = Math.max(r.height ?? 15, lines * 13.5 + 3);
         r.commit(); }
     }
+    // vùng in giãn theo số dòng đã chèn
+    const added = loops.reduce((a, L) => a + Math.max(0, (data.tables[L.key] ?? []).length - 1), 0);
+    const ps = ws.pageSetup as { printArea?: string };
+    if (added && ps.printArea) ps.printArea = ps.printArea.replace(/(\$?[A-Z]+\$?)(\d+)$/, (_m, c, r) => c + (+r + added));
     for (const n of blank) { const r = ws.getRow(n + shiftOf(n)); r.eachCell({ includeEmpty: true }, (c) => { if (c.value == null || cellText(c) === '') c.style = {}; }); }
     // ảnh: ô chỉ chứa {ben_ban_logo} / {kh_logo} → đặt ảnh vừa khít vùng ô (giữ tỉ lệ)
     const mg: string[] = (ws.model as unknown as { merges: string[] }).merges ?? [];
@@ -221,7 +225,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
       const sp = sp0 ? [sp0[0], vcols.filter((x) => x >= c && x < c + sp0[1]).length] as [number, number] : undefined;
       let v = ''; const raw = cell.value as unknown;
       if (raw && typeof raw === 'object' && 'formula' in (raw as object)) { const res = (raw as { result?: unknown }).result; v = res == null ? '' : typeof res === 'number' ? res.toLocaleString('vi-VN') : String(res); }
-      else if (typeof raw === 'number') v = raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
+      else if (typeof raw === 'number') v = /^0+$/.test(String(cell.numFmt ?? '')) ? String(raw).padStart(String(cell.numFmt).length, '0') : raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
       const f = cell.font ?? {}; const a = cell.alignment ?? {}; const b = cell.border ?? {}; const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
       const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
