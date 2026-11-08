@@ -25,7 +25,7 @@ export type Score = {
   overdue: number; sOntime: number; sSpeed: number; sQuality: number; sVolume: number; score: number; ranked: boolean;
   rank: number; rankCo: number; nCo: number; crown: boolean; crownWhy: string[]; prev: number | null; weekly: number[];
 };
-export const UNIT_NAME: Record<string, string> = { CNC: 'Phương Nam CNC', IPC: 'IPC', HANWHA: 'Hanwha', IT: 'IT', KHAC: 'Khác' };
+export const UNIT_NAME: Record<string, string> = { CNC: 'Phương Nam CNC', IPC: 'IPC', HANWA: 'Hanwa', IT: 'IT', KHAC: 'Khác' };
 
 /** Tải dữ liệu một lần, tính điểm cho mọi người theo cấu hình */
 export function usePerf() {

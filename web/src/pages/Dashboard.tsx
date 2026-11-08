@@ -319,7 +319,7 @@ function StepTime({ steps, open }: { steps: { p: Proc; label: string; avg: numbe
     </div>; })}</div>;
 }
 
-/** Ai đang giữ việc: mặc định xếp nhiều → ít; bật "Theo công ty" thì gom PN / IPC / Hanwha, mỗi nhóm xếp nhiều → ít */
+/** Ai đang giữ việc: mặc định xếp nhiều → ít; bật "Theo công ty" thì gom PN / IPC / Hanwa, mỗi nhóm xếp nhiều → ít */
 function People({ people, open }: { people: { who: string; items: Item[]; stuck: number; co: Record<string, number> }[]; open: (t: string, items: Item[], sub?: string) => void }) {
   const [by, setBy] = useState(false);
   const max = Math.max(1, ...people.map((p) => p.items.length));

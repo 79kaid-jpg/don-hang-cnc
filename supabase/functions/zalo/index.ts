@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     const b = d.batches; const proc = b.proc as string;
     const ROLE: Record<string, string> = proc === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
     const STL: Record<string, string> = { tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập' };
-    const CO: Record<string, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwha' };
+    const CO: Record<string, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' };
     const FIN: Record<string, string> = { QT1: 'khách ký xác nhận', QT2: 'ký bàn giao / nhận vật liệu', QT3: 'khách ký nhận hàng' };
     let company = d.company, role = ROLE[d.status], what = '';
     if (d.status === 'da_duyet' && proc !== 'QT0' && d.company === 'HW') { company = 'PN'; role = 'hoan_tat'; what = `Cả 3 công ty đã duyệt. Bước cuối: ${FIN[proc]} – in bản, ký tay, tải lên.`; }

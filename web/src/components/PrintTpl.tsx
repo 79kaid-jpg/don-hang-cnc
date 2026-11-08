@@ -8,7 +8,7 @@ import { QtTag } from './QtTag';
 import { toast } from './ui';
 
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
-const CO: Record<string, string> = { '': 'Cả 3 công ty', PN: 'Phương Nam', IPC: 'IPC', HW: 'Hanwha' };
+const CO: Record<string, string> = { '': 'Cả 3 công ty', PN: 'Phương Nam', IPC: 'IPC', HW: 'Hanwa' };
 const loadBuf = async (t: Tpl) => { const { data, error } = await sb.storage.from('files').download(t.path); if (error || !data) throw error ?? new Error('Không tải được mẫu'); return data.arrayBuffer(); };
 const safe = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^\w.-]+/g, '_');
 

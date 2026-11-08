@@ -52,7 +52,7 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
   return <div className="af">
     <div className="af-pick">
       <div className="seg" role="tablist">{PROCS.map((p) => <button key={p} role="tab" aria-pressed={proc === p} onClick={() => setProc(p)}>{p}</button>)}</div>
-      {cos.length > 1 && <div className="seg">{cos.map((c) => <button key={c} aria-pressed={company === c} onClick={() => setCo(c)}>{c === 'HW' ? 'Hanwha' : c}</button>)}</div>}
+      {cos.length > 1 && <div className="seg">{cos.map((c) => <button key={c} aria-pressed={company === c} onClick={() => setCo(c)}>{c === 'HW' ? 'Hanwa' : c}</button>)}</div>}
     </div>
     <section className="af-card">
       <header><QtTag qt={proc} /><b>{PROC_NAME[proc]}</b><span className="small muted">· {COMPANY[company as 'PN']}</span></header>
@@ -71,7 +71,7 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
           <span className="af-sla ro"><Icon name="clock" size={13} />{l.sla_h}h</span>
           {canEdit && <span className="af-act"><button className="btn sm" onClick={() => setEdit(l)}>Sửa</button><button className="btn sm" onClick={() => offLv(l)}>{l.active ? 'Tắt' : 'Bật'}</button></span>}
         </li>)}
-        <li className="af-end"><Icon name="check" size={14} />{proc === 'QT0' ? 'Hoàn tất bóc tách' : company === 'HW' ? 'Chờ khách ký tay' : 'Chuyển ' + (company === 'PN' ? 'IPC' : 'Hanwha')}</li>
+        <li className="af-end"><Icon name="check" size={14} />{proc === 'QT0' ? 'Hoàn tất bóc tách' : company === 'HW' ? 'Chờ khách ký tay' : 'Chuyển ' + (company === 'PN' ? 'IPC' : 'Hanwa')}</li>
       </ol>
       {canEdit && !edit && <button className="btn sm af-add" onClick={() => setEdit({ proc, company, ord: mine.length + 1, name: 'Giám đốc duyệt', cond_field: 'none', cond_op: '>', cond_value: null, user_id: null, group_id: null, sla_h: 24, active: true })}>
         <Icon name="plus" size={15} />Thêm cấp duyệt sau bước Duyệt</button>}

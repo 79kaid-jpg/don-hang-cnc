@@ -1,4 +1,4 @@
-/** Mô hình quy trình theo swimlane 04/11/2026: 4 quy trình chạy riêng, QT1–QT3 đi qua 3 công ty PN → IPC → Hanwha */
+/** Mô hình quy trình theo swimlane 04/11/2026: 4 quy trình chạy riêng, QT1–QT3 đi qua 3 công ty PN → IPC → Hanwa */
 export type Proc = 'QT0' | 'QT1' | 'QT2' | 'QT3';
 export type Company = 'PN' | 'IPC' | 'HW';
 export type Row = Record<string, string | number | null>;
@@ -8,7 +8,7 @@ export type Doc = { id: string; batch_id: string; company: Company; status: stri
 export type Batch = { id: string; order_id: string; proc: Proc; seq: number; title: string; status: 'dang_lam' | 'cho_ky' | 'hoan_tat' | 'fail' | 'huy';
   checklist: Record<string, boolean>; final_files: { name: string; path: string }[]; created_at: string; done_at: string | null };
 
-export const COMPANY: Record<Company, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwha' };
+export const COMPANY: Record<Company, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' };
 export const COMPANIES: Company[] = ['PN', 'IPC', 'HW'];
 export const PROC_NAME: Record<Proc, string> = { QT0: 'Bóc tách bản vẽ', QT1: 'Xác nhận đơn hàng', QT2: 'Lệnh gia công & bàn giao vật liệu', QT3: 'Xuất kho kiêm biên bản giao hàng' };
 export const PROC_SHORT: Record<Proc, string> = { QT0: 'Bóc tách', QT1: 'XNĐH', QT2: 'Lệnh GC', QT3: 'Giao hàng' };

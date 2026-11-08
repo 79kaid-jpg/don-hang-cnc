@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon';
 
 type Lane = 'PN' | 'IPC' | 'HW' | 'KH';
 type Step = { id: string; proc: Proc; lane: Lane; title: string; who: string; sla?: number; say: string; kind: 'start' | 'work' | 'check' | 'approve' | 'extra' | 'back' | 'hand' | 'final' | 'done' };
-const LANES: [Lane, string][] = [['PN', 'Phương Nam CNC'], ['IPC', 'IPC'], ['HW', 'Hanwha'], ['KH', 'Khách hàng']];
+const LANES: [Lane, string][] = [['PN', 'Phương Nam CNC'], ['IPC', 'IPC'], ['HW', 'Hanwa'], ['KH', 'Khách hàng']];
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const FORM: Record<Proc, string> = { QT0: 'Danh sách tấm (bóc tách)', QT1: 'Xác nhận đơn hàng (XNĐH)', QT2: 'Lệnh gia công', QT3: 'Phiếu xuất kho / BB giao hàng' };
 const ICON: Record<Step['kind'], string> = { start: 'plus', work: 'file', check: 'eye', approve: 'check', extra: 'shield', back: 'back', hand: 'arrow', final: 'print', done: 'star' };
@@ -47,7 +47,7 @@ export default function Simulate() {
         }
         if (withExtra) for (const l of lv.filter((x) => x.active && x.proc === proc && x.company === co))
           S.push({ id: `${proc}.${co}.x.${l.name}`, proc, lane: co, kind: 'extra', title: l.name, who: nm(l.user_id, l.group_id), sla: l.sla_h, say: `Cấp duyệt thêm (cấu hình ở Luồng duyệt). ${l.name} xem phiếu và ghi chú rồi duyệt hoặc trả về.` });
-        if (proc !== 'QT0' && co !== 'HW') S.push({ id: `${proc}.${co}.hand`, proc, lane: co === 'PN' ? 'IPC' : 'HW', kind: 'hand', title: 'Nhận phiếu', who: 'Hệ thống', say: `${COMPANY[co as 'PN']} đã duyệt → hệ thống tự tạo phiếu cho ${co === 'PN' ? 'IPC' : 'Hanwha'} và báo Zalo cho người lập.` });
+        if (proc !== 'QT0' && co !== 'HW') S.push({ id: `${proc}.${co}.hand`, proc, lane: co === 'PN' ? 'IPC' : 'HW', kind: 'hand', title: 'Nhận phiếu', who: 'Hệ thống', say: `${COMPANY[co as 'PN']} đã duyệt → hệ thống tự tạo phiếu cho ${co === 'PN' ? 'IPC' : 'Hanwa'} và báo Zalo cho người lập.` });
       }
       if (proc !== 'QT0') S.push({ id: `${proc}.final`, proc, lane: 'KH', kind: 'final', title: FINAL[proc], who: 'Khách hàng', say: `Cả 3 công ty đã duyệt. Bấm "In mẫu cho khách ký" → in theo mẫu Excel, khách ký tay, chụp / scan rồi "Tải bản đã ký". ${proc === 'QT3' ? '' : 'Quy trình kế tiếp được mở.'}` });
     }

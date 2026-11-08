@@ -10,7 +10,7 @@ import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
- *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwha, cột cuối là bước ký tay. */
+ *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwa, cột cuối là bước ký tay. */
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 type Mine = { doc_id: string | null; batch_id: string };
 /** Bước nhập liệu (phải mở hồ sơ) và nhãn hành động chuyển bước */
@@ -149,7 +149,7 @@ export default function Board() {
   return (
     <>
       <div className="page-head">
-        <div><h1>Bảng Kanban</h1><p className="muted">Mỗi thẻ là một hồ sơ ({qt === 'QT0' ? 'lần bóc tách' : qt === 'QT1' ? 'XNĐH' : qt === 'QT2' ? 'lệnh gia công' : 'đợt giao'}). {qt === 'QT0' ? 'Chỉ Phương Nam CNC.' : 'Đi lần lượt Phương Nam CNC → IPC → Hanwha, cuối cùng ký tay.'}</p></div>
+        <div><h1>Bảng Kanban</h1><p className="muted">Mỗi thẻ là một hồ sơ ({qt === 'QT0' ? 'lần bóc tách' : qt === 'QT1' ? 'XNĐH' : qt === 'QT2' ? 'lệnh gia công' : 'đợt giao'}). {qt === 'QT0' ? 'Chỉ Phương Nam CNC.' : 'Đi lần lượt Phương Nam CNC → IPC → Hanwa, cuối cùng ký tay.'}</p></div>
         <div className="row">
           <Link className="btn sm hide-m" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
           <Link className="btn sm primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn</span></Link>
@@ -233,7 +233,7 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
     <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>{action === 'next' ? 'Ký' : 'Trả về'} · {c.o?.code}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
       <div className="mv-route"><span className="chip idle">{proc !== 'QT0' && c.doc ? COMPANY[c.doc.company] + ' · ' : ''}{STATUS[st]}</span><Icon name={action === 'next' ? 'arrow' : 'back'} size={16} />
-        <span className="chip wait">{action === 'next' ? (st === 'duyet' ? (proc === 'QT0' ? 'Đã duyệt' : c.doc?.company === 'HW' ? FINAL[proc] : (c.doc?.company === 'PN' ? 'IPC' : 'Hanwha') + ' · Lập') : STATUS[FLOW[proc][FLOW[proc].indexOf(st) + 1]]) : STATUS[FLOW[proc][FLOW[proc].indexOf(st) - 1]]}</span></div>
+        <span className="chip wait">{action === 'next' ? (st === 'duyet' ? (proc === 'QT0' ? 'Đã duyệt' : c.doc?.company === 'HW' ? FINAL[proc] : (c.doc?.company === 'PN' ? 'IPC' : 'Hanwa') + ' · Lập') : STATUS[FLOW[proc][FLOW[proc].indexOf(st) + 1]]) : STATUS[FLOW[proc][FLOW[proc].indexOf(st) - 1]]}</span></div>
       <p className="small muted" style={{ margin: 0 }}>{c.b.title}. {action === 'next' ? 'Ký xác nhận bước này. Cần sửa số liệu, đính kèm file thì bấm “Mở hồ sơ”.' : 'Hồ sơ quay lại bước trước, người phụ trách được báo kèm lý do.'}</p>
       <label className="f">{action === 'back' ? 'Lý do trả về *' : 'Ghi chú (tuỳ chọn)'}<textarea rows={2} autoFocus value={note} onChange={(e) => setNote(e.target.value)} /></label>
       {err && <div className="msg err" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}

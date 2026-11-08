@@ -16,8 +16,8 @@ import { ApprovalFlows } from '../components/ApprovalFlows';
 import { PrintTemplates } from '../components/PrintTpl';
 
 type Step = { id: string; doc_type: string; step_no: number; label: string; approver_id: string | null; hours: number };
-const UNITS = ['CNC', 'IPC', 'HANWHA', 'IT', 'KHAC'];
-const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWHA: 'Hanwha', IT: 'IT', KHAC: 'Khác' };
+const UNITS = ['CNC', 'IPC', 'HANWA', 'IT', 'KHAC'];
+const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWA: 'Hanwa', IT: 'IT', KHAC: 'Khác' };
 
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {

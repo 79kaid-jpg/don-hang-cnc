@@ -8,7 +8,7 @@ export type TplImg = { base64: string; ext: 'png' | 'jpeg'; w: number; h: number
 export type TplData = { vars: Record<string, string | number>; tables: Record<string, Record<string, string | number>[]>; images?: Record<string, TplImg> };
 /** Mã công ty trong danh mục khách hàng */
 export const CO_CODE: Record<string, string> = { PN: 'PNCNC', IPC: 'IPC', HW: 'HANWA' };
-/** Bên mua theo công ty duyệt: PN → IPC, IPC → Hanwha, Hanwha → khách cuối */
+/** Bên mua theo công ty duyệt: PN → IPC, IPC → Hanwa, Hanwa → khách cuối */
 export function parties(o: Order, company: string, proc: string, custs: Customer[]) {
   const by = (code: string) => custs.find((c) => c.code.toUpperCase() === code) ?? null;
   const end = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)) ?? null;
@@ -18,7 +18,12 @@ export function parties(o: Order, company: string, proc: string, custs: Customer
 }
 const RE = /\{([#/]?)([a-z0-9_]+(?:\.[a-z0-9_]+)?)\}/gi;
 
-async function XL() { return (await import('exceljs')).default; }
+async function XL() {
+  try { return (await import('exceljs')).default; }
+  catch (e) { // app vừa cập nhật → tải lại trang để lấy bản mới
+    try { const k = 'pms-chunk-reload'; if (Date.now() - +(sessionStorage.getItem(k) ?? 0) > 30000) { sessionStorage.setItem(k, String(Date.now())); location.reload(); } } catch { /* bỏ qua */ }
+    throw new Error('App vừa được cập nhật – đang tải lại trang, bấm lại Mẫu in sau khi tải xong.', { cause: e }); }
+}
 
 /* ---------- số tiền bằng chữ ---------- */
 const DV = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
@@ -47,7 +52,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   const lastAt = sg('duyet')?.at ?? d.status_at; const dt = new Date(lastAt);
   const vars: Record<string, string | number> = {
     ma_don: o.code, du_an: o.project, khach_hang: cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')] ?? '', ma_kh: kh?.code ?? '', ma_so_thue: kh?.tax_code ?? '', dia_chi: kh?.address ?? '', nguoi_lien_he: kh?.contact ?? '', dien_thoai: kh?.phone ?? '', email_kh: kh?.email ?? '', kh1: cust[o.kh1_id ?? ''] ?? '', kh2: cust[o.kh2_id ?? ''] ?? '',
-    lien_he: o.contact ?? '', mo_ta: o.description ?? '', han_giao: fd(o.due_date ?? undefined), lo: b.title, cong_ty: { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwha' }[d.company] ?? d.company,
+    lien_he: o.contact ?? '', mo_ta: o.description ?? '', han_giao: fd(o.due_date ?? undefined), lo: b.title, cong_ty: { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' }[d.company] ?? d.company,
     ngay: String(dt.getDate()).padStart(2, '0'), thang: String(dt.getMonth() + 1).padStart(2, '0'), nam: dt.getFullYear(), ngay_in: fd(new Date().toISOString()), ngay_duyet_full: fd(lastAt),
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; '),
     ben_ban_ten: S?.name ?? '', ben_ban_ma: S?.code ?? '', ben_ban_dia_chi: S?.address ?? '', ben_ban_mst: S?.tax_code ?? '', ben_ban_dien_thoai: S?.phone ?? '', ben_ban_email: S?.email ?? '',
@@ -82,7 +87,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
     { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ngay_thang_nam', t: 'TP.HCM, ngày … tháng … năm … (ngày duyệt)' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' },
     { k: 'ben_ban_logo', t: 'Logo bên bán (đặt vào ô / vùng gộp ô muốn in logo)' }, { k: 'kh_logo', t: 'Logo bên mua' },
     { k: 'ben_ban_ten', t: 'Bên bán: tên' }, { k: 'ben_ban_dia_chi', t: 'Bên bán: địa chỉ' }, { k: 'ben_ban_mst', t: 'Bên bán: MST' }, { k: 'ben_ban_dien_thoai', t: 'Bên bán: điện thoại' }, { k: 'ben_ban_email', t: 'Bên bán: email' },
-    { k: 'kh_ten', t: 'Bên mua: tên (PN→IPC, IPC→Hanwha, Hanwha→khách cuối)' }, { k: 'kh_ma', t: 'Bên mua: mã' }, { k: 'kh_dia_chi', t: 'Bên mua: địa chỉ' }, { k: 'kh_mst', t: 'Bên mua: MST' }, { k: 'kh_lien_he', t: 'Bên mua: liên hệ' }];
+    { k: 'kh_ten', t: 'Bên mua: tên (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)' }, { k: 'kh_ma', t: 'Bên mua: mã' }, { k: 'kh_dia_chi', t: 'Bên mua: địa chỉ' }, { k: 'kh_mst', t: 'Bên mua: MST' }, { k: 'kh_lien_he', t: 'Bên mua: liên hệ' }];
   for (const f of fieldsOf('F0', 'header')) if (!f.sys) L.push({ k: f.key, t: 'F0 · ' + f.label });
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }

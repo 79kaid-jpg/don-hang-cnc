@@ -6,7 +6,7 @@ import { toast } from './ui';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
 
-/** Quản trị → Khách hàng: danh mục dùng chung (IPC, Hanwha, khách cuối…) */
+/** Quản trị → Khách hàng: danh mục dùng chung (IPC, Hanwa, khách cuối…) */
 export function CustomersAdmin({ canEdit }: { canEdit: boolean }) {
   const [list, setList] = useState<Customer[]>([]); const [n, setN] = useState<Record<string, number>>({});
   const [logos, setLogos] = useState<Record<string, string>>({});

@@ -37,7 +37,7 @@ export default function ProcPanel({ o, proc, people }: { o: Order; proc: Proc; p
       <div className="pp-head">
         <div><h2 style={{ margin: 0 }} className="row"><QtTag qt={proc} /> {PROC_NAME[proc]}</h2>
           <p className="small muted" style={{ margin: '4px 0 0' }}>{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
-            : proc === 'QT1' ? 'Phương Nam lập → duyệt → IPC chép danh sách, đổi giá → duyệt → Hanwha → duyệt. Mỗi bên in bộ của mình cho khách ký.'
+            : proc === 'QT1' ? 'Phương Nam lập → duyệt → IPC chép danh sách, đổi giá → duyệt → Hanwa → duyệt. Mỗi bên in bộ của mình cho khách ký.'
             : proc === 'QT2' ? 'Đầu vào là Excel lệnh gia công từ phần mềm sản xuất. Một đơn có thể chia nhiều lệnh. Cả 3 công ty đều lập hồ sơ.'
             : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p></div>
         <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{batches.length ? 'Mở ' + BATCH_WORD[proc] + ' mới' : 'Bắt đầu ' + proc}</button>
@@ -137,7 +137,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const adm = useAuth().can('admin_it');
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide');
-  // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwha, Hanwha→khách cuối)
+  // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
   const [ship, setShip] = useState<string[]>([]);
   useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'dk_giao')) return;
     sb.from('customers').select('*').then(({ data }) => { const cs = (data as Customer[]) ?? []; const { buyer } = parties(o, d.company, proc, cs);
