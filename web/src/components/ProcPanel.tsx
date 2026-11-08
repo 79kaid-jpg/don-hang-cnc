@@ -338,27 +338,30 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
   const wOf = (c: Col) => Math.min(48, Math.max(c.w ?? 7, ...rows.map((r) => String(r[c.k] ?? '').length + 3)));
   const colT = (k: string) => cols.find((c) => c.k === k)?.t ?? '';
   const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
+  let skipped = 0;
   const fromAoa = (aoa: string[][]) => {
     const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
     const hi = aoa.findIndex((r) => r.some((c) => inCols.some((x) => norm(c) === norm(x.t))));
     let map: (string | null)[];
     if (hi >= 0) { map = aoa[hi].map((c) => cols.find((x) => norm(c) === norm(x.t))?.k ?? null); aoa = aoa.slice(hi + 1); }
     else map = inCols.map((c) => c.k);
-    const out: Row[] = [];
+    const out: Row[] = []; skipped = 0;
     for (const r of aoa) {
-      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; if (k && !cols.find((x) => x.k === k)?.calc) row[k] = String(v ?? '').trim(); });
+      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k && !c?.calc) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
       if (!Object.values(row).some((v) => v)) continue;
       if (String(Object.values(row)[0] ?? '').toUpperCase() === 'TỔNG') continue;
-      if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) continue; // dòng ví dụ của file mẫu
+      if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) { skipped++; continue; } // dòng ví dụ của file mẫu
       out.push(row);
     }
     return out;
   };
-  const doPaste = () => { const add = fromAoa(paste.trim().split(/\r?\n/).map((l) => l.split('\t'))); onChange([...rows, ...add]); setPaste(''); setOpen(false); setMsg('Đã thêm ' + add.length + ' dòng'); };
+  const doPaste = () => { const add = fromAoa(paste.replace(/^(\r?\n)+|(\r?\n)+$/g, '').split(/\r?\n/).map((l) => l.split('\t')));
+    if (!add.length) { setMsg(skipped ? 'Các dòng dán vào trùng dòng ví dụ của Mẫu Excel nên không thêm. Hãy thay bằng dữ liệu thật.' : 'Không đọc được dòng nào – kiểm tra lại dữ liệu đã chép.'); return; }
+    onChange([...rows, ...add]); setPaste(''); setOpen(false); setMsg('Đã thêm ' + add.length + ' dòng' + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); };
   const doFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return; const X = await import('xlsx');
     const wb = X.read(await f.arrayBuffer()); const aoa = X.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '', raw: false });
-    const add = fromAoa(aoa); onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name); e.target.value = '';
+    const add = fromAoa(aoa); onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); e.target.value = '';
   };
   const tpl = async () => { const X = await import('xlsx'); const ex = [0, 1, 2].map((i) => inCols.map((c) => sampleRow(c, i)));
     const ws = X.utils.aoa_to_sheet([inCols.map((c) => c.t), ...ex]); ws['!cols'] = inCols.map((c, j) => ({ wch: Math.max(10, c.t.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
@@ -418,6 +421,16 @@ const SAMPLE: Record<string, (string | number)[]> = {
   pallet: ['PL-1', 'PL-1', 'PL-2'], don_gia: [450000, 450000, 450000], duong_han: [0, 0, 1.2], chan: [2, 2, 4], m2_dot: [0, 0, 0],
   ghi_chu: ['', '', ''],
 };
+/** Số chép từ Excel có định dạng: 1.500 / 1,500.25 / 5.500.000 / 8,25 → dạng chuẩn */
+export function normNum(v: string): string {
+  let x = v.replace(/[\s\u00a0]/g, ''); if (!x) return '';
+  const d = x.lastIndexOf('.'), c = x.lastIndexOf(',');
+  if (d >= 0 && c >= 0) { const dec = d > c ? '.' : ','; x = x.split(dec === '.' ? ',' : '.').join(''); return x.replace(',', '.'); }
+  const sep = d >= 0 ? '.' : c >= 0 ? ',' : ''; if (!sep) return x;
+  const parts = x.split(sep);
+  if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3 && parts[0] !== '0')) return parts.join(''); // dấu phân cách hàng nghìn
+  return parts.join('.');
+}
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
