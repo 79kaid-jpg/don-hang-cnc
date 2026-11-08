@@ -197,6 +197,11 @@ export default function Board() {
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
                           <span className="kb-code">{it.o?.code}</span><span className="kb-proj">{it.b.title}</span>
                           <span className="small muted">{[it.o?.project, cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']?.name].filter(Boolean).join(' · ')}</span></Link>
+                        {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
+                          const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';
+                          const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
+                          return <span key={co} className={'kb-co ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
+                            {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <span className="kb-who" title={h.what}><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</span>}
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
