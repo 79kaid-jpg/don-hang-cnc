@@ -46,10 +46,10 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
     { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'don_gia', t: 'Đơn giá (đ/m²)', n: true }, { k: 'tt', t: 'Thành tiền (đ)', n: true, calc: ttOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
-  nl: { t: 'Bảng 1 – Nguyên liệu (tấm phôi)', cols: [
+  nl: { t: 'Bảng 1 – Thông tin xuất hàng (nguyên liệu)', cols: [
     { k: 'tam_phoi', t: 'Tấm phôi / quy cách', w: 14 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
     { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
-  tp2: { t: 'Bảng 2 – Thành phẩm', cols: [
+  tp2: { t: 'Bảng 2 – Thông tin nhập hàng (thành phẩm)', cols: [
     { k: 'ma_tam', t: 'Mã tấm thành phẩm', w: 12 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
     { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
   tp3: { t: 'Danh sách thành phẩm của đợt giao', cols: [
