@@ -333,6 +333,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
       const row: Row = {}; r.forEach((v, j) => { const k = map[j]; if (k && !cols.find((x) => x.k === k)?.calc) row[k] = String(v ?? '').trim(); });
       if (!Object.values(row).some((v) => v)) continue;
       if (String(Object.values(row)[0] ?? '').toUpperCase() === 'TỔNG') continue;
+      if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) continue; // dòng ví dụ của file mẫu
       out.push(row);
     }
     return out;
@@ -343,7 +344,8 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     const wb = X.read(await f.arrayBuffer()); const aoa = X.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '', raw: false });
     const add = fromAoa(aoa); onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name); e.target.value = '';
   };
-  const tpl = async () => { const X = await import('xlsx'); const ws = X.utils.aoa_to_sheet([inCols.map((c) => c.t)]); ws['!cols'] = inCols.map((c) => ({ wch: Math.max(10, c.t.length + 2) }));
+  const tpl = async () => { const X = await import('xlsx'); const ex = [0, 1, 2].map((i) => inCols.map((c) => sampleRow(c, i)));
+    const ws = X.utils.aoa_to_sheet([inCols.map((c) => c.t), ...ex]); ws['!cols'] = inCols.map((c, j) => ({ wch: Math.max(10, c.t.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   return (
     <div className="pp-tbl">
@@ -389,6 +391,18 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
 /** HTML bản in mặc định của app (khi QT chưa có mẫu Excel) */
 /** Bản in mặc định: bảng có từ 9 cột trở lên thì in khổ ngang */
 export const wideDoc = (p: Proc) => tablesOf(p).some((t) => colsOf(p, t.key).length >= 9);
+/** Dòng ví dụ trong file "Mẫu Excel" (theo Lệnh gia công mẫu IPCĐC02). Khi tải lên, dòng trùng ví dụ sẽ bị bỏ qua. */
+const SAMPLE: Record<string, (string | number)[]> = {
+  ma_tam: ['SL-AL-SILL-137-CUR-BOT.1', 'SL-AL-SILL-137-CUR-BOT.2', 'SL-AL-SILL-137-CUR-TOP.1'],
+  vat_lieu: ['Nhôm 3.0 x W x L (A3003-H14/24-CN)', 'Nhôm 3.0 x W x L (A3003-H14/24-CN)', 'Nhôm 3.0 x W x L (A3003-H14/24-CN)'],
+  tam_phoi: ['1500x5500', '1500x5500', '1250x2500'], day: [3, 3, 3], dai: [880, 880, 880], rong: [427, 427, 427],
+  mac_thep: ['A3003H14-30000W000L-CN', 'A3003H14-30000W000L-CN', 'A3003H14-30000W000L-CN'],
+  so_tam: [3, 2, 8], m2_tam: [0.38, 0.38, 0.38], m2: [1.13, 0.75, 3.01], kg: [9.3, 6.2, 24.8], ma_mau: ['YN205V', 'YN205V', 'YN205V'],
+  ma_don_hang: ['110260HW0001.001', '110260HW0001.002', '110260HW0001.004'], kh_bv: ['SL-AL-SILL-137-CUR-BOT.1', 'SL-AL-SILL-137-CUR-BOT.2', 'SL-AL-SILL-137-CUR-TOP.1'],
+  pallet: ['PL-1', 'PL-1', 'PL-2'], don_gia: [450000, 450000, 450000], duong_han: [0, 0, 1.2], chan: [2, 2, 4], m2_dot: [0, 0, 0],
+  ghi_chu: ['Dòng ví dụ – xoá trước khi tải lên', '', ''],
+};
+const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
