@@ -52,7 +52,8 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; '),
     ben_ban_ten: S?.name ?? '', ben_ban_ma: S?.code ?? '', ben_ban_dia_chi: S?.address ?? '', ben_ban_mst: S?.tax_code ?? '', ben_ban_dien_thoai: S?.phone ?? '', ben_ban_email: S?.email ?? '',
     kh_ten: K?.name ?? '', kh_ma: K?.code ?? '', kh_dia_chi: K?.address ?? '', kh_mst: K?.tax_code ?? '', kh_lien_he: [K?.contact, K?.phone].filter(Boolean).join(' · '), kh_dien_thoai: K?.phone ?? '', kh_email: K?.email ?? '',
-    ten_hang: 'GC đột, chấn'
+    ten_hang: 'GC đột, chấn',
+    ngay_thang_nam: `TP.HCM, ngày ${String(dt.getDate()).padStart(2, '0')} tháng ${String(dt.getMonth() + 1).padStart(2, '0')} năm ${dt.getFullYear()}`
   };
   for (const [k] of hdrOf(b.proc as Proc)) vars[k] = d.header?.[k] ?? '';
   for (const k of Object.keys(d.header ?? {})) if (vars[k] == null) vars[k] = d.header[k];
@@ -78,7 +79,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
   const L: { k: string; t: string }[] = [
     { k: 'ma_don', t: 'Mã đơn hàng' }, { k: 'du_an', t: 'Dự án' }, { k: 'khach_hang', t: 'Khách hàng' }, { k: 'ma_kh', t: 'Mã khách hàng' }, { k: 'ma_so_thue', t: 'Mã số thuế KH' }, { k: 'dia_chi', t: 'Địa chỉ KH' }, { k: 'nguoi_lien_he', t: 'Người liên hệ KH' }, { k: 'dien_thoai', t: 'Điện thoại KH' }, { k: 'email_kh', t: 'Email KH' }, { k: 'kh1', t: 'KH1' }, { k: 'kh2', t: 'KH2' },
     { k: 'lien_he', t: 'Liên hệ' }, { k: 'han_giao', t: 'Hạn giao' }, { k: 'cong_ty', t: 'Công ty của phiếu' }, { k: 'lo', t: 'Tên lô / đợt' },
-    { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' },
+    { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ngay_thang_nam', t: 'TP.HCM, ngày … tháng … năm … (ngày duyệt)' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' },
     { k: 'ben_ban_logo', t: 'Logo bên bán (đặt vào ô / vùng gộp ô muốn in logo)' }, { k: 'kh_logo', t: 'Logo bên mua' },
     { k: 'ben_ban_ten', t: 'Bên bán: tên' }, { k: 'ben_ban_dia_chi', t: 'Bên bán: địa chỉ' }, { k: 'ben_ban_mst', t: 'Bên bán: MST' }, { k: 'ben_ban_dien_thoai', t: 'Bên bán: điện thoại' }, { k: 'ben_ban_email', t: 'Bên bán: email' },
     { k: 'kh_ten', t: 'Bên mua: tên (PN→IPC, IPC→Hanwha, Hanwha→khách cuối)' }, { k: 'kh_ma', t: 'Bên mua: mã' }, { k: 'kh_dia_chi', t: 'Bên mua: địa chỉ' }, { k: 'kh_mst', t: 'Bên mua: MST' }, { k: 'kh_lien_he', t: 'Bên mua: liên hệ' }];
