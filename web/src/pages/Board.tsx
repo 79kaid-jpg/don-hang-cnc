@@ -7,16 +7,18 @@ import { Icon } from '../components/Icon';
 import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
+import { useAuth } from '../lib/auth';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
  *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwha, cột cuối là bước ký tay. */
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 type Mine = { doc_id: string | null; batch_id: string };
-type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; i: number };
+type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: boolean; i: number };
 
 export default function Board() {
   const nav = useNavigate();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
+  const adm = useAuth().can('admin_it');
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
@@ -33,8 +35,8 @@ export default function Board() {
   const COLS = columnsOf(qt);
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st = stepOf(b, docs); const o = orders[b.order_id];
-    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), i: COLS.findIndex((c) => c.key === st.key) };
-  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine]); // eslint-disable-line
+    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: adm || mine.some((m) => m.batch_id === b.id), i: COLS.findIndex((c) => c.key === st.key) };
+  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm]); // eslint-disable-line
   const byCol = (i: number) => cards.filter((c) => c.i === i);
   const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p).length;
   const mineIn = (p: Proc) => (batches ?? []).some((b) => b.proc === p && mine.some((m) => m.batch_id === b.id));
@@ -64,8 +66,8 @@ export default function Board() {
       else if (key === 'h' || e.key === 'ArrowLeft') mv(-1, 0); else if (key === 'l' || e.key === 'ArrowRight') mv(1, 0);
       else if (selCard) {
         if (e.key === 'Enter') { e.preventDefault(); nav('/don/' + selCard.b.order_id + '?tab=' + qt); }
-        else if (key === 'm' && canNext(selCard)) { e.preventDefault(); setDlg({ c: selCard, action: 'next' }); }
-        else if (key === 'r' && canBack(selCard)) { e.preventDefault(); setDlg({ c: selCard, action: 'back' }); }
+        else if (key === 'm' && selCard.act && canNext(selCard)) { e.preventDefault(); setDlg({ c: selCard, action: 'next' }); }
+        else if (key === 'r' && selCard.act && canBack(selCard)) { e.preventDefault(); setDlg({ c: selCard, action: 'back' }); }
       }
     };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k);
@@ -130,10 +132,10 @@ export default function Board() {
   const startDrag = (e: React.PointerEvent<HTMLElement>, c: Card) => {
     if (e.button !== 0 || e.pointerType === 'touch') return;
     const tg = e.target as HTMLElement; if (tg.closest('button, input, select') || (tg.closest('a') && !tg.closest('a.kb-link'))) return;
-    if (!c.mine || (!canNext(c) && !canBack(c))) { // không phải lượt mình: báo khi người dùng thử kéo
+    if (!c.act || (!canNext(c) && !canBack(c))) { // không phải lượt mình: báo khi người dùng thử kéo
       const x0 = e.clientX, y0 = e.clientY, card = e.currentTarget;
       const mv = (ev: PointerEvent) => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 10) return; off();
-        toast(!c.mine ? 'Chưa đến lượt bạn – chỉ người phụ trách bước này mới kéo được thẻ' : 'Hồ sơ này không chuyển bước được từ đây');
+        toast(!c.act ? 'Chưa đến lượt bạn – chỉ người phụ trách bước này mới kéo được thẻ' : 'Hồ sơ này không chuyển bước được từ đây');
         card.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 260 }); };
       const off = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', off); };
       addEventListener('pointermove', mv); addEventListener('pointerup', off); return; }
@@ -193,7 +195,7 @@ export default function Board() {
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <span className="kb-who" title={h.what}><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</span>}
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
-                        {it.mine && <div className="kb-acts">
+                        {it.act && <div className="kb-acts">
                           {it.key === 'ky' ? <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>Tải bản {FINAL[qt].toLowerCase()} →</Link>
                             : <Link className="btn sm primary kb-next" title={(NEXT_LABEL[it.doc?.status ?? ''] ?? 'Mở') + ' – mở hồ sơ'} to={'/don/' + it.b.order_id + '?tab=' + qt}>{({ tiep_nhan: 'Bóc tách', boc_tach: 'Tạo DS tấm', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Gửi duyệt', duyet: 'Duyệt', lap: 'Gửi kiểm tra' } as Record<string, string>)[it.doc?.status ?? ''] ?? 'Mở'}</Link>}
                           {canNext(it) && <button className="kb-ib kb-move" aria-label="Ký nhanh" title="Ký nhanh (M)" onClick={() => setDlg({ c: it, action: 'next' })}><Icon name="check" size={17} /></button>}
