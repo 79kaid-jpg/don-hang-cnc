@@ -8,7 +8,7 @@ import { confirmDialog, toast } from './ui';
 
 const PROCS: FProc[] = ['F0', 'QT0', 'QT1', 'QT2', 'QT3'];
 const PERMS: Perm[] = ['hide', 'view', 'edit', 'required'];
-const TYPES: Record<Area, FType[]> = { header: ['text', 'number', 'date', 'select', 'textarea'], col: ['text', 'number'], file: ['file'] };
+const TYPES: Record<Area, FType[]> = { header: ['text', 'number', 'date', 'select', 'textarea'], col: ['text', 'number'], file: ['file'], table: ['text'] };
 const Chev = ({ up = false, size = 14 }: { up?: boolean; size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={up ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>;
 const stepName = (s: string) => (s === 'tiep_nhan' ? 'Tiếp nhận' : STATUS[s] ?? s);
 
@@ -22,6 +22,7 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
     ? [{ area: 'header', tbl: '', title: 'Thông tin đơn hàng', sub: 'Ô nhập khi tạo đơn và ở tab F0. Khách hàng luôn bắt buộc. Ô có sẵn chỉ đổi được tên, lựa chọn và Ẩn / Bắt buộc' }] : [
     { area: 'header', tbl: '', title: 'Thông tin phiếu', sub: 'Các ô nhập ở đầu phiếu' },
     ...tablesOf(proc as Proc).map((t) => ({ area: 'col' as Area, tbl: t.key, title: 'Cột · ' + t.title, sub: 'Cột của bảng. Cột tự tính chỉ đổi được tên và quyền' })),
+    { area: 'table', tbl: '', title: 'Bảng phải có dữ liệu', sub: 'Bắt buộc = bảng phải có ít nhất 1 dòng có thông tin thì mới ký được ở bước đó' },
     { area: 'file', tbl: '', title: 'Tệp đính kèm', sub: 'Mỗi dòng là một loại tệp; Bắt buộc = phải tải ít nhất 1 tệp trước khi ký' }];
   const add = async (area: Area, tbl: string) => {
     const label = area === 'file' ? 'Loại tệp mới' : area === 'col' ? 'Cột mới' : 'Trường mới';
@@ -48,7 +49,7 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
       {sections.map((s) => { const list = all.filter((f) => f.area === s.area && f.tbl === s.tbl);
         return <section key={s.area + s.tbl} className="fa-sec">
           <header><div><b>{s.title}</b><div className="small muted">{s.sub}</div></div>
-            {canEdit && <button className="btn sm" onClick={() => add(s.area, s.tbl)}><Icon name="plus" size={15} />Thêm</button>}</header>
+            {canEdit && s.area !== 'table' && <button className="btn sm" onClick={() => add(s.area, s.tbl)}><Icon name="plus" size={15} />Thêm</button>}</header>
           <ul className="fa-list">{list.map((f, i) => <Row key={f.id ?? f.key} f={f} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
             open={open === f.id} onOpen={() => setOpen(open === f.id ? '' : f.id ?? '')} onMove={(d) => move(f, d)} />)}</ul>
         </section>; })}
@@ -76,8 +77,8 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
         {canEdit && <span className="fa-mv"><button className="link-btn" disabled={first} onClick={() => onMove(-1)} aria-label="Lên"><Chev up /></button>
           <button className="link-btn" disabled={last} onClick={() => onMove(1)} aria-label="Xuống"><Chev /></button></span>}
         <button className="fa-main" onClick={onOpen} aria-expanded={open}>
-          <span className="fa-lb">{f.label}{f.restricted && <span className="fa-tag lock" title="Trường nhạy cảm – chỉ người được cấp quyền mới thấy">🔒 hạn chế</span>}{!f.active && <span className="fa-tag">đã ẩn</span>}{f.sys && <span className="fa-tag">{proc === 'F0' ? 'có sẵn' : 'tự tính'}</span>}</span>
-          <span className="small muted">{f0 && f0Perm(x) !== 'edit' && <span className="fa-req">{PERM_NAME[f0Perm(x)]} · </span>}{TYPE_NAME[f.type]}{f.area !== 'file' ? ' · {' + (f.area === 'col' ? f.tbl + '.' : '') + f.key + '}' : ''}
+          <span className="fa-lb">{f.label}{f.restricted && <span className="fa-tag lock" title="Trường nhạy cảm – chỉ người được cấp quyền mới thấy">🔒 hạn chế</span>}{!f.active && <span className="fa-tag">đã ẩn</span>}{f.sys && f.area !== 'table' && <span className="fa-tag">{proc === 'F0' ? 'có sẵn' : 'tự tính'}</span>}</span>
+          <span className="small muted">{f.area === 'table' ? 'Bảng ' + f.key + ' · ' : ''}{f0 && f0Perm(x) !== 'edit' && <span className="fa-req">{PERM_NAME[f0Perm(x)]} · </span>}{TYPE_NAME[f.type]}{f.area !== 'file' ? ' · {' + (f.area === 'col' ? f.tbl + '.' : '') + f.key + '}' : ''}
             {reqs.length > 0 && <span className="fa-req"> · Bắt buộc: {reqs.slice(0, 3).join(', ')}{reqs.length > 3 ? '…' : ''}</span>}{hides > 0 && ' · ẩn ' + hides + ' ô'}</span>
         </button>
         <span className="fa-chev"><Chev size={16} /></span>
@@ -85,7 +86,7 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
       {open && <div className="fa-ed">
         <div className="grid2">
           <label className="f">Tên hiển thị<input value={x.label} disabled={!canEdit} onChange={(e) => setX({ ...x, label: e.target.value })} /></label>
-          {f.area !== 'file' && <label className="f">Kiểu dữ liệu<select value={x.type} disabled={!canEdit || f.sys} onChange={(e) => setX({ ...x, type: e.target.value as FType })}>
+          {f.area !== 'file' && f.area !== 'table' && <label className="f">Kiểu dữ liệu<select value={x.type} disabled={!canEdit || f.sys} onChange={(e) => setX({ ...x, type: e.target.value as FType })}>
             {(f.type === 'person' ? ['person' as FType] : TYPES[f.area]).map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</select></label>}
           {x.type === 'select' && <label className="f f-wide">Các lựa chọn (mỗi dòng một giá trị)<textarea rows={3} disabled={!canEdit} value={x.options.join('\n')} onChange={(e) => setX({ ...x, options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })} /></label>}
           {f.area === 'col' && x.type === 'number' && <label className="f">Số chữ số thập phân<input inputMode="numeric" disabled={!canEdit} value={x.decimals ?? ''} onChange={(e) => setX({ ...x, decimals: e.target.value === '' ? null : Math.max(0, Math.min(4, +e.target.value || 0)) })} /></label>}
@@ -99,12 +100,12 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
             {canEdit && cos.length > 1 && <select className="fa-all" aria-label={'Đặt cả cột ' + stepName(s)} value="" onChange={(e) => setAll(s, e.target.value === '_' ? '' : e.target.value)}>
               <option value="">cả cột…</option><option value="_">Mặc định</option>{PERMS.map((p) => <option key={p} value={p}>{PERM_NAME[p]}</option>)}</select>}</th>)}</tr></thead>
           <tbody>{cos.map((c) => <tr key={c}><th>{proc === 'QT0' ? 'Phương Nam' : COMPANY[c]}</th>
-            {steps.map((s) => { const v = x.perms?.[c]?.[s] ?? ''; const eff = (v || defaultPerm(proc, s)) as Perm;
+            {steps.map((s) => { const v = x.perms?.[c]?.[s] ?? ''; const eff = (v || (f.area === 'table' ? 'view' : defaultPerm(proc, s))) as Perm;
               return <td key={s}><select className={'pm-' + eff + (v ? '' : ' def')} disabled={!canEdit || (f.sys && v !== 'hide' && false)} value={v} onChange={(e) => setP(c, s, e.target.value)} aria-label={c + ' ' + stepName(s)}>
-                <option value="">{PERM_NAME[defaultPerm(proc, s)]} (mặc định)</option>
-                {PERMS.filter((p) => !(f.sys && (p === 'edit' || p === 'required'))).map((p) => <option key={p} value={p}>{PERM_NAME[p]}</option>)}</select></td>; })}</tr>)}</tbody>
+                <option value="">{f.area === 'table' ? 'Không bắt buộc' : PERM_NAME[defaultPerm(proc, s)] + ' (mặc định)'}</option>
+                {PERMS.filter((p) => (f.area === 'table' ? p === 'required' : !(f.sys && (p === 'edit' || p === 'required')))).map((p) => <option key={p} value={p}>{PERM_NAME[p]}</option>)}</select></td>; })}</tr>)}</tbody>
         </table></div></>}
-        {!f0 && <ViewAccess x={x} setX={setX} canEdit={canEdit} />}
+        {!f0 && f.area !== 'table' && <ViewAccess x={x} setX={setX} canEdit={canEdit} />}
         {canEdit && <div className="row fa-act">
           {!f.sys && (f.active ? <button className="btn sm" onClick={del}><Icon name="eyeoff" size={15} />Ẩn trường</button>
             : <button className="btn sm" onClick={() => setX({ ...x, active: true })}><Icon name="eye" size={15} />Bật lại</button>)}

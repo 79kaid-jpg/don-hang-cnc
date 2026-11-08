@@ -3,7 +3,7 @@ import { sb } from './supabase';
 import { HEADER, PROC_TABLES, TABLES, FLOW, type Col, type Company, type Proc } from './proc';
 
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
-export type Area = 'header' | 'col' | 'file';
+export type Area = 'header' | 'col' | 'file' | 'table';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
 export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier';
 export type FProc = Proc | 'F0';

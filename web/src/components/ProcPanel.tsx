@@ -1,5 +1,5 @@
 import { normNum, parseTsv } from '../lib/paste';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import {
@@ -14,7 +14,7 @@ import { parties } from '../lib/xlsxTpl';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
-import { confirmDialog, toast } from './ui';
+import { Menu, confirmDialog, toast } from './ui';
 import { useAuth } from '../lib/auth';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -154,7 +154,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
     const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: !adm && !(p === 'edit' || p === 'required'), req: p === 'required' }]; });
-    return { key, title: TABLES[def].t, cols, ed: adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan')) }; });
+    const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required';
+    return { key, title: TABLES[def].t, treq, cols, ed: adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan')) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
   // Admin: nạp nhanh dữ liệu mẫu vào ô trống (đầu phiếu) và bảng trống (3 dòng ví dụ)
@@ -214,10 +215,11 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
           <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
-          {adm && editable && d.status !== 'da_duyet' && <button className="btn sm" title="Admin: điền nhanh các ô còn trống bằng dữ liệu mẫu để chạy thử các bước" onClick={fillDemo}><Icon name="bolt" size={15} />Nạp dữ liệu</button>}
           {editable && <button className="btn sm" disabled={!dirty} onClick={() => save()}><Icon name="check" size={15} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
-          <PrintTplButton o={o} b={b} d={d} people={people} />
-          <button className="btn sm" onClick={() => printDoc(o, b, d, people)}><Icon name="print" size={15} />In / PDF</button>
+          <PrintTplButton o={o} b={b} d={d} people={people} fallback={() => printDoc(o, b, d, people)} />
+          <Menu icon="more" title="Thao tác khác" items={[
+            { label: 'In bản mặc định của app', icon: 'print', hint: 'Không theo mẫu Excel', onClick: () => printDoc(o, b, d, people) },
+            adm && editable && d.status !== 'da_duyet' && { label: 'Nạp dữ liệu mẫu', icon: 'bolt', hint: 'Admin: điền nhanh ô trống & bảng trống', onClick: fillDemo, sep: true }]} />
         </div>
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
@@ -249,8 +251,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
               {canEd({ key: k, label: lab, ...f } as FDef) && <label className="btn sm"><Icon name="upload" size={14} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
       </div>
 
-      {tblDefs.map(({ key, title, cols, ed }) => (
-        <TableEdit key={key} title={title} cols={cols} rows={t[key] ?? []} editable={ed}
+      {tblDefs.map(({ key, title, cols, ed, treq }) => (
+        <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${o.code}-${proc}-${key}`} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
@@ -327,7 +329,7 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: string; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
+function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
@@ -350,10 +352,10 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     const hi = aoa.findIndex((r) => r.some((c) => inCols.some((x) => norm(c) === norm(x.t))));
     let map: (string | null)[];
     if (hi >= 0) { map = aoa[hi].map((c) => cols.find((x) => norm(c) === norm(x.t))?.k ?? null); aoa = aoa.slice(hi + 1); }
-    else map = inCols.map((c) => c.k);
+    else map = cols.map((c) => c.k);
     const out: Row[] = []; skipped = 0;
     for (const r of aoa) {
-      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k && !c?.calc) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
+      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k && c && !c.calc && !c.ro) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
       if (!Object.values(row).some((v) => v)) continue;
       if (String(Object.values(row)[0] ?? '').toUpperCase() === 'TỔNG') continue;
       if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) { skipped++; continue; } // dòng ví dụ của file mẫu
@@ -369,10 +371,10 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     // có dòng tiêu đề khớp tên cột → dùng ánh xạ theo tên
     const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
     if (lines[0].some((x) => inCols.some((c) => norm(x) === norm(c.t)))) { const add = fromAoa(lines); onChange([...rows, ...add]); setMsg('Đã thêm ' + add.length + ' dòng (theo tiêu đề cột)'); return; }
-    const start = inCols.findIndex((c) => c.k === ck); const out = rows.map((r) => ({ ...r })); let n = 0;
+    const start = cols.findIndex((c) => c.k === ck); const out = rows.map((r) => ({ ...r })); let n = 0;
     lines.forEach((cells, li) => { const ix = ri + li; while (out.length <= ix) out.push({});
-      cells.forEach((v, cj) => { const c = inCols[start + cj]; if (c) out[ix][c.k] = c.n ? normNum(v) : v.trim(); }); n++; });
-    onChange(out); setMsg(`Đã dán ${n} dòng × ${Math.min(lines[0].length, inCols.length - start)} cột từ ô đang chọn`);
+      cells.forEach((v, cj) => { const c = cols[start + cj]; if (c && !c.calc && !c.ro) out[ix][c.k] = c.n ? normNum(v) : v.trim(); }); n++; });
+    onChange(out); setMsg(`Đã dán ${n} dòng × ${Math.min(lines[0].length, cols.length - start)} cột từ ô đang chọn`);
   };
   // Ctrl+V khi đang ở bảng nhưng không ở ô nhập (ví dụ bảng trống): thêm dòng mới
   const pasteAny = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -389,19 +391,27 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     const wb = X.read(await f.arrayBuffer()); const aoa = X.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '', raw: false });
     const add = fromAoa(aoa); onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); e.target.value = '';
   };
-  const tpl = async () => { const X = await import('xlsx'); const ex = [0, 1, 2].map((i) => inCols.map((c) => sampleRow(c, i)));
-    const ws = X.utils.aoa_to_sheet([inCols.map((c) => c.t), ...ex]); ws['!cols'] = inCols.map((c, j) => ({ wch: Math.max(10, c.t.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
+  // File mẫu: đúng các cột của bảng (cột tự tính để trống, ghi chú "tự tính"), 3 dòng ví dụ
+  const tpl = async () => { const X = await import('xlsx'); const hd = cols.map((c) => c.calc ? c.t + ' (tự tính)' : c.t);
+    const ex = [0, 1, 2].map((i) => cols.map((c) => (c.calc ? '' : sampleRow(c, i))));
+    const ws = X.utils.aoa_to_sheet([hd, ...ex]); ws['!cols'] = hd.map((h, j) => ({ wch: Math.max(10, h.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
+  const fileRef = useRef<HTMLInputElement>(null);
+  const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
+  const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
     <div className="pp-tbl" onPaste={editable ? pasteAny : undefined}>
-      <div className="row between pp-th"><b>{title} <span className="small muted">· {rows.length} dòng</span></b>
+      <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span></b>
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
-          {isAdm && <button className="btn sm" title="Admin: thêm 3 dòng dữ liệu mẫu vào bảng này" onClick={() => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); }}><Icon name="bolt" size={14} />Nạp dữ liệu</button>}
-          <button className="btn sm" onClick={tpl}><Icon name="download" size={14} />Mẫu Excel</button>
-          <label className="btn sm"><Icon name="upload" size={14} />Tải Excel<input type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} /></label>
-          <button className="btn sm" onClick={() => setOpen(!open)}><Icon name="copy" size={14} />Dán từ Excel</button>
-          {rows.length > 0 && <button className="btn sm pp-clear" onClick={() => onChange([])}><Icon name="x" size={14} />Xoá hết</button>}</span>}</div>
-      {open && <div className="pp-paste"><textarea rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Chép các dòng trong Excel (có hoặc không có dòng tiêu đề) rồi dán vào đây.\nThứ tự cột: ' + inCols.map((c) => c.t).join(' · ')} />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
+          <Menu label="Nhập Excel" icon="sheet" items={[
+            { label: 'Tải file Excel lên…', icon: 'upload', hint: 'Đọc theo tên cột ở dòng tiêu đề', onClick: () => fileRef.current?.click() },
+            { label: 'Dán dữ liệu đã chép…', icon: 'copy', hint: 'Hoặc bấm vào một ô rồi nhấn Ctrl+V', onClick: () => setOpen(true) },
+            { label: 'Tải file mẫu', icon: 'download', hint: 'Đúng các cột của bảng này, có 3 dòng ví dụ', onClick: tpl, sep: true }]} />
+          <Menu icon="more" title="Thao tác khác" items={[
+            isAdm && { label: 'Nạp dữ liệu mẫu', icon: 'bolt', hint: 'Admin: thêm 3 dòng ví dụ', onClick: addSample },
+            rows.length > 0 && { label: 'Xoá hết các dòng', icon: 'trash', danger: true, onClick: clearAll, sep: true }]} /></span>}</div>
+      {open && <div className="pp-paste"><textarea rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Chép các dòng trong Excel (có hoặc không có dòng tiêu đề) rồi dán vào đây.\nThứ tự cột như bảng: ' + cols.map((c) => c.t).join(' · ')} />
         <button className="btn sm primary" disabled={!paste.trim()} onClick={doPaste}>Thêm vào bảng</button></div>}
       {msg && <div className="small muted">{msg}</div>}
       {hdr && <div className="fill-bar" role="dialog" aria-label={'Đặt chung ' + colT(hdr.k)}>

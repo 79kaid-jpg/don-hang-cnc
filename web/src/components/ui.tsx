@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { chipKind } from '../lib/format';
 import { Icon } from './Icon';
 
@@ -61,3 +61,21 @@ export const Skeleton = ({ rows = 3, h = 56 }: { rows?: number; h?: number }) =>
 export const Empty = ({ title, children }: { title: string; children?: ReactNode }) => (
   <div className="empty"><Icon name="inbox" size={28} /><b>{title}</b>{children}</div>
 );
+
+/** Menu thả xuống gọn: một nút + danh sách lệnh (đóng khi bấm ra ngoài / Esc) */
+export type MenuItem = { label: string; icon?: string; onClick: () => void; danger?: boolean; hint?: string; sep?: boolean } | null | false;
+export function Menu({ label, icon, items, align = 'right', primary, title }: { label?: string; icon?: string; items: MenuItem[]; align?: 'left' | 'right'; primary?: boolean; title?: string }) {
+  const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!open) return; const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', esc); return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); }; }, [open]);
+  const list = items.filter(Boolean) as Exclude<MenuItem, null | false>[];
+  if (!list.length) return null;
+  return <div className="mnu" ref={ref}>
+    <button type="button" className={'btn sm' + (primary ? ' primary' : '') + (label ? '' : ' icon-btn')} aria-haspopup="menu" aria-expanded={open} title={title} aria-label={title ?? label} onClick={() => setOpen(!open)}>
+      {icon && <Icon name={icon} size={15} />}{label}{label && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>}</button>
+    {open && <div className={'mnu-pop ' + align} role="menu">{list.map((it, i) => <div key={i}>{it.sep && i > 0 && <div className="mnu-sep" />}
+      <button type="button" role="menuitem" className={'mnu-it' + (it.danger ? ' danger' : '')} onClick={() => { setOpen(false); it.onClick(); }}>
+        {it.icon && <Icon name={it.icon} size={15} />}<span><span>{it.label}</span>{it.hint && <span className="mnu-hint">{it.hint}</span>}</span></button></div>)}</div>}
+  </div>;
+}
