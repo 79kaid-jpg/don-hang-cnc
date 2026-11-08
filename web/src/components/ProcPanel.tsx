@@ -152,6 +152,21 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     return { key, title: TABLES[def].t, cols, ed: adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan')) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
+  // Admin: nạp nhanh dữ liệu mẫu vào ô trống (đầu phiếu) và bảng trống (3 dòng ví dụ)
+  const fillDemo = () => {
+    const today = new Date().toISOString().slice(0, 10); const H0: Record<string, string> = { ...h }; let nh = 0, nt = 0;
+    const HV: Record<string, string> = { so_lenh: 'D16000' + Math.floor(10 + Math.random() * 89), so_hd: 'HW', ma_dh: '110260HW0001', code_bpmh: 'BPMH-01', nguoi_phat_lenh: 'Huỳnh Thị Viên',
+      kho_xuat: 'Công ty CP Phương Nam CNC', kho_nhan: 'Công ty CP Phương Nam CNC', dang_gc: 'SLU-N0096-3mm-TC đợt 1', xuong: 'Xưởng CNC Phương Nam', vat: '8', hao_hut: '5', kenh: 'Email',
+      dk_giao: 'Giao tại kho bên mua', dk_tt: 'Chuyển khoản 30 ngày', so_xn: 'XN-' + o.code.slice(-3), so_phieu: 'PXK-' + o.code.slice(-3), dia_diem: ship[0] ?? 'Kho Hanwa – KCN Long Hậu', xe: '51C-447.39', tai_xe: 'Nguyễn Văn B' };
+    for (const f of hFields) { if (!canEd(f) || String(H0[f.key] ?? '').trim()) continue;
+      const v = HV[f.key] ?? (f.type === 'date' ? today : f.type === 'number' ? '1' : f.type === 'select' ? f.options[0] ?? '' : f.type === 'person' || f.type === 'carrier' ? '' : 'Mẫu – ' + f.label);
+      if (v) { H0[f.key] = v; nh++; } }
+    const T0 = { ...t };
+    for (const tb of tblDefs) { if (!tb.ed || (T0[tb.key] ?? []).length) continue;
+      T0[tb.key] = [0, 1, 2].map((i) => Object.fromEntries(tb.cols.filter((c) => !c.calc).map((c) => [c.k, String(sampleRow(c, i))])).valueOf() as Row); nt++; }
+    setH(H0); setT(T0); setDirty(true);
+    toast(nh + nt ? `Đã nạp ${nh} ô đầu phiếu, ${nt} bảng mẫu. Kiểm tra rồi bấm Lưu.` : 'Không còn ô trống để nạp');
+  };
   const badNums = (): string[] => {
     const out: string[] = [];
     for (const f of hFields) if (f.type === 'number' && !isNumOk(h[f.key])) out.push(f.label);
@@ -194,6 +209,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
           <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
+          {adm && editable && d.status !== 'da_duyet' && <button className="btn sm" title="Admin: điền nhanh các ô còn trống bằng dữ liệu mẫu để chạy thử các bước" onClick={fillDemo}><Icon name="bolt" size={15} />Nạp dữ liệu</button>}
           {editable && <button className="btn sm" disabled={!dirty} onClick={() => save()}><Icon name="check" size={15} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           <PrintTplButton o={o} b={b} d={d} people={people} />
           <button className="btn sm" onClick={() => printDoc(o, b, d, people)}><Icon name="print" size={15} />In / PDF</button>
@@ -400,7 +416,7 @@ const SAMPLE: Record<string, (string | number)[]> = {
   so_tam: [3, 2, 8], m2_tam: [0.38, 0.38, 0.38], m2: [1.13, 0.75, 3.01], kg: [9.3, 6.2, 24.8], ma_mau: ['YN205V', 'YN205V', 'YN205V'],
   ma_don_hang: ['110260HW0001.001', '110260HW0001.002', '110260HW0001.004'], kh_bv: ['SL-AL-SILL-137-CUR-BOT.1', 'SL-AL-SILL-137-CUR-BOT.2', 'SL-AL-SILL-137-CUR-TOP.1'],
   pallet: ['PL-1', 'PL-1', 'PL-2'], don_gia: [450000, 450000, 450000], duong_han: [0, 0, 1.2], chan: [2, 2, 4], m2_dot: [0, 0, 0],
-  ghi_chu: ['Dòng ví dụ – xoá trước khi tải lên', '', ''],
+  ghi_chu: ['', '', ''],
 };
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
