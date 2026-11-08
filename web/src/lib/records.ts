@@ -25,14 +25,15 @@ async function docPrintHtml(o: Order, b: Batch, d: Doc, ppl: Record<string, Prof
 async function toPdf(html: string, stamp: { text: string; sub: string; color: string }, landscape: boolean): Promise<Blob> {
   const h2p = (await import('html2pdf.js')).default as unknown as () => { set: (o: unknown) => { from: (el: HTMLElement) => { outputPdf: (t: 'blob') => Promise<Blob> } } };
   const wrap = document.createElement('div');
-  wrap.style.cssText = `position:fixed;left:-10000px;top:0;width:${landscape ? 1100 : 760}px;background:#fff;color:#000;padding:8px`;
+  wrap.style.cssText = `width:${landscape ? 1100 : 760}px;background:#fff;color:#000;padding:8px`;
   wrap.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div style="border:2.5px solid ${stamp.color};color:${stamp.color};border-radius:6px;padding:4px 12px;text-align:center;transform:rotate(-2deg);font-family:Arial,sans-serif">
     <div style="font-weight:800;font-size:15px;letter-spacing:.06em">${stamp.text}</div><div style="font-size:10.5px">${stamp.sub}</div></div></div>${html}`;
-  document.body.appendChild(wrap);
+  const hold = document.createElement('div'); hold.style.cssText = 'position:absolute;left:0;top:0;height:0;overflow:hidden;z-index:-1';
+  hold.appendChild(wrap); document.body.appendChild(hold);
   try {
     return await h2p().set({ margin: [6, 6, 8, 6], filename: 'chung-tu.pdf', image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(wrap).outputPdf('blob');
-  } finally { wrap.remove(); }
+  } finally { hold.remove(); }
 }
 
 /** Lưu một chứng từ PDF cho phiếu */
