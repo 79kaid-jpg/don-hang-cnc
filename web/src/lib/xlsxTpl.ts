@@ -1,7 +1,8 @@
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
 import type { Order, Profile } from './supabase';
-import { HEADER, PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
+import { hdrOf, colsOf } from './fields';
+import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
 
 export type TplData = { vars: Record<string, string | number>; tables: Record<string, Record<string, string | number>[]> };
 const RE = /\{([#/]?)([a-z0-9_]+(?:\.[a-z0-9_]+)?)\}/gi;
@@ -38,12 +39,12 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     ngay: String(dt.getDate()).padStart(2, '0'), thang: String(dt.getMonth() + 1).padStart(2, '0'), nam: dt.getFullYear(), ngay_in: fd(new Date().toISOString()), ngay_duyet_full: fd(lastAt),
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; ')
   };
-  for (const [k] of HEADER[b.proc as Proc]) vars[k] = d.header?.[k] ?? '';
+  for (const [k] of hdrOf(b.proc as Proc)) vars[k] = d.header?.[k] ?? '';
   for (const k of Object.keys(d.header ?? {})) if (vars[k] == null) vars[k] = d.header[k];
   for (const r of ['lap', 'kiem_tra', 'duyet', 'admin', 'ky_thuat']) { const s = sg(r); vars['nguoi_' + r] = nm(s?.user); vars['ngay_' + r] = fd(s?.at); }
   const tables: TplData['tables'] = {};
   for (const [key, def] of PROC_TABLES[b.proc as Proc]) {
-    const T = TABLES[def]; const rows: Row[] = d.tables?.[key] ?? [];
+    const T = { t: TABLES[def].t, cols: colsOf(b.proc as Proc, key) }; const rows: Row[] = d.tables?.[key] ?? [];
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
       for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : String(v); }
       return o2; });
@@ -60,10 +61,10 @@ export function varList(proc: Proc): { k: string; t: string }[] {
     { k: 'ma_don', t: 'Mã đơn hàng' }, { k: 'du_an', t: 'Dự án' }, { k: 'khach_hang', t: 'Khách hàng (KH cuối)' }, { k: 'kh1', t: 'KH1' }, { k: 'kh2', t: 'KH2' },
     { k: 'lien_he', t: 'Liên hệ' }, { k: 'han_giao', t: 'Hạn giao' }, { k: 'cong_ty', t: 'Công ty của phiếu' }, { k: 'lo', t: 'Tên lô / đợt' },
     { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' }];
-  for (const [k, t] of HEADER[proc]) L.push({ k, t });
+  for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }
   if (proc === 'QT1') L.push({ k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
-  for (const [key, def] of PROC_TABLES[proc]) { const T = TABLES[def];
+  for (const [key, def] of PROC_TABLES[proc]) { const T = { t: TABLES[def].t, cols: colsOf(proc, key) };
     L.push({ k: '#' + key, t: 'Lặp dòng: ' + T.t + ' (đặt ở ô đầu dòng)' }, { k: key + '.stt', t: 'STT' });
     for (const c of T.cols) { L.push({ k: key + '.' + c.k, t: c.t }); if (c.n) L.push({ k: 'tong_' + key + '_' + c.k, t: 'Tổng ' + c.t }); } }
   return L;

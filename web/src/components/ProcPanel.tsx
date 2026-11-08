@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sb, errText, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import {
-  BATCH_WORD, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, HEADER, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
+  BATCH_WORD, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
   sumOf, numIn, type Batch, type Col, type Company, type Doc, type Proc, type Row
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { Journey } from './Journey';
+import { useFields, fieldsOf, permOf, colsOf, hdrOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
@@ -129,7 +130,15 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const lvName = d.status === 'duyet_them' && apv ? lvs.find((l) => l.id === apv.queue[apv.idx])?.name : undefined;
-  const editable = can && (proc === 'QT0' ? ['tiep_nhan', 'boc_tach', 'tao_ds'].includes(d.status) : d.status === 'lap');
+  useFields();
+  const pm = (f: FDef) => permOf(f, d.company, d.status, proc);
+  const canEd = (f: FDef) => can && (pm(f) === 'edit' || pm(f) === 'required');
+  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide');
+  const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
+  const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
+    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' ? [] : [{ ...c, ro: !(p === 'edit' || p === 'required'), req: p === 'required' }]; });
+    return { key, title: TABLES[def].t, cols, ed: can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan') }; });
+  const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
   const save = async (quiet = false) => {
     const hh = totalOf() != null ? { ...h, tong_tt: totalOf()! } : h;
@@ -156,7 +165,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
   const role = ROLE_OF[d.status];
-  const kinds = proc === 'QT0' ? [['ban_ve', 'Bản vẽ / tài liệu khách gửi'], ['excel', 'Excel bóc tách chi tiết (bắt buộc)']] : [['dinh_kem', 'File đính kèm (Excel từ phần mềm SX…)']];
+
   return (
     <section className="card pp-doc">
       <div className="pp-doc-head">
@@ -173,21 +182,24 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {!can && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       <div className="grid2">
-        {HEADER[proc].map(([k, lab, ty]) => (
-          <label key={k} className="f">{lab}<input type={ty === 'date' ? 'date' : 'text'} inputMode={ty === 'num' ? 'decimal' : undefined} disabled={!editable}
-            value={h[k] ?? ''} onChange={(e) => { setH({ ...h, [k]: e.target.value }); setDirty(true); }} /></label>))}
+        {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
+          return <label key={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
+            {f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
+              : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
+              : <input type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />}
+            {f.help && <small className="muted">{f.help}</small>}</label>; })}
       </div>
 
       <div className="pp-files">
-        {kinds.map(([k, lab]) => (
-          <div key={k} className="pp-fk"><span className="small"><b>{lab}</b></span>
+        {fFields.map(({ key: k, label: lab, ...f }) => (
+          <div key={k} className="pp-fk"><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
             <span className="row" style={{ gap: 6 }}>{files.filter((f) => f.kind === k).map((f) => <FileLink key={f.path} f={f} />)}
               {files.filter((f) => f.kind === k).length === 0 && <span className="small muted">chưa có</span>}
-              {editable && <label className="btn sm"><Icon name="upload" size={14} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
+              {canEd({ key: k, label: lab, ...f } as FDef) && <label className="btn sm"><Icon name="upload" size={14} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
       </div>
 
-      {PROC_TABLES[proc].map(([key, def]) => (
-        <TableEdit key={key} title={TABLES[def].t} cols={TABLES[def].cols} rows={t[key] ?? []} editable={editable && (proc !== 'QT0' || d.status !== 'tiep_nhan')}
+      {tblDefs.map(({ key, title, cols, ed }) => (
+        <TableEdit key={key} title={title} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${o.code}-${proc}-${key}`} />))}
       {proc === 'QT1' && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
@@ -233,7 +245,7 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: string; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
-  const inCols = cols.filter((c) => !c.calc);
+  const inCols = cols.filter((c) => !c.calc && !c.ro);
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const set = (i: number, k: string, v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   // Áp dụng một giá trị cho cả cột: từ ô vừa sửa (gợi ý) hoặc từ nút ở tiêu đề cột
@@ -292,13 +304,13 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
       <div className="tbl-wrap"><table className="tbl pp-grid">
-        <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : ''}>{editable && !c.calc && rows.length > 1
+        <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : ''}>{editable && !c.calc && !c.ro && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
-              {c.t}<Icon name="list" size={12} /></button> : c.t}</th>)}{editable && <th />}</tr></thead>
+              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {rows.map((r, i) => <tr key={i}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
-              : editable ? <input value={String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} onChange={(e) => set(i, c.k, e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
+              : editable && !c.ro ? <input value={String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} onChange={(e) => set(i, c.k, e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} style={{ width: (c.w ?? 7) + 'ch' }} />
               : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
@@ -314,8 +326,8 @@ function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
   const title = { QT0: 'DANH SÁCH TẤM – BÓC TÁCH BẢN VẼ', QT1: 'XÁC NHẬN ĐƠN HÀNG', QT2: 'LỆNH GIA CÔNG KIÊM BÀN GIAO VẬT LIỆU', QT3: 'PHIẾU XUẤT KHO KIÊM BIÊN BẢN GIAO HÀNG' }[b.proc];
-  const meta = [['Mã đơn hàng', o.code], ['Dự án', o.project], ...HEADER[b.proc].map(([k, l]) => [l, d.header[k] ?? ''])];
-  const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = TABLES[def]; const rows = d.tables[key] ?? [];
+  const meta = [['Mã đơn hàng', o.code], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
+  const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
     return `<h3>${esc(T.t)}</h3><table><tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
       <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
   const roles = b.proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet'];

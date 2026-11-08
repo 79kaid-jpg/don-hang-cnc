@@ -31,7 +31,7 @@ export const NEXT_LABEL: Record<string, string> = {
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
 /** Cột bảng: key, tên, kiểu (t chữ, n số), có tính tự động */
-export type Col = { k: string; t: string; n?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number };
+export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * 7.85).toFixed(1) : null; };
