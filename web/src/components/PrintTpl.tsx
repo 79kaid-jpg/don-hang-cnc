@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
-import { buildData, downloadWb, fillXlsx, printHtml, scanVars, toHtml, varList, type Tpl } from '../lib/xlsxTpl';
+import { parties, type TplImg, buildData, downloadWb, fillXlsx, printHtml, scanVars, toHtml, varList, type Tpl } from '../lib/xlsxTpl';
 import { Icon } from './Icon';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
@@ -13,6 +13,14 @@ const loadBuf = async (t: Tpl) => { const { data, error } = await sb.storage.fro
 const safe = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^\w.-]+/g, '_');
 
 /** Mẫu đang dùng cho quy trình + công ty: ưu tiên mẫu riêng công ty, sau đó mẫu chung */
+/** Tải logo từ kho, đổi sang base64 (PNG/JPEG) kèm kích thước */
+async function loadImg(path: string): Promise<TplImg | null> {
+  const { data } = await sb.storage.from('files').download(path); if (!data) return null;
+  const bmp = await createImageBitmap(data); const cv = document.createElement('canvas'); const k = Math.min(1, 1200 / bmp.width); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+  cv.getContext('2d')!.drawImage(bmp, 0, 0, cv.width, cv.height);
+  return { base64: cv.toDataURL('image/png').split(',')[1], ext: 'png', w: cv.width, h: cv.height };
+}
+
 export function useTpl(proc: string, company: string) {
   const [t, setT] = useState<Tpl | null>(null);
   useEffect(() => { sb.from('print_templates').select('*').eq('proc', proc).eq('active', true).order('version', { ascending: false })
@@ -22,7 +30,10 @@ export function useTpl(proc: string, company: string) {
 
 async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const { data } = await sb.from('customers').select('*'); const cs = (data as Customer[]) ?? []; const cust = Object.fromEntries(cs.map((c) => [c.id, c.name]));
-  const wb = await fillXlsx(await loadBuf(t), buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)))); return { wb, html: toHtml(wb) };
+  const td = buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)), cs);
+  const pt = parties(o, d.company, b.proc, cs); td.images = {};
+  for (const [k, c] of [['ben_ban_logo', pt.seller], ['kh_logo', pt.buyer]] as const) { const im = c?.logo_path ? await loadImg(c.logo_path) : null; if (im) td.images[k] = im; }
+  const wb = await fillXlsx(await loadBuf(t), td); return { wb, html: toHtml(wb) };
 }
 
 function Preview({ html, title, onXlsx, onClose }: { html: string; title: string; onXlsx: () => void; onClose: () => void }) {
