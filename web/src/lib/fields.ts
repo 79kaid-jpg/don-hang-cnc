@@ -26,7 +26,7 @@ export async function loadFields() {
 /** Dùng trong component để vẽ lại khi cấu hình đổi */
 export function useFields() {
   const [, set] = useState(ver);
-  useEffect(() => { const f = () => set(ver); subs.add(f); if (!store) loadFields(); return () => { subs.delete(f); }; }, []);
+  useEffect(() => { const f = () => set(ver); subs.add(f); f(); /* bắt kịp nếu cấu hình đã tải xong trước khi đăng ký */ if (!store) loadFields(); return () => { subs.delete(f); }; }, []);
   return ver;
 }
 
