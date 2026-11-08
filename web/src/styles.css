@@ -1793,3 +1793,4 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .cp-logo-box,.ca-logo{display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box}
 .cp-logo-box img,.ca-logo img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
 .cp-logo-box img{max-width:150px!important;max-height:62px!important;width:auto!important;height:auto!important;min-height:0!important}
+.kb-card .kb-acts .kb-next{display:inline-flex;align-items:center;gap:6px}.kb-ib.kb-open{color:var(--muted)}

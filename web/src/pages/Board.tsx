@@ -13,6 +13,9 @@ import { useAuth } from '../lib/auth';
  *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwha, cột cuối là bước ký tay. */
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 type Mine = { doc_id: string | null; batch_id: string };
+/** Bước nhập liệu (phải mở hồ sơ) và nhãn hành động chuyển bước */
+const ENTRY = ['tiep_nhan', 'boc_tach', 'tao_ds', 'lap'];
+const NEXT_BTN: Record<string, string> = { tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Chuyển tạo DS tấm', tao_ds: 'Gửi kiểm tra', lap: 'Gửi kiểm tra', kiem_tra: 'Gửi duyệt', duyet: 'Duyệt', duyet_them: 'Duyệt' };
 type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: boolean; i: number };
 
 export default function Board() {
@@ -197,8 +200,14 @@ export default function Board() {
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>
                         {it.act && <div className="kb-acts">
                           {it.key === 'ky' ? <Link className="btn sm primary kb-next" to={'/don/' + it.b.order_id + '?tab=' + qt}>Tải bản {FINAL[qt].toLowerCase()} →</Link>
-                            : <Link className="btn sm primary kb-next" title={(NEXT_LABEL[it.doc?.status ?? ''] ?? 'Mở') + ' – mở hồ sơ'} to={'/don/' + it.b.order_id + '?tab=' + qt}>{({ tiep_nhan: 'Bóc tách', boc_tach: 'Tạo DS tấm', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Gửi duyệt', duyet: 'Duyệt', lap: 'Gửi kiểm tra' } as Record<string, string>)[it.doc?.status ?? ''] ?? 'Mở'}</Link>}
-                          {canNext(it) && <button className="kb-ib kb-move" aria-label="Ký nhanh" title="Ký nhanh (M)" onClick={() => setDlg({ c: it, action: 'next' })}><Icon name="check" size={17} /></button>}
+                            : ENTRY.includes(it.doc?.status ?? '') ? <>
+                              {/* bước nhập liệu: phải mở hồ sơ để nhập; ✓ gửi luôn khi đã nhập xong */}
+                              <Link className="btn sm primary kb-next" title="Mở hồ sơ để nhập liệu" to={'/don/' + it.b.order_id + '?tab=' + qt}>Nhập liệu</Link>
+                              {canNext(it) && <button className="kb-ib kb-move" aria-label={NEXT_BTN[it.doc?.status ?? ''] ?? 'Chuyển bước'} title={(NEXT_BTN[it.doc?.status ?? ''] ?? 'Chuyển bước') + ' (M)'} onClick={() => setDlg({ c: it, action: 'next' })}><Icon name="check" size={17} /></button>}</>
+                            : <>
+                              {/* bước kiểm tra / duyệt: nút chính thực hiện luôn, có hộp xác nhận */}
+                              {canNext(it) && <button className="btn sm primary kb-next" title={(NEXT_BTN[it.doc?.status ?? ''] ?? 'Chuyển bước') + ' (M)'} onClick={() => setDlg({ c: it, action: 'next' })}>{NEXT_BTN[it.doc?.status ?? ''] ?? 'Chuyển bước'}</button>}
+                              <Link className="kb-ib kb-open" aria-label="Xem hồ sơ" title="Xem hồ sơ (Enter)" to={'/don/' + it.b.order_id + '?tab=' + qt}><Icon name="eye" size={17} /></Link></>}
                           {canBack(it) && <button className="kb-ib kb-back" aria-label="Trả về" title="Trả về (R)" onClick={() => setDlg({ c: it, action: 'back' })}><Icon name="back" size={17} /></button>}
                         </div>}
                       </article>))}
