@@ -42,12 +42,13 @@ export async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<
   const wb = await fillXlsx(await loadBuf(t), td); return { wb, html: toHtml(wb) };
 }
 
-function Preview({ html, title, onXlsx, onClose }: { html: string; title: string; onXlsx: () => void; onClose: () => void }) {
+function Preview({ html, title, onXlsx, onTpl, onClose }: { html: string; title: string; onXlsx: () => void; onTpl?: () => void; onClose: () => void }) {
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [onClose]);
   return createPortal(<div className="pt-ov" onClick={onClose}>
     <div className="pt-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
       <header><b>{title}</b><span style={{ flex: 1 }} />
-        <button className="btn sm" onClick={onXlsx}><Icon name="download" size={15} />Excel</button>
+        {onTpl && <button className="btn sm" onClick={onTpl} title="File mẫu còn nguyên các biến {…} – dùng file này để chỉnh sửa rồi tải lên lại"><Icon name="download" size={15} />Tải mẫu gốc (có biến) để sửa</button>}
+        <button className="btn sm" onClick={onXlsx} title={onTpl ? 'Bản đã điền dữ liệu thử – chỉ để xem, không dùng làm mẫu' : ''}><Icon name="download" size={15} />{onTpl ? 'Excel bản thử' : 'Excel'}</button>
         <button className="btn sm primary" onClick={() => printHtml(html, title)}><Icon name="print" size={15} />In / PDF</button>
         <button className="btn sm icon" aria-label="Đóng" onClick={onClose}><Icon name="x" size={16} /></button></header>
       <div className="pt-paper"><div dangerouslySetInnerHTML={{ __html: html }} /></div>
@@ -110,7 +111,7 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
           <span className="pt-ic"><Icon name="file" size={18} /></span>
           <div className="pt-b"><b>{t.name}</b><span className="small muted">{CO[t.company ?? '']} · v{t.version} · {new Date(t.created_at).toLocaleDateString('vi-VN')} · {t.vars.length} biến{t.active ? '' : ' · đang tắt'}</span></div>
           <span className="pt-act"><button className="btn sm" disabled={busy} onClick={() => test(t)}><Icon name="eye" size={14} />Thử</button>
-            <button className="btn sm icon" aria-label="Tải file mẫu" onClick={() => dl(t)}><Icon name="download" size={14} /></button>
+            <button className="btn sm icon" aria-label="Tải file mẫu gốc (có biến)" title="Tải file mẫu gốc (có biến) để chỉnh sửa" onClick={() => dl(t)}><Icon name="download" size={14} /></button>
             {canEdit && <button className="btn sm" onClick={() => toggle(t)}>{t.active ? 'Tắt' : 'Dùng'}</button>}</span>
         </li>)}</ul>
         {canEdit && !up && <label className="pt-drop"><Icon name="upload" size={20} /><span><b>Tải mẫu Excel (.xlsx)</b><br /><span className="small muted">Gõ biến vào ô, ví dụ {'{so_lenh}'} · dòng bảng bắt đầu bằng {'{#nl}'}</span></span>
@@ -122,7 +123,7 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
           <div className="small"><b>{up.vars.length} biến tìm thấy</b> trong {up.file.name}</div>
           <div className="pt-vars">{up.vars.map((v) => <span key={v} className={'pt-v' + (known.has(v) ? '' : ' bad')} title={known.has(v) ? '' : 'Biến không có – sẽ để trống'}>{'{' + v + '}'}</span>)}</div>
           {up.vars.some((v) => !known.has(v)) && <div className="msg err"><Icon name="alert" size={16} /><span>Biến màu đỏ không có trong {proc} – sẽ để trống khi in. Kiểm tra lại chính tả.</span></div>}
-          {!up.vars.length && <div className="msg info"><Icon name="alert" size={16} /><span>Chưa thấy biến nào. Gõ {'{ten_bien}'} vào các ô cần điền.</span></div>}
+          {!up.vars.length && <div className="msg err"><Icon name="alert" size={16} /><span><b>File này không có biến nào</b> – mọi đơn sẽ in ra cùng một nội dung cố định. Có thể bạn đang tải lên bản <i>đã điền dữ liệu</i> (nút "Excel bản thử"). Hãy dùng nút tải <b>mẫu gốc (có biến)</b>, sửa trên đó rồi tải lên lại; hoặc gõ {'{ten_bien}'} vào các ô cần điền.</span></div>}
           <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}><button className="btn" onClick={() => setUp(null)}>Huỷ</button>
             <button className="btn primary" disabled={busy || !up.name.trim()} onClick={save}>{busy ? 'Đang lưu…' : 'Lưu mẫu'}</button></div>
         </div>}
@@ -132,6 +133,6 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
         <ul className="pt-vl">{varList(proc).map((v) => <li key={v.k}><button onClick={() => copy(v.k)}><code>{'{' + v.k + '}'}</code><span>{v.t}</span></button></li>)}</ul>
       </section>
     </div>
-    {pv && <Preview html={pv.html} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onClose={() => setPv(null)} />}
+    {pv && <Preview html={pv.html} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onTpl={() => dl(pv.t)} onClose={() => setPv(null)} />}
   </div>;
 }
