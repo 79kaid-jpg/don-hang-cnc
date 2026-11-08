@@ -1782,3 +1782,5 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .pp-tot-lb{font-weight:700;text-align:left!important;white-space:nowrap}
 .pp-tot-lb span{margin-left:6px;font-weight:500;font-size:12px;color:var(--muted)}
 .pp-grid tbody td[colspan]{text-align:left;width:auto;color:inherit;padding:8px 10px}
+input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!important;box-shadow:0 0 0 2px rgba(217,45,32,.12)}
+.f-err{color:#b42318;font-size:12px}

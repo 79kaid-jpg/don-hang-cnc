@@ -69,6 +69,11 @@ export const OWN_HEADER = ['so_lenh', 'so_hd', 'so_phieu', 'so_xn'];
 
 export const sumOf = (rows: Row[], c: Col) => rows.reduce((s, r) => s + (Number((c.calc ? c.calc(r) : num(r[c.k])) ?? 0)), 0);
 export const numIn = num;
+/** Số hợp lệ: 12 · 12.5 · 12,5 (không âm, tối đa một dấu thập phân) */
+export const NUM_RE = /^\d+([.,]\d+)?$/;
+export const isNumOk = (v: unknown) => { const s = String(v ?? '').trim(); return s === '' || NUM_RE.test(s); };
+/** Lọc ký tự khi gõ vào ô số */
+export const numTyping = (v: string) => v.replace(/[^\d.,]/g, '');
 
 /** Bước hiện tại của một hồ sơ (dùng cho Kanban / sơ đồ) */
 export function stepOf(b: Batch, docs: Doc[]): { key: string; company?: Company; doc?: Doc } {
