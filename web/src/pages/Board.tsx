@@ -22,7 +22,9 @@ type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: b
 export default function Board() {
   const nav = useNavigate();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
-  const adm = useAuth().can('admin_it');
+  const { can: canA, me: meP } = useAuth(); const adm = canA('admin_it');
+  // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
+  const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
@@ -37,7 +39,7 @@ export default function Board() {
   };
   useEffect(() => { load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
-  const COLS = [...columnsOf(qt), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
+  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st = stepOf(b, docs); const o = orders[b.order_id];
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: COLS.findIndex((c) => c.key === st.key) };
