@@ -8,6 +8,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
+import { advanceDoc } from '../lib/records';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
  *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwa, cột cuối là bước ký tay. */
@@ -29,16 +30,17 @@ export default function Board() {
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
   const load = async () => {
     const [a, b, c, d, e] = await Promise.all([
-      sb.from('batches').select('*').in('status', ['dang_lam', 'cho_ky']).order('created_at'),
+      sb.from('batches').select('*').or(`status.in.(dang_lam,cho_ky),and(status.in.(hoan_tat,fail),done_at.gte.${new Date(Date.now() - 14 * 864e5).toISOString()})`).order('created_at'),
       sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs').select('*')]);
     setBatches((a.data as Batch[]) ?? []); setOrders(Object.fromEntries(((b.data as Order[]) ?? []).map((x) => [x.id, x])));
     setCust(Object.fromEntries(((c.data as Customer[]) ?? []).map((x) => [x.id, x]))); setMine((d.data as Mine[]) ?? []); setDocs((e.data as Doc[]) ?? []);
   };
   useEffect(() => { load(); }, []);
-  const COLS = columnsOf(qt);
+  // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
+  const COLS = [...columnsOf(qt), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st = stepOf(b, docs); const o = orders[b.order_id];
-    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: adm || mine.some((m) => m.batch_id === b.id), i: COLS.findIndex((c) => c.key === st.key) };
+    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: COLS.findIndex((c) => c.key === st.key) };
   }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm]); // eslint-disable-line
   const byCol = (i: number) => cards.filter((c) => c.i === i);
   const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p).length;
@@ -182,8 +184,8 @@ export default function Board() {
           <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               return (
-                <section key={c.key} data-col={i} className={'kb-col' + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '')} aria-label={c.title}>
-                  <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group ?? qt} · bước {qt === 'QT0' ? i + 1 : (i % 3) + 1}</span>
+                <section key={c.key} data-col={i} className={'kb-col' + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
+                  <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
                     <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div></header>
                   <div className="kb-list">
                     {(tgt || eat === i) && <div className={'kb-slot open' + (isBack ? ' back' : '') + (eat === i ? ' eat' : '')} aria-hidden="true"><span className="kb-slot-mouth" />
@@ -227,8 +229,8 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const st = c.doc?.status ?? '';
   const go = async () => { setBusy(true); setErr('');
-    const { error } = await sb.rpc('doc_advance', { p_doc: c.doc!.id, p_action: action, p_note: note.trim() }); setBusy(false);
-    if (error) setErr(errText(error)); else { toast(action === 'next' ? 'Đã ký' : 'Đã trả về'); onDone(); } };
+    try { const r = await advanceDoc(c.o!, c.b, c.doc!, action, note.trim()); setBusy(false); toast(action === 'next' ? 'Đã ký' : 'Đã trả về'); if (r.warn) setTimeout(() => toast(r.warn!), 1500); onDone(); }
+    catch (e) { setBusy(false); setErr(errText(e as Error)); } };
   return (
     <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>{action === 'next' ? 'Ký' : 'Trả về'} · {c.o?.code}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>

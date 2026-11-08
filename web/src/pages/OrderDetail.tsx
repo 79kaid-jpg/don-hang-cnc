@@ -1,6 +1,7 @@
 import { Age } from '../components/Age';
 import { CustomerPicker } from '../components/CustomerPicker';
 import { OrderFields } from '../components/OrderFields';
+import { RecordsTab } from '../components/Records';
 import { QtTag } from '../components/QtTag';
 import ProcPanel from '../components/ProcPanel';
 import { PROC_SHORT, procSummary, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -21,7 +22,7 @@ type Price = { line_id: string; order_id: string; unit_price: number; price_unit
 type Step = { doc_type: string; step_no: number; label: string; approver_id: string | null };
 type Ev = { id: number; at: string; actor: string | null; acting_as: string | null; action: string };
 
-const TABS = [['F0', 'F0 Tiếp nhận'], ['QT0', 'QT0 Bóc tách'], ['QT1', 'QT1 XNĐH'], ['QT2', 'QT2 Lệnh GC'], ['QT3', 'QT3 Giao hàng'], ['LS', 'LS Lịch sử']] as const;
+const TABS = [['F0', 'F0 Tiếp nhận'], ['QT0', 'QT0 Bóc tách'], ['QT1', 'QT1 XNĐH'], ['QT2', 'QT2 Lệnh GC'], ['QT3', 'QT3 Giao hàng'], ['CT', 'CT Chứng từ'], ['LS', 'LS Lịch sử']] as const;
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 
 export default function OrderDetail() {
@@ -102,6 +103,7 @@ export default function OrderDetail() {
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {PROCS.includes(tab as Proc) && <ProcPanel o={o} proc={tab as Proc} people={people} />}
+      {tab === 'CT' && <RecordsTab orderId={o.id} people={people} />}
       {tab === 'LS' && (
         <div className="card steps">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}

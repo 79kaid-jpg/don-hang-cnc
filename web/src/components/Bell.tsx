@@ -5,8 +5,8 @@ import { dt } from '../lib/format';
 import { Icon } from './Icon';
 
 type M = { id: string; order_id: string; code: string; project: string; proc: string | null; company: string | null; kind: string; from_name: string; text: string; via: string; at: string; unread: boolean };
-const LB: Record<string, string> = { nudge: 'nhắc việc', reply: 'nhắn', reassign: 'giao việc cho bạn', auto: 'nhắc hạn' };
-const IC: Record<string, string> = { nudge: 'bell', reply: 'chat', reassign: 'users', auto: 'clock' };
+const LB: Record<string, string> = { nudge: 'nhắc việc', reply: 'nhắn', reassign: 'giao việc cho bạn', auto: 'nhắc hạn', turn: 'chuyển phiếu', result: 'kết quả duyệt' };
+const IC: Record<string, string> = { nudge: 'bell', reply: 'chat', reassign: 'users', auto: 'clock', turn: 'inbox', result: 'checksq' };
 
 /** Chuông thông báo: tin Trao đổi gửi tới tôi (nhắc việc, giao lại, phản hồi, nhắc hạn) */
 export function Bell({ variant }: { variant: 'top' | 'side' }) {

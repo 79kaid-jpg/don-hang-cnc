@@ -21,6 +21,12 @@ async function loadImg(path: string): Promise<TplImg | null> {
   return { base64: cv.toDataURL('image/png').split(',')[1], ext: 'png', w: cv.width, h: cv.height };
 }
 
+/** Mẫu in đang dùng cho QT + công ty */
+export async function getTpl(proc: string, company: string): Promise<Tpl | null> {
+  const { data } = await sb.from('print_templates').select('*').eq('proc', proc).eq('active', true).order('version', { ascending: false });
+  const l = (data as Tpl[]) ?? []; return l.find((x) => x.company === company) ?? l.find((x) => !x.company) ?? null;
+}
+
 export function useTpl(proc: string, company: string) {
   const [t, setT] = useState<Tpl | null>(null);
   useEffect(() => { sb.from('print_templates').select('*').eq('proc', proc).eq('active', true).order('version', { ascending: false })
@@ -28,7 +34,7 @@ export function useTpl(proc: string, company: string) {
   return t;
 }
 
-async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
+export async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const { data } = await sb.from('customers').select('*'); const cs = (data as Customer[]) ?? []; const cust = Object.fromEntries(cs.map((c) => [c.id, c.name]));
   const td = buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)), cs);
   const pt = parties(o, d.company, b.proc, cs); td.images = {};

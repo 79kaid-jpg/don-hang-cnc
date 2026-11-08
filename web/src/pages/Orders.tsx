@@ -14,6 +14,7 @@ export default function Orders() {
   const { can } = useAuth(); const nav = useNavigate();
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
+  const [kq, setKq] = useState<'' | 'ok' | 'fail'>('');
   const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   const holder = useHolders();
   useEffect(() => {
@@ -32,10 +33,11 @@ export default function Orders() {
     else if (done) due = { cls: 'done', t: 'Hoàn tất', ic: 'check' };
     else if (o.due_date) { const d = Math.ceil((new Date(o.due_date + 'T23:59:59').getTime() - Date.now()) / 864e5);
       if (d < 0) due = { cls: 'late', t: 'Quá hạn ' + -d + ' ngày', ic: 'alert' }; else if (d <= 3) due = { cls: 'soon', t: d === 0 ? 'Hạn hôm nay' : 'Còn ' + d + ' ngày', ic: 'clock' }; }
-    return { l, done, hs, stuck, due, steps: PROCS.map((p) => ({ p, ...procSummary(p, l, ds) })) };
+    const fail = l.some((b) => b.status === 'fail');
+    return { l, done, fail, hs, stuck, due, steps: PROCS.map((p) => ({ p, ...procSummary(p, l, ds) })) };
   };
   const all = useMemo(() => (rows ?? []).map((o) => ({ o, ...info(o) })), [rows, bs, ds, holder]); // eslint-disable-line react-hooks/exhaustive-deps
-  const base = all.filter((x) => (done ? true : !['hoan_tat', 'huy'].includes(x.o.status) && !x.done) && (x.o.code + ' ' + x.o.project).toLowerCase().includes(q.toLowerCase()));
+  const base = all.filter((x) => (kq === 'ok' ? x.done : kq === 'fail' ? x.fail : true) && (done || kq ? true : !['hoan_tat', 'huy'].includes(x.o.status) && !x.done) && (x.o.code + ' ' + x.o.project).toLowerCase().includes(q.toLowerCase()));
   const cnt = { late: base.filter((x) => x.due?.cls === 'late').length, soon: base.filter((x) => x.due?.cls === 'soon').length, stuck: base.filter((x) => x.stuck).length };
   const list = base.filter((x) => !f || (f === 'stuck' ? x.stuck : x.due?.cls === f));
   return (
@@ -52,6 +54,9 @@ export default function Orders() {
         {([['late', 'Quá hạn', 'alert'], ['soon', 'Sắp đến hạn', 'clock'], ['stuck', 'Kẹt ≥ 2 ngày', 'hourglass']] as const).map(([k, t, ic]) => (
           <button key={k} className={'pill-toggle f-' + k + (f === k ? ' on' : '')} aria-pressed={f === k} onClick={() => setF(f === k ? '' : k)}><Icon name={ic} size={15} />{t} <span className="kb-count">{cnt[k]}</span></button>))}
         <button className={'pill-toggle' + (done ? ' on' : '')} aria-pressed={done} onClick={() => setDone(!done)}>{done && <Icon name="check" size={16} />}Gồm đơn đã xong / huỷ</button>
+        <label className="small muted row" style={{ gap: 6 }}>Kết quả
+          <select aria-label="Lọc theo kết quả" value={kq} onChange={(e) => setKq(e.target.value as typeof kq)}>
+            <option value="">Tất cả</option><option value="ok">Hoàn thành</option><option value="fail">Có lượt thất bại</option></select></label>
       </div>
       {!rows ? <Skeleton rows={4} h={92} /> : list.length === 0 ? <Empty title={q ? 'Không có đơn khớp “' + q + '”' : 'Không có đơn'} /> : (
         <ul className="ol">

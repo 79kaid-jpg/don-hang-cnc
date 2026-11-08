@@ -157,8 +157,13 @@ Deno.serve(async (req) => {
     const link = `${APP}#/don/${b.order_id}?tab=${proc}`;
     const head = `${b.orders.code} · ${b.orders.project}\n${proc} · ${b.title}${proc === 'QT0' ? '' : ' · ' + CO[d.company]}`;
     const text = what ? `✍ ${head}\n${what}\n${link}` : back ? `↩️ Bị trả về – ${STL[d.status]}\n${head}\nLý do: ${last?.note ?? ''}\n${link}` : `📌 Đến lượt bạn: ${STL[d.status]}${proc === 'QT0' ? '' : ' (' + CO[company] + ')'}\n${head}\n${link}`;
+    let pdf = '';
+    if (!what && !back && (d.status === 'duyet' || d.status === 'duyet_them')) {
+      const { data: rc } = await db.from('doc_records').select('path').eq('doc_id', doc_id).eq('kind', 'trinh_duyet').order('at', { ascending: false }).limit(1).maybeSingle();
+      if (rc) { const { data: su } = await db.storage.from('files').createSignedUrl(rc.path, 7 * 86400); if (su?.signedUrl) pdf = '\n📄 Bản trình duyệt (PDF): ' + su.signedUrl; }
+    }
     const { data: ps } = await db.from('profiles').select('id, zalo_chat_id').in('id', [...ids]);
-    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { await send(p.zalo_chat_id, text); n++; }
+    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { await send(p.zalo_chat_id, text + pdf); n++; }
     return json({ ok: true, sent: n, to: ids.size });
   }
   return json({ error: 'unknown op' }, 400);

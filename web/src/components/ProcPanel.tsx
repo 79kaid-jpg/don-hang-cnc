@@ -7,6 +7,8 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { Journey } from './Journey';
+import { advanceDoc } from '../lib/records';
+import { ReviewPdf } from './Records';
 import { parties } from '../lib/xlsxTpl';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
@@ -50,7 +52,7 @@ export default function ProcPanel({ o, proc, people }: { o: Order; proc: Proc; p
         {B && <Chain proc={proc} b={B} docs={bDocs} sel={D?.company} onPick={setCo} />}
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
-        {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Fail. Mở “lần bóc tách mới” nếu cần làm lại.</span></div>}
+        {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Thất bại – đã dừng. {B.proc === 'QT0' ? 'Mở “lần bóc tách mới”' : 'Mở lượt mới'} nếu cần làm lại.</span></div>}
         {B && B.proc === 'QT2' && <Check5 b={B} />}
         {D && B && <DocView key={D.id + D.status} o={o} b={B} d={D} people={people} onChanged={load} />}
       </>)}
@@ -166,9 +168,11 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
-    const { data, error } = await sb.rpc('doc_advance', { p_doc: d.id, p_action: action, p_note: n });
-    setBusy(false);
-    if (error) setErr(errText(error)); else { toast(action === 'next' ? 'Đã ký → ' + (STATUS[data as string] ?? data) : action === 'back' ? 'Đã trả về' : 'Đã đánh Fail'); setAsk(''); setWhy(''); onChanged(); }
+    try {
+      const r = await advanceDoc(o, b, { ...d, ...h0(d) }, action, n); setBusy(false);
+      toast(action === 'next' ? 'Đã ký → ' + (STATUS[r.next] ?? r.next) : action === 'back' ? 'Đã trả về' : 'Đã đánh Thất bại'); if (r.warn) setTimeout(() => toast(r.warn!), 1500);
+      setAsk(''); setWhy(''); onChanged();
+    } catch (e) { setBusy(false); setErr(errText(e as Error)); }
   };
   const addNote = async () => { const { error } = await sb.rpc('doc_note', { p_doc: d.id, p_text: note }); if (error) setErr(errText(error)); else { setNote(''); onChanged(); } };
   const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string) => {
@@ -199,6 +203,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status)) && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
       {!can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
+      <ReviewPdf docId={d.id} status={d.status} />
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
@@ -248,12 +253,12 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {can && !['da_duyet', 'fail'].includes(d.status) && (
         <div className="pp-act">
           {ask ? (<div className="pp-ask">
-            <label className="f">{ask === 'fail' ? 'Lý do Fail (hao hụt lớn, vượt dự toán, không sản xuất được…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
+            <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
             <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
-              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Đánh Fail' : 'Trả về'}</button></div></div>) : (<>
+              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
             {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
-            {proc === 'QT0' && d.status === 'duyet' && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Từ chối · Fail</button>}
+            {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
             <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button></>)}
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
@@ -270,6 +275,8 @@ function SaveState({ editable, dirty, busy, onSave }: { editable: boolean; dirty
 }
 
 /** Còn thay đổi chưa lưu: hỏi trước khi rời trang (đóng tab, bấm liên kết trong app) */
+const h0 = (d: Doc) => ({ apv: (d as Doc & { apv?: { queue: string[]; idx: number } | null }).apv ?? null });
+
 function useUnsavedGuard(dirty: boolean) {
   useEffect(() => {
     if (!dirty) return;
@@ -379,7 +386,8 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
 }
 
 /** Bản in theo mẫu form (A4) */
-function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
+/** HTML bản in mặc định của app (khi QT chưa có mẫu Excel) */
+export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
   const title = { QT0: 'DANH SÁCH TẤM – BÓC TÁCH BẢN VẼ', QT1: 'XÁC NHẬN ĐƠN HÀNG', QT2: 'LỆNH GIA CÔNG KIÊM BÀN GIAO VẬT LIỆU', QT3: 'PHIẾU XUẤT KHO KIÊM BIÊN BẢN GIAO HÀNG' }[b.proc];
@@ -391,8 +399,7 @@ function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');
   const hand = b.proc === 'QT1' ? ['Khách hàng xác nhận (ký, đóng dấu)'] : b.proc === 'QT2' ? ['Người bàn giao vật liệu', 'Người nhận vật liệu'] : b.proc === 'QT3' ? ['Thủ kho / người giao', 'Tài xế', 'Khách hàng nhận hàng'] : [];
-  const w = window.open('', '_blank'); if (!w) return;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><style>
     @page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}
@@ -403,6 +410,8 @@ function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
     ${d.notes.length ? `<div class="notes"><b>Ghi chú:</b><br>${d.notes.map((n) => esc((ROLE_NAME[n.role] ?? n.role) + ': ' + n.text)).join('<br>')}</div>` : ''}
     <h3>Ký xác nhận</h3><table class="sig"><tr>${sig}</tr></table>
     ${hand.length ? `<h3>Ký tay</h3><table class="sig"><tr>${hand.map((x) => `<td><b>${x}</b><div class="sp"></div>Họ tên: ……………………</td>`).join('')}</tr></table>` : ''}
-    <script>setTimeout(()=>print(),300)</script></body></html>`);
-  w.document.close();
+    ${auto ? '<script>setTimeout(()=>print(),300)</script>' : ''}</body></html>`;
+}
+function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
+  const w = window.open('', '_blank'); if (!w) return; w.document.write(docHtml(o, b, d, people, true)); w.document.close();
 }
