@@ -1855,3 +1855,7 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .pp-tools{gap:4px!important}
 /* Sidebar (và popup Thông báo bên trong) luôn nằm trên nội dung trang */
 .side{z-index:45}
+/* Sidebar thu gọn (68px, overflow ẩn): popup Tài khoản / Thông báo ghim theo màn hình để không bị cắt */
+.app.side-hidden:not(.side-peek) .acc-pop{position:fixed;left:12px;bottom:76px;width:272px}
+.app.side-hidden:not(.side-peek) .side .bell-pop{position:fixed;left:80px;top:16px}
+.app.side-hidden:not(.side-peek) .acc-pop .acc-id{display:grid}
