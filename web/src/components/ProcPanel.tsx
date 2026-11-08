@@ -1,3 +1,4 @@
+import { normNum, parseTsv } from '../lib/paste';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
@@ -360,7 +361,27 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     }
     return out;
   };
-  const doPaste = () => { const add = fromAoa(paste.replace(/^(\r?\n)+|(\r?\n)+$/g, '').split(/\r?\n/).map((l) => l.split('\t')));
+  // Dán thẳng vào ô (như Excel): nhiều ô / nhiều dòng → điền từ ô đang chọn sang phải và xuống dưới, thiếu dòng thì thêm
+  const pasteAt = (e: React.ClipboardEvent<HTMLInputElement>, ri: number, ck: string) => {
+    const txt = e.clipboardData.getData('text/plain'); if (!/[\t\n]/.test(txt.replace(/\r?\n$/, ''))) return; // một ô → để trình duyệt dán bình thường
+    e.preventDefault();
+    const lines = parseTsv(txt); if (!lines.length) return;
+    // có dòng tiêu đề khớp tên cột → dùng ánh xạ theo tên
+    const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
+    if (lines[0].some((x) => inCols.some((c) => norm(x) === norm(c.t)))) { const add = fromAoa(lines); onChange([...rows, ...add]); setMsg('Đã thêm ' + add.length + ' dòng (theo tiêu đề cột)'); return; }
+    const start = inCols.findIndex((c) => c.k === ck); const out = rows.map((r) => ({ ...r })); let n = 0;
+    lines.forEach((cells, li) => { const ix = ri + li; while (out.length <= ix) out.push({});
+      cells.forEach((v, cj) => { const c = inCols[start + cj]; if (c) out[ix][c.k] = c.n ? normNum(v) : v.trim(); }); n++; });
+    onChange(out); setMsg(`Đã dán ${n} dòng × ${Math.min(lines[0].length, inCols.length - start)} cột từ ô đang chọn`);
+  };
+  // Ctrl+V khi đang ở bảng nhưng không ở ô nhập (ví dụ bảng trống): thêm dòng mới
+  const pasteAny = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const tg = e.target as HTMLElement; if (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || e.defaultPrevented) return;
+    const g = parseTsv(e.clipboardData.getData('text/plain')); if (!g.length) return; e.preventDefault();
+    const add = fromAoa(g); if (!add.length) { setMsg(skipped ? 'Các dòng dán vào trùng dòng ví dụ của Mẫu Excel nên không thêm.' : 'Không đọc được dòng nào.'); return; }
+    onChange([...rows, ...add]); setMsg('Đã dán ' + add.length + ' dòng');
+  };
+  const doPaste = () => { const add = fromAoa(parseTsv(paste));
     if (!add.length) { setMsg(skipped ? 'Các dòng dán vào trùng dòng ví dụ của Mẫu Excel nên không thêm. Hãy thay bằng dữ liệu thật.' : 'Không đọc được dòng nào – kiểm tra lại dữ liệu đã chép.'); return; }
     onChange([...rows, ...add]); setPaste(''); setOpen(false); setMsg('Đã thêm ' + add.length + ' dòng' + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); };
   const doFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -372,7 +393,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     const ws = X.utils.aoa_to_sheet([inCols.map((c) => c.t), ...ex]); ws['!cols'] = inCols.map((c, j) => ({ wch: Math.max(10, c.t.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   return (
-    <div className="pp-tbl">
+    <div className="pp-tbl" onPaste={editable ? pasteAny : undefined}>
       <div className="row between pp-th"><b>{title} <span className="small muted">· {rows.length} dòng</span></b>
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           {isAdm && <button className="btn sm" title="Admin: thêm 3 dòng dữ liệu mẫu vào bảng này" onClick={() => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); }}><Icon name="bolt" size={14} />Nạp dữ liệu</button>}
@@ -401,10 +422,12 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
         <tbody>
           {rows.map((r, i) => <tr key={i}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
-              : editable && !c.ro ? <input value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
+              : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
               : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
+          {editable && rows.length === 0 && <tr><td colSpan={cols.length + 2}><div className="pp-dropzone" tabIndex={0} role="textbox" aria-label="Dán dữ liệu từ Excel">
+            <Icon name="copy" size={16} /><span><b>Bấm vào đây rồi nhấn Ctrl+V</b> để dán các dòng đã chép từ Excel <span className="muted">(có hoặc không có dòng tiêu đề)</span></span></div></td></tr>}
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
         {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
@@ -427,16 +450,6 @@ const SAMPLE: Record<string, (string | number)[]> = {
   pallet: ['PL-1', 'PL-1', 'PL-2'], don_gia: [450000, 450000, 450000], duong_han: [0, 0, 1.2], chan: [2, 2, 4], m2_dot: [0, 0, 0],
   ghi_chu: ['', '', ''],
 };
-/** Số chép từ Excel có định dạng: 1.500 / 1,500.25 / 5.500.000 / 8,25 → dạng chuẩn */
-export function normNum(v: string): string {
-  let x = v.replace(/[\s\u00a0]/g, ''); if (!x) return '';
-  const d = x.lastIndexOf('.'), c = x.lastIndexOf(',');
-  if (d >= 0 && c >= 0) { const dec = d > c ? '.' : ','; x = x.split(dec === '.' ? ',' : '.').join(''); return x.replace(',', '.'); }
-  const sep = d >= 0 ? '.' : c >= 0 ? ',' : ''; if (!sep) return x;
-  const parts = x.split(sep);
-  if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3 && parts[0] !== '0')) return parts.join(''); // dấu phân cách hàng nghìn
-  return parts.join('.');
-}
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));

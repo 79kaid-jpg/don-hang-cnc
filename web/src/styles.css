@@ -1834,3 +1834,5 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .kb-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .login-as{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}.login-as:hover{text-decoration:underline;color:var(--accent,#2563eb)}button.login-as.kb-who{display:inline-flex;align-items:center;gap:6px}button.login-as.avatar{display:inline-grid;place-items:center}
+
+.pp-dropzone{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1.5px dashed var(--line,#cbd5e1);border-radius:10px;color:var(--muted,#64748b);cursor:text;outline:none}.pp-dropzone:focus{border-color:var(--accent,#3A6EA5);background:color-mix(in srgb,var(--accent,#3A6EA5) 6%,transparent);color:inherit}

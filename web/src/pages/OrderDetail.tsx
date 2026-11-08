@@ -1,3 +1,4 @@
+import { normNum, parseTsv } from '../lib/paste';
 import { Age } from '../components/Age';
 import { CustomerPicker } from '../components/CustomerPicker';
 import { OrderFields } from '../components/OrderFields';
@@ -211,8 +212,9 @@ function F1({ o, lines, can, run, load, setErr, setOk, tot }: P & { tot: { qty: 
   };
   const fromPaste = () => {
     // Cột: Mã TP | Vật liệu | Dày | Dài | Rộng | Số tấm  (dán thẳng từ Excel)
-    const rows = paste.trim().split(/\r?\n/).map((l) => l.split('\t')).filter((c) => c.length >= 6)
-      .map((c) => ({ product_code: c[0], material: c[1], thickness_mm: c[2], length_mm: c[3], width_mm: c[4], qty: c[5], spec: c[6] ?? '' }));
+    const g = parseTsv(paste); if (g.length && /m[aã]/i.test(g[0][0] ?? '') && isNaN(Number(normNum(g[0][2] ?? '')))) g.shift(); // bỏ dòng tiêu đề
+    const rows = g.filter((c) => c.length >= 6)
+      .map((c) => ({ product_code: c[0].trim(), material: c[1].trim(), thickness_mm: normNum(c[2]), length_mm: normNum(c[3]), width_mm: normNum(c[4]), qty: normNum(c[5]), spec: (c[6] ?? '').trim() }));
     if (!rows.length) { setErr('Không đọc được dòng nào. Cần 6 cột: Mã TP, Vật liệu, Dày, Dài, Rộng, Số tấm.'); return; }
     add(rows);
   };

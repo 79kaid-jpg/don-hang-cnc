@@ -1,3 +1,4 @@
+import { normNum, parseTsv } from '../lib/paste';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Icon } from '../components/Icon';
@@ -45,13 +46,13 @@ function TableField({ cols, rows, ed, onChange }: { cols: Column[]; rows: Row[];
     if (inCols.some((c) => c.label.toLowerCase() === first || c.id === first)) grid = grid.slice(1);
     return grid.filter((g) => g.some((x) => String(x ?? '').trim() !== '')).map((g) => Object.fromEntries(inCols.map((c, k) => {
       const x = g[k]; const s = String(x ?? '').trim();
-      return [c.id, c.type === 'number' ? (s === '' ? '' : Number(s.replace(/\s/g, '').replace(',', '.'))) : s];
+      return [c.id, c.type === 'number' ? (typeof x === 'number' ? x : s === '' ? '' : Number(normNum(s))) : s];
     })));
   };
   const paste = (e: React.ClipboardEvent) => {
     const t = e.clipboardData.getData('text'); if (!t.includes('\t') && !t.includes('\n')) return;
     e.preventDefault();
-    const add = toRows(t.replace(/\r/g, '').split('\n').map((l) => l.split('\t')));
+    const add = toRows(parseTsv(t));
     onChange([...rows.filter((r) => Object.values(r).some((x) => x !== '' && x != null)), ...add]); setMsg(`Đã dán ${add.length} dòng`);
   };
   const importXlsx = async (f?: File) => {
