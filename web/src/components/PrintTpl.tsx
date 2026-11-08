@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
-import { parties, type TplImg, buildData, downloadWb, fillXlsx, printHtml, scanVars, toHtml, varList, type Tpl } from '../lib/xlsxTpl';
+import { parties, type TplImg, buildData, downloadWb, fillXlsx, printHtml, isLandscape, scanVars, toHtml, varList, type Tpl } from '../lib/xlsxTpl';
 import { Icon } from './Icon';
 import { QtTag } from './QtTag';
 import { toast } from './ui';
@@ -39,17 +39,17 @@ export async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<
   const td = buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)), cs);
   const pt = parties(o, d.company, b.proc, cs); td.images = {};
   for (const [k, c] of [['ben_ban_logo', pt.seller], ['kh_logo', pt.buyer]] as const) { const im = c?.logo_path ? await loadImg(c.logo_path) : null; if (im) td.images[k] = im; }
-  const wb = await fillXlsx(await loadBuf(t), td); return { wb, html: toHtml(wb) };
+  const wb = await fillXlsx(await loadBuf(t), td); return { wb, html: toHtml(wb), landscape: isLandscape(wb) };
 }
 
-function Preview({ html, title, onXlsx, onTpl, onClose }: { html: string; title: string; onXlsx: () => void; onTpl?: () => void; onClose: () => void }) {
+function Preview({ html, title, landscape = true, onXlsx, onTpl, onClose }: { html: string; title: string; landscape?: boolean; onXlsx: () => void; onTpl?: () => void; onClose: () => void }) {
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [onClose]);
   return createPortal(<div className="pt-ov" onClick={onClose}>
     <div className="pt-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
       <header><b>{title}</b><span style={{ flex: 1 }} />
         {onTpl && <button className="btn sm" onClick={onTpl} title="File mẫu còn nguyên các biến {…} – dùng file này để chỉnh sửa rồi tải lên lại"><Icon name="download" size={15} />Tải mẫu gốc (có biến) để sửa</button>}
         <button className="btn sm" onClick={onXlsx} title={onTpl ? 'Bản đã điền dữ liệu thử – chỉ để xem, không dùng làm mẫu' : ''}><Icon name="download" size={15} />{onTpl ? 'Excel bản thử' : 'Excel'}</button>
-        <button className="btn sm primary" onClick={() => printHtml(html, title)}><Icon name="print" size={15} />In / PDF</button>
+        <button className="btn sm primary" onClick={() => printHtml(html, title, landscape)}><Icon name="print" size={15} />In / PDF</button>
         <button className="btn sm icon" aria-label="Đóng" onClick={onClose}><Icon name="x" size={16} /></button></header>
       <div className="pt-paper"><div dangerouslySetInnerHTML={{ __html: html }} /></div>
     </div></div>, document.body);
@@ -57,13 +57,13 @@ function Preview({ html, title, onXlsx, onTpl, onClose }: { html: string; title:
 
 /** Nút trên phiếu: điền mẫu → xem trước → tải Excel / in PDF */
 export function PrintTplButton({ o, b, d, people, big }: { o: Order; b: Batch; d: Doc; people: Record<string, Profile>; big?: boolean }) {
-  const t = useTpl(b.proc, d.company); const [pv, setPv] = useState<{ html: string; wb: Awaited<ReturnType<typeof render>>['wb'] } | null>(null); const [busy, setBusy] = useState(false);
+  const t = useTpl(b.proc, d.company); const [pv, setPv] = useState<{ html: string; landscape?: boolean; wb: Awaited<ReturnType<typeof render>>['wb'] } | null>(null); const [busy, setBusy] = useState(false);
   if (!t) return null;
   const name = safe(`${t.name}_${o.code}_${d.company}`) + '.xlsx';
   const go = async () => { setBusy(true); try { setPv(await render(t, o, b, d, people)); } catch (e) { toast(errText(e as Error)); } setBusy(false); };
   return <>
     <button className={'btn sm' + (big ? ' primary pt-big' : '')} disabled={busy} onClick={go}><Icon name="file" size={15} />{busy ? 'Đang tạo…' : big ? 'In mẫu cho khách ký' : 'Mẫu in'}</button>
-    {pv && <Preview html={pv.html} title={t.name + ' · ' + o.code} onXlsx={() => downloadWb(pv.wb, name)} onClose={() => setPv(null)} />}
+    {pv && <Preview html={pv.html} landscape={pv.landscape} title={t.name + ' · ' + o.code} onXlsx={() => downloadWb(pv.wb, name)} onClose={() => setPv(null)} />}
   </>;
 }
 
@@ -71,7 +71,7 @@ export function PrintTplButton({ o, b, d, people, big }: { o: Order; b: Batch; d
 export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
   const [proc, setProc] = useState<Proc>('QT1'); const [list, setList] = useState<Tpl[]>([]);
   const [up, setUp] = useState<{ file: File; buf: ArrayBuffer; vars: string[]; name: string; company: string } | null>(null); const [busy, setBusy] = useState(false);
-  const [pv, setPv] = useState<{ html: string; wb: Awaited<ReturnType<typeof render>>['wb']; t: Tpl } | null>(null);
+  const [pv, setPv] = useState<{ html: string; landscape?: boolean; wb: Awaited<ReturnType<typeof render>>['wb']; t: Tpl } | null>(null);
   const known = new Set(varList(proc).map((v) => v.k));
   const load = () => sb.from('print_templates').select('*').eq('proc', proc).order('created_at', { ascending: false }).then(({ data }) => setList((data as Tpl[]) ?? []));
   useEffect(() => { load(); setUp(null); }, [proc]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,6 +133,6 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
         <ul className="pt-vl">{varList(proc).map((v) => <li key={v.k}><button onClick={() => copy(v.k)}><code>{'{' + v.k + '}'}</code><span>{v.t}</span></button></li>)}</ul>
       </section>
     </div>
-    {pv && <Preview html={pv.html} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onTpl={() => dl(pv.t)} onClose={() => setPv(null)} />}
+    {pv && <Preview html={pv.html} landscape={pv.landscape} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onTpl={() => dl(pv.t)} onClose={() => setPv(null)} />}
   </div>;
 }

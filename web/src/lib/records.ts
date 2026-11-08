@@ -12,13 +12,13 @@ async function people(): Promise<Record<string, Profile>> {
 }
 
 /** HTML bản in của phiếu: mẫu Excel nếu có, không thì bản in mặc định */
-async function docPrintHtml(o: Order, b: Batch, d: Doc, ppl: Record<string, Profile>): Promise<string> {
+async function docPrintHtml(o: Order, b: Batch, d: Doc, ppl: Record<string, Profile>): Promise<{ html: string; landscape: boolean }> {
   const { getTpl, render } = await import('../components/PrintTpl');
   const t = await getTpl(b.proc, d.company);
-  if (t) { const r = await render(t, o, b, d, ppl); return `<div style="font-family:'Times New Roman',serif">${r.html}</div>`; }
-  const { docHtml } = await import('../components/ProcPanel');
+  if (t) { const r = await render(t, o, b, d, ppl); return { html: `<div style="font-family:'Times New Roman',serif">${r.html}</div>`, landscape: r.landscape }; }
+  const { docHtml, wideDoc } = await import('../components/ProcPanel');
   const full = docHtml(o, b, d, ppl); const st = full.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? ''; const body = full.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? full;
-  return `<style>${st.replace(/@page\{[^}]*\}/, '').replace(/body\{/g, '.pdfdoc{')}</style><div class="pdfdoc">${body}</div>`;
+  return { html: `<style>${st.replace(/@page\{[^}]*\}/, '').replace(/body\{/g, '.pdfdoc{')}</style><div class="pdfdoc">${body}</div>`, landscape: wideDoc(b.proc) };
 }
 
 /** Tạo PDF từ HTML, kèm dấu (ĐÃ DUYỆT / THẤT BẠI / BẢN TRÌNH DUYỆT) */
@@ -43,8 +43,8 @@ export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['ki
   const stamp = kind === 'trinh_duyet' ? { text: 'BẢN TRÌNH DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#3A6EA5' }
     : kind === 'duyet' ? { text: level ? 'ĐÃ DUYỆT · ' + level.toUpperCase() : 'ĐÃ DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#1d7a46' }
     : { text: 'THẤT BẠI', sub: `${me} · ${fmt(now)}${note ? ' · ' + note : ''}`, color: '#b42318' };
-  const html = await docPrintHtml(o, b, d, ppl);
-  const pdf = await toPdf(html, stamp, b.proc === 'QT1');
+  const { html, landscape } = await docPrintHtml(o, b, d, ppl);
+  const pdf = await toPdf(html, stamp, landscape);
   const path = `records/${o.id}/${b.proc}-${d.company}-${kind}-${now.getTime()}.pdf`;
   const up = await sb.storage.from('files').upload(path, pdf, { contentType: 'application/pdf' }); if (up.error) throw up.error;
   const { data, error } = await sb.from('doc_records').insert({ order_id: o.id, doc_id: d.id, proc: b.proc, company: d.company, batch_title: b.title, kind, level_name: level, result, path, note }).select('*').single();

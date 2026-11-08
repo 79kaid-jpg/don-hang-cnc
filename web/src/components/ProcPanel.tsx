@@ -10,7 +10,7 @@ import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
 import { ReviewPdf } from './Records';
 import { parties } from '../lib/xlsxTpl';
-import { useFields, fieldsOf, permOf, colsOf, hdrOf, type FDef } from '../lib/fields';
+import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { confirmDialog, toast } from './ui';
@@ -387,6 +387,8 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
 
 /** Bản in theo mẫu form (A4) */
 /** HTML bản in mặc định của app (khi QT chưa có mẫu Excel) */
+/** Bản in mặc định: bảng có từ 9 cột trở lên thì in khổ ngang */
+export const wideDoc = (p: Proc) => tablesOf(p).some((t) => colsOf(p, t.key).length >= 9);
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
@@ -400,7 +402,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');
   const hand = b.proc === 'QT1' ? ['Khách hàng xác nhận (ký, đóng dấu)'] : b.proc === 'QT2' ? ['Người bàn giao vật liệu', 'Người nhận vật liệu'] : b.proc === 'QT3' ? ['Thủ kho / người giao', 'Tài xế', 'Khách hàng nhận hàng'] : [];
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><style>
-    @page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
+    @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm}body{font-family:Arial,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}
     .notes{margin-top:8px;font-size:10.5px}</style></head><body>
