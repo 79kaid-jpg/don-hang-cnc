@@ -103,9 +103,9 @@ def build(path):
         ca, cz = ord(a), ord(z)
         for rr in range(k, k + 7):
             for cc in range(ca, cz + 1):
-                cell = ws[f'{chr(cc)}{rr}']
-                cell.border = Border(left=thin if cc == ca else None, right=thin if cc == cz else None,
-                                     top=thin if rr == k else None, bottom=thin if rr == k + 6 else None)
+                # ô đầu vùng gộp mang đủ viền trái/phải (trình đọc Excel dùng kiểu ô đầu cho cả vùng)
+                ws[f'{chr(cc)}{rr}'].border = Border(left=thin if cc == ca else None, right=thin if (cc == cz or cc == ca) else None,
+                                                     top=thin if rr == k else None, bottom=thin if rr in (k + 6, k + 4) and rr == k + 6 else None)
     ws.row_dimensions[k].height = 20
     for rr in range(k + 2, k + 5): ws.row_dimensions[rr].height = 16
     ws.print_area = f'A1:{LAST}{k + 6}'
