@@ -5,13 +5,13 @@ import { HEADER, PROC_TABLES, TABLES, FLOW, type Col, type Company, type Proc } 
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
 export type Area = 'header' | 'col' | 'file';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
-export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person';
+export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier';
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>> };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
-export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng' };
+export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển' };
 /** Bước mà người làm được nhập liệu theo mặc định */
 export const EDIT_STEPS: Record<Proc, string[]> = { QT0: ['tiep_nhan', 'boc_tach', 'tao_ds'], QT1: ['lap'], QT2: ['lap'], QT3: ['lap'] };
 export const companiesOf = (p: Proc): Company[] => (p === 'QT0' ? ['PN'] : ['PN', 'IPC', 'HW']);

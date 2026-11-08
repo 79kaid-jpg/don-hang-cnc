@@ -56,7 +56,9 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     ngay: String(dt.getDate()).padStart(2, '0'), thang: String(dt.getMonth() + 1).padStart(2, '0'), nam: dt.getFullYear(), ngay_in: fd(new Date().toISOString()), ngay_duyet_full: fd(lastAt),
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; '),
     ben_ban_ten: S?.name ?? '', ben_ban_ma: S?.code ?? '', ben_ban_dia_chi: S?.address ?? '', ben_ban_mst: S?.tax_code ?? '', ben_ban_dien_thoai: S?.phone ?? '', ben_ban_email: S?.email ?? '',
-    kh_ten: K?.name ?? '', kh_ma: K?.code ?? '', kh_dia_chi: K?.address ?? '', kh_mst: K?.tax_code ?? '', kh_lien_he: [K?.contact, K?.phone].filter(Boolean).join(' · '), kh_dien_thoai: K?.phone ?? '', kh_email: K?.email ?? '',
+    kh_ten: K?.name ?? '', kh_ma: K?.code ?? '', kh_dia_chi: K?.address ?? '', kh_mst: K?.tax_code ?? '', kh_lien_he: [K?.contact, K?.phone].filter(Boolean).join(' · '), kh_dien_thoai: K?.phone ?? '', kh_email: K?.email ?? '', kh_dai_dien: K?.contact ?? '', kh_chuc_vu: K?.position ?? '',
+    ben_ban_dai_dien: S?.contact ?? '', ben_ban_chuc_vu: S?.position ?? '',
+    ...(() => { const V = custs.find((c) => c.id === d.header?.dvvc); return { vc_ten: V?.name ?? '', vc_dia_chi: V?.address ?? '', vc_dien_thoai: V?.phone ?? '', vc_dai_dien: V?.contact ?? '', vc_chuc_vu: V?.position ?? '', vc_mst: V?.tax_code ?? '' }; })(),
     ten_hang: 'GC đột, chấn',
     ngay_thang_nam: `TP.HCM, ngày ${String(dt.getDate()).padStart(2, '0')} tháng ${String(dt.getMonth() + 1).padStart(2, '0')} năm ${dt.getFullYear()}`
   };
@@ -87,7 +89,9 @@ export function varList(proc: Proc): { k: string; t: string }[] {
     { k: 'ngay', t: 'Ngày duyệt (dd)' }, { k: 'thang', t: 'Tháng' }, { k: 'nam', t: 'Năm' }, { k: 'ngay_duyet_full', t: 'Ngày duyệt dd/mm/yyyy' }, { k: 'ngay_in', t: 'Ngày in' }, { k: 'ngay_thang_nam', t: 'TP.HCM, ngày … tháng … năm … (ngày duyệt)' }, { k: 'ghi_chu', t: 'Ghi chú phiếu' },
     { k: 'ben_ban_logo', t: 'Logo bên bán (đặt vào ô / vùng gộp ô muốn in logo)' }, { k: 'kh_logo', t: 'Logo bên mua' },
     { k: 'ben_ban_ten', t: 'Bên bán: tên' }, { k: 'ben_ban_dia_chi', t: 'Bên bán: địa chỉ' }, { k: 'ben_ban_mst', t: 'Bên bán: MST' }, { k: 'ben_ban_dien_thoai', t: 'Bên bán: điện thoại' }, { k: 'ben_ban_email', t: 'Bên bán: email' },
-    { k: 'kh_ten', t: 'Bên mua: tên (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)' }, { k: 'kh_ma', t: 'Bên mua: mã' }, { k: 'kh_dia_chi', t: 'Bên mua: địa chỉ' }, { k: 'kh_mst', t: 'Bên mua: MST' }, { k: 'kh_lien_he', t: 'Bên mua: liên hệ' }];
+    { k: 'kh_ten', t: 'Bên mua: tên (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)' }, { k: 'kh_ma', t: 'Bên mua: mã' }, { k: 'kh_dia_chi', t: 'Bên mua: địa chỉ' }, { k: 'kh_mst', t: 'Bên mua: MST' }, { k: 'kh_lien_he', t: 'Bên mua: liên hệ' }, { k: 'kh_dai_dien', t: 'Bên mua: người đại diện' }, { k: 'kh_chuc_vu', t: 'Bên mua: chức vụ' },
+    { k: 'ben_ban_dai_dien', t: 'Bên bán: người đại diện' }, { k: 'ben_ban_chuc_vu', t: 'Bên bán: chức vụ' },
+    { k: 'vc_ten', t: 'Vận chuyển: tên' }, { k: 'vc_dia_chi', t: 'Vận chuyển: địa chỉ' }, { k: 'vc_dien_thoai', t: 'Vận chuyển: điện thoại' }, { k: 'vc_dai_dien', t: 'Vận chuyển: đại diện' }, { k: 'vc_chuc_vu', t: 'Vận chuyển: chức vụ' }];
   for (const f of fieldsOf('F0', 'header')) if (!f.sys) L.push({ k: f.key, t: 'F0 · ' + f.label });
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }

@@ -39,9 +39,9 @@ def party(title, rows):
         put(f'A{r}', lab, f(10), al('left', ind=1), f'A{r}:B{r}'); put(f'C{r}', v, f(10), al('left', True), f'C{r}:F{r}')
         if lab2: put(f'G{r}', lab2, f(10, i=True), al('right'), f'G{r}:G{r}'); put(f'H{r}', v2, f(10), al('left'), f'H{r}:I{r}')
         r += 1
-party('Bên A (Bên nhận hàng):', ['{kh_ten}', ('Địa chỉ giao:', '{dia_diem}', None, None), ('Điện thoại:', '{kh_dien_thoai}', None, None), ('Đại diện:', '{kh_lien_he}', 'Chức vụ:', '')])
-party('Bên B (Bên giao hàng):', ['{ben_ban_ten}', ('Địa chỉ:', '{ben_ban_dia_chi}', None, None), ('Điện thoại:', '{ben_ban_dien_thoai}', None, None), ('Đại diện:', '{nguoi_lap}', 'Chức vụ:', '')])
-party('Bên C (Bên vận chuyển):', ['', ('Xe / biển số:', '{xe}', None, None), ('Tài xế:', '{tai_xe}', None, None)])
+party('Bên A (Bên nhận hàng):', ['{kh_ten}', ('Địa chỉ giao:', '{dia_diem}', None, None), ('Điện thoại:', '{kh_dien_thoai}', None, None), ('Đại diện:', '{kh_dai_dien}', 'Chức vụ:', '{kh_chuc_vu}')])
+party('Bên B (Bên giao hàng):', ['{ben_ban_ten}', ('Địa chỉ:', '{ben_ban_dia_chi}', None, None), ('Điện thoại:', '{ben_ban_dien_thoai}', None, None), ('Đại diện:', '{ben_ban_dai_dien}', 'Chức vụ:', '{ben_ban_chuc_vu}')])
+party('Bên C (Bên vận chuyển):', ['{vc_ten}', ('Địa chỉ:', '{vc_dia_chi}', None, None), ('Điện thoại:', '{vc_dien_thoai}', None, None), ('Đại diện:', '{vc_dai_dien}', 'Chức vụ:', '{vc_chuc_vu}'), ('Xe / biển số:', '{xe}', 'Tài xế:', '{tai_xe}')])
 put(f'A{r}', 'Hai bên cùng nhau thống nhất số lượng giao hàng như sau:', f(10, i=True), al('left'), f'A{r}:I{r}'); r += 1
 h1, h2 = r, r + 1
 fill = PatternFill('solid', fgColor='EEF2F8')

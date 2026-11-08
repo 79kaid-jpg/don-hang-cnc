@@ -138,7 +138,9 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide');
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
-  const [ship, setShip] = useState<string[]>([]);
+  const [ship, setShip] = useState<string[]>([]); const [carriers, setCarriers] = useState<Customer[]>([]);
+  useEffect(() => { if (hFields.some((f) => f.type === 'carrier')) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plates = carriers.find((c) => c.id === h.dvvc)?.vehicles ?? [];
   useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'dk_giao')) return;
     sb.from('customers').select('*').then(({ data }) => { const cs = (data as Customer[]) ?? []; const { buyer } = parties(o, d.company, proc, cs);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -200,10 +202,14 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
-            {f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
+            {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
+              : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
               : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
-              : <input type={f.type === 'date' ? 'date' : 'text'} list={(f.key === 'dia_diem' || f.key === 'dk_giao') && ship.length ? 'ship-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
-                onChange={(e) => on(f.type === 'number' ? numTyping(e.target.value) : e.target.value)} />}
+              : <input type={f.type === 'date' ? 'date' : 'text'} list={(f.key === 'dia_diem' || f.key === 'dk_giao') && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
+                onChange={(e) => { const x = f.type === 'number' ? numTyping(e.target.value) : e.target.value; const pv = f.key === 'xe' ? plates.find((p) => p.plate === x) : undefined;
+                  if (pv?.driver && !h.tai_xe) { setH({ ...h, xe: x, tai_xe: pv.driver }); setDirty(true); } else on(x); }} />}
+            {f.key === 'xe' && plates.length > 0 && <datalist id={'xe-' + d.id}>{plates.map((p) => <option key={p.plate} value={p.plate}>{p.driver}</option>)}</datalist>}
+            {f.key === 'tai_xe' && plates.length > 0 && <datalist id={'tx-' + d.id}>{[...new Set(plates.map((p) => p.driver).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
             {f.type === 'number' && !isNumOk(v) && <small className="f-err">Phải là số, VD: 12 hoặc 12,5</small>}
             {(f.key === 'dia_diem' || f.key === 'dk_giao') && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
             {f.help && <small className="muted">{f.help}</small>}</label>; })}
