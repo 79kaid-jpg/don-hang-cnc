@@ -15,5 +15,34 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
   <title>PMS</title>
 </head>
-<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+<body>
+<style>
+  #splash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#F5F6F8;color:#1B1F24;font-family:'Be Vietnam Pro',system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
+  #splash.out{opacity:0;visibility:hidden}
+  #splash .sp-box{display:flex;flex-direction:column;align-items:center;gap:18px}
+  #splash svg{width:84px;height:84px;filter:drop-shadow(0 10px 24px rgba(27,31,36,.18))}
+  #splash .b{transform-box:fill-box;transform-origin:bottom;animation:spGrow 1.6s cubic-bezier(.3,.7,.2,1) infinite}
+  #splash .b2{animation-delay:.08s}#splash .b3{animation-delay:.16s}#splash .b4{animation-delay:.24s}#splash .b5{animation-delay:.32s}#splash .b6{animation-delay:.4s}#splash .b7{animation-delay:.48s}
+  @keyframes spGrow{0%{transform:scaleY(.15);opacity:.4}35%,70%{transform:scaleY(1);opacity:1}100%{transform:scaleY(.15);opacity:.4}}
+  #splash .sp-name{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:700;font-size:26px;letter-spacing:.14em;margin-top:2px}
+  #splash .sp-sub{font-size:13px;color:#6B7380;letter-spacing:.02em;margin-top:-10px}
+  #splash .sp-track{width:148px;height:3px;border-radius:3px;background:#E3E6EA;overflow:hidden;margin-top:6px}
+  #splash .sp-bar{width:40%;height:100%;border-radius:3px;background:#3A6EA5;animation:spSlide 1.2s ease-in-out infinite}
+  @keyframes spSlide{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}
+  @media (prefers-color-scheme:dark){#splash{background:#14171B;color:#E8EAED}#splash .sp-sub{color:#8A929C}#splash .sp-track{background:#2A2F36}#splash svg{filter:none;outline:1px solid #2E343C;outline-offset:0;border-radius:19px}#splash .sp-bar{background:#5B8FCC}}
+  @media (prefers-reduced-motion:reduce){#splash .b,#splash .sp-bar{animation:none}}
+</style>
+<div id="splash" role="status" aria-label="Đang tải PMS">
+  <div class="sp-box">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="113" fill="#1B1F24"/>
+      <rect class="b" x="106" y="120" width="44" height="272" rx="12" fill="#3A6EA5"/><rect class="b b2" x="170" y="120" width="44" height="272" rx="12" fill="#C9CED6"/>
+      <rect class="b b3" x="234" y="120" width="44" height="72" rx="12" fill="#C9CED6"/><rect class="b b4" x="298" y="120" width="44" height="72" rx="12" fill="#AAB1BA"/>
+      <rect class="b b5" x="362" y="120" width="44" height="72" rx="12" fill="#8A929C"/><rect class="b b6" x="234" y="226" width="44" height="72" rx="12" fill="#C9CED6"/>
+      <rect class="b b7" x="298" y="226" width="44" height="72" rx="12" fill="#AAB1BA"/></svg>
+    <div class="sp-name">PMS</div>
+    <div class="sp-sub">Quản lý đơn hàng · Phương Nam CNC · IPC · Hanwa</div>
+    <div class="sp-track"><div class="sp-bar"></div></div>
+  </div>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>

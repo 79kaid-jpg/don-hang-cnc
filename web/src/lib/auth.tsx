@@ -38,7 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await load(session); return null;
   };
   const stopActing = async () => { await sb.rpc('stop_impersonation'); await load(session); };
-  if (!ready) return <p style={{ padding: 24 }}>Đang tải…</p>;
+  // Màn hình chờ (index.html) giữ đến khi biết trạng thái đăng nhập, rồi mờ dần
+  useEffect(() => { if (!ready) return; const el = document.getElementById('splash'); if (!el) return;
+    const t0 = (window as unknown as { __t0?: number }).__t0 ?? 0; const wait = Math.max(0, 450 - (performance.now() - t0));
+    const a = setTimeout(() => el.classList.add('out'), wait); const z = setTimeout(() => el.remove(), wait + 400); return () => { clearTimeout(a); clearTimeout(z); }; }, [ready]);
+  if (!ready) return null;
   return <AuthCtx.Provider value={{ session, me, real, acting, can, reload: () => load(session), actAs, stopActing }}>{children}</AuthCtx.Provider>;
 }
 export const useAuth = () => useContext(AuthCtx);
