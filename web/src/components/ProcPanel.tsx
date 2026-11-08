@@ -275,6 +275,8 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 }
 
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
+/** Cột được "áp dụng cho toàn bộ dòng" */
+const FILL_COLS = ['don_gia'];
 function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: string; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
@@ -286,7 +288,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
     onChange(rows.map((r) => (onlyEmpty && String(r[k] ?? '').trim() ? r : { ...r, [k]: v }))); setFill(null); setHdr(null);
     setMsg(`Đã áp dụng ${v} cho ${n} dòng · cột ${cols.find((c) => c.k === k)?.t}`);
   };
-  const offer = (k: string, v: string) => { if (!v.trim() || rows.length < 2) return; if (rows.some((r) => String(r[k] ?? '') !== v)) setFill({ k, v }); };
+  const offer = (k: string, v: string) => { if (!FILL_COLS.includes(k) || !v.trim() || rows.length < 2) return; if (rows.some((r) => String(r[k] ?? '') !== v)) setFill({ k, v }); };
   const colT = (k: string) => cols.find((c) => c.k === k)?.t ?? '';
   const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
   const fromAoa = (aoa: string[][]) => {
@@ -335,7 +337,7 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
       <div className="tbl-wrap"><table className="tbl pp-grid">
-        <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : ''}>{editable && !c.calc && !c.ro && rows.length > 1
+        <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : ''}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
