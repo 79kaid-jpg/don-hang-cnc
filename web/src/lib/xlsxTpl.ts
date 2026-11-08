@@ -225,7 +225,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
   const cols = vcols.map(wOf);
   const total = cols.reduce((a, w) => a + w, 0) || 1;
   const bd = (b?: Partial<ExcelJS.Border>) => (b?.style ? `${b.style === 'medium' || b.style === 'thick' ? 1.5 : 1}px solid ${argb(b.color) || '#000'}` : '');
-  let h = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Times New Roman',serif;font-size:12px"><colgroup>${cols.map((w) => `<col style="width:${(w / total * 100).toFixed(2)}%">`).join('')}</colgroup>`;
+  let h = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:12px"><colgroup>${cols.map((w) => `<col style="width:${(w / total * 100).toFixed(2)}%">`).join('')}</colgroup>`;
   const gs = (ws as unknown as { _groups?: { head: number[]; from: number; to: number }[] })._groups ?? [];
   const tag = (r: number) => { const i = gs.findIndex((g) => r >= g.from && r <= g.to); if (i >= 0) return ` data-g="${i}"`; const j = gs.findIndex((g) => g.head.includes(r)); return j >= 0 ? ` data-h="${j}"` : ''; };
   for (let r = r0; r <= r1; r++) { const row = ws.getRow(r); if (row.hidden) continue; h += `<tr${tag(r)} style="height:${(row.height ?? 15) * 1.33}px">`;
@@ -236,8 +236,11 @@ export function toHtml(wb: ExcelJS.Workbook): string {
       let v = ''; const raw = cell.value as unknown;
       if (raw && typeof raw === 'object' && 'formula' in (raw as object)) { const res = (raw as { result?: unknown }).result; v = res == null ? '' : typeof res === 'number' ? res.toLocaleString('vi-VN') : String(res); }
       else if (typeof raw === 'number') v = /^0+$/.test(String(cell.numFmt ?? '')) ? String(raw).padStart(String(cell.numFmt).length, '0') : raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
-      const f = cell.font ?? {}; const a = cell.alignment ?? {}; const b = cell.border ?? {}; const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
-      const st = [f.name && f.name !== 'Calibri' ? `font-family:'${f.name}',${/Times/i.test(f.name) ? 'serif' : 'system-ui,sans-serif'}` : '', f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
+      const f = cell.font ?? {}; const a = cell.alignment ?? {};
+      const b = { ...(cell.border ?? {}) } as Partial<ExcelJS.Borders>;
+      if (sp0) { const rc = ws.getCell(r, c + sp0[1] - 1).border ?? {}; const bc = ws.getCell(r + sp0[0] - 1, c).border ?? {};
+        if (!b.right?.style && rc.right?.style) b.right = rc.right; if (!b.bottom?.style && bc.bottom?.style) b.bottom = bc.bottom; } const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
+      const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
         a.wrapText ? 'white-space:pre-wrap;overflow-wrap:break-word' : 'white-space:pre-wrap;overflow-wrap:break-word', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');

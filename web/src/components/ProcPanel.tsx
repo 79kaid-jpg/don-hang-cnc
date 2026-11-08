@@ -470,8 +470,8 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');
   const hand = b.proc === 'QT1' ? ['Khách hàng xác nhận (ký, đóng dấu)'] : b.proc === 'QT2' ? ['Người bàn giao vật liệu', 'Người nhận vật liệu'] : b.proc === 'QT3' ? ['Thủ kho / người giao', 'Tài xế', 'Khách hàng nhận hàng'] : [];
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><style>
-    @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm}body{font-family:Arial,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"><style>
+    @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm}body{font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}
     .notes{margin-top:8px;font-size:10.5px}</style></head><body>
@@ -481,7 +481,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
     ${d.notes.length ? `<div class="notes"><b>Ghi chú:</b><br>${d.notes.map((n) => esc((ROLE_NAME[n.role] ?? n.role) + ': ' + n.text)).join('<br>')}</div>` : ''}
     <h3>Ký xác nhận</h3><table class="sig"><tr>${sig}</tr></table>
     ${hand.length ? `<h3>Ký tay</h3><table class="sig"><tr>${hand.map((x) => `<td><b>${x}</b><div class="sp"></div>Họ tên: ……………………</td>`).join('')}</tr></table>` : ''}
-    ${auto ? '<script>setTimeout(()=>print(),300)</script>' : ''}</body></html>`;
+    ${auto ? '<script>onload=()=>(document.fonts ? document.fonts.ready : Promise.resolve()).then(()=>setTimeout(()=>print(),200))</script>' : ''}</body></html>`;
 }
 function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const w = window.open('', '_blank'); if (!w) return; w.document.write(docHtml(o, b, d, people, true)); w.document.close();

@@ -15,7 +15,7 @@ async function people(): Promise<Record<string, Profile>> {
 async function docPrintHtml(o: Order, b: Batch, d: Doc, ppl: Record<string, Profile>): Promise<{ html: string; landscape: boolean }> {
   const { getTpl, render } = await import('../components/PrintTpl');
   const t = await getTpl(b.proc, d.company);
-  if (t) { const r = await render(t, o, b, d, ppl); return { html: `<div style="font-family:'Times New Roman',serif">${r.html}</div>`, landscape: r.landscape }; }
+  if (t) { const r = await render(t, o, b, d, ppl); return { html: `<div style="font-family:'Be Vietnam Pro',system-ui,sans-serif">${r.html}</div>`, landscape: r.landscape }; }
   const { docHtml, wideDoc } = await import('../components/ProcPanel');
   const full = docHtml(o, b, d, ppl); const st = full.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? ''; const body = full.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? full;
   return { html: `<style>${st.replace(/@page\{[^}]*\}/, '').replace(/body\{/g, '.pdfdoc{')}</style><div class="pdfdoc">${body}</div>`, landscape: wideDoc(b.proc) };
@@ -26,7 +26,7 @@ async function toPdf(html: string, stamp: { text: string; sub: string; color: st
   const h2p = (await import('html2pdf.js')).default as unknown as () => { set: (o: unknown) => { from: (el: HTMLElement) => { outputPdf: (t: 'blob') => Promise<Blob> } } };
   const wrap = document.createElement('div');
   wrap.style.cssText = `box-sizing:border-box;width:${landscape ? 1100 : 760}px;background:#fff;color:#000;padding:8px`;
-  wrap.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div style="border:2.5px solid ${stamp.color};color:${stamp.color};border-radius:6px;padding:4px 12px;text-align:center;transform:rotate(-2deg);font-family:Arial,sans-serif">
+  wrap.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div style="border:2.5px solid ${stamp.color};color:${stamp.color};border-radius:6px;padding:4px 12px;text-align:center;transform:rotate(-2deg);font-family:'Be Vietnam Pro',system-ui,sans-serif">
     <div style="font-weight:800;font-size:15px;letter-spacing:.06em">${stamp.text}</div><div style="font-size:10.5px">${stamp.sub}</div></div></div>${html}`;
   const hold = document.createElement('div'); hold.style.cssText = 'position:absolute;left:0;top:0;height:0;overflow:hidden;z-index:-1';
   hold.appendChild(wrap); document.body.appendChild(hold);
