@@ -30,10 +30,26 @@ async function toPdf(html: string, stamp: { text: string; sub: string; color: st
     <div style="font-weight:800;font-size:15px;letter-spacing:.06em">${stamp.text}</div><div style="font-size:10.5px">${stamp.sub}</div></div></div>${html}`;
   const hold = document.createElement('div'); hold.style.cssText = 'position:absolute;left:0;top:0;height:0;overflow:hidden;z-index:-1';
   hold.appendChild(wrap); document.body.appendChild(hold);
+  // Ngắt trang không cắt ngang dòng bảng: chèn khoảng trống trước dòng sẽ bị cắt
+  const W = landscape ? 1100 : 760; const pageMm = landscape ? [297, 210] : [210, 297];
+  keepRows(wrap, Math.floor(W * (pageMm[1] - 6 - 8) / (pageMm[0] - 6 - 6)));
   try {
     return await h2p().set({ margin: [6, 6, 8, 6], filename: 'chung-tu.pdf', image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: landscape ? 1100 : 760, windowWidth: (landscape ? 1100 : 760) + 40, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(wrap).outputPdf('blob');
   } finally { hold.remove(); }
+}
+
+/** Đẩy dòng bảng bị vắt qua ranh giới trang sang trang sau */
+export function keepRows(root: HTMLElement, pageH: number) {
+  const top0 = root.getBoundingClientRect().top;
+  for (const tr of Array.from(root.querySelectorAll('tr'))) {
+    const r = tr.getBoundingClientRect(); const t = r.top - top0, b = r.bottom - top0;
+    if (r.height >= pageH || r.height === 0) continue;
+    const pg = Math.floor(t / pageH); if (Math.floor((b - 1) / pageH) === pg) continue;
+    const gap = (pg + 1) * pageH - t; const sp = document.createElement('tr');
+    sp.innerHTML = `<td colspan="99" style="height:${gap}px;padding:0;border:none;border-left:none;border-right:none;background:#fff"></td>`;
+    tr.parentNode!.insertBefore(sp, tr);
+  }
 }
 
 /** Lưu một chứng từ PDF cho phiếu */
