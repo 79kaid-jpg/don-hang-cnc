@@ -1859,3 +1859,20 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .app.side-hidden:not(.side-peek) .acc-pop{position:fixed;left:12px;bottom:76px;width:272px}
 .app.side-hidden:not(.side-peek) .side .bell-pop{position:fixed;left:80px;top:16px}
 .app.side-hidden:not(.side-peek) .acc-pop .acc-id{display:grid}
+
+/* ===== Màu nhận diện công ty: PN CNC (xanh navy) · IPC (xanh ngọc) · Hanwa (xanh lá) – luôn đi kèm tên, không chỉ dùng màu ===== */
+:root{--co-PN:#1D4ED8;--co-PN-bg:#E8EEFD;--co-IPC:#0E7490;--co-IPC-bg:#E0F4F7;--co-HW:#15803D;--co-HW-bg:#E6F4EA}
+.co-PN,.c-PN{--co:var(--co-PN);--co-bg:var(--co-PN-bg)}.co-IPC,.c-IPC{--co:var(--co-IPC);--co-bg:var(--co-IPC-bg)}.co-HW,.c-HW{--co:var(--co-HW);--co-bg:var(--co-HW-bg)}
+/* Kanban: cột theo công ty có vạch màu trên đầu + nhãn công ty cùng màu */
+.kb-col.co{border-top:3px solid var(--co)}
+.kb-col.co .kb-group{color:var(--co)!important}
+/* Nhãn tiến độ công ty trên thẻ: vạch màu bên trái */
+.kb-co.c-PN,.kb-co.c-IPC,.kb-co.c-HW{border-left:3px solid var(--co)}
+/* Chuỗi công ty trong hồ sơ */
+.pp-chain.co li.c-PN>button,.pp-chain.co li.c-IPC>button,.pp-chain.co li.c-HW>button{border-top:3px solid var(--co)!important}
+.pp-chain.co li.sel>button{border-color:var(--co)!important;box-shadow:0 0 0 3px var(--co-bg)!important}
+.pp-chain.co li.cur .dot{background:var(--co);border-color:var(--co);color:#fff}
+.pp-chain.co li b{color:var(--co)}
+/* Chấm đơn vị ở Quản trị người dùng */
+.u-CNC{background:var(--co-PN)!important}.u-IPC{background:var(--co-IPC)!important}.u-HANWA{background:var(--co-HW)!important}
+.adm2-av.u-CNC::after{background:var(--co-PN)!important}.adm2-av.u-IPC::after{background:var(--co-IPC)!important}.adm2-av.u-HANWA::after{background:var(--co-HW)!important}

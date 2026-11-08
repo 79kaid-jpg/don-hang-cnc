@@ -187,7 +187,7 @@ export default function Board() {
           <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               return (
-                <section key={c.key} data-col={i} className={'kb-col' + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
+                <section key={c.key} data-col={i} className={'kb-col' + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
                   <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
                     <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div></header>
                   <div className="kb-list">
@@ -208,7 +208,7 @@ export default function Board() {
                         {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
                           const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
-                          return <span key={co} className={'kb-co ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
+                          return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <LoginAs uid={h.uid} name={h.who} className="kb-who"><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</LoginAs>}

@@ -71,7 +71,7 @@ function Chain({ proc, b, docs, sel, onPick }: { proc: Proc; b: Batch; docs: Doc
   return (
     <ol className="pp-chain co">
       {COMPANIES.map((c) => { const d = docs.find((x) => x.company === c); const st = !d ? 'todo' : d.status === 'da_duyet' ? 'done' : 'cur';
-        return <li key={c} className={st + (sel === c ? ' sel' : '')}>
+        return <li key={c} className={'c-' + c + ' ' + st + (sel === c ? ' sel' : '')}>
           <button disabled={!d} onClick={() => onPick(c)}><span className="dot">{st === 'done' ? <Icon name="check" size={12} /> : c === 'PN' ? 1 : c === 'IPC' ? 2 : 3}</span>
             <b>{COMPANY[c]}</b><span className="small">{!d ? 'chưa tới' : STATUS[d.status]}</span></button></li>; })}
       <li className={b.status === 'hoan_tat' ? 'done' : b.status === 'cho_ky' ? 'cur' : 'todo'}><span className="dot">{b.status === 'hoan_tat' ? <Icon name="check" size={12} /> : '✍'}</span><b>{FINAL[proc]}</b><span className="small">ký tay</span></li>
