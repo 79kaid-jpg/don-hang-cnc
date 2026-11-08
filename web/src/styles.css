@@ -1762,3 +1762,22 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .pp-dirty{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#1d7a46}
 .pp-dirty.on{color:#8a5a00;font-weight:600}
 .pp-dirty i{width:8px;height:8px;border-radius:50%;background:#f59e0b}
+
+/* ===== Bảng nhập liệu: canh tiêu đề với ô, dòng Tổng ===== */
+.pp-grid{border-collapse:separate;border-spacing:0}
+.pp-grid td{padding:4px 6px}
+.pp-grid th{padding:8px 14px;vertical-align:bottom;line-height:1.25}
+@media (max-width:720px){.pp-grid td{padding:4px 6px}.pp-grid th{padding:8px 14px}}
+.pp-grid th:first-child,.pp-grid td:first-child{padding-left:10px;padding-right:4px;width:28px;text-align:right;color:var(--muted)}
+.pp-grid td input{width:100%;box-sizing:border-box;padding:4px 7px!important}
+.pp-grid td input.num{text-align:right;font-variant-numeric:tabular-nums}
+.pp-grid td .calc{display:block;padding:0 8px}
+.pp-grid td.n{font-variant-numeric:tabular-nums}
+.pp-grid .th-fill{display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.pp-grid th.n .th-fill{flex-direction:row}
+.pp-grid tfoot td{background:color-mix(in srgb,var(--steel,#3A6EA5) 7%,var(--card,#fff));border-top:2px solid color-mix(in srgb,var(--steel,#3A6EA5) 45%,transparent);padding:10px 14px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.pp-grid tfoot td:first-child{color:var(--ink)}
+.pp-grid tfoot td.n{padding-right:14px}
+.pp-grid tfoot b{font-weight:700}
+.pp-tot-lb{font-weight:700;text-align:left!important;white-space:nowrap}
+.pp-tot-lb span{margin-left:6px;font-weight:500;font-size:12px;color:var(--muted)}

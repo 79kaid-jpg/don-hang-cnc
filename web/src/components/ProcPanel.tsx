@@ -344,12 +344,12 @@ function TableEdit({ title, cols, rows, editable, onChange, fname }: { title: st
           {rows.map((r, i) => <tr key={i}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input value={String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} onChange={(e) => set(i, c.k, e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} style={{ width: (c.w ?? 7) + 'ch' }} />
+                onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: (c.w ?? 7) + 'ch' }} />
               : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
-        {rows.length > 0 && <tfoot><tr><td /><td><b>Tổng</b></td>{cols.slice(1).map((c) => <td key={c.k} className="n"><b>{c.k in totals ? fmtN(totals[c.k], c.d ?? 0) : ''}</b></td>)}{editable && <td />}</tr></tfoot>}
+        {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
       </table></div>
     </div>);
 }
