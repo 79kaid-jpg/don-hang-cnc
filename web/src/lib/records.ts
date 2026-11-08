@@ -49,6 +49,9 @@ export function keepRows(root: HTMLElement, pageH: number) {
     const gap = (pg + 1) * pageH - t; const sp = document.createElement('tr');
     sp.innerHTML = `<td colspan="99" style="height:${gap}px;padding:0;border:none;border-left:none;border-right:none;background:#fff"></td>`;
     tr.parentNode!.insertBefore(sp, tr);
+    // lặp lại dòng tiêu đề của bảng ở đầu trang mới
+    const g = tr.getAttribute('data-g');
+    if (g != null) for (const hr of Array.from(root.querySelectorAll(`tr[data-h="${g}"]`))) { const c = hr.cloneNode(true) as HTMLElement; c.removeAttribute('data-h'); tr.parentNode!.insertBefore(c, tr); }
   }
 }
 
