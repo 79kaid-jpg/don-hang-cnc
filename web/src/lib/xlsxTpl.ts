@@ -186,32 +186,50 @@ export function toHtml(wb: ExcelJS.Workbook): string {
     span[ra + ':' + ca] = [rz - ra + 1, cz - ca + 1]; for (let r = ra; r <= rz; r++) for (let c = ca; c <= cz; c++) if (r !== ra || c !== ca) hide.add(r + ':' + c); }
   let used = 1; for (let c = 1; c <= maxC; c++) for (let r = 1; r <= maxR; r++) if (ws.getCell(r, c).value != null) used = Math.max(used, c);
   for (const k of Object.keys(span)) { const [, c] = k.split(':').map(Number); used = Math.max(used, c + span[k][1] - 1); }
+  // Vùng in (Print Area) nếu có: chỉ hiển thị phần này, như khi in từ Excel
+  let r0 = 1, r1 = maxR, c0 = 1; const pa = String((ws.pageSetup as { printArea?: string }).printArea ?? '').split(',')[0].replace(/\$/g, '').replace(/^.*!/, '');
+  const pm = pa.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+  if (pm) { c0 = colN(pm[1]); r0 = +pm[2]; used = colN(pm[3]); r1 = Math.min(+pm[4], maxR); }
+  // Bỏ cột / dòng ẩn
+  const vis = (c: number) => !ws.getColumn(c).hidden && (ws.getColumn(c).width ?? 9) > 0.5;
+  const vcols: number[] = []; for (let c = c0; c <= used; c++) if (vis(c)) vcols.push(c);
   const esc = (s: string) => s.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]!));
-  const cols = Array.from({ length: used }, (_, i) => (ws.getColumn(i + 1).width ?? 9) * 7);
-  const total = cols.reduce((a, w) => a + w, 0);
-  const bd = (b?: Partial<ExcelJS.Border>) => (b?.style ? `1px solid ${argb(b.color) || '#000'}` : '');
+  const wOf = (c: number) => (ws.getColumn(c).width ?? 9) * 7;
+  const cols = vcols.map(wOf);
+  const total = cols.reduce((a, w) => a + w, 0) || 1;
+  const bd = (b?: Partial<ExcelJS.Border>) => (b?.style ? `${b.style === 'medium' || b.style === 'thick' ? 1.5 : 1}px solid ${argb(b.color) || '#000'}` : '');
   let h = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Times New Roman',serif;font-size:12px"><colgroup>${cols.map((w) => `<col style="width:${(w / total * 100).toFixed(2)}%">`).join('')}</colgroup>`;
-  for (let r = 1; r <= maxR; r++) { const row = ws.getRow(r); h += `<tr style="height:${(row.height ?? 15) * 1.33}px">`;
-    for (let c = 1; c <= used; c++) { if (hide.has(r + ':' + c)) continue; const cell = ws.getCell(r, c); const sp = span[r + ':' + c];
+  for (let r = r0; r <= r1; r++) { const row = ws.getRow(r); if (row.hidden) continue; h += `<tr style="height:${(row.height ?? 15) * 1.33}px">`;
+    const skip = new Set<number>();
+    for (const c of vcols) { if (hide.has(r + ':' + c) || skip.has(c)) continue;
+      const cell = ws.getCell(r, c); const sp0 = span[r + ':' + c];
+      const sp = sp0 ? [sp0[0], vcols.filter((x) => x >= c && x < c + sp0[1]).length] as [number, number] : undefined;
       let v = ''; const raw = cell.value as unknown;
       if (raw && typeof raw === 'object' && 'formula' in (raw as object)) { const res = (raw as { result?: unknown }).result; v = res == null ? '' : typeof res === 'number' ? res.toLocaleString('vi-VN') : String(res); }
       else if (typeof raw === 'number') v = raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
       const f = cell.font ?? {}; const a = cell.alignment ?? {}; const b = cell.border ?? {}; const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
       const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
-        a.wrapText ? 'white-space:pre-wrap;overflow:hidden' : 'white-space:pre;overflow:visible', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
+        a.wrapText ? 'white-space:pre-wrap;overflow-wrap:anywhere' : 'white-space:pre;overflow:hidden;text-overflow:clip', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');
-      h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''} style="${st}">${esc(v)}</td>`; }
+      // Như Excel: chữ không xuống dòng được tràn sang các ô trống bên phải
+      let spill = 1;
+      if (!sp && v && !a.wrapText && (a.horizontal ?? 'left') === 'left' && typeof raw !== 'number') {
+        for (const n of vcols.filter((x) => x > c)) { if (hide.has(r + ':' + n)) { if (skip.has(n)) continue; break; }
+          const nv = ws.getCell(r, n).value; if (nv != null && String(nv).trim() !== '') break;
+          const ns = span[r + ':' + n]; if (ns && ns[0] > 1) break;
+          skip.add(n); spill++; if (ns) vcols.filter((x) => x > n && x < n + ns[1]).forEach((x) => { skip.add(x); spill++; }); } }
+      h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st}">${esc(v)}</td>`; }
     h += '</tr>'; }
   h += '</table>';
   const imgs = ws.getImages().map((im) => { const m = wb.getImage(+im.imageId) as { base64?: string; buffer?: ArrayBuffer; extension: string };
     let b64 = m.base64 ?? ''; if (!b64 && m.buffer) { const u = new Uint8Array(m.buffer as ArrayBuffer); let s = ''; u.forEach((x) => { s += String.fromCharCode(x); }); b64 = btoa(s); }
     if (b64.includes(',')) b64 = b64.split(',')[1];
     const tl = im.range.tl as { nativeCol: number; nativeRow: number; col: number; row: number }; const br = im.range.br as { nativeCol: number; nativeRow: number } | undefined;
-    const left = cols.slice(0, Math.floor(tl.col)).reduce((a, w) => a + w, 0) / total * 100;
+    const left = vcols.filter((c) => c - 1 < Math.floor(tl.col)).reduce((a, c) => a + wOf(c), 0) / total * 100;
     const ext = (im.range as unknown as { ext?: { width: number; height: number } }).ext;
-    const wpx = ext?.width ?? (br ? cols.slice(Math.floor(tl.col), br.nativeCol).reduce((a, w) => a + w, 0) : 90);
-    let top = 0; for (let r = 1; r <= Math.floor(tl.row); r++) top += (ws.getRow(r).height ?? 15) * 1.33;
+    const wpx = ext?.width ?? (br ? vcols.filter((c) => c - 1 >= Math.floor(tl.col) && c - 1 < br.nativeCol).reduce((a, c) => a + wOf(c), 0) : 90);
+    let top = 0; for (let r = r0; r <= Math.floor(tl.row); r++) if (!ws.getRow(r).hidden) top += (ws.getRow(r).height ?? 15) * 1.33;
     return `<img src="data:image/${m.extension};base64,${b64}" style="position:absolute;left:${left}%;top:${top}px;width:${Math.min(wpx, 220)}px">`; }).join('');
   return `<div style="position:relative">${imgs}${h}</div>`;
 }
