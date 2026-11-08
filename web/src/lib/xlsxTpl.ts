@@ -62,7 +62,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     ten_hang: 'GC đột, chấn',
     ngay_thang_nam: `TP.HCM, ngày ${String(dt.getDate()).padStart(2, '0')} tháng ${String(dt.getMonth() + 1).padStart(2, '0')} năm ${dt.getFullYear()}`
   };
-  for (const [k] of hdrOf(b.proc as Proc)) vars[k] = d.header?.[k] ?? '';
+  for (const [k, , t] of hdrOf(b.proc as Proc)) { const v = d.header?.[k] ?? ''; vars[k] = t === 'date' && /^\d{4}-\d{2}-\d{2}/.test(v) ? fd(v) : v; }
   for (const k of Object.keys(d.header ?? {})) if (vars[k] == null) vars[k] = d.header[k];
   for (const [k, v] of Object.entries((o as Order & { extra?: Record<string, string> }).extra ?? {})) if (vars[k] == null) vars[k] = v;
   if (vars.han_bao_gia == null) vars.han_bao_gia = fd(o.quote_due ?? undefined);
@@ -237,7 +237,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
       if (raw && typeof raw === 'object' && 'formula' in (raw as object)) { const res = (raw as { result?: unknown }).result; v = res == null ? '' : typeof res === 'number' ? res.toLocaleString('vi-VN') : String(res); }
       else if (typeof raw === 'number') v = /^0+$/.test(String(cell.numFmt ?? '')) ? String(raw).padStart(String(cell.numFmt).length, '0') : raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
       const f = cell.font ?? {}; const a = cell.alignment ?? {}; const b = cell.border ?? {}; const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
-      const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
+      const st = [f.name && f.name !== 'Calibri' ? `font-family:'${f.name}',${/Times/i.test(f.name) ? 'serif' : 'system-ui,sans-serif'}` : '', f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
         a.wrapText ? 'white-space:pre-wrap;overflow-wrap:break-word' : 'white-space:pre-wrap;overflow-wrap:break-word', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');
@@ -271,7 +271,7 @@ export async function downloadWb(wb: ExcelJS.Workbook, name: string) {
 export const isLandscape = (wb: ExcelJS.Workbook) => (wb.worksheets[0]?.pageSetup as { orientation?: string } | undefined)?.orientation === 'landscape';
 export function printHtml(html: string, title: string, landscape = true) {
   const w = window.open('', '_blank'); if (!w) return;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>@page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:10mm}body{margin:0}tr,img{page-break-inside:avoid;break-inside:avoid}</style></head><body>${html}<script>onload=()=>setTimeout(()=>print(),300)</script></body></html>`); w.document.close();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"><style>@page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:10mm}body{margin:0}tr,img{page-break-inside:avoid;break-inside:avoid}</style></head><body>${html}<script>onload=()=>(document.fonts ? document.fonts.ready : Promise.resolve()).then(()=>setTimeout(()=>print(),200))</script></body></html>`); w.document.close();
 }
 
 export type Tpl = { id: string; proc: string; company: string | null; name: string; path: string; file_name: string | null; version: number; vars: string[]; active: boolean; created_at: string };
