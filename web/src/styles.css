@@ -1988,3 +1988,5 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .kb-col.kb-elsewhere .kb-group{color:#475569}
 .kb-col.kb-elsewhere .kb-card{opacity:.92;background:#fff}
 .kb-where{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#334155;background:#EEF2F6;border-radius:8px;padding:3px 8px;align-self:flex-start}
+
+.btn.danger-soft{color:#B42318}.btn.danger-soft:hover{background:#FEF3F2;border-color:#FDA29B}

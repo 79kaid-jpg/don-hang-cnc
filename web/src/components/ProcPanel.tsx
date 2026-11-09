@@ -228,6 +228,9 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
           {editable && <button className="btn xs" disabled={!dirty} onClick={() => save()}><Icon name="check" size={13} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           <PrintTplButton o={o} b={b} d={d} people={people} fallback={() => printDoc(o, b, d, people)} />
           <button className="btn xs icon-only" title="In bản mặc định của app (không theo mẫu Excel)" aria-label="In bản mặc định" onClick={() => printDoc(o, b, d, people)}><Icon name="file" size={13} /></button>
+          {(can || adm) && d.status === FLOW[proc][0] && (proc === 'QT0' || d.company === 'PN') && b.status === 'dang_lam' && <button className="btn xs icon-only danger-soft" title={'Xoá ' + b.title + ' để lập lại (chỉ khi còn ở bước đầu)'} aria-label={'Xoá ' + b.title} onClick={async () => {
+            if (!(await confirmDialog(`Xoá hẳn “${b.title}” (${PROC_NAME[proc]})? Toàn bộ dữ liệu đã nhập sẽ mất. Sau đó bạn có thể mở lại ${BATCH_WORD[proc]} mới.`, 'Xoá hồ sơ', true))) return;
+            const { error } = await sb.rpc('batch_delete', { p_batch: b.id, p_note: '' }); if (error) return toast(errText(error)); toast('Đã xoá ' + b.title); onChanged(); }}><Icon name="trash" size={13} /></button>}
           {adm && editable && d.status !== 'da_duyet' && <button className="btn xs icon-only" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" aria-label="Nạp dữ liệu mẫu" onClick={fillDemo}><Icon name="bolt" size={13} /></button>}
         </div>
       </div>
