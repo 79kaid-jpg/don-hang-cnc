@@ -75,7 +75,7 @@ function Shell() {
     { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
     { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
     { to: '/thong-ke', icon: 'chart', label: 'Thống kê', short: 'Thống kê' },
-    ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Trình tạo quy trình (thử)', short: 'Quy trình', side: true }] : []),
+    ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Tạo quy trình', short: 'Quy trình', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/mo-phong', icon: 'run', label: 'Mô phỏng quy trình', short: 'Mô phỏng', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
@@ -118,7 +118,7 @@ function Shell() {
             <nav className="sheet-list" onClick={() => setSheet(false)}>
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
               {can('admin_it') && <NavLink to="/mo-phong"><Icon name="run" />Mô phỏng quy trình</NavLink>}
-              {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Trình tạo quy trình (thử)</NavLink>}
+              {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Tạo quy trình</NavLink>}
               <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
               <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
               <button onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
