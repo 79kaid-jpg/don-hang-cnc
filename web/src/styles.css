@@ -1902,3 +1902,6 @@ input[aria-invalid=true]{border-color:#d92d20!important;background:#fff5f4!impor
 .op-it:hover{border-color:var(--accent,#3A6EA5);background:#F7F9FC}.op-it.off{opacity:.65}
 .op-p{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
 .op-tag{font-size:12px;padding:2px 8px;border-radius:10px;background:#F1F5F9;color:#64748B;white-space:nowrap}.op-tag.ok{background:#E8F5EC;color:#15803D}
+/* iPad/iOS: ô ngày cao & căn giữa khác các ô khác → đồng bộ */
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:44px;min-height:44px;text-align:left;line-height:22px}
+input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:22px}
