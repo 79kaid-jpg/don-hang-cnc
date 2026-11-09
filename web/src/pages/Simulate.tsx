@@ -14,6 +14,9 @@ const SPEEDS = [0.5, 1, 2];
 type CP = { proc: string; company: string; role: string; user_id: string | null; group_id: string | null; sla_h: number | null };
 type LV = { proc: string; company: string; name: string; user_id: string | null; group_id: string | null; sla_h: number; active: boolean };
 
+import { backfillRecords } from '../lib/records';
+(window as unknown as { __backfill: typeof backfillRecords }).__backfill = backfillRecords;
+
 export default function Simulate() {
   const [cp, setCp] = useState<CP[]>([]); const [lv, setLv] = useState<LV[]>([]); const [ppl, setPpl] = useState<Record<string, string>>({}); const [gs, setGs] = useState<Record<string, string>>({});
   const [i, setI] = useState(0); const [play, setPlay] = useState(false); const [sp, setSp] = useState(1);

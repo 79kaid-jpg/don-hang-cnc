@@ -63,9 +63,9 @@ export function keepRows(root: HTMLElement, pageH: number) {
 }
 
 /** Lưu một chứng từ PDF cho phiếu */
-export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['kind'], note = '', level: string | null = null, result: DocRecord['result'] = null): Promise<DocRecord | null> {
-  const ppl = await people(); const { data: au } = await sb.rpc('app_uid'); const me = ppl[au as string]?.full_name ?? '';
-  const now = new Date();
+export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['kind'], note = '', level: string | null = null, result: DocRecord['result'] = null, as?: { user: string; at: string }, ppl0?: Record<string, Profile>): Promise<DocRecord | null> {
+  const ppl = ppl0 ?? await people(); const au = as?.user ?? (await sb.rpc('app_uid')).data; const me = ppl[au as string]?.full_name ?? '';
+  const now = as ? new Date(as.at) : new Date();
   const stamp = kind === 'trinh_duyet' ? { text: 'BẢN TRÌNH DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#3A6EA5' }
     : kind === 'duyet' ? { text: level ? 'ĐÃ DUYỆT · ' + level.toUpperCase() : 'ĐÃ DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#1d7a46' }
     : { text: 'THẤT BẠI', sub: `${me} · ${fmt(now)}${note ? ' · ' + note : ''}`, color: '#b42318' };
@@ -98,3 +98,26 @@ export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: s
 }
 
 export const recordUrl = async (path: string) => (await sb.storage.from('files').createSignedUrl(path, 3600)).data?.signedUrl ?? '';
+
+/** Admin: tạo bù PDF "Đã duyệt"/"Thất bại" cho phiếu đã kết thúc mà chưa có chứng từ (VD đơn chạy mô phỏng) */
+export async function backfillRecords(onStep?: (done: number, total: number, label: string) => void, limit = 10000): Promise<{ ok: number; err: number }> {
+  const ppl = await people();
+  const { data: ds } = await sb.from('docs_v').select('*').in('status', ['da_duyet', 'fail']);
+  const { data: rs } = await sb.from('doc_records').select('doc_id, kind').in('kind', ['duyet', 'tu_choi']);
+  const have = new Set(((rs ?? []) as { doc_id: string }[]).map((r) => r.doc_id));
+  const todo = ((ds ?? []) as Doc[]).filter((d) => !have.has(d.id)).slice(0, limit);
+  const bc: Record<string, Batch> = {}; const oc: Record<string, Order> = {}; let ok = 0, err = 0;
+  for (const [i, d] of todo.entries()) {
+    try {
+      const b = bc[d.batch_id] ??= (await sb.from('batches').select('*').eq('id', d.batch_id).single()).data as Batch;
+      const o = oc[b.order_id] ??= (await sb.from('orders').select('*').eq('id', b.order_id).single()).data as Order;
+      const sg = [...(d.signs ?? [])].reverse().find((x) => d.status === 'fail' ? x.action === 'fail' : x.action === 'next') ?? { user: '', at: d.status_at };
+      const as = { user: sg.user, at: sg.at ?? d.status_at };
+      if (d.status === 'fail') await saveRecord(o, b, d, 'tu_choi', '(tạo bù) ' + ((sg as { note?: string }).note ?? ''), null, 'that_bai', as, ppl);
+      else await saveRecord(o, b, d, 'duyet', '(tạo bù)', 'Duyệt', 'thanh_cong', as, ppl);
+      ok++;
+    } catch (e) { err++; console.warn('backfill', d.id, e); }
+    onStep?.(i + 1, todo.length, d.id);
+  }
+  return { ok, err };
+}
