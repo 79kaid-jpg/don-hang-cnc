@@ -2042,7 +2042,9 @@ html[data-glass=on]:not([data-theme=dark]) .side,
 html[data-glass=on]:not([data-theme=dark]) .topbar{background:var(--glass)!important;-webkit-backdrop-filter:blur(22px) saturate(160%)!important;backdrop-filter:blur(22px) saturate(160%)!important;border-color:var(--glass-line)!important;box-shadow:var(--glass-shadow)}
 html[data-glass=on]:not([data-theme=dark]) .side{border-right:1px solid var(--glass-edge)}
 html[data-glass=on]:not([data-theme=dark]) .topbar{color:var(--ink)!important;border-bottom:1px solid var(--glass-edge)!important}
-html[data-glass=on]:not([data-theme=dark]) .topbar svg,html[data-glass=on]:not([data-theme=dark]) .topbar b,html[data-glass=on]:not([data-theme=dark]) .topbar .brand,html[data-glass=on]:not([data-theme=dark]) .topbar .brand *{color:var(--ink)!important}
+html[data-glass=on]:not([data-theme=dark]) .topbar svg,html[data-glass=on]:not([data-theme=dark]) .topbar b,html[data-glass=on]:not([data-theme=dark]) .topbar .brand,html[data-glass=on]:not([data-theme=dark]) .topbar .brand *,html[data-glass=on]:not([data-theme=dark]) .topbar .tb-title,html[data-glass=on]:not([data-theme=dark]) .topbar .tb-btn{color:var(--ink)!important}
+/* điện thoại: thanh trên không làm mờ (tránh lỗi hiển thị / giật trên iOS) */
+@media (max-width:900px){html[data-glass=on]:not([data-theme=dark]) .topbar{background:rgba(255,255,255,.88)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 /* khung QT trên Kanban / Sơ đồ: kính trong, thấy nền */
 html[data-glass=on]:not([data-theme=dark]) .qt-group{--qp:rgba(255,255,255,.55)}
 html[data-glass=on]:not([data-theme=dark]) .qt-panel{background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.7);box-shadow:var(--glass-shadow)}
@@ -2070,3 +2072,6 @@ html[data-glass=on]:not([data-theme=dark]) textarea{background-color:#fff}
 html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){background:rgba(255,255,255,.75);border-color:rgba(20,40,70,.14)}
 }}
 @media print{html[data-glass=on] body{background:#fff!important}}
+
+/* Checklist trên màn hẹp: nhãn mức/tự kiểm xuống dòng dưới nội dung, không bóp chữ */
+@media (max-width:600px){.sc-it{flex-wrap:wrap}.sc-it .sc-l{flex:1 1 calc(100% - 40px)}.sc-it .sc-lv{margin-left:30px;margin-top:0}.sc-it .sc-lv+.sc-lv{margin-left:4px}}
