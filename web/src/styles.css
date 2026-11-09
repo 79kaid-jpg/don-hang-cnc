@@ -1990,3 +1990,18 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .kb-where{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#334155;background:#EEF2F6;border-radius:8px;padding:3px 8px;align-self:flex-start}
 
 .btn.danger-soft{color:#B42318}.btn.danger-soft:hover{background:#FEF3F2;border-color:#FDA29B}
+
+/* Kết nối & khoá API */
+.ig-intro{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+@media (max-width:420px){.ig-grid{grid-template-columns:1fr}}
+.ig{display:flex;flex-direction:column;gap:10px;border-left:4px solid #CBD5E1}
+.ig.ok{border-left-color:#16A34A}.ig.bad{border-left-color:#DC2626}.ig.unk{border-left-color:#D97706}
+.ig-h{display:flex;align-items:center;gap:10px}
+.ig-logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;color:#fff;background:#64748B;flex:none}
+.ig-logo.p-base{background:#1E66F5}.ig-logo.p-zalo{background:#0068FF}.ig-logo.p-anthropic{background:#C15F3C}.ig-logo.p-google{background:#34A853}.ig-logo.p-openai{background:#111827}
+.ig-st{font-size:12px;font-weight:600;white-space:nowrap;color:#64748B}.ig-st.ok{color:#15803D}.ig-st.bad{color:#B91C1C}.ig-st.unk{color:#B45309}
+.ig-meta{display:flex;flex-direction:column;gap:3px;color:#475569}
+.ig-err{color:#B91C1C}
+.ig-acts{display:flex;gap:6px;flex-wrap:wrap}
+.ig-edit{display:flex;flex-direction:column;gap:6px}

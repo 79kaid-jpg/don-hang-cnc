@@ -49,7 +49,7 @@ export default function Admin() {
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
-    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
+    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối & API', 'Base, Zalo, Google, Anthropic…', 'shield']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
