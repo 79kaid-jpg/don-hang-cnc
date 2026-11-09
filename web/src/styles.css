@@ -2020,3 +2020,53 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 
 .af-who select{height:34px!important;min-height:34px!important;font-size:13.5px!important;padding:4px 8px!important;max-width:100%}
 .af-b{min-width:0}
+
+/* ═══ Giao diện "Kính nhẹ" (tuỳ chọn): kính ở khung ngoài, nội dung làm việc giữ nền gần đặc để dễ đọc ═══
+   Chỉ áp dụng chế độ sáng, khi trình duyệt hỗ trợ backdrop-filter và người dùng không bật giảm trong suốt. */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+@media not (prefers-reduced-transparency:reduce){
+html[data-glass=on]:not([data-theme=dark]){
+  --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.86); --glass-line:rgba(255,255,255,.7); --glass-edge:rgba(20,40,70,.10);
+  --glass-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 8px 30px rgba(20,40,80,.10);
+  --surface:rgba(255,255,255,.9); --soft:rgba(248,250,252,.82);
+}
+html[data-glass=on]:not([data-theme=dark]) body{
+  background:
+    radial-gradient(900px 600px at 8% -10%,rgba(29,78,216,.22),transparent 60%),
+    radial-gradient(800px 600px at 105% 10%,rgba(14,116,144,.20),transparent 60%),
+    radial-gradient(900px 700px at 50% 115%,rgba(21,128,61,.16),transparent 60%),
+    linear-gradient(160deg,#EEF3FA,#F4F7F6 55%,#EEF4F1);
+  background-attachment:fixed}
+/* khung ngoài: kính */
+html[data-glass=on]:not([data-theme=dark]) .side,
+html[data-glass=on]:not([data-theme=dark]) .topbar{background:var(--glass)!important;-webkit-backdrop-filter:blur(22px) saturate(160%)!important;backdrop-filter:blur(22px) saturate(160%)!important;border-color:var(--glass-line)!important;box-shadow:var(--glass-shadow)}
+html[data-glass=on]:not([data-theme=dark]) .side{border-right:1px solid var(--glass-edge)}
+html[data-glass=on]:not([data-theme=dark]) .topbar{color:var(--ink)!important;border-bottom:1px solid var(--glass-edge)!important}
+html[data-glass=on]:not([data-theme=dark]) .topbar svg,html[data-glass=on]:not([data-theme=dark]) .topbar b,html[data-glass=on]:not([data-theme=dark]) .topbar .brand,html[data-glass=on]:not([data-theme=dark]) .topbar .brand *{color:var(--ink)!important}
+/* khung QT trên Kanban / Sơ đồ: kính trong, thấy nền */
+html[data-glass=on]:not([data-theme=dark]) .qt-group{--qp:rgba(255,255,255,.55)}
+html[data-glass=on]:not([data-theme=dark]) .qt-panel{background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.7);box-shadow:var(--glass-shadow)}
+html[data-glass=on]:not([data-theme=dark]) .qt-tabs button[aria-selected=true],html[data-glass=on]:not([data-theme=dark]) .qt-tabs button.on{background:rgba(255,255,255,.5)!important}
+/* thanh dưới điện thoại: bán trong suốt, không làm mờ (tránh lỗi cuộn trên iOS) */
+html[data-glass=on]:not([data-theme=dark]) .bottom-nav{background:rgba(255,255,255,.9)!important;border-top:1px solid var(--glass-edge)!important;box-shadow:0 -6px 24px rgba(20,40,80,.08)}
+/* hộp thoại, menu, thông báo, bảng lệnh: kính đặc hơn */
+html[data-glass=on]:not([data-theme=dark]) .modal,
+html[data-glass=on]:not([data-theme=dark]) .acc-pop,html[data-glass=on]:not([data-theme=dark]) .pal,html[data-glass=on]:not([data-theme=dark]) .sheet,html[data-glass=on]:not([data-theme=dark]) .db-menu,html[data-glass=on]:not([data-theme=dark]) .cp-pop,
+
+html[data-glass=on]:not([data-theme=dark]) .bell-pop{background:var(--glass-strong)!important;-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow),0 24px 60px rgba(20,40,80,.18)!important}
+html[data-glass=on]:not([data-theme=dark]) .modal-bg{background:rgba(20,30,50,.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+html[data-glass=on]:not([data-theme=dark]) .toast{background:rgba(27,31,36,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+/* thẻ nội dung: gần đặc, viền sáng – không làm mờ để cuộn nhẹ */
+html[data-glass=on]:not([data-theme=dark]) .card{background:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.8);box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 4px 18px rgba(20,40,80,.07)}
+/* Kanban: cột trong, thẻ bán đặc; đặc hẳn khi rê / kéo */
+html[data-glass=on]:not([data-theme=dark]) .kb-col,html[data-glass=on]:not([data-theme=dark]) .qt-panel .kb-col{background:rgba(236,240,245,.55)!important;border:1px solid rgba(255,255,255,.6)}
+html[data-glass=on]:not([data-theme=dark]) .kb-card{background:rgba(255,255,255,.88);transition:background var(--t),box-shadow var(--t)}
+html[data-glass=on]:not([data-theme=dark]) .kb-card:hover{background:#fff;box-shadow:0 8px 24px rgba(20,40,80,.12)}
+/* bảng dữ liệu, ô nhập: đặc để số liệu rõ */
+html[data-glass=on]:not([data-theme=dark]) table,
+html[data-glass=on]:not([data-theme=dark]) input,
+html[data-glass=on]:not([data-theme=dark]) select,
+html[data-glass=on]:not([data-theme=dark]) textarea{background-color:#fff}
+html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){background:rgba(255,255,255,.75);border-color:rgba(20,40,70,.14)}
+}}
+@media print{html[data-glass=on] body{background:#fff!important}}
