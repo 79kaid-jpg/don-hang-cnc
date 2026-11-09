@@ -2082,3 +2082,12 @@ html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){backg
 .pp-chain .dot.ring-dot .ring-t{font-weight:700}
 .doc-steps{margin:2px 0 6px}
 @media (max-width:600px){.doc-steps li{min-width:0;padding:6px 4px;font-size:12.5px;gap:6px}}
+/* Khung hành động phiếu – hướng A */
+.pp-act .pp-savebtn{min-height:34px;padding:0 12px;font-size:13px;gap:6px}
+@media (max-width:700px){
+  .pp-act{gap:8px;padding:10px 12px}
+  .pp-act .pp-save{flex:1 0 100%;margin:0;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .pp-act>.btn{min-height:44px;flex:1 1 0;justify-content:center;margin:0}
+  .pp-act>.btn.primary{flex:2 1 0;min-width:0;white-space:normal;line-height:1.2;text-align:center}
+  .pp-act>.btn.kb-back,.pp-act>.btn.rt-go{padding:0 10px}
+}
