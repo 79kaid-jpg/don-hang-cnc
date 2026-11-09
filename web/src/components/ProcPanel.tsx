@@ -236,7 +236,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {!can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       <StepRings proc={proc} d={d} />
-      {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} />}
+      {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };

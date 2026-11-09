@@ -115,6 +115,7 @@ export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: s
     else if (action === 'next' && (d.status === 'duyet' || d.status === 'duyet_them')) rec = await saveRecord(o, b, d, 'duyet', note, d.status === 'duyet_them' ? await lvName() : 'Duyệt');
     else if (action === 'fail') rec = await saveRecord(o, b, d, 'tu_choi', note, null, 'that_bai');
   } catch (e) { warn = 'Chưa lưu được chứng từ PDF: ' + ((e as Error).message ?? e); }
+  if (action === 'next') { try { const { syncAuto } = await import('./checks'); await syncAuto(b.proc as never, d as never); } catch { /* bỏ qua – máy chủ vẫn kiểm */ } }
   const { data, error } = await sb.rpc('doc_advance', { p_doc: d.id, p_action: action, p_note: note });
   if (error) { if (rec) await sb.from('doc_records').update({ note: '(đã huỷ – ký không thành công) ' + rec.note }).eq('id', rec.id); throw error; }
   if (rec && rec.kind === 'duyet' && data === 'da_duyet') await sb.from('doc_records').update({ result: 'thanh_cong' }).eq('id', rec.id);

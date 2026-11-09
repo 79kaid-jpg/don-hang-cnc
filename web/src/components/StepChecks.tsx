@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
-import { FLOW, STATUS, PROC_NAME, type Proc, type Doc } from '../lib/proc';
-import { itemsOf, loadChecks, progress, useChecks, LEVEL_NAME, type CheckItem, type CheckTpl, type Level } from '../lib/checks';
+import { FLOW, STATUS, PROC_NAME, PROC_TABLES, TABLES, type Proc, type Doc } from '../lib/proc';
+import { fieldsOf, useFields } from '../lib/fields';
+import { itemsOf, loadChecks, progress, useChecks, applyAuto, reqKeysOf, AUTO_HINT, LEVEL_NAME, type CheckItem, type CheckTpl, type Level } from '../lib/checks';
 import { useAuth } from '../lib/auth';
 import { Ring } from './Ring';
 import { Icon } from './Icon';
@@ -13,27 +14,35 @@ const fdt = (s?: string) => s ? new Date(s).toLocaleString('vi-VN', { day: '2-di
 /** Dải bước ở đầu phiếu: mỗi bước một vòng tiến độ checklist */
 export function StepRings({ proc, d }: { proc: Proc; d: DocCk }) {
   const tpl = useChecks(); const fl = FLOW[proc]; const ci = fl.indexOf(d.status === 'duyet_them' ? 'duyet' : d.status); const fin = d.status === 'da_duyet';
-  const rows = fl.map((s) => ({ s, p: progress(itemsOf(tpl, proc, s, d.checklist)) })).filter((x) => x.p.total);
+  const rows = fl.map((s) => ({ s, p: progress(s === d.status ? applyAuto(itemsOf(tpl, proc, s, d.checklist), d, reqKeysOf(proc, d.company, s)).items : itemsOf(tpl, proc, s, d.checklist)) })).filter((x) => x.p.total);
   if (!rows.length) return null;
   return <div className="sc-steps" aria-label="Checklist theo bước">{rows.map(({ s, p }) => { const k = fl.indexOf(s);
     return <span key={s} className={'sc-step' + (k === ci && !fin ? ' cur' : k < ci || fin ? ' past' : '')}><Ring done={p.done} total={p.total} size={28} stroke={3.5} />{STATUS[s]}</span>; })}</div>;
 }
 
 /** Checklist của bước hiện tại – tích, ghi chú, thêm mục riêng cho hồ sơ */
-export function StepChecks({ proc, d, people, canEdit, onChanged }: { proc: Proc; d: DocCk; people: Record<string, Profile>; canEdit: boolean; onChanged?: () => void }) {
+export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc: Proc; d: DocCk; people: Record<string, Profile>; canEdit: boolean; onChanged?: () => void; live?: { header?: Record<string, string>; tables?: Record<string, Record<string, unknown>[]>; files?: { kind: string }[] } }) {
   const tpl = useChecks(); const { me } = useAuth();
   const step = d.status;
   const [items, setItems] = useState<CheckItem[]>(() => itemsOf(tpl, proc, step, d.checklist));
   const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false);
-  const saved = useRef(false);
-  useEffect(() => { setItems(itemsOf(tpl, proc, step, d.checklist)); }, [tpl, proc, step, d.checklist]);
+  const base = useRef<CheckItem[] | null>(null);
+  useEffect(() => { base.current = null; }, [d.checklist, step]);
+  const data = live ?? d;
+  useEffect(() => { const r = applyAuto(base.current ?? itemsOf(tpl, proc, step, d.checklist), data, reqKeysOf(proc, d.company, step)); setItems(r.items);
+    // Tự tích / bỏ tích theo dữ liệu đang nhập (lưu checklist sau 0,8 giây)
+    if (!r.changed || !canEdit || !FLOW[proc].includes(step)) return;
+    base.current = r.items;
+    const tm = setTimeout(() => { sb.rpc('doc_check', { p_doc: d.id, p_step: step, p_items: r.items }); }, 800);
+    return () => clearTimeout(tm);
+  }, [tpl, proc, step, d.checklist, data.header, data.tables, data.files]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!FLOW[proc].includes(step) || !items.length && !canEdit) return null;
   const p = progress(items);
   const push = async (next: CheckItem[]) => {
     setItems(next); setBusy(true);
     const { error } = await sb.rpc('doc_check', { p_doc: d.id, p_step: step, p_items: next }); setBusy(false);
-    if (error) { toast(errText(error)); setItems(itemsOf(tpl, proc, step, d.checklist)); return; }
-    saved.current = true; onChanged?.();
+    if (error) { toast(errText(error)); setItems(base.current ?? itemsOf(tpl, proc, step, d.checklist)); return; }
+    base.current = next; onChanged?.();
   };
   const set = (i: number, patch: Partial<CheckItem>) => push(items.map((x, k) => k === i ? { ...x, ...patch } : x));
   const tick = (i: number) => { const x = items[i]; const on = !x.done;
@@ -54,12 +63,14 @@ export function StepChecks({ proc, d, people, canEdit, onChanged }: { proc: Proc
       </div>
       <ul className="sc-list">{items.map((x, i) => (
         <li key={x.id} className={'sc-it' + (x.done ? ' done' : '')}>
-          <input type="checkbox" checked={!!x.done} disabled={!canEdit || busy} onChange={() => tick(i)} aria-label={x.label} />
+          <input type="checkbox" checked={!!x.done} disabled={!canEdit || busy || !!x.auto} onChange={() => tick(i)} aria-label={x.label} title={x.auto ? 'Tự kiểm: ' + AUTO_HINT(x.auto) : undefined} />
           <div className="sc-l"><span>{x.label}</span>
             {x.level === 'note' && (canEdit && !x.done ? <input className="sc-note" placeholder="Ghi chú / số liệu…" defaultValue={x.note ?? ''} onBlur={(e) => e.target.value !== (x.note ?? '') && set(i, { note: e.target.value })} />
               : x.note ? <span className="small">📝 {x.note}</span> : null)}
-            {x.done && x.by && <span className="sc-meta">✓ {people[x.by]?.full_name ?? '…'} · {fdt(x.at)}</span>}
+            {x.done && x.by && <span className="sc-meta">✓ {x.by === 'auto' ? 'Hệ thống tự kiểm' : people[x.by]?.full_name ?? '…'} · {fdt(x.at)}</span>}
+            {x.auto && !x.done && <span className="sc-meta sc-auto">⚡ Tự tích khi {AUTO_HINT(x.auto)} </span>}
           </div>
+          {x.auto && <span className="sc-lv auto" title={'Tự kiểm: ' + AUTO_HINT(x.auto)}>⚡ Tự kiểm</span>}
           <span className={'sc-lv ' + x.level}>{LEVEL_NAME[x.level]}</span>
           {canEdit && x.custom && <button className="sc-del" aria-label="Xoá mục" onClick={() => del(i)}><Icon name="x" size={14} /></button>}
         </li>))}</ul>
@@ -99,6 +110,7 @@ export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
             <li key={x.id} className={'sca-row' + (drag === x.id ? ' drag' : '')} draggable={canEdit} onDragStart={() => setDrag(x.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(x.id)}>
               <span className="grip" aria-hidden="true">⋮⋮</span>
               <input defaultValue={x.label} disabled={!canEdit} aria-label="Nội dung" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== x.label && upd(x.id, { label: e.target.value.trim() })} />
+              <AutoPick proc={sel[0]} value={x.auto ?? ''} disabled={!canEdit} onChange={(v) => upd(x.id, { auto: v || null })} />
               <select value={x.level} disabled={!canEdit} aria-label="Mức" onChange={(e) => upd(x.id, { level: e.target.value as Level })}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
               {canEdit && <button className="btn xs icon-only" aria-label="Xoá" onClick={() => del(x)}><Icon name="trash" size={13} /></button>}
             </li>))}
@@ -108,4 +120,19 @@ export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
             <button className="btn xs primary" onClick={add} disabled={!nl.trim()}><Icon name="plus" size={13} />Thêm</button></div>}
         </div></div>
     </div>);
+}
+
+/** Chọn quy tắc tự kiểm cho một mục checklist */
+function AutoPick({ proc, value, disabled, onChange }: { proc: Proc; value: string; disabled?: boolean; onChange: (v: string) => void }) {
+  useFields();
+  const hs = fieldsOf(proc, 'header'), fs = fieldsOf(proc, 'file');
+  const tbs = PROC_TABLES[proc].map(([k, def]) => ({ k, t: TABLES[def]?.t ?? k, cols: TABLES[def]?.cols ?? [] }));
+  return <select className="sca-auto" value={value} disabled={disabled} aria-label="Tự kiểm tra" onChange={(e) => onChange(e.target.value)}>
+    <option value="">Tích tay</option>
+    <option value="req">⚡ Đủ trường bắt buộc của bước</option>
+    <optgroup label="⚡ Ô thông tin đã nhập">{hs.map((f) => <option key={f.key} value={'h:' + f.key}>{f.label}</option>)}</optgroup>
+    <optgroup label="⚡ Bảng có dữ liệu">{tbs.map((t) => <option key={t.k} value={'t:' + t.k}>{t.t}</option>)}</optgroup>
+    <optgroup label="⚡ Cột đã nhập đủ mọi dòng">{tbs.flatMap((t) => t.cols.filter((c) => !c.calc).map((c) => <option key={t.k + c.k} value={'c:' + t.k + '.' + c.k}>{t.t} · {c.t}</option>))}</optgroup>
+    <optgroup label="⚡ Đã tải file">{fs.map((f) => <option key={f.key} value={'f:' + f.key}>{f.label}</option>)}</optgroup>
+  </select>;
 }
