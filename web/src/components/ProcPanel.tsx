@@ -1,3 +1,4 @@
+import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
@@ -114,7 +115,7 @@ function Final({ b, o, onDone }: { b: Batch; o: Order; onDone: () => void }) {
   const up = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setErr(''); const out: { name: string; path: string }[] = [];
     for (const file of Array.from(e.target.files ?? [])) {
-      const path = `${o.id}/${b.id}/ky-tay/${Date.now()}-${file.name}`;
+      const path = `${o.id}/${b.id}/ky-tay/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; } out.push({ name: file.name, path });
     }
     const { error } = await sb.rpc('batch_finish', { p_batch: b.id, p_files: out });
@@ -199,7 +200,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string) => {
     const nf = [...files];
     for (const file of Array.from(e.target.files ?? [])) {
-      const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${file.name}`;
+      const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
       nf.push({ kind, name: file.name, path, at: new Date().toISOString() });
     }

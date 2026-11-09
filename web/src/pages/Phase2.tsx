@@ -1,3 +1,4 @@
+import { safeName } from '../lib/files';
 import { useCallback, useEffect, useState } from 'react';
 import { sb, errText, type Approval, type Order, type Profile } from '../lib/supabase';
 import { date, dt, money, num } from '../lib/format';
@@ -164,7 +165,7 @@ export function QT3(p: Common & { part?: 'lgc' | 'approve' | 'after' }) {
   };
   const upPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    const path = `${o.id}/f6/${Date.now()}-${f.name}`;
+    const path = `${o.id}/f6/${Date.now()}-${safeName(f.name)}`;
     const up = await sb.storage.from('files').upload(path, f); if (up.error) { setErr(errText(up.error)); return; }
     const { error } = await sb.from('handovers').update({ signed_pdf_path: path }).eq('order_id', o.id);
     if (error) { setErr(errText(error)); return; }
@@ -329,7 +330,7 @@ export function QT3Giao(p: Common) {
     const files = Array.from(e.target.files ?? []); e.target.value = ''; if (!files.length) return;
     const paths: string[] = [];
     for (const f of files) {
-      const path = `${o.id}/f9/${kind}-${Date.now()}-${f.name}`;
+      const path = `${o.id}/f9/${kind}-${Date.now()}-${safeName(f.name)}`;
       const up = await sb.storage.from('files').upload(path, f); if (up.error) { setErr(errText(up.error)); return; }
       paths.push(path);
     }

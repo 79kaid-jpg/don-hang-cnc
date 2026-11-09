@@ -1,3 +1,4 @@
+import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { Age } from '../components/Age';
 import { CustomerPicker } from '../components/CustomerPicker';
@@ -138,7 +139,7 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
   };
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     for (const file of Array.from(e.target.files ?? [])) {
-      const { error } = await sb.storage.from('files').upload(`${o.id}/f0/${Date.now()}-${file.name}`, file);
+      const { error } = await sb.storage.from('files').upload(`${o.id}/f0/${Date.now()}-${safeName(file.name)}`, file);
       if (error) { setErr(errText(error)); return; }
     }
     setOk('Đã tải file.'); listFiles();
@@ -307,7 +308,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
   };
   const uploadPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    const path = `${o.id}/f2/${Date.now()}-${file.name}`;
+    const path = `${o.id}/f2/${Date.now()}-${safeName(file.name)}`;
     const up = await sb.storage.from('files').upload(path, file);
     if (up.error) { setErr(errText(up.error)); return; }
     const { error } = await sb.from('confirmations').update({ signed_pdf_path: path }).eq('order_id', o.id);
