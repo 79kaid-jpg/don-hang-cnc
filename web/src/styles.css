@@ -1640,7 +1640,11 @@ h1,h2,.tb-title,.db-kpi b,.kpi b,.mw-kpi b,.sim-top h1{font-family:var(--font-d)
 .tk-acts .btn{min-height:32px}
 .tk-form{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 .tk-form textarea,.tk-form select{width:100%}
-.tk-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:260px;overflow:auto}
+.tk-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:220px;overflow:auto}
+.tk-tog{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:2px 0;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.tk-n{font-size:11px;font-weight:700;padding:0 6px;border-radius:9px;background:var(--line,#e5e7eb)}
+.tk-car{transition:transform .15s;opacity:.6}.tk-car.on{transform:rotate(180deg)}
+.tk-last{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .tk-m{display:flex;gap:8px;font-size:13px}
 .tk-ic{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--soft,#eef1f4);color:var(--muted)}
 .tk-m.nudge .tk-ic{background:#fff3d6;color:#8a5a00}.tk-m.reply .tk-ic{background:#e3f4ea;color:#1d7a46}

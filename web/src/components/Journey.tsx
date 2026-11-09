@@ -84,13 +84,13 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
 }
 
 type Msg = { id: string; kind: string; from_user: string | null; to_users: string[]; text: string; via: string; meta: Record<string, string | number>; at: string; replied_at: string | null };
-const KIND: Record<string, [string, string]> = { nudge: ['Nhắc việc', 'bell'], reply: ['Phản hồi', 'chat'], reassign: ['Giao lại', 'users'], auto: ['Tự động', 'clock'], note: ['Ghi chú', 'file'] };
+const KIND: Record<string, [string, string]> = { nudge: ['Nhắc việc', 'bell'], reply: ['Phản hồi', 'chat'], reassign: ['Giao lại', 'users'], auto: ['Tự động', 'clock'], note: ['Ghi chú', 'file'], turn: ['Chuyển bước', 'arrow'], back: ['Trả về', 'alert'] };
 
 /** Trao đổi: nhắc việc / giao lại / phản hồi của người làm (cả qua Zalo) */
 function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; open: boolean }) {
   const [ms, setMs] = useState<Msg[]>([]); const [mgr, setMgr] = useState(false);
   const [mode, setMode] = useState<'' | 'nudge' | 'reassign'>(''); const [txt, setTxt] = useState(''); const [to, setTo] = useState(''); const [rep, setRep] = useState('');
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [exp, setExp] = useState(false);
   const load = () => sb.from('order_msgs').select('*').eq('doc_id', d.id).order('at').then(({ data }) => setMs((data as Msg[]) ?? []));
   useEffect(() => { load(); if (open) sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => setMgr(!!data)); else setMgr(false);
     const ch = sb.channel('msgs-' + d.id).on('postgres_changes', { event: '*', schema: 'public', table: 'order_msgs', filter: 'doc_id=eq.' + d.id }, () => load()).subscribe();
@@ -106,11 +106,12 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
   if (!ms.length && !open) return null;
   return (
     <div className="tk">
-      <div className="tk-head"><b><Icon name="chat" size={14} />Trao đổi</b>
+      <div className="tk-head"><button type="button" className="tk-tog" aria-expanded={exp} onClick={() => setExp(!exp)}><Icon name="chat" size={14} /><b>Trao đổi</b>{ms.length > 0 && <span className="tk-n">{ms.length}</span>}<span className={'tk-car' + (exp ? ' on' : '')}>▾</span></button>
+        {!exp && ms.length > 0 && <span className="tk-last small muted" onClick={() => setExp(true)}><b>{nm(ms[ms.length - 1].from_user)}:</b> {ms[ms.length - 1].text}</span>}
         {lastNudge && <span className={'tk-st ' + (lastNudge.replied_at ? 'ok' : waitH >= 4 ? 'late' : 'wait')}>{lastNudge.replied_at ? 'Đã phản hồi' : waitH >= 4 ? 'Chưa phản hồi ' + fmtLeft(waitH) : 'Chờ phản hồi'}</span>}
         {mgr && <span className="tk-acts">
-          <button className={'btn sm' + (mode === 'nudge' ? ' primary' : '')} onClick={() => { setMode(mode === 'nudge' ? '' : 'nudge'); setErr(''); }}><Icon name="bell" size={14} />Nhắc việc</button>
-          <button className={'btn sm' + (mode === 'reassign' ? ' primary' : '')} onClick={() => { setMode(mode === 'reassign' ? '' : 'reassign'); setErr(''); }}><Icon name="users" size={14} />Giao lại</button>
+          <button className={'btn sm' + (mode === 'nudge' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'nudge' ? '' : 'nudge'); setErr(''); }}><Icon name="bell" size={14} />Nhắc việc</button>
+          <button className={'btn sm' + (mode === 'reassign' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'reassign' ? '' : 'reassign'); setErr(''); }}><Icon name="users" size={14} />Giao lại</button>
         </span>}
       </div>
       {mode === 'nudge' && <div className="tk-form">
@@ -126,11 +127,11 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
           <button className="btn primary" disabled={busy || !to || !txt.trim()} onClick={async () => { if (await run('reassign_doc', { p_doc: d.id, p_user: to, p_note: txt }, 'Đã giao lại cho ' + people[to]?.full_name)) { setTxt(''); setTo(''); setMode(''); location.reload(); } }}>{busy ? 'Đang giao…' : 'Giao lại'}</button></div>
       </div>}
       {err && <div className="msg err" role="alert"><Icon name="alert" size={16} /><span>{err}</span></div>}
-      {ms.length > 0 && <ul className="tk-list">{ms.map((m) => { const [lb, ic] = KIND[m.kind] ?? [m.kind, 'file'];
+      {exp && ms.length > 0 && <ul className="tk-list" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>{ms.map((m) => { const [lb, ic] = KIND[m.kind] ?? [m.kind, 'file'];
         return <li key={m.id} className={'tk-m ' + m.kind}><span className="tk-ic"><Icon name={ic} size={12} /></span>
           <div><div className="tk-meta"><b>{nm(m.from_user)}</b> · {lb}{m.kind === 'reassign' && m.meta?.to_name ? ' → ' + m.meta.to_name : ''}{m.via === 'zalo' ? <span className="tk-via">Zalo</span> : null}<span className="small muted"> · {dt(m.at)}</span></div>
             <div className="tk-txt">{m.text}</div></div></li>; })}</ul>}
-      {open && <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (await run('reply_msg', { p_doc: d.id, p_text: rep }, 'Đã gửi')) setRep(''); }}>
+      {open && exp && <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (await run('reply_msg', { p_doc: d.id, p_text: rep }, 'Đã gửi')) setRep(''); }}>
         <input placeholder="Trả lời / ghi chú…" value={rep} onChange={(e) => setRep(e.target.value)} maxLength={500} />
         <button className="btn sm primary icon-btn" disabled={busy || !rep.trim()} aria-label="Gửi"><Icon name="arrow" size={16} /></button>
       </form>}
