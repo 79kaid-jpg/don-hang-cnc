@@ -1971,3 +1971,14 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .sc-lv.auto{background:#F5F3FF;color:#6D28D9;text-transform:none}.sc-auto{color:#7C3AED}
 .sca-row .sca-auto{font-size:13px!important}
 @media (max-width:760px){.sca-row{grid-template-columns:22px minmax(0,1fr) auto}.sca-row .sca-auto,.sca-row select{grid-column:2}}
+
+/* Lịch sử đơn hàng: dòng thời gian */
+.ls{display:flex;flex-direction:column;gap:16px}
+.ls-d{font-size:12px;font-weight:700;color:var(--muted);text-transform:capitalize;margin-bottom:6px;position:sticky;top:0;background:inherit}
+.ls-list{list-style:none;margin:0;padding:0 0 0 6px;border-left:2px solid #E5E7EB;display:grid;gap:10px}
+.ls-it{position:relative;padding-left:16px}
+.ls-dot{position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:#94A3B8;box-shadow:0 0 0 3px #fff}
+.ls-it.ok .ls-dot{background:#16A34A}.ls-it.edit .ls-dot{background:#D97706}.ls-it.back .ls-dot{background:#7C3AED}.ls-it.bad .ls-dot{background:#DC2626}
+.ls-m{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.ls-t{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ls-a{font-size:14px;color:#334155;line-height:1.45;overflow-wrap:anywhere}

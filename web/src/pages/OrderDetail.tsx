@@ -1,3 +1,4 @@
+import { STATUS } from '../lib/proc';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { Age } from '../components/Age';
@@ -106,12 +107,20 @@ export default function OrderDetail() {
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} />}
       {tab === 'CT' && <RecordsTab orderId={o.id} people={people} />}
-      {tab === 'LS' && (
-        <div className="card steps">
+      {tab === 'LS' && (() => {
+        // Nhật ký: đổi mã trạng thái sang chữ, nhóm theo ngày, hiện dạng dòng thời gian
+        const nice = (t: string) => t.replace(/\b(tiep_nhan|boc_tach|tao_ds|kiem_tra|duyet_them|da_duyet|duyet|lap|fail)\b/g, (m) => STATUS[m] ?? m).replace(/\b(admin|ky_thuat) ký/g, (_m, r) => (r === 'admin' ? 'Admin' : 'Bóc tách') + ' ký').replace(/ ký → /g, ' ký ✓ → ').replace(/∅/g, '(trống)');
+        const day = (x: string) => new Date(x).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+        const tm = (x: string) => new Date(x).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const kind = (t: string) => /Admin sửa/.test(t) ? 'edit' : /trả về|Trả về/.test(t) ? 'back' : /fail|Thất bại|Fail/i.test(t) ? 'bad' : /ký|Mở |Tạo/.test(t) ? 'ok' : 'info';
+        const groups: [string, Ev[]][] = []; for (const e of events) { const k = day(e.at); const g = groups.at(-1); if (g && g[0] === k) g[1].push(e); else groups.push([k, [e]]); }
+        return <div className="card ls">
           {events.length === 0 && <span className="muted">Chưa có sự kiện.</span>}
-          {events.map((e) => <div key={e.id}><span className="small muted">{dt(e.at)} · {people[e.actor ?? '']?.full_name ?? 'hệ thống'}{e.acting_as ? ' (với tư cách ' + (people[e.acting_as]?.full_name ?? '?') + ')' : ''}</span><div>{e.action}</div></div>)}
-        </div>
-      )}
+          {groups.map(([d, es]) => <div key={d} className="ls-day"><div className="ls-d">{d}</div>
+            <ol className="ls-list">{es.map((e) => <li key={e.id} className={'ls-it ' + kind(e.action)}><span className="ls-dot" aria-hidden="true" />
+              <div className="ls-b"><div className="ls-m"><b>{people[e.actor ?? '']?.full_name ?? 'Hệ thống'}</b>{e.acting_as ? <span className="small muted"> (với tư cách {people[e.acting_as]?.full_name ?? '?'})</span> : null}<span className="ls-t">{tm(e.at)}</span></div>
+                <div className="ls-a">{nice(e.action)}</div></div></li>)}</ol></div>)}
+        </div>; })()}
       </div></div>
     </>
   );
