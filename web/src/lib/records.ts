@@ -26,10 +26,17 @@ async function toPdf(html: string, stamp: { text: string; sub: string; color: st
   const h2p = (await import('html2pdf.js')).default as unknown as () => { set: (o: unknown) => { from: (el: HTMLElement) => { outputPdf: (t: 'blob') => Promise<Blob> } } };
   const wrap = document.createElement('div');
   wrap.style.cssText = `box-sizing:border-box;width:${landscape ? 1100 : 760}px;background:#fff;color:#000;padding:8px`;
-  wrap.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div style="border:2.5px solid ${stamp.color};color:${stamp.color};border-radius:6px;padding:4px 12px;text-align:center;transform:rotate(-2deg);font-family:'Be Vietnam Pro',system-ui,sans-serif">
-    <div style="font-weight:800;font-size:15px;letter-spacing:.06em">${stamp.text}</div><div style="font-size:10.5px">${stamp.sub}</div></div></div>${html}`;
+  wrap.style.position = 'relative';
+  wrap.innerHTML = `${html}<div data-stamp style="position:absolute;right:4px;top:112px;border:1.5px solid ${stamp.color};color:${stamp.color};border-radius:4px;padding:2px 8px;text-align:center;transform:rotate(-2deg);font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;line-height:1.25">
+    <div style="font-weight:800;font-size:10px;letter-spacing:.05em">${stamp.text}</div><div style="font-size:8px">${stamp.sub}</div></div>`;
   const hold = document.createElement('div'); hold.style.cssText = 'position:absolute;left:0;top:0;height:0;overflow:hidden;z-index:-1';
   hold.appendChild(wrap); document.body.appendChild(hold);
+  { // dấu đặt ngay dưới dòng "Ngày in" (góc phải đầu trang), không đè lên dòng logo
+    const st = wrap.querySelector<HTMLElement>('[data-stamp]'); const w0 = wrap.getBoundingClientRect().top;
+    const cell = [...wrap.querySelectorAll<HTMLElement>('td,th,div,p,span')].filter((e) => /Ngày in/i.test(e.textContent ?? '') && e.children.length === 0).pop()
+      ?? [...wrap.querySelectorAll<HTMLElement>('td')].find((e) => /Ngày in/i.test(e.textContent ?? ''));
+    if (st && cell) st.style.top = Math.round(cell.getBoundingClientRect().bottom - w0 + 4) + 'px';
+  }
   // Ngắt trang không cắt ngang dòng bảng: chèn khoảng trống trước dòng sẽ bị cắt
   const W = landscape ? 1100 : 760; const pageMm = landscape ? [297, 210] : [210, 297];
   keepRows(wrap, Math.floor(W * (pageMm[1] - 6 - 8) / (pageMm[0] - 6 - 6)));
