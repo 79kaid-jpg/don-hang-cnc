@@ -45,7 +45,10 @@ export default function Board() {
     const st = stepOf(b, docs); const o = orders[b.order_id];
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: COLS.findIndex((c) => c.key === st.key) };
   }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm]); // eslint-disable-line
-  const byCol = (i: number) => cards.filter((c) => c.i === i);
+  // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
+  const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);
+    return Math.max(+new Date(c.doc?.status_at ?? 0), ...ds.map((x) => +new Date(x.status_at ?? 0)), +new Date((c.b as { updated_at?: string }).updated_at ?? 0)); };
+  const byCol = (i: number) => { const l = cards.filter((c) => c.i === i); return ['hoan_tat', 'fail'].includes(COLS[i]?.key) ? l.sort((a, z) => tEnd(z) - tEnd(a)) : l; };
   const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p).length;
   const mineIn = (p: Proc) => (batches ?? []).some((b) => b.proc === p && mine.some((m) => m.batch_id === b.id));
   const auto = useRef(false);
