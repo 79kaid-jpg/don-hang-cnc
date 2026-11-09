@@ -242,7 +242,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
         if (!b.right?.style && rc.right?.style) b.right = rc.right; if (!b.bottom?.style && bc.bottom?.style) b.bottom = bc.bottom; } const fill = (cell.fill as { fgColor?: { argb?: string }; pattern?: string } | undefined);
       const st = [f.bold ? 'font-weight:700' : '', f.italic ? 'font-style:italic' : '', f.size ? `font-size:${f.size * 1.2}px` : '', argb(f.color) && argb(f.color) !== '#000000' ? `color:${argb(f.color)}` : '',
         `text-align:${a.horizontal === 'centerContinuous' ? 'center' : a.horizontal ?? (typeof raw === 'number' ? 'right' : 'left')}`, `vertical-align:${a.vertical === 'middle' ? 'middle' : a.vertical ?? 'bottom'}`,
-        a.wrapText ? 'white-space:pre-wrap;overflow-wrap:break-word' : 'white-space:pre-wrap;overflow-wrap:break-word', fill?.pattern === 'solid' && argb(fill.fgColor) ? `background:${argb(fill.fgColor)}` : '',
+        a.wrapText ? 'white-space:pre-wrap;overflow-wrap:break-word' : 'white-space:pre-wrap;overflow-wrap:break-word', fill?.pattern === 'solid' && argb(fill.fgColor) && !/^#(F[8-9A-F]){3}$/i.test(argb(fill.fgColor)) ? `background:${argb(fill.fgColor)}` : '',
         bd(b.top) && `border-top:${bd(b.top)}`, bd(b.bottom) && `border-bottom:${bd(b.bottom)}`, bd(b.left) && `border-left:${bd(b.left)}`, bd(b.right) && `border-right:${bd(b.right)}`, 'padding:2px 4px'].filter(Boolean).join(';');
       // Như Excel: chữ không xuống dòng được tràn sang các ô trống bên phải
       let spill = 1;

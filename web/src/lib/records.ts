@@ -62,6 +62,23 @@ export function keepRows(root: HTMLElement, pageH: number) {
   }
 }
 
+/** Bảng "Nhật ký phê duyệt" in cuối mỗi chứng từ lưu trữ: ai làm bước nào, khi nào */
+async function auditHtml(d: Doc, ppl: Record<string, Profile>, level: string | null): Promise<string> {
+  const { ROLE_NAME } = await import('./proc');
+  const t = (x: string) => new Date(x).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const act: Record<string, string> = { ky: 'Đã ký', next: 'Đã ký', back: 'Trả về', fail: 'Thất bại' };
+  const e = (x: string) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const rows = (d.signs ?? []).map((s, i) => { const lv = (s as { level?: string | null }).level;
+    return `<tr><td style="text-align:center">${i + 1}</td><td>${e(lv ?? (s.role === 'duyet' && level && i === d.signs.length - 1 ? level : ROLE_NAME[s.role] ?? s.role))}</td><td><b>${e(ppl[s.user]?.full_name ?? '—')}</b></td><td>${act[s.action] ?? e(s.action)}</td><td style="white-space:nowrap">${s.at ? t(s.at) : ''}</td><td>${e(s.note ?? '')}</td></tr>`; }).join('');
+  if (!rows) return '';
+  const td = 'border:1px solid #94A3B8;padding:4px 6px;font-size:10.5px;vertical-align:top';
+  return `<div style="page-break-inside:avoid;break-inside:avoid;margin-top:14px;font-family:'Be Vietnam Pro',system-ui,sans-serif">
+    <div style="font-weight:700;font-size:12px;margin:0 0 4px;color:#1F3A93">NHẬT KÝ PHÊ DUYỆT</div>
+    <table style="width:100%;border-collapse:collapse">${'<tr>' + ['STT', 'Bước', 'Người thực hiện', 'Hành động', 'Thời gian', 'Ghi chú'].map((h) => `<th style="${td};background:#EEF2F7;text-align:left">${h}</th>`).join('') + '</tr>'}
+    ${rows.replace(/<td/g, `<td style="${td}"`).replace(/<td style="([^"]*)" style="([^"]*)"/g, '<td style="$1;$2"')}</table>
+    <div style="font-size:9px;color:#64748B;margin-top:3px">Chứng từ lưu trữ tạo tự động bởi hệ thống – không chỉnh sửa được.</div></div>`;
+}
+
 /** Lưu một chứng từ PDF cho phiếu */
 export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['kind'], note = '', level: string | null = null, result: DocRecord['result'] = null, as?: { user: string; at: string }, ppl0?: Record<string, Profile>): Promise<DocRecord | null> {
   const ppl = ppl0 ?? await people(); const au = as?.user ?? (await sb.rpc('app_uid')).data; const me = ppl[au as string]?.full_name ?? '';
@@ -69,9 +86,16 @@ export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['ki
   const stamp = kind === 'trinh_duyet' ? { text: 'BẢN TRÌNH DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#3A6EA5' }
     : kind === 'duyet' ? { text: level ? 'ĐÃ DUYỆT · ' + level.toUpperCase() : 'ĐÃ DUYỆT', sub: `${me} · ${fmt(now)}`, color: '#1d7a46' }
     : { text: 'THẤT BẠI', sub: `${me} · ${fmt(now)}${note ? ' · ' + note : ''}`, color: '#b42318' };
-  const { html, landscape } = await docPrintHtml(o, b, d, ppl);
+  // Bản duyệt/thất bại: thêm chữ ký của người đang thao tác (chưa có trong d.signs lúc tạo PDF)
+  const { ROLE_OF } = await import('./proc');
+  const signs = [...(d.signs ?? [])];
+  if (!as && kind !== 'trinh_duyet') signs.push({ role: ROLE_OF[d.status] ?? d.status, user: au as string, at: now.toISOString(), action: kind === 'tu_choi' ? 'fail' : 'ky', note });
+  else if (!as && kind === 'trinh_duyet') signs.push({ role: ROLE_OF[d.status] ?? d.status, user: au as string, at: now.toISOString(), action: 'ky', note });
+  const d2 = { ...d, signs } as Doc;
+  const { html: h0, landscape } = await docPrintHtml(o, b, d2, ppl);
+  const html = h0 + await auditHtml(d2, ppl, level);
   const pdf = await toPdf(html, stamp, landscape);
-  const path = `records/${o.id}/${b.proc}-${d.company}-${kind}-${now.getTime()}.pdf`;
+  const path = `records/${o.id}/${b.proc}-${d.company}-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.pdf`;
   const up = await sb.storage.from('files').upload(path, pdf, { contentType: 'application/pdf' }); if (up.error) throw up.error;
   const { data, error } = await sb.from('doc_records').insert({ order_id: o.id, doc_id: d.id, proc: b.proc, company: d.company, batch_title: b.title, kind, level_name: level, result, path, note }).select('*').single();
   if (error) throw error; return data as DocRecord;
@@ -100,21 +124,24 @@ export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: s
 export const recordUrl = async (path: string) => (await sb.storage.from('files').createSignedUrl(path, 3600)).data?.signedUrl ?? '';
 
 /** Admin: tạo bù PDF "Đã duyệt"/"Thất bại" cho phiếu đã kết thúc mà chưa có chứng từ (VD đơn chạy mô phỏng) */
-export async function backfillRecords(onStep?: (done: number, total: number, label: string) => void, limit = 10000): Promise<{ ok: number; err: number }> {
+export async function backfillRecords(onStep?: (done: number, total: number, label: string) => void, limit = 10000, redo = false): Promise<{ ok: number; err: number }> {
   const ppl = await people();
   const { data: ds } = await sb.from('docs_v').select('*').in('status', ['da_duyet', 'fail']);
-  const { data: rs } = await sb.from('doc_records').select('doc_id, kind').in('kind', ['duyet', 'tu_choi']);
-  const have = new Set(((rs ?? []) as { doc_id: string }[]).map((r) => r.doc_id));
+  const { data: rs } = await sb.from('doc_records').select('id, doc_id, kind, note').in('kind', ['duyet', 'tu_choi']);
+  const recs = ((rs ?? []) as { id: string; doc_id: string; note: string }[]).filter((r) => !r.note.startsWith('(đã huỷ'));
+  const have = new Set(recs.filter((r) => !redo || !r.note.startsWith('(tạo bù)')).map((r) => r.doc_id));
+  const old = (id: string) => recs.filter((r) => r.doc_id === id && r.note.startsWith('(tạo bù)')).map((r) => r.id);
   const todo = ((ds ?? []) as Doc[]).filter((d) => !have.has(d.id)).slice(0, limit);
   const bc: Record<string, Batch> = {}; const oc: Record<string, Order> = {}; let ok = 0, err = 0;
   for (const [i, d] of todo.entries()) {
     try {
       const b = bc[d.batch_id] ??= (await sb.from('batches').select('*').eq('id', d.batch_id).single()).data as Batch;
       const o = oc[b.order_id] ??= (await sb.from('orders').select('*').eq('id', b.order_id).single()).data as Order;
-      const sg = [...(d.signs ?? [])].reverse().find((x) => d.status === 'fail' ? x.action === 'fail' : x.action === 'next') ?? { user: '', at: d.status_at };
+      const sg = [...(d.signs ?? [])].reverse().find((x) => d.status === 'fail' ? x.action === 'fail' : x.action === 'next' || x.action === 'ky') ?? { user: '', at: d.status_at };
       const as = { user: sg.user, at: sg.at ?? d.status_at };
       if (d.status === 'fail') await saveRecord(o, b, d, 'tu_choi', '(tạo bù) ' + ((sg as { note?: string }).note ?? ''), null, 'that_bai', as, ppl);
       else await saveRecord(o, b, d, 'duyet', '(tạo bù)', 'Duyệt', 'thanh_cong', as, ppl);
+      const ids = old(d.id); if (ids.length) await sb.from('doc_records').update({ note: '(đã huỷ – thay bằng bản mới) (tạo bù)' }).in('id', ids);
       ok++;
     } catch (e) { err++; console.warn('backfill', d.id, e); }
     onStep?.(i + 1, todo.length, d.id);
