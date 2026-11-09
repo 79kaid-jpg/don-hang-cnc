@@ -1,3 +1,5 @@
+import { Ring } from '../components/Ring';
+import { itemsOf, progress, useChecks, type CheckItem } from '../lib/checks';
 import { createPortal } from 'react-dom';
 import { LoginAs } from '../components/LoginAs';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +24,7 @@ const NEXT_BTN: Record<string, string> = { tiep_nhan: 'Chuyển bóc tách', boc
 type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: boolean; i: number };
 
 export default function Board() {
-  const nav = useNavigate();
+  const nav = useNavigate(); const ckTpl = useChecks();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
   const { can: canA, me: meP } = useAuth(); const adm = canA('admin_it');
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
@@ -217,6 +219,8 @@ export default function Board() {
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
                           return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
+                        {it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist));
+                          return pr.total ? <div className="kb-ck"><Ring done={pr.done} total={pr.total} size={26} stroke={3} />Checklist {STATUS[it.doc.status] ?? ''}{pr.miss ? ' · thiếu ' + pr.miss : ''}</div> : null; })()}
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <LoginAs uid={h.uid} name={h.who} className="kb-who"><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</LoginAs>}
                           {t && <span className={'kb-age' + (isStuck(t) ? ' stuck' : '')} title={'Tới bước ' + dt(t)}><Icon name={isStuck(t) ? 'hourglass' : 'clock'} size={13} />chờ {waited(t)}</span>}</>; })()}</div>

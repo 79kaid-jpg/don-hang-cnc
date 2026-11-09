@@ -3,7 +3,7 @@ import { FieldsAdmin } from '../components/FieldsAdmin';
 import { CustomersAdmin } from '../components/CustomersAdmin';
 import { BaseConnect } from '../components/BaseConnect';
 import { GroupsAdmin, StepDefaultsAdmin, useGroups } from '../components/StepPeople';
-import { ChecklistAdmin } from '../components/Checklist';
+import { StepChecksAdmin } from '../components/StepChecks';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Profile } from '../lib/supabase';
@@ -49,13 +49,13 @@ export default function Admin() {
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
-    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
+    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối BASE', 'Token API', 'share']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
   const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
   const NAV: [string, (typeof TABS)[number][]][] = [['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
-    ['Quy trình', TABS.filter((t) => ['kh', 'cp', 'fields', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['perf', 'base'].includes(t[0]))]];
+    ['Quy trình', TABS.filter((t) => ['kh', 'cp', 'fields', 'ck', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
   const ini = (n: string) => (n || '?').replace(/\(.*?\)/g, '').split(' ').filter((x) => /\p{L}/u.test(x)).slice(-2).map((x) => x[0]).join('').toUpperCase() || '?';
   const filtered = fRole !== '' || fZ || fU !== '' || fAct !== 'on' || q !== '';
@@ -126,7 +126,7 @@ export default function Admin() {
       {tab === 'base' && <BaseConnect canEdit={can('admin_it')} />}
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}
       {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
-      {tab === 'ck' && <ChecklistAdmin canEdit={can('admin_it')} />}
+      {tab === 'ck' && <StepChecksAdmin canEdit={can('admin_it')} />}
       {tab === 'flows' && (!steps || !people ? <Skeleton rows={4} h={90} /> : <Flows steps={steps} people={people} onSaved={load} />)}
       </section></div>
   );
