@@ -11,13 +11,25 @@ import { toast, confirmDialog } from './ui';
 type DocCk = Doc & { checklist?: Record<string, CheckItem[]> };
 const fdt = (s?: string) => s ? new Date(s).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 
-/** Dải bước ở đầu phiếu: mỗi bước một vòng tiến độ checklist */
-export function StepRings({ proc, d }: { proc: Proc; d: DocCk }) {
-  const tpl = useChecks(); const fl = FLOW[proc]; const ci = fl.indexOf(d.status === 'duyet_them' ? 'duyet' : d.status); const fin = d.status === 'da_duyet';
-  const rows = fl.map((s) => ({ s, p: progress(s === d.status ? applyAuto(itemsOf(tpl, proc, s, d.checklist), d, reqKeysOf(proc, d.company, s)).items : itemsOf(tpl, proc, s, d.checklist)) })).filter((x) => x.p.total);
-  if (!rows.length) return null;
-  return <div className="sc-steps" aria-label="Checklist theo bước">{rows.map(({ s, p }) => { const k = fl.indexOf(s);
-    return <span key={s} className={'sc-step' + (k === ci && !fin ? ' cur' : k < ci || fin ? ' past' : '')}><Ring done={p.done} total={p.total} size={28} stroke={3.5} />{STATUS[s]}</span>; })}</div>;
+/** Tiến độ checklist từng bước của một phiếu (bước hiện tại tính cả tự tích) */
+export function useStepProg(proc: Proc, d?: DocCk) {
+  const tpl = useChecks();
+  if (!d) return {} as Record<string, { done: number; total: number }>;
+  return Object.fromEntries(FLOW[proc].map((s) => [s, progress(s === d.status ? applyAuto(itemsOf(tpl, proc, s, d.checklist), d, reqKeysOf(proc, d.company, s)).items : itemsOf(tpl, proc, s, d.checklist))]));
+}
+
+/** Chấm của thanh bước: vòng checklist x/y nếu bước có checklist, không thì số thứ tự / dấu tích */
+export function StepDot({ n, done, p }: { n: number | string; done: boolean; p?: { done: number; total: number } }) {
+  if (done || !p?.total) return <span className="dot">{done ? <Icon name="check" size={12} /> : n}</span>;
+  return <span className="dot ring-dot" title={`Bước ${n} · checklist ${p.done}/${p.total}`}><Ring done={p.done} total={p.total} size={30} stroke={3} /></span>;
+}
+
+/** Thanh bước của phiếu QT1–QT3 (Lập → Kiểm tra → Duyệt), mỗi bước kèm vòng checklist */
+export function DocSteps({ proc, d }: { proc: Proc; d: DocCk }) {
+  const prog = useStepProg(proc, d); const fl = FLOW[proc]; const fin = d.status === 'da_duyet';
+  const ci = fl.indexOf(d.status === 'duyet_them' ? 'duyet' : d.status);
+  return <ol className="pp-chain doc-steps" aria-label="Các bước của phiếu">{fl.map((s, k) =>
+    <li key={s} className={fin || k < ci ? 'done' : k === ci ? 'cur' : ''}><StepDot n={k + 1} done={fin || k < ci} p={prog[s]} />{STATUS[s]}</li>)}</ol>;
 }
 
 /** Checklist của bước hiện tại – tích, ghi chú, thêm mục riêng cho hồ sơ */

@@ -1,4 +1,4 @@
-import { StepChecks, StepRings } from './StepChecks';
+import { StepChecks, DocSteps, StepDot, useStepProg } from './StepChecks';
 import { createPortal } from 'react-dom';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
@@ -66,9 +66,9 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
 }
 
 function Chain({ proc, b, docs, sel, onPick }: { proc: Proc; b: Batch; docs: Doc[]; sel?: Company; onPick: (c: Company) => void }) {
+  const d = proc === 'QT0' ? docs[0] : undefined; const prog = useStepProg('QT0', d); const i = d ? FLOW.QT0.indexOf(d.status) : -1; const done = d?.status === 'da_duyet';
   if (proc === 'QT0') {
-    const d = docs[0]; const i = d ? FLOW.QT0.indexOf(d.status) : -1; const done = d?.status === 'da_duyet';
-    return <ol className="pp-chain">{FLOW.QT0.map((s, k) => <li key={s} className={done || k < i ? 'done' : k === i ? 'cur' : ''}><span className="dot">{done || k < i ? <Icon name="check" size={12} /> : k + 1}</span>{STATUS[s]}</li>)}
+    return <ol className="pp-chain">{FLOW.QT0.map((s, k) => <li key={s} className={done || k < i ? 'done' : k === i ? 'cur' : ''}><StepDot n={k + 1} done={done || k < i} p={prog[s]} />{STATUS[s]}</li>)}
       <li className={done ? 'done' : d?.status === 'fail' ? 'bad' : ''}><span className="dot">{done ? <Icon name="check" size={12} /> : '★'}</span>{d?.status === 'fail' ? 'Fail' : 'DS tấm đã ký'}</li></ol>;
   }
   return (
@@ -238,7 +238,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status)) && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
       {!can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
-      <StepRings proc={proc} d={d} />
+      {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
       <div className="grid2">

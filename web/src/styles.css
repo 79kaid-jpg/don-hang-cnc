@@ -2075,3 +2075,10 @@ html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){backg
 
 /* Checklist trên màn hẹp: nhãn mức/tự kiểm xuống dòng dưới nội dung, không bóp chữ */
 @media (max-width:600px){.sc-it{flex-wrap:wrap}.sc-it .sc-l{flex:1 1 calc(100% - 40px)}.sc-it .sc-lv{margin-left:30px;margin-top:0}.sc-it .sc-lv+.sc-lv{margin-left:4px}}
+/* Thanh bước kèm vòng checklist */
+.pp-chain .dot.ring-dot{border:0;background:transparent;width:30px;height:30px;box-shadow:none}
+.pp-chain li.cur .dot.ring-dot{background:transparent;box-shadow:0 0 0 3px rgba(184,149,74,.25);border-radius:50%}
+.pp-chain .dot.ring-dot .ring{margin:0}
+.pp-chain .dot.ring-dot .ring-t{font-weight:700}
+.doc-steps{margin:2px 0 6px}
+@media (max-width:600px){.doc-steps li{min-width:0;padding:6px 4px;font-size:12.5px;gap:6px}}
