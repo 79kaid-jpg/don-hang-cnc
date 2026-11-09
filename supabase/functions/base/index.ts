@@ -26,7 +26,9 @@ Deno.serve(async (req) => {
   const s = await sec();
   if (req.headers.get('x-notify-key') !== s.NOTIFY_KEY) return json({ error: 'forbidden' }, 403);
   const { op, host = 'workflow.base.vn', path, params = {}, tk, files } = await req.json().catch(() => ({}));
-  if (!s.BASE_TOKEN) return json({ error: 'no token' });
-  try { if (op === 'call') return json(await call(host, path, s.BASE_TOKEN, params, tk, files)); } catch (e) { return json({ error: String(e) }); }
+  // Mỗi app Base một token: request.base.vn dùng BASE_REQUEST_TOKEN (nếu có), còn lại BASE_TOKEN (Workflow)
+  const token = host.startsWith('request.') && s.BASE_REQUEST_TOKEN ? s.BASE_REQUEST_TOKEN : s.BASE_TOKEN;
+  if (!token) return json({ error: 'no token' });
+  try { if (op === 'call') return json(await call(host, path, token, params, tk, files)); } catch (e) { return json({ error: String(e) }); }
   return json({ error: 'unknown op' }, 400);
 });
