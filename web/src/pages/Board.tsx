@@ -45,10 +45,13 @@ export default function Board() {
   };
   useEffect(() => { load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
-  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
+  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')),
+    ...(!adm && qt !== 'QT0' ? [{ key: 'xong_minh', title: 'Đang ở bên khác', group: 'Đã duyệt' }] : []), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st = stepOf(b, docs); const o = orders[b.order_id];
-    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: COLS.findIndex((c) => c.key === st.key) };
+    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
+      // Phần của công ty mình đã duyệt, hồ sơ đang ở công ty khác / chờ khách ký → cột "Đã duyệt · đang ở bên khác"
+      return docs.some((x) => x.batch_id === b.id && x.company === myCo && x.status === 'da_duyet') ? COLS.findIndex((c) => c.key === 'xong_minh') : -1; })() };
   }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm]); // eslint-disable-line
   // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
   const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);
@@ -197,8 +200,8 @@ export default function Board() {
           <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               return (
-                <section key={c.key} data-col={i} className={'kb-col' + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
-                  <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
+                <section key={c.key} data-col={i} className={'kb-col' + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'xong_minh' ? ' kb-elsewhere' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
+                  <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : c.key === 'xong_minh' ? 'Đã duyệt phần ' + (COMPANY[myCo as keyof typeof COMPANY] ?? myCo) : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
                     <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div></header>
                   <div className="kb-list">
                     {(tgt || eat === i) && <div className={'kb-slot open' + (isBack ? ' back' : '') + (eat === i ? ' eat' : '')} aria-hidden="true"><span className="kb-slot-mouth" />
@@ -220,7 +223,8 @@ export default function Board() {
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
                           return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
-                        {it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(applyAuto(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist), it.doc as never, reqKeysOf(qt, it.doc.company, it.doc.status)).items);
+                        {COLS[it.i]?.key === 'xong_minh' && <div className="kb-where"><Icon name="arrow" size={12} />{it.key === 'ky' ? 'Chờ khách ký – ' + FINAL[qt].toLowerCase() : 'Đang ở ' + (COMPANY[it.key.split('.')[0] as keyof typeof COMPANY] ?? '') + ' · ' + (STATUS[it.key.split('.')[1]] ?? '')}</div>}
+                        {COLS[it.i]?.key !== 'xong_minh' && it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(applyAuto(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist), it.doc as never, reqKeysOf(qt, it.doc.company, it.doc.status)).items);
                           return pr.total ? <div className="kb-ck"><Ring done={pr.done} total={pr.total} size={26} stroke={3} />Checklist {STATUS[it.doc.status] ?? ''}{pr.miss ? ' · thiếu ' + pr.miss : ''}</div> : null; })()}
                         <div className="kb-meta">{(() => { const h = holder(it.b, docs); const t = h?.since ?? it.doc?.status_at; return <>
                           {h && <LoginAs uid={h.uid} name={h.who} className="kb-who"><span className="avatar xs">{initialOf(h.who)}</span>{h.who}</LoginAs>}

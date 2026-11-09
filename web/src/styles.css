@@ -1982,3 +1982,9 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .ls-m{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}
 .ls-t{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .ls-a{font-size:14px;color:#334155;line-height:1.45;overflow-wrap:anywhere}
+
+/* Kanban: hồ sơ công ty mình đã duyệt, đang ở công ty khác */
+.kb-col.kb-elsewhere{background:linear-gradient(180deg,#F1F5F9,#F8FAFC);border-top:3px solid #94A3B8}
+.kb-col.kb-elsewhere .kb-group{color:#475569}
+.kb-col.kb-elsewhere .kb-card{opacity:.92;background:#fff}
+.kb-where{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#334155;background:#EEF2F6;border-radius:8px;padding:3px 8px;align-self:flex-start}
