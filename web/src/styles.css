@@ -2017,3 +2017,6 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 @container (max-width:620px){.sca-grid{grid-template-columns:1fr!important}.sca-nav{display:none}.sca-pick{display:flex}}
 @container (max-width:420px){.sca-row{grid-template-columns:22px minmax(0,1fr) auto!important;grid-template-areas:"grip label del" ". ak ak" ". lv lv"!important}}
 .sc-add{flex-wrap:wrap}.sc-add input{flex:1 1 180px}
+
+.af-who select{height:34px!important;min-height:34px!important;font-size:13.5px!important;padding:4px 8px!important;max-width:100%}
+.af-b{min-width:0}

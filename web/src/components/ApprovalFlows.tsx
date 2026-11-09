@@ -3,7 +3,8 @@ import { sb, type Profile } from '../lib/supabase';
 import { COMPANY, PROC_NAME, ROLE_NAME, type Proc } from '../lib/proc';
 import { Icon } from './Icon';
 import { QtTag } from './QtTag';
-import { toast } from './ui';
+import { toast, confirmDialog } from './ui';
+import { errText } from '../lib/supabase';
 
 /** Quản trị → Luồng duyệt: mỗi quy trình × công ty là một chuỗi khối có cấu trúc.
  *  Bước chính (Lập → Kiểm tra → Duyệt) lấy người từ "Phụ trách quy trình"; có thể đặt hạn từng bước.
@@ -33,6 +34,21 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
     const { error } = await sb.from('chain_people').update({ sla_h: v }).eq('proc', proc).eq('company', company).eq('role', role);
     if (error) toast(error.message); else { setCp(cp.map((c) => (c.proc === proc && c.company === company && c.role === role ? { ...c, sla_h: v } : c))); }
   };
+  const UNIT: Record<string, string> = { PN: 'CNC', IPC: 'IPC', HW: 'HANWA' };
+  // Đổi người phụ trách bước chính (lưu vào chain_people) – chỉ người cùng công ty
+  const setWho = async (role: string, u: string | null, g: string | null) => {
+    const old = cp.find((x) => x.proc === proc && x.company === company && x.role === role);
+    const rec = { proc, company, role, user_id: u, group_id: g, sla_h: old?.sla_h ?? 48 };
+    const { error } = await sb.from('chain_people').upsert(rec); if (error) return toast(errText(error));
+    load(); const name = who(u, g); toast('Đã giao ' + ROLE_NAME[role] + ' cho ' + name);
+    const { data: ds } = await sb.from('docs_v').select('id, status, batches!inner(proc, status)').eq('company', company).eq('batches.proc', proc).eq('batches.status', 'dang_lam');
+    const st = proc === 'QT0' ? ({ admin: ['tiep_nhan', 'tao_ds'], ky_thuat: ['boc_tach'] } as Record<string, string[]>)[role] ?? [role] : [role];
+    const n = ((ds as { status: string }[]) ?? []).filter((d) => st.includes(d.status)).length;
+    if (n && (u || g) && (await confirmDialog(`Có ${n} hồ sơ đang ở bước ${ROLE_NAME[role]}. Chuyển cả ${n} hồ sơ cho ${name} và báo Zalo?`, 'Chuyển hồ sơ'))) {
+      const { data, error: e2 } = await sb.rpc('reassign_open', { p_proc: proc, p_company: company, p_role: role, p_user: u });
+      if (e2) toast(errText(e2)); else toast(`Đã chuyển ${data} hồ sơ cho ${name}`);
+    }
+  };
   const saveLv = async () => {
     if (!edit) return; if (!edit.user_id && !edit.group_id) { toast('Chọn người hoặc nhóm duyệt'); return; }
     const { id, ...row } = edit; const q = id ? sb.from('approval_levels').update(row).eq('id', id) : sb.from('approval_levels').insert(row);
@@ -42,10 +58,10 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
   const saveDg = async () => { if (!nd?.user_id || !nd.to_user || !nd.to_date) { toast('Chọn người, người nhận và ngày kết thúc'); return; }
     const { error } = await sb.from('delegations').insert(nd); if (error) toast(error.message); else { toast('Đã thêm ủy quyền'); setNd(null); load(); } };
   const endDg = async (d: DG) => { const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10); const { error } = await sb.from('delegations').update({ to_date: y < d.from_date ? d.from_date : y }).eq('id', d.id!); if (error) toast(error.message); else load(); };
-  const pick = (u: string | null, g: string | null, on: (u: string | null, g: string | null) => void) =>
+  const pick = (u: string | null, g: string | null, on: (u: string | null, g: string | null) => void, unit?: string) =>
     <select value={u ? 'u:' + u : g ? 'g:' + g : ''} disabled={!canEdit} onChange={(e) => { const v = e.target.value; on(v.startsWith('u:') ? v.slice(2) : null, v.startsWith('g:') ? v.slice(2) : null); }}>
       <option value="">– Chọn –</option>
-      <optgroup label="Người">{people.map((p) => <option key={p.id} value={'u:' + p.id}>{p.full_name}</option>)}</optgroup>
+      <optgroup label={unit ? 'Người · ' + COMPANY[company as 'PN'] : 'Người'}>{people.filter((p) => !unit || p.unit === unit).map((p) => <option key={p.id} value={'u:' + p.id}>{p.full_name}</option>)}</optgroup>
       <optgroup label="Nhóm">{groups.map((x) => <option key={x.id} value={'g:' + x.id}>{x.name}</option>)}</optgroup></select>;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -60,7 +76,9 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
         {ROLES[proc].map((r, i) => { const c = cp.find((x) => x.proc === proc && x.company === company && x.role === r);
           return <li key={r} className="af-step">
             <span className="af-n">{i + 1}</span>
-            <div className="af-b"><b>{ROLE_NAME[r]}</b><span className="small">{who(c?.user_id ?? null, c?.group_id ?? null)}</span></div>
+            <div className="af-b"><b>{ROLE_NAME[r]}</b>{canEdit
+              ? <span className="af-who">{pick(c?.user_id ?? null, c?.group_id ?? null, (u, g) => setWho(r, u, g), UNIT[company])}</span>
+              : <span className="small">{who(c?.user_id ?? null, c?.group_id ?? null)}</span>}</div>
             <label className="af-sla" title="Hạn xử lý bước này"><Icon name="clock" size={13} />
               <input type="number" min={1} value={c?.sla_h ?? 48} disabled={!canEdit || !c} onChange={(e) => setSla(r, Math.max(1, +e.target.value || 1))} />h</label>
           </li>; })}
@@ -84,7 +102,7 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
         <p className="small muted" style={{ margin: 0 }}>Khi người ở bước Duyệt ký, nếu điều kiện đúng hồ sơ sẽ chờ thêm cấp này trước khi {company === 'HW' ? 'chờ ký tay' : 'chuyển sang công ty kế tiếp'}. {proc !== 'QT1' && 'Điều kiện theo tiền chỉ có ở QT1.'}</p>
         <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setEdit(null)}>Huỷ</button><button className="btn primary" onClick={saveLv}>Lưu cấp duyệt</button></div>
       </div>}
-      <p className="small muted" style={{ margin: 0 }}>Người ở 3 bước chính đổi tại tab <b>Phụ trách quy trình</b>. Hạn từng bước dùng để cảnh báo “sắp / quá hạn”.</p>
+      <p className="small muted" style={{ margin: 0 }}>Đổi người ở từng bước ngay trong ô chọn (chỉ người cùng công ty); có thể chuyển luôn các hồ sơ đang mở cho người mới. Hạn từng bước dùng để cảnh báo “sắp / quá hạn”.</p>
     </section>
 
     <section className="af-card">
