@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -93,7 +94,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
   return (
-    <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.code}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
       <label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
       {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tắt khi phải tách đơn: khác giá cong/thẳng, hàn/không hàn, đơn quá lớn)</span></span></label>}
@@ -102,7 +103,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       {err && <div className="msg err"><Icon name="alert" size={18} /><span>{err}</span></div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Huỷ</button>
         <button className="btn primary" disabled={proc === 'QT2' && n < 5} onClick={go}>{proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
-    </div></div>);
+    </div></div>, document.body));
 }
 
 function FileLink({ f }: { f: { name: string; path: string } }) {

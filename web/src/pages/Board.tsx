@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { LoginAs } from '../components/LoginAs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -274,7 +275,7 @@ function OrderPick({ qt, orders, batches, onClose, onPick }: { qt: Proc; orders:
   const list = Object.values(orders).filter((o) => !q || (o.code + ' ' + (o.project ?? '')).toLowerCase().includes(q.toLowerCase()))
     .sort((a, z) => Number(ready(z.id)) - Number(ready(a.id)) || n(a.id) - n(z.id) || z.code.localeCompare(a.code));
   return (
-    <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Lập {BATCH_WORD[qt]} – chọn đơn hàng</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
       <input autoFocus placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} />
       <p className="small muted" style={{ margin: 0 }}>Đơn đã hoàn thành {prev} được xếp lên trước. Đơn mới chưa có thì bấm “Tạo đơn” ở tab QT0.</p>
@@ -283,5 +284,5 @@ function OrderPick({ qt, orders, batches, onClose, onPick }: { qt: Proc; orders:
           <b>{o.code}</b><span className="op-p">{o.project}</span>
           <span className={'op-tag' + (ok ? ' ok' : '')}>{ok ? (k ? 'đã có ' + k + ' ' + BATCH_WORD[qt] : 'sẵn sàng') : 'chưa xong ' + prev}</span></button></li>; })}
         {list.length === 0 && <li className="small muted">Không tìm thấy đơn.</li>}</ul>
-    </div></div>);
+    </div></div>, document.body));
 }
