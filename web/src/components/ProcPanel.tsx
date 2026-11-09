@@ -197,14 +197,21 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     } catch (e) { setBusy(false); setErr(errText(e as Error)); }
   };
   const addNote = async () => { const { error } = await sb.rpc('doc_note', { p_doc: d.id, p_text: note }); if (error) setErr(errText(error)); else { setNote(''); onChanged(); } };
-  const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string) => {
-    const nf = [...files];
+  const persist = async (nf: typeof files, msg: string) => { setFiles(nf); const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: h, p_tables: t, p_files: nf }); if (error) { setErr(errText(error)); return false; } toast(msg); return true; };
+  const removeFile = async (path: string, name: string) => {
+    if (!(await confirmDialog(`Gỡ file “${name}”?`, 'Gỡ file'))) return;
+    if (await persist(files.filter((x) => x.path !== path), 'Đã gỡ ' + name)) sb.storage.from('files').remove([path]);
+  };
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string, replace = false) => {
+    const old = replace ? files.filter((x) => x.kind === kind) : [];
+    const nf = files.filter((x) => !old.includes(x));
     for (const file of Array.from(e.target.files ?? [])) {
       const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
       nf.push({ kind, name: file.name, path, at: new Date().toISOString() });
     }
-    setFiles(nf); const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: h, p_tables: t, p_files: nf }); if (error) setErr(errText(error)); else toast('Đã tải file');
+    e.target.value = '';
+    if (await persist(nf, replace ? 'Đã thay file' : 'Đã tải file') && old.length) sb.storage.from('files').remove(old.map((x) => x.path));
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
@@ -246,9 +253,12 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} className="pp-fk"><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
-            <span className="row" style={{ gap: 6 }}>{files.filter((f) => f.kind === k).map((f) => <FileLink key={f.path} f={f} />)}
-              {files.filter((f) => f.kind === k).length === 0 && <span className="small muted">chưa có</span>}
-              {canEd({ key: k, label: lab, ...f } as FDef) && <label className="btn xs"><Icon name="upload" size={13} />Tải lên<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</span></div>))}
+            <span className="row" style={{ gap: 6 }}>{(() => { const ed = canEd({ key: k, label: lab, ...f } as FDef); const mine = files.filter((x) => x.kind === k); return <>
+              {mine.map((x) => <span key={x.path} className="row" style={{ gap: 2 }}><FileLink f={x} />
+                {ed && <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>}</span>)}
+              {mine.length === 0 && <span className="small muted">chưa có</span>}
+              {ed && mine.length > 0 && <label className="btn xs" title="Thay toàn bộ file hiện có bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
+              {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
       </div>
 
       {tblDefs.map(({ key, title, cols, ed, treq }) => (
