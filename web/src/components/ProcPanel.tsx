@@ -21,10 +21,10 @@ import { useAuth } from '../lib/auth';
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
 
 /** Một quy trình của một đơn: danh sách hồ sơ (lần / lệnh / đợt) → chuỗi công ty → bản đang chọn */
-export default function ProcPanel({ o, proc, people }: { o: Order; proc: Proc; people: Record<string, Profile> }) {
+export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
   const [bid, setBid] = useState(''); const [co, setCo] = useState<Company | ''>('');
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(autoNew);
   const load = useCallback(async () => {
     const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
     const bs = (b as Batch[]) ?? []; setBatches(bs);

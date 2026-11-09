@@ -104,7 +104,7 @@ export default function OrderDetail() {
       </div><div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
-      {PROCS.includes(tab as Proc) && <ProcPanel o={o} proc={tab as Proc} people={people} />}
+      {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} />}
       {tab === 'CT' && <RecordsTab orderId={o.id} people={people} />}
       {tab === 'LS' && (
         <div className="card steps">

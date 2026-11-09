@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, errText, type Customer, type Order } from '../lib/supabase';
 import { dt } from '../lib/format';
-import { COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, STATUS, columnsOf, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
+import { BATCH_WORD, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, STATUS, columnsOf, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
 import { Icon } from '../components/Icon';
 import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
@@ -26,6 +26,7 @@ export default function Board() {
   const { can: canA, me: meP } = useAuth(); const adm = canA('admin_it');
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
+  const [picking, setPicking] = useState(false);
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
@@ -160,7 +161,9 @@ export default function Board() {
         <div><h1>Bảng Kanban</h1><p className="muted">Mỗi thẻ là một hồ sơ ({qt === 'QT0' ? 'lần bóc tách' : qt === 'QT1' ? 'XNĐH' : qt === 'QT2' ? 'lệnh gia công' : 'đợt giao'}). {qt === 'QT0' ? 'Chỉ Phương Nam CNC.' : 'Đi lần lượt Phương Nam CNC → IPC → Hanwa, cuối cùng ký tay.'}</p></div>
         <div className="row">
           <Link className="btn sm hide-m" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
-          <Link className="btn sm primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn</span></Link>
+          {qt === 'QT0' ? <Link className="btn sm primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn</span></Link>
+            : <button className="btn sm primary fab-m" onClick={() => setPicking(true)} aria-label={'Lập ' + BATCH_WORD[qt]}><Icon name="plus" size={20} /><span className="fab-t">Lập {BATCH_WORD[qt]}</span></button>}
+          {picking && qt !== 'QT0' && <OrderPick qt={qt} orders={orders} batches={batches ?? []} onClose={() => setPicking(false)} onPick={(id) => nav('/don/' + id + '?tab=' + qt + '&new=1')} />}
         </div>
       </div>
       <div className="row">
@@ -259,5 +262,26 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
         <Link className="btn" to={'/don/' + c.b.order_id + '?tab=' + proc}>Mở hồ sơ</Link>
         <button className={action === 'next' ? 'btn primary' : 'btn rt-go'} disabled={busy || (action === 'back' && !note.trim())} onClick={go}>{busy ? 'Đang xử lý…' : action === 'next' ? 'Ký' : 'Trả về'}</button>
       </div>
+    </div></div>);
+}
+
+/** Chọn đơn hàng để lập hồ sơ mới của QT1/QT2/QT3 (đơn phải xong quy trình trước) */
+function OrderPick({ qt, orders, batches, onClose, onPick }: { qt: Proc; orders: Record<string, Order>; batches: Batch[]; onClose: () => void; onPick: (id: string) => void }) {
+  const [q, setQ] = useState('');
+  const prev: Proc = qt === 'QT1' ? 'QT0' : qt === 'QT2' ? 'QT1' : 'QT2';
+  const ready = (id: string) => batches.some((b) => b.order_id === id && b.proc === prev && b.status === 'hoan_tat');
+  const n = (id: string) => batches.filter((b) => b.order_id === id && b.proc === qt).length;
+  const list = Object.values(orders).filter((o) => !q || (o.code + ' ' + (o.project ?? '')).toLowerCase().includes(q.toLowerCase()))
+    .sort((a, z) => Number(ready(z.id)) - Number(ready(a.id)) || n(a.id) - n(z.id) || z.code.localeCompare(a.code));
+  return (
+    <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className="mv-head"><h2 style={{ margin: 0 }}>Lập {BATCH_WORD[qt]} – chọn đơn hàng</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+      <input autoFocus placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <p className="small muted" style={{ margin: 0 }}>Đơn đã hoàn thành {prev} được xếp lên trước. Đơn mới chưa có thì bấm “Tạo đơn” ở tab QT0.</p>
+      <ul className="op-list">{list.slice(0, 60).map((o) => { const ok = ready(o.id); const k = n(o.id);
+        return <li key={o.id}><button className={'op-it' + (ok ? '' : ' off')} onClick={() => onPick(o.id)}>
+          <b>{o.code}</b><span className="op-p">{o.project}</span>
+          <span className={'op-tag' + (ok ? ' ok' : '')}>{ok ? (k ? 'đã có ' + k + ' ' + BATCH_WORD[qt] : 'sẵn sàng') : 'chưa xong ' + prev}</span></button></li>; })}
+        {list.length === 0 && <li className="small muted">Không tìm thấy đơn.</li>}</ul>
     </div></div>);
 }
