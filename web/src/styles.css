@@ -1964,13 +1964,13 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .sca-row{display:grid;grid-template-columns:22px minmax(0,1fr) 190px 130px auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .sca-row.drag{opacity:.4}.sca-row .grip{cursor:grab;color:#94A3B8;text-align:center;user-select:none}
 .sca-row input,.sca-row select{height:38px!important;min-height:38px!important;font-size:14px!important}
-@media (max-width:600px){.sca-row{grid-template-columns:24px 1fr auto}.sca-row select{grid-column:2}}
+
 .sca-nav button{width:100%}
 .sca-row select,.sc-add select{padding:4px 10px!important;line-height:1.2!important}
 
 .sc-lv.auto{background:#F5F3FF;color:#6D28D9;text-transform:none}.sc-auto{color:#7C3AED}
 .sca-row .sca-auto{font-size:13px!important}
-@media (max-width:760px){.sca-row{grid-template-columns:22px minmax(0,1fr) auto}.sca-row .sca-auto,.sca-row select{grid-column:2}}
+
 
 /* Lịch sử đơn hàng: dòng thời gian */
 .ls{display:flex;flex-direction:column;gap:16px}
@@ -2005,3 +2005,15 @@ a.btn.disabled{pointer-events:none;opacity:.5}
 .ig-err{color:#B91C1C}
 .ig-acts{display:flex;gap:6px;flex-wrap:wrap}
 .ig-edit{display:flex;flex-direction:column;gap:6px}
+
+/* Checklist quản trị: tự co giãn theo bề rộng khung (container query) */
+.sca-wrap{container-type:inline-size;min-width:0}
+.sca-grid{min-width:0}
+.sca-pick{display:none}
+.sca-row{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) auto!important;grid-template-areas:"grip label label del" ". ak lv ."!important;row-gap:6px}
+.sca-row .grip{grid-area:grip}.sca-row .sca-label{grid-area:label;min-width:0}.sca-row .sca-auto{grid-area:ak;min-width:0}
+.sca-row .sca-level{grid-area:lv;min-width:0}.sca-row .sca-del{grid-area:del}
+@container (min-width:900px){.sca-row{grid-template-columns:22px minmax(0,1fr) 210px 140px auto!important;grid-template-areas:"grip label ak lv del"!important}}
+@container (max-width:620px){.sca-grid{grid-template-columns:1fr!important}.sca-nav{display:none}.sca-pick{display:flex}}
+@container (max-width:420px){.sca-row{grid-template-columns:22px minmax(0,1fr) auto!important;grid-template-areas:"grip label del" ". ak ak" ". lv lv"!important}}
+.sc-add{flex-wrap:wrap}.sc-add input{flex:1 1 180px}

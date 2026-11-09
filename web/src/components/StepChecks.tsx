@@ -100,7 +100,12 @@ export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
       <div><h2 style={{ margin: 0 }}>Checklist theo bước</h2>
         <p className="small muted" style={{ margin: '4px 0 0' }}>Mẫu mặc định cho từng bước. Khi hồ sơ bắt đầu tích, checklist được chụp lại vào hồ sơ – sửa mẫu chỉ áp dụng cho hồ sơ chưa tích. Mục <b>Bắt buộc</b> chưa tích thì không ký chuyển bước được.</p></div>
       {!canEdit && <div className="msg info"><Icon name="alert" size={16} /><span>Chỉ Admin IT được sửa.</span></div>}
-      <div className="sca-grid">
+      <div className="sca-wrap"><div className="sca-grid">
+        <label className="f sca-pick">Bước
+          <select value={sel[0] + '|' + sel[1]} onChange={(e) => { const [p, st] = e.target.value.split('|'); setSel([p as Proc, st]); }}>
+            {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => <optgroup key={p} label={p + ' · ' + PROC_NAME[p]}>
+              {STEPS_OF(p).map((st) => <option key={st} value={p + '|' + st}>{STATUS[st]} ({(all ?? []).filter((x) => x.proc === p && x.step === st && x.active).length})</option>)}</optgroup>)}
+          </select></label>
         <nav className="sca-nav" aria-label="Chọn bước">{(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => <div key={p}><h4>{p} · {PROC_NAME[p]}</h4>
           {STEPS_OF(p).map((s) => { const n = (all ?? []).filter((x) => x.proc === p && x.step === s && x.active).length;
             return <button key={s} className={sel[0] === p && sel[1] === s ? 'on' : ''} onClick={() => setSel([p, s])}>{STATUS[s]}<em>{n}</em></button>; })}</div>)}</nav>
@@ -109,16 +114,16 @@ export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
           <ul className="sca-list">{list.map((x) => (
             <li key={x.id} className={'sca-row' + (drag === x.id ? ' drag' : '')} draggable={canEdit} onDragStart={() => setDrag(x.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(x.id)}>
               <span className="grip" aria-hidden="true">⋮⋮</span>
-              <input defaultValue={x.label} disabled={!canEdit} aria-label="Nội dung" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== x.label && upd(x.id, { label: e.target.value.trim() })} />
+              <input className="sca-label" defaultValue={x.label} disabled={!canEdit} aria-label="Nội dung" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== x.label && upd(x.id, { label: e.target.value.trim() })} />
               <AutoPick proc={sel[0]} value={x.auto ?? ''} disabled={!canEdit} onChange={(v) => upd(x.id, { auto: v || null })} />
-              <select value={x.level} disabled={!canEdit} aria-label="Mức" onChange={(e) => upd(x.id, { level: e.target.value as Level })}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
-              {canEdit && <button className="btn xs icon-only" aria-label="Xoá" onClick={() => del(x)}><Icon name="trash" size={13} /></button>}
+              <select className="sca-level" value={x.level} disabled={!canEdit} aria-label="Mức" onChange={(e) => upd(x.id, { level: e.target.value as Level })}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
+              {canEdit && <button className="btn xs icon-only sca-del" aria-label="Xoá" onClick={() => del(x)}><Icon name="trash" size={13} /></button>}
             </li>))}
             {all && !list.length && <li className="small muted">Bước này chưa có mục nào.</li>}</ul>
           {canEdit && <div className="sc-add"><input value={nl} placeholder="Thêm mục…" onChange={(e) => setNl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
-            <select value={lv} onChange={(e) => setLv(e.target.value as Level)} style={{ width: 150, height: 36, minHeight: 36 }}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
+            <select value={lv} onChange={(e) => setLv(e.target.value as Level)} style={{ width: 'auto', minWidth: 130, height: 36, minHeight: 36 }}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
             <button className="btn xs primary" onClick={add} disabled={!nl.trim()}><Icon name="plus" size={13} />Thêm</button></div>}
-        </div></div>
+        </div></div></div>
     </div>);
 }
 
