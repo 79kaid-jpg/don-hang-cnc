@@ -25,6 +25,7 @@ import WfRun from './wf/WfRun';
 import WfPrint from './wf/WfPrint';
 import './wf/wf.css';
 import Dashboard from './pages/Dashboard';
+import { Viewer } from './components/Viewer';
 import ProcessDoc from './pages/ProcessDoc';
 import Simulate from './pages/Simulate';
 
@@ -160,7 +161,7 @@ function Shell() {
         {items.filter((i) => i.to !== '/quan-tri' && i.to !== '/quy-trinh-moi' && i.to !== '/mo-phong').map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}><Icon name={i.icon} size={22} />{i.short}{badge(i.badge)}</NavLink>))}
       </nav>
-      <UpdateBar /><Toaster /><ConfirmHost />
+      <UpdateBar /><Toaster /><ConfirmHost /><Viewer />
     </div>
   );
 }

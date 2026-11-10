@@ -1,3 +1,4 @@
+import { viewUrl } from '../lib/viewer';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { sb, errText } from '../lib/supabase';
@@ -53,7 +54,7 @@ export default function WfRun() {
   if (!ins || !ver) return err ? <Msg err={err} /> : <Skeleton />;
   const def: Def = ver.def;
   const open = tasks.filter((t) => t.status === 'cho');
-  const openFile = async (path: string) => { const { data } = await sb.storage.from('files').createSignedUrl(path, 600); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); };
+  const openFile = async (path: string) => { const { data } = await sb.storage.from('files').createSignedUrl(path, 600); if (data?.signedUrl) viewUrl(data.signedUrl, path.split('/').pop() ?? 'file'); };
   // lưu biểu mẫu qua một việc mà người dùng có quyền sửa (dữ liệu dùng chung cho cả hồ sơ)
   const saveData = async (taskId: string, quiet = false) => {
     if (!dataDirty) return true;

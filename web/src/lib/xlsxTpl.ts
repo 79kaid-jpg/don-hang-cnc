@@ -1,3 +1,4 @@
+import { viewHtml } from './viewer';
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
 import type { Customer, Order, Profile } from './supabase';
@@ -272,10 +273,7 @@ export async function downloadWb(wb: ExcelJS.Workbook, name: string) {
 }
 /** Khổ giấy theo cài đặt trong Excel (Page Layout → Orientation) */
 export const isLandscape = (wb: ExcelJS.Workbook) => (wb.worksheets[0]?.pageSetup as { orientation?: string } | undefined)?.orientation === 'landscape';
-export function printHtml(html: string, title: string, landscape = true) {
-  const w = window.open('', '_blank'); if (!w) return;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"><style>@page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:10mm}body{margin:0}tr,img{page-break-inside:avoid;break-inside:avoid}</style></head><body>${html}<script>onload=()=>(document.fonts ? document.fonts.ready : Promise.resolve()).then(()=>setTimeout(()=>print(),200))</script></body></html>`); w.document.close();
-}
+export function printHtml(html: string, title: string, landscape = true) { viewHtml(html, title, landscape); }
 
 export type Tpl = { id: string; proc: string; company: string | null; name: string; path: string; file_name: string | null; version: number; vars: string[]; active: boolean; created_at: string };
 export { colL };

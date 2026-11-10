@@ -1,4 +1,5 @@
 import { GuideBox } from './GuideBox';
+import { viewHtml, viewUrl } from '../lib/viewer';
 import { Assignees } from './Assignees';
 import { useGuides, guideFor, guideByKey } from '../lib/guides';
 import { StepChecks, DocSteps, StepDot, useStepProg } from './StepChecks';
@@ -111,7 +112,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
 }
 
 function FileLink({ f }: { f: { name: string; path: string } }) {
-  const open = async () => { const { data } = await sb.storage.from('files').createSignedUrl(f.path, 600); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); };
+  const open = async () => { const { data } = await sb.storage.from('files').createSignedUrl(f.path, 600); if (data?.signedUrl) viewUrl(data.signedUrl, f.name); };
   return <button className="link-btn" onClick={open}><Icon name="file" size={14} />{f.name}</button>;
 }
 
@@ -508,5 +509,5 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
     ${auto ? '<script>onload=()=>(document.fonts ? document.fonts.ready : Promise.resolve()).then(()=>setTimeout(()=>print(),200))</script>' : ''}</body></html>`;
 }
 function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
-  const w = window.open('', '_blank'); if (!w) return; w.document.write(docHtml(o, b, d, people, true)); w.document.close();
+  viewHtml(docHtml(o, b, d, people, false), PROC_NAME[b.proc] + ' · ' + b.title);
 }
