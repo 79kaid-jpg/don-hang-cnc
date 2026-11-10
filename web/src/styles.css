@@ -2091,3 +2091,33 @@ html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){backg
   .pp-act>.btn.primary{flex:2 1 0;min-width:0;white-space:normal;line-height:1.2;text-align:center}
   .pp-act>.btn.kb-back,.pp-act>.btn.rt-go{padding:0 10px}
 }
+/* Hướng dẫn bước (dùng chung) */
+.gd{display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.55}
+.gd-purpose{margin:0}
+.gd-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.gd-todo{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px}
+.gd-todo li::marker{color:#3A6EA5;font-weight:700}
+.gd-note{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:#FFF7E6;color:#7A4A00;border:1px solid #F3D9A4}
+.gd-note svg{flex:none;margin-top:3px}
+.gd-links{display:flex;flex-wrap:wrap;gap:6px}.gd-links a{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px;text-decoration:none}
+.gd-edit{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:#3A6EA5;text-decoration:none}
+.gd-card{border:1px solid #CFE0F1;background:#F5F9FD;border-radius:14px;padding:0;gap:0}
+.gd-top{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:0;font:inherit;color:var(--ink);cursor:pointer;min-height:44px;text-align:left}
+.gd-top b{flex:1}.gd-top svg{transition:transform .2s}.gd-card.open .gd-top svg{transform:rotate(180deg)}
+.gd-in{padding:0 14px 12px;display:flex;flex-direction:column;gap:8px}
+.pg-guide{margin:10px 0;padding:12px;border-radius:12px;background:#F5F9FD;border:1px solid #CFE0F1;display:flex;flex-direction:column;gap:8px}
+.sim-card .gd{margin-top:6px}
+.gda{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
+.gda-nav{display:flex;flex-direction:column;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto}
+.gda-pick{display:none}
+.gda-gt{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:2px 0 4px}
+.gda-grp button{display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:7px 10px;border:0;background:none;border-radius:8px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
+.gda-grp button:hover{background:rgba(58,110,165,.07)}.gda-grp button.on{background:rgba(58,110,165,.13);font-weight:600}
+.gda-grp .chip{margin-left:auto;font-size:11px}
+.gda-ed{display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;padding:16px}
+.gda-ed header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.gda-ed h3{margin:0}
+.gda-ed textarea{width:100%;resize:vertical}
+.gda-pv{border-top:1px dashed var(--line);padding-top:12px}
+@media (max-width:800px){.gda{grid-template-columns:1fr}.gda-nav{position:static;max-height:none}.gda-grp{display:none}.gda-pick{display:block;width:100%;min-height:44px}}
+html[data-theme=dark] .gd-card,html[data-theme=dark] .pg-guide{background:rgba(58,110,165,.12);border-color:rgba(120,160,210,.3)}
+html[data-theme=dark] .gd-note{background:rgba(245,158,11,.12);color:#F5C27A;border-color:rgba(245,158,11,.3)}

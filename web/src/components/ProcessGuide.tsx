@@ -1,5 +1,13 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
+import { GuideBox } from './GuideBox';
+import { useGuides, guideByKey } from '../lib/guides';
+
+/** Bước ở trang này ↔ hướng dẫn dùng chung (Quản trị → Hướng dẫn bước) */
+const GK: Record<string, string> = { 'QT0.B1': 'QT0.*.tiep_nhan', 'QT0.B2': 'QT0.*.boc_tach', 'QT0.B3': 'QT0.*.tao_ds', 'QT0.B4': 'QT0.*.kiem_tra', 'QT0.B5': 'QT0.*.duyet',
+  'QT1.B1': 'QT1.*.lap', 'QT1.B2': 'QT1.*.kiem_tra', 'QT1.B3': 'QT1.*.lap', 'QT1.B4': 'QT1.*.lap', 'QT1.B5': 'sim.final',
+  'QT2.B2': 'QT2.*.lap', 'QT2.B3': 'QT2.*.lap', 'QT2.B4': 'QT2.*.lap', 'QT2.B5': 'sim.final', 'QT3.B2': 'QT3.*.lap', 'QT3.B3': 'QT3.*.lap', 'QT3.B4': 'sim.final' };
+const GV: Record<string, Record<string, string>> = { 'QT1.B3': { cty: 'IPC' }, 'QT1.B4': { cty: 'Hanwa' }, 'QT2.B3': { cty: 'IPC' }, 'QT2.B4': { cty: 'Hanwa' }, 'QT3.B3': { cty: 'IPC / Hanwa' } };
 
 /** Sơ đồ quy trình tương tác QT0 → QT3 theo swimlane 04/11/2026 (4 quy trình chạy riêng).
  *  Bấm một quy trình để xem các bước, bấm một bước để xem ai làm, nhập gì, ai duyệt, xong thì sang đâu, làm ở đâu trong app. */
@@ -36,6 +44,8 @@ export default function ProcessGuide() {
   const [pk, setPk] = useState('QT0'); const [sk, setSk] = useState('B1');
   const P = PROCS.find((p) => p.k === pk)!; const S = P.steps.find((s) => s.k === sk) ?? P.steps[0];
   const pick = (k: string) => { setPk(k); setSk('B1'); };
+  const guides = useGuides(); const gid = P.k + '.' + S.k; const PHIEU: Record<string, string> = { QT1: 'Xác nhận đơn hàng', QT2: 'Lệnh gia công', QT3: 'Phiếu xuất kho / BB giao hàng' };
+  const G = GK[gid] ? guideByKey(guides, GK[gid]) : undefined;
   return (
     <div className="pg">
       <div className="pg-procs" role="tablist" aria-label="Chọn quy trình">
@@ -70,6 +80,7 @@ export default function ProcessGuide() {
           <dt>Xong thì</dt><dd>{S.next}</dd>
           <dt>Làm ở đâu</dt><dd>{S.where}</dd>
         </dl>
+        {G && <div className="pg-guide"><div className="gd-h">💡 Hướng dẫn chi tiết</div><GuideBox g={G} vars={{ cty: 'Phương Nam CNC', phieu: PHIEU[P.k] ?? '', ...GV[gid] }} /></div>}
         <div className="small muted">Kết thúc {P.t}: <b>{P.exit}</b>. {P.back}</div>
       </div>
     </div>);

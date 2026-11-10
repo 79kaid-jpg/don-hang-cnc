@@ -2,9 +2,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sb, type Profile } from '../lib/supabase';
 import { COMPANY, FINAL, FLOW, PROC_NAME, ROLE_OF, STATUS, type Proc } from '../lib/proc';
 import { Icon } from '../components/Icon';
+import { GuideBox } from '../components/GuideBox';
+import { useGuides, guideFor, guideByKey } from '../lib/guides';
 
 type Lane = 'PN' | 'IPC' | 'HW' | 'KH';
-type Step = { id: string; proc: Proc; lane: Lane; title: string; who: string; sla?: number; say: string; kind: 'start' | 'work' | 'check' | 'approve' | 'extra' | 'back' | 'hand' | 'final' | 'done' };
+type Step = { id: string; proc: Proc; lane: Lane; title: string; who: string; sla?: number; say: string; gk?: string; vars?: Record<string, string>; kind: 'start' | 'work' | 'check' | 'approve' | 'extra' | 'back' | 'hand' | 'final' | 'done' };
 const LANES: [Lane, string][] = [['PN', 'Phương Nam CNC'], ['IPC', 'IPC'], ['HW', 'Hanwa'], ['KH', 'Khách hàng']];
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const FORM: Record<Proc, string> = { QT0: 'Danh sách tấm (bóc tách)', QT1: 'Xác nhận đơn hàng (XNĐH)', QT2: 'Lệnh gia công', QT3: 'Phiếu xuất kho / BB giao hàng' };
@@ -28,7 +30,7 @@ export default function Simulate() {
 
   const steps = useMemo(() => {
     const nm = (u: string | null, g: string | null) => (u ? ppl[u] ?? '…' : g ? 'Nhóm ' + (gs[g] ?? '') : 'Chưa gán');
-    const S: Step[] = [{ id: 's', proc: 'QT0', lane: 'PN', kind: 'start', title: 'Kinh doanh tạo đơn hàng', who: 'Kinh doanh', say: 'Khách gửi yêu cầu qua Email / điện thoại. Kinh doanh tạo đơn: khách hàng, dự án, hạn báo giá, hạn giao. Hệ thống mở QT0 cho Phương Nam.' }];
+    const S: Step[] = [{ id: 's', proc: 'QT0', lane: 'PN', kind: 'start', gk: 'sim.start', title: 'Kinh doanh tạo đơn hàng', who: 'Kinh doanh', say: 'Khách gửi yêu cầu qua Email / điện thoại. Kinh doanh tạo đơn: khách hàng, dự án, hạn báo giá, hạn giao. Hệ thống mở QT0 cho Phương Nam.' }];
     for (const proc of PROCS) {
       const cos: Lane[] = proc === 'QT0' ? ['PN'] : ['PN', 'IPC', 'HW'];
       for (const co of cos) {
@@ -40,21 +42,21 @@ export default function Simulate() {
             : st === 'lap' ? `${COMPANY[co as 'PN']} lập phiếu ${FORM[proc]}${co === 'PN' ? '' : ' – dữ liệu đã được chép sẵn từ công ty trước, chỉ cần chỉnh giá / số lượng của mình'}.`
             : st === 'kiem_tra' ? 'Kiểm tra nội dung phiếu và ghi chú của đơn. Đạt → gửi duyệt; sai → trả về người lập kèm lý do.'
             : 'Người duyệt đọc thông tin phiếu và ghi chú rồi duyệt hoặc trả về. Duyệt xong phiếu được khoá.';
-          S.push({ id: `${proc}.${co}.${st}`, proc, lane: co, kind, title: STATUS[st], who: nm(c?.user_id ?? null, c?.group_id ?? null), sla: c?.sla_h ?? 48, say });
+          S.push({ id: `${proc}.${co}.${st}`, proc, lane: co, kind, title: STATUS[st], who: nm(c?.user_id ?? null, c?.group_id ?? null), sla: c?.sla_h ?? 48, say, gk: proc + '.' + co + '.' + st, vars: { cty: COMPANY[co as 'PN'], phieu: FORM[proc] } });
           if (withBack && proc === 'QT1' && co === 'IPC' && st === 'kiem_tra') {
-            S.push({ id: 'back', proc, lane: co, kind: 'back', title: 'Trả về', who: nm(c?.user_id ?? null, c?.group_id ?? null), say: 'Tình huống: người kiểm tra thấy sai đơn giá → bấm Trả về, ghi lý do. Phiếu quay lại bước Lập, lý do hiện trong Hành trình duyệt.' });
+            S.push({ id: 'back', proc, lane: co, kind: 'back', gk: 'sim.back', title: 'Trả về', who: nm(c?.user_id ?? null, c?.group_id ?? null), say: 'Tình huống: người kiểm tra thấy sai đơn giá → bấm Trả về, ghi lý do. Phiếu quay lại bước Lập, lý do hiện trong Hành trình duyệt.' });
             const l = cp.find((x) => x.proc === proc && x.company === co && x.role === 'lap');
-            S.push({ id: 'relap', proc, lane: co, kind: 'work', title: 'Lập lại', who: nm(l?.user_id ?? null, l?.group_id ?? null), sla: l?.sla_h ?? 48, say: 'Người lập sửa theo lý do rồi gửi kiểm tra lại. Thời gian chờ được tính tiếp vào hiệu quả của từng người.' });
-            S.push({ id: 'recheck', proc, lane: co, kind: 'check', title: 'Kiểm tra lại', who: nm(c?.user_id ?? null, c?.group_id ?? null), sla: c?.sla_h ?? 48, say: 'Lần này đạt → gửi duyệt.' });
+            S.push({ id: 'relap', proc, lane: co, kind: 'work', gk: 'sim.relap', title: 'Lập lại', who: nm(l?.user_id ?? null, l?.group_id ?? null), sla: l?.sla_h ?? 48, say: 'Người lập sửa theo lý do rồi gửi kiểm tra lại. Thời gian chờ được tính tiếp vào hiệu quả của từng người.' });
+            S.push({ id: 'recheck', proc, lane: co, kind: 'check', gk: 'sim.recheck', title: 'Kiểm tra lại', who: nm(c?.user_id ?? null, c?.group_id ?? null), sla: c?.sla_h ?? 48, say: 'Lần này đạt → gửi duyệt.' });
           }
         }
         if (withExtra) for (const l of lv.filter((x) => x.active && x.proc === proc && x.company === co))
-          S.push({ id: `${proc}.${co}.x.${l.name}`, proc, lane: co, kind: 'extra', title: l.name, who: nm(l.user_id, l.group_id), sla: l.sla_h, say: `Cấp duyệt thêm (cấu hình ở Luồng duyệt). ${l.name} xem phiếu và ghi chú rồi duyệt hoặc trả về.` });
-        if (proc !== 'QT0' && co !== 'HW') S.push({ id: `${proc}.${co}.hand`, proc, lane: co === 'PN' ? 'IPC' : 'HW', kind: 'hand', title: 'Nhận phiếu', who: 'Hệ thống', say: `${COMPANY[co as 'PN']} đã duyệt → hệ thống tự tạo phiếu cho ${co === 'PN' ? 'IPC' : 'Hanwa'} và báo Zalo cho người lập.` });
+          S.push({ id: `${proc}.${co}.x.${l.name}`, proc, lane: co, kind: 'extra', gk: 'sim.extra', vars: { cap: l.name }, title: l.name, who: nm(l.user_id, l.group_id), sla: l.sla_h, say: `Cấp duyệt thêm (cấu hình ở Luồng duyệt). ${l.name} xem phiếu và ghi chú rồi duyệt hoặc trả về.` });
+        if (proc !== 'QT0' && co !== 'HW') S.push({ id: `${proc}.${co}.hand`, proc, lane: co === 'PN' ? 'IPC' : 'HW', kind: 'hand', gk: 'sim.hand', vars: { cty: COMPANY[co as 'PN'], cty_sau: co === 'PN' ? 'IPC' : 'Hanwa' }, title: 'Nhận phiếu', who: 'Hệ thống', say: `${COMPANY[co as 'PN']} đã duyệt → hệ thống tự tạo phiếu cho ${co === 'PN' ? 'IPC' : 'Hanwa'} và báo Zalo cho người lập.` });
       }
-      if (proc !== 'QT0') S.push({ id: `${proc}.final`, proc, lane: 'KH', kind: 'final', title: FINAL[proc], who: 'Khách hàng', say: `Cả 3 công ty đã duyệt. Bấm "In mẫu cho khách ký" → in theo mẫu Excel, khách ký tay, chụp / scan rồi "Tải bản đã ký". ${proc === 'QT3' ? '' : 'Quy trình kế tiếp được mở.'}` });
+      if (proc !== 'QT0') S.push({ id: `${proc}.final`, proc, lane: 'KH', kind: 'final', gk: 'sim.final', title: FINAL[proc], who: 'Khách hàng', say: `Cả 3 công ty đã duyệt. Bấm "In mẫu cho khách ký" → in theo mẫu Excel, khách ký tay, chụp / scan rồi "Tải bản đã ký". ${proc === 'QT3' ? '' : 'Quy trình kế tiếp được mở.'}` });
     }
-    S.push({ id: 'done', proc: 'QT3', lane: 'KH', kind: 'done', title: 'Đơn hoàn tất', who: '', say: 'Toàn bộ QT0 → QT3 đã xong. Thời gian từng bước được ghi lại cho Thống kê và Hiệu quả.' });
+    S.push({ id: 'done', proc: 'QT3', lane: 'KH', kind: 'done', gk: 'sim.done', title: 'Đơn hoàn tất', who: '', say: 'Toàn bộ QT0 → QT3 đã xong. Thời gian từng bước được ghi lại cho Thống kê và Hiệu quả.' });
     return S;
   }, [cp, lv, ppl, gs, withBack, withExtra]);
 
@@ -71,6 +73,9 @@ export default function Simulate() {
     const a = w.getBoundingClientRect(), b = el.getBoundingClientRect(); setTok({ x: b.left - a.left + w.scrollLeft + b.width / 2, y: b.top - a.top + b.height / 2 });
     const sx = b.left - a.left + w.scrollLeft - a.width / 2 + b.width / 2; w.scrollTo({ left: sx, behavior: 'smooth' }); }, [cur?.id, steps]);
 
+  const guides = useGuides();
+  const gOf = (x?: Step) => { if (!x?.gk) return undefined; const m = x.gk.match(/^(QT\d)\.(\w+)\.(\w+)$/); return m ? guideFor(guides, m[1], m[2], m[3]) : guideByKey(guides, x.gk); };
+  const curG = gOf(cur);
   const nextSt = steps[i + 1];
   return (
     <div className="sim">
@@ -114,7 +119,7 @@ export default function Simulate() {
             <span className="sim-n">Bước {i + 1}/{steps.length}</span></div>
           <h2>{cur.title}</h2>
           {cur.who && <div className="sim-who"><span className="sim-av">{cur.who.trim().split(' ').pop()?.[0] ?? '?'}</span><b>{cur.who}</b>{cur.sla && <span className="small muted">· hạn xử lý {cur.sla}h</span>}</div>}
-          <p>{cur.say}</p>
+          {curG ? <GuideBox g={curG} vars={cur.vars} /> : <p>{cur.say}</p>}
           {nextSt && <div className="small muted sim-next"><Icon name="arrow" size={12} /> Tiếp theo: <b>{nextSt.title}</b>{nextSt.lane !== 'KH' ? ' · ' + COMPANY[nextSt.lane as 'PN'] : ''}</div>}
         </div>
       </section>}
