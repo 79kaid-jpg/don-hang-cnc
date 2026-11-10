@@ -37,7 +37,9 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
   const tpl = useChecks(); const { me } = useAuth();
   const step = d.status;
   const [items, setItems] = useState<CheckItem[]>(() => itemsOf(tpl, proc, step, d.checklist));
-  const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false); const [all, setAll] = useState(false);
+  const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false); const [all, setAll] = useState(false); const [flash, setFlash] = useState(false); const box = useRef<HTMLElement>(null);
+  useEffect(() => { const go = () => { setAll(true); setFlash(true); requestAnimationFrame(() => box.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })); setTimeout(() => setFlash(false), 2400); };
+    addEventListener('pms-goto-check', go); return () => removeEventListener('pms-goto-check', go); }, []);
   const base = useRef<CheckItem[] | null>(null);
   useEffect(() => { base.current = null; }, [d.checklist, step]);
   const data = live ?? d;
@@ -65,7 +67,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
   const pct = p.total ? Math.round(p.done / p.total * 100) : 0; const full = p.total > 0 && p.done === p.total;
   const shown = items.map((x, i) => ({ x, i })).filter(({ x }) => all || !x.done);
   return (
-    <section className={'sc-card' + (p.total && !p.miss && p.done === p.total ? ' ok' : '')} aria-label="Checklist bước hiện tại">
+    <section ref={box} className={'sc-card' + (p.total && !p.miss && p.done === p.total ? ' ok' : '') + (flash ? ' flash' : '')} aria-label="Checklist bước hiện tại">
       <button className="sc-head sc-mini" aria-expanded={all} onClick={() => setAll(!all)} title={all ? 'Thu gọn' : 'Xem tất cả mục'}>
         <Ring done={p.done} total={p.total} size={30} stroke={3.5} />
         <b>Checklist</b><span className="sc-cnt">{p.done}/{p.total}</span>{busy && <span className="small muted">đang lưu…</span>}
@@ -73,7 +75,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
         <span className="sc-more">{all ? 'Thu gọn' : full ? 'Xem' : 'Tất cả'}<Icon name={all ? 'up' : 'down'} size={14} /></span>
       </button>
       {shown.length > 0 && <ul className="sc-list">{shown.map(({ x, i }) => (
-        <li key={x.id} className={'sc-it' + (x.done ? ' done' : '')}>
+        <li key={x.id} className={'sc-it' + (x.done ? ' done' : '') + (flash && !x.done && x.level === 'req' ? ' miss' : '')}>
           <input type="checkbox" checked={!!x.done} disabled={!canEdit || busy || !!x.auto} onChange={() => tick(i)} aria-label={x.label} title={x.auto ? 'Tự kiểm: ' + AUTO_HINT(x.auto) : undefined} />
           <div className="sc-l"><span>{x.label}</span>
             {x.level === 'note' && (canEdit && !x.done ? <input className="sc-note" placeholder="Ghi chú / số liệu…" defaultValue={x.note ?? ''} onBlur={(e) => e.target.value !== (x.note ?? '') && set(i, { note: e.target.value })} />
