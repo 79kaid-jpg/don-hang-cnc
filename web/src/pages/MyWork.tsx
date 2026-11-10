@@ -89,14 +89,15 @@ export default function MyWork() {
             </ul>)}
         </div>
       </section>
-      {mine.length > 0 && <section className="card flush" aria-labelledby="h-mine">
-        <div className="card-head"><h2 id="h-mine">Tôi đã xử lý gần đây</h2><Link className="small" to="/thong-ke">Thống kê →</Link></div>
+      {mine.length > 0 && <details className="card flush mw-done">
+        <summary className="card-head"><h2>Đã xử lý gần đây <span className="chip idle">{mine.length}</span></h2></summary>
         <ul className="worklist">{mine.map((r) => (
           <li key={r.id}><Link to={'/don/' + r.order_id + '?tab=' + r.proc} className="mw-rec">
             <QtTag qt={r.proc} /><span className="mw-rec-t"><b>{r.code}</b><span className="muted"> · {r.title}</span></span>
             <span className={'mw-act a-' + r.action}>{({ ky: 'Đã ký', tra_ve: 'Trả về', fail: 'Từ chối' } as Record<string, string>)[r.action] ?? r.action}</span>
             <span className="mw-time">{ago(r.at)}</span></Link></li>))}</ul>
-      </section>}
+        <div style={{ padding: '8px 16px 12px' }}><Link className="small" to="/thong-ke">Thống kê →</Link></div>
+      </details>}
       <PerfCard />
     </>
   );

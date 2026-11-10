@@ -2267,3 +2267,6 @@ html[data-theme=dark] .gd-pop{background:#1f2329}
 .sw-howto[open] summary{margin-bottom:6px}
 .sw-howto summary::before{content:'▸';margin-right:6px;transition:transform .15s;display:inline-block}.sw-howto[open] summary::before{transform:rotate(90deg)}
 .sw-howto summary::-webkit-details-marker{display:none}.sw-howto summary{list-style:none}
+.mw-done>summary{list-style:none;cursor:pointer;min-height:48px}.mw-done>summary::-webkit-details-marker{display:none}
+.mw-done>summary h2{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted)}
+.mw-done>summary::after{content:'▸';margin-left:auto;color:var(--muted);transition:transform .15s}.mw-done[open]>summary::after{transform:rotate(90deg)}
