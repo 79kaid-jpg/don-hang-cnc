@@ -17,7 +17,6 @@ import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '.
 import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
-import { QT2Merged, QT3Giao, F7 } from './Phase2';
 
 type Conf = { order_id: string; vat_rate: number; terms: string; kh1_confirmed_at: string | null; kh1_channel: string | null;
   kh2_confirmed_at: string | null; kh2_channel: string | null; signed_pdf_path: string | null };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
+import { useWho } from '../lib/people';
 import { GuideBox } from './GuideBox';
 import { useGuides, guideByKey } from '../lib/guides';
 
@@ -14,13 +15,20 @@ const GV: Record<string, Record<string, string>> = { 'QT1.B3': { cty: 'IPC' }, '
 type Step = { k: string; t: string; who: string; form?: string; input: string; approve?: string; next: string; where: string; gate?: string };
 type Proc = { k: string; t: string; sub: string; steps: Step[]; exit: string; back: string };
 
+const Q0: Record<string, string> = { B1: 'tiep_nhan', B2: 'boc_tach', B3: 'tao_ds', B4: 'kiem_tra', B5: 'duyet' };
+const CK: Record<string, string> = { PN: 'PN', 'Phương Nam': 'PN', IPC: 'IPC', Hanwa: 'HW' }; const RK: Record<string, string> = { 'Lập': 'lap', 'Kiểm tra': 'kiem_tra', 'Duyệt': 'duyet' };
+/** Tên thật theo cấu hình Phụ trách quy trình; không khớp thì giữ chữ gốc */
+function liveWho(W: ReturnType<typeof useWho>, proc: string, S: Step) {
+  if (proc === 'QT0') return Q0[S.k] ? W.who('QT0', [Q0[S.k]]) : S.who;
+  const m = S.who.match(/^(PN|Phương Nam|IPC|Hanwa) · (Lập|Kiểm tra|Duyệt)/); return m ? W.who(proc, [CK[m[1]] + '.' + RK[m[2]]]) : S.who; }
+
 const PROCS: Proc[] = [
   { k: 'QT0', t: 'QT0', sub: 'Bóc tách bản vẽ', exit: 'Danh sách tấm đã ký (đầu vào tuỳ chọn của QT1) hoặc Fail', back: 'Kiểm tra / duyệt trả về bóc tách. Duyệt từ chối (hao hụt lớn, vượt dự toán, không sản xuất được) = Fail; mở “lần bóc tách mới” nếu làm lại. Chỉ Phương Nam CNC làm.', steps: [
-    { k: 'B1', t: 'Admin tiếp nhận', who: 'Admin (Viên / Phụng)', form: 'Form 1', input: 'Bản vẽ khách gửi qua email / Zalo, ngày nhận, kênh; ghi chú yêu cầu đặc biệt', next: 'Bóc tách kỹ thuật', where: 'Đơn → thẻ QT0 → Bắt đầu QT0 → tải bản vẽ → Chuyển bóc tách' },
-    { k: 'B2', t: 'Bóc tách kỹ thuật', who: 'Kỹ thuật (anh Hậu)', form: 'Form 1', input: 'Vật liệu, hao hụt, đường hàn / chấn, m² đột, vấn đề kỹ thuật; bắt buộc đính kèm Excel bóc tách chi tiết', next: 'Tạo danh sách tấm', where: 'Thẻ QT0 · tải “Excel bóc tách chi tiết” → Xong bóc tách', gate: 'Có Excel?' },
+    { k: 'B1', t: 'Admin tiếp nhận', who: 'Admin', form: 'Form 1', input: 'Bản vẽ khách gửi qua email / Zalo, ngày nhận, kênh; ghi chú yêu cầu đặc biệt', next: 'Bóc tách kỹ thuật', where: 'Đơn → thẻ QT0 → Bắt đầu QT0 → tải bản vẽ → Chuyển bóc tách' },
+    { k: 'B2', t: 'Bóc tách kỹ thuật', who: 'Kỹ thuật', form: 'Form 1', input: 'Vật liệu, hao hụt, đường hàn / chấn, m² đột, vấn đề kỹ thuật; bắt buộc đính kèm Excel bóc tách chi tiết', next: 'Tạo danh sách tấm', where: 'Thẻ QT0 · tải “Excel bóc tách chi tiết” → Xong bóc tách', gate: 'Có Excel?' },
     { k: 'B3', t: 'Tạo danh sách tấm', who: 'Admin', form: 'Form 1', input: 'Mã tấm, dày, dài, rộng, số tấm, m² trải phẳng/tấm (tổng m², kg tự tính). Tải Excel theo mẫu hoặc dán từ Excel', next: 'Kiểm tra', where: 'Thẻ QT0 · bảng Danh sách tấm → Gửi kiểm tra' },
-    { k: 'B4', t: 'Kiểm tra', who: 'Kiểm tra (anh Mai Anh)', input: 'Đọc bản vẽ + ghi chú, thêm lưu ý (tấm quá rộng cần tăng cứng, góc chưa phù hợp, khổ vượt khả năng máy…)', next: 'Đạt → Duyệt. Chưa đạt → trả về bóc tách', where: 'Thẻ QT0 · Ghi chú → Đạt, gửi duyệt / Trả về' },
-    { k: 'B5', t: 'Duyệt', who: 'Duyệt (Dung)', input: 'Sẵn sàng sản xuất?', approve: 'Ký điện tử · có tin Zalo', next: 'Duyệt → DS tấm đã ký. Từ chối → Fail', where: 'Thẻ QT0 · Duyệt / Từ chối · Fail', gate: 'Sẵn sàng?' }] },
+    { k: 'B4', t: 'Kiểm tra', who: 'Kiểm tra', input: 'Đọc bản vẽ + ghi chú, thêm lưu ý (tấm quá rộng cần tăng cứng, góc chưa phù hợp, khổ vượt khả năng máy…)', next: 'Đạt → Duyệt. Chưa đạt → trả về bóc tách', where: 'Thẻ QT0 · Ghi chú → Đạt, gửi duyệt / Trả về' },
+    { k: 'B5', t: 'Duyệt', who: 'Duyệt', input: 'Sẵn sàng sản xuất?', approve: 'Ký điện tử · có tin Zalo', next: 'Duyệt → DS tấm đã ký. Từ chối → Fail', where: 'Thẻ QT0 · Duyệt / Từ chối · Fail', gate: 'Sẵn sàng?' }] },
   { k: 'QT1', t: 'QT1', sub: 'Xác nhận đơn hàng', exit: '3 bộ XNĐH (PN, IPC, Hanwa) + bản khách ký tay', back: 'Kiểm tra / duyệt của mỗi công ty trả về bước Lập của chính công ty đó.', steps: [
     { k: 'B1', t: 'Phương Nam lập + đơn giá', who: 'PN · Lập', form: 'Form 2', input: 'Lấy DS tấm từ QT0 (tắt được khi tách đơn), nhập đơn giá; thành tiền = m² × đơn giá, cộng VAT', next: 'Kiểm tra → Duyệt PN', where: 'Thẻ QT1 → Mở XNĐH → Gửi kiểm tra' },
     { k: 'B2', t: 'PN kiểm tra → duyệt', who: 'PN · Kiểm tra, Duyệt', approve: 'Ký điện tử', input: 'Xem lại giá, điều kiện', next: 'Tự chép DS tấm sang IPC', where: 'Thẻ QT1 · bản Phương Nam CNC' },
@@ -41,6 +49,7 @@ const PROCS: Proc[] = [
 ];
 
 export default function ProcessGuide() {
+  const W = useWho();
   const [pk, setPk] = useState('QT0'); const [sk, setSk] = useState('B1');
   const P = PROCS.find((p) => p.k === pk)!; const S = P.steps.find((s) => s.k === sk) ?? P.steps[0];
   const pick = (k: string) => { setPk(k); setSk('B1'); };
@@ -73,7 +82,7 @@ export default function ProcessGuide() {
       <div className="pg-detail" aria-live="polite">
         <h3 style={{ margin: 0 }}>{P.t} · {S.k} {S.t}</h3>
         <dl>
-          <dt>Ai làm</dt><dd>{S.who}</dd>
+          <dt>Ai làm</dt><dd>{liveWho(W, P.k, S)}</dd>
           {S.form && <><dt>Phiếu</dt><dd>{S.form}</dd></>}
           <dt>Nhập gì</dt><dd>{S.input}</dd>
           {S.approve && <><dt>Ai duyệt</dt><dd>{S.approve}</dd></>}

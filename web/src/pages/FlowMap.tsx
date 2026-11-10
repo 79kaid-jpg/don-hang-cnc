@@ -6,6 +6,7 @@ import { sb, type Order } from '../lib/supabase';
 import { PROC_NAME, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
 import { Icon } from '../components/Icon';
 import { QtTag } from '../components/QtTag';
+import { useWho } from '../lib/people';
 
 /** Sơ đồ swimlane tương tác (theo file swimlane 04/11/2026).
  *  Máy tính: làn ngang, các bước xếp theo thời gian, mũi tên nối. Điện thoại: dòng thời gian dọc, mỗi bước ghi làn.
@@ -20,12 +21,12 @@ const D: Record<Proc, P> = {
     lanes: ['Khách hàng', 'Admin tiếp nhận', 'Bóc tách kỹ thuật', 'Kiểm tra', 'Duyệt'],
     steps: [
       { id: 's1', lane: 0, col: 0, t: 'Gửi bản vẽ', kind: 'start', who: 'Khách hàng', what: 'Gửi qua email hoặc Zalo. Có khách gửi kèm danh sách tấm, có khách chỉ có bản vẽ.' },
-      { id: 's2', lane: 1, col: 1, t: 'Tiếp nhận, đưa lên', kind: 'step', keys: ['tiep_nhan'], who: 'Admin (Viên / Phụng)', what: 'Tải bản vẽ và tài liệu lên; ghi chú yêu cầu đặc biệt của khách.', where: 'Đơn → QT0 → Bắt đầu QT0 → Tải bản vẽ → Chuyển bóc tách' },
-      { id: 's3', lane: 2, col: 2, t: 'Bóc tách, lập DS tấm', kind: 'step', keys: ['boc_tach'], who: 'Kỹ thuật (anh Hậu)', what: 'Mã tấm, m² từng tấm, tổng m². Vật liệu, hao hụt, đường hàn, đường chấn, m² đột. Nêu vấn đề kỹ thuật vào ghi chú.', where: 'QT0 · tải “Excel bóc tách chi tiết” · ghi chú' },
+      { id: 's2', lane: 1, col: 1, t: 'Tiếp nhận, đưa lên', kind: 'step', keys: ['tiep_nhan'], who: 'Admin tiếp nhận', what: 'Tải bản vẽ và tài liệu lên; ghi chú yêu cầu đặc biệt của khách.', where: 'Đơn → QT0 → Bắt đầu QT0 → Tải bản vẽ → Chuyển bóc tách' },
+      { id: 's3', lane: 2, col: 2, t: 'Bóc tách, lập DS tấm', kind: 'step', keys: ['boc_tach'], who: 'Kỹ thuật', what: 'Mã tấm, m² từng tấm, tổng m². Vật liệu, hao hụt, đường hàn, đường chấn, m² đột. Nêu vấn đề kỹ thuật vào ghi chú.', where: 'QT0 · tải “Excel bóc tách chi tiết” · ghi chú' },
       { id: 'c1', lane: 2, col: 3, t: 'Có file Excel?', kind: 'cond', keys: ['boc_tach'], who: 'Kỹ thuật', what: 'Bắt buộc đính kèm Excel chi tiết; không có thì không chuyển bước được (app chặn).' },
       { id: 's5', lane: 1, col: 4, t: 'Tạo DS tấm trên form', kind: 'step', keys: ['tao_ds'], who: 'Admin', what: 'Tải hàng loạt từ Excel (theo mẫu) hoặc dán từ Excel. Chỉ ký trên bảng danh sách tấm.', where: 'QT0 · bảng Danh sách tấm → Tải Excel / Dán từ Excel → Gửi kiểm tra' },
-      { id: 's6', lane: 3, col: 5, t: 'Kiểm tra bản vẽ + ghi chú', kind: 'step', keys: ['kiem_tra'], who: 'Kiểm tra (anh Mai Anh)', what: 'Đọc bản vẽ và ghi chú kỹ thuật; thêm lưu ý: tấm quá rộng cần tăng cứng, góc chưa phù hợp, khổ vượt khả năng máy…', where: 'QT0 · Ghi chú → Đạt, gửi duyệt / Trả về' },
-      { id: 'c2', lane: 4, col: 6, t: 'Sẵn sàng chạy?', kind: 'cond', keys: ['duyet'], who: 'Duyệt (Dung)', what: 'Kết luận đơn có sẵn sàng sản xuất. Từ chối khi hao hụt lớn, vượt dự toán, không sản xuất được.', where: 'QT0 · Duyệt / Từ chối · Fail' },
+      { id: 's6', lane: 3, col: 5, t: 'Kiểm tra bản vẽ + ghi chú', kind: 'step', keys: ['kiem_tra'], who: 'Kiểm tra', what: 'Đọc bản vẽ và ghi chú kỹ thuật; thêm lưu ý: tấm quá rộng cần tăng cứng, góc chưa phù hợp, khổ vượt khả năng máy…', where: 'QT0 · Ghi chú → Đạt, gửi duyệt / Trả về' },
+      { id: 'c2', lane: 4, col: 6, t: 'Sẵn sàng chạy?', kind: 'cond', keys: ['duyet'], who: 'Duyệt', what: 'Kết luận đơn có sẵn sàng sản xuất. Từ chối khi hao hụt lớn, vượt dự toán, không sản xuất được.', where: 'QT0 · Duyệt / Từ chối · Fail' },
       { id: 'ok', lane: 1, col: 7, t: 'DS tấm đã ký → QT1', kind: 'end', keys: ['hoan_tat'], who: 'Admin', what: 'Là đầu vào (tuỳ chọn) của Xác nhận đơn hàng.' },
       { id: 'x', lane: 4, col: 7, t: 'Fail · mở lại', kind: 'fail', keys: ['fail'], who: 'Duyệt', what: 'Quy trình kết thúc; làm lại từ đầu bằng “lần bóc tách mới” nếu cần.' }],
     edges: [{ a: 's1', b: 's2' }, { a: 's2', b: 's3' }, { a: 's3', b: 'c1' }, { a: 'c1', b: 's3', l: 'Không', dash: true }, { a: 'c1', b: 's5', l: 'Có' },
@@ -83,7 +84,7 @@ export default function FlowMap() {
   const proc = (PROCS.includes(sp.get('qt') as Proc) ? sp.get('qt') : 'QT0') as Proc;
   const setProc = (p: Proc) => { const n = new URLSearchParams(sp); n.set('qt', p); setSp(n); setSel(''); };
   const [orders, setOrders] = useState<Order[]>([]); const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
-  const [q, setQ] = useState(''); const [sel, setSel] = useState('');
+  const [q, setQ] = useState(''); const [sel, setSel] = useState(''); const W = useWho();
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').order('created_at', { ascending: false }).then(({ data }) => setOrders((data as Order[]) ?? []));
     sb.from('batches').select('*').neq('status', 'huy').then(({ data }) => setBs((data as Batch[]) ?? []));
@@ -190,7 +191,7 @@ export default function FlowMap() {
         <div className="mv-head"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b style={{ fontSize: 17 }}>{S0.t}</b></span>
           <button className="btn sm icon-btn" onClick={() => setSel('')} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
         <span className={'sw-kind ' + S0.kind}>{KIND[S0.kind]} · làn {P.lanes[S0.lane]}</span>
-        <dl className="sw-dl"><dt>Ai làm</dt><dd>{S0.who}</dd><dt>Làm gì</dt><dd>{S0.what}</dd>{S0.where && <><dt>Trong app</dt><dd>{S0.where}</dd></>}
+        <dl className="sw-dl"><dt>Ai làm</dt><dd>{S0.keys?.some((k) => k !== 'fail') ? W.who(proc, S0.keys.filter((k) => k !== 'fail')) : S0.who}</dd><dt>Làm gì</dt><dd>{S0.what}</dd>{S0.where && <><dt>Trong app</dt><dd>{S0.where}</dd></>}
           {P.edges.filter((e) => e.a === S0.id).length > 0 && <><dt>Đi tiếp</dt><dd>{P.edges.filter((e) => e.a === S0.id).map((e) => <div key={e.b}>{e.l ? <b>{e.l}: </b> : null}{P.steps.find((x) => x.id === e.b)?.t}{e.dash ? ' (quay vòng)' : ''}</div>)}</dd></>}</dl>
         {S0.keys && <div><b className="small">{one ? 'Đơn này' : 'Hồ sơ đang ở bước này'} ({inStep(S0).length})</b>
           <ul className="fm2-list">{inStep(S0).length === 0 ? <li className="muted small">Không có.</li> : inStep(S0).map((b) => { const o = orders.find((x) => x.id === b.order_id);
