@@ -191,11 +191,12 @@ export default function FlowMap() {
         <div className="mv-head"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b style={{ fontSize: 17 }}>{S0.t}</b></span>
           <button className="btn sm icon-btn" onClick={() => setSel('')} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
         <span className={'sw-kind ' + S0.kind}>{KIND[S0.kind]} · làn {P.lanes[S0.lane]}</span>
+        {S0.keys && (() => { const it = inStep(S0); return <section className="sw-jobs"><h4>{one ? 'Đơn này' : 'Việc ở bước này'} <span className="sw-cnt">{it.length}</span></h4>
+          {it.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Chưa có hồ sơ nào.</p> : <ul>{it.map((b) => { const o = orders.find((x) => x.id === b.order_id);
+            return <li key={b.id}><Link className="sw-job" to={'/don/' + b.order_id + '?tab=' + proc}><span className="sw-job-t"><b>{o?.code}</b><span>{b.title}</span><small>{o?.project}</small></span><span className="sw-go">Mở<Icon name="arrow" size={16} /></span></Link></li>; })}</ul>}</section>; })()}
+        <details className="sw-howto" open={!S0.keys || inStep(S0).length === 0}><summary>Hướng dẫn</summary>
         <dl className="sw-dl"><dt>Ai làm</dt><dd>{S0.keys?.some((k) => k !== 'fail') ? W.who(proc, S0.keys.filter((k) => k !== 'fail')) : S0.who}</dd><dt>Làm gì</dt><dd>{S0.what}</dd>{S0.where && <><dt>Trong app</dt><dd>{S0.where}</dd></>}
-          {P.edges.filter((e) => e.a === S0.id).length > 0 && <><dt>Đi tiếp</dt><dd>{P.edges.filter((e) => e.a === S0.id).map((e) => <div key={e.b}>{e.l ? <b>{e.l}: </b> : null}{P.steps.find((x) => x.id === e.b)?.t}{e.dash ? ' (quay vòng)' : ''}</div>)}</dd></>}</dl>
-        {S0.keys && <div><b className="small">{one ? 'Đơn này' : 'Hồ sơ đang ở bước này'} ({inStep(S0).length})</b>
-          <ul className="fm2-list">{inStep(S0).length === 0 ? <li className="muted small">Không có.</li> : inStep(S0).map((b) => { const o = orders.find((x) => x.id === b.order_id);
-            return <li key={b.id}><Link to={'/don/' + b.order_id + '?tab=' + proc}><b>{o?.code}</b> · {b.title} <span className="small muted">{o?.project}</span><Icon name="arrow" size={16} /></Link></li>; })}</ul></div>}
+          {P.edges.filter((e) => e.a === S0.id).length > 0 && <><dt>Đi tiếp</dt><dd>{P.edges.filter((e) => e.a === S0.id).map((e) => <div key={e.b}>{e.l ? <b>{e.l}: </b> : null}{P.steps.find((x) => x.id === e.b)?.t}{e.dash ? ' (quay vòng)' : ''}</div>)}</dd></>}</dl></details>
       </aside></div>, document.body)}
     </>
   );

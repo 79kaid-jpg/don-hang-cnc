@@ -2254,3 +2254,16 @@ html[data-theme=dark] .gd-pop{background:#1f2329}
 @keyframes flashring{0%,40%{box-shadow:0 0 0 3px rgba(220,38,38,.7)}100%{box-shadow:0 0 0 3px rgba(220,38,38,0)}}
 @media (prefers-reduced-motion: reduce){.flash{animation:none;box-shadow:0 0 0 3px rgba(220,38,38,.7)}}
 .sc-card,label.f,.pp-files,.pp-tbl{scroll-margin-top:150px}
+/* Sheet bước: việc lên đầu, hướng dẫn gập */
+.sw-jobs{margin:4px 0 12px}.sw-jobs h4{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+.sw-cnt{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--qc,#2C5F8A);color:#fff;font-size:12.5px;display:inline-grid;place-items:center}
+.sw-jobs ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.sw-job{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--qc,#2C5F8A);border-left-width:5px;background:var(--card,#fff);color:inherit;text-decoration:none;transition:transform .12s,box-shadow .12s}
+.sw-job:active{transform:scale(.98)}.sw-job:hover{box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.sw-job-t{display:flex;flex-direction:column;min-width:0;flex:1}.sw-job-t b{white-space:nowrap;font-size:15px}
+.sw-job-t span,.sw-job-t small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sw-job-t small{color:var(--muted)}
+.sw-go{display:inline-flex;align-items:center;gap:4px;padding:8px 12px;border-radius:999px;background:var(--qc,#2C5F8A);color:#fff;font-weight:700;font-size:13.5px;flex:none}
+.sw-howto{border-top:1px solid var(--line,#E6E9ED);padding-top:8px}.sw-howto summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);min-height:36px;display:flex;align-items:center}
+.sw-howto[open] summary{margin-bottom:6px}
+.sw-howto summary::before{content:'▸';margin-right:6px;transition:transform .15s;display:inline-block}.sw-howto[open] summary::before{transform:rotate(90deg)}
+.sw-howto summary::-webkit-details-marker{display:none}.sw-howto summary{list-style:none}
