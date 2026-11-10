@@ -37,7 +37,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
   const tpl = useChecks(); const { me } = useAuth();
   const step = d.status;
   const [items, setItems] = useState<CheckItem[]>(() => itemsOf(tpl, proc, step, d.checklist));
-  const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false);
+  const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false); const [all, setAll] = useState(false);
   const base = useRef<CheckItem[] | null>(null);
   useEffect(() => { base.current = null; }, [d.checklist, step]);
   const data = live ?? d;
@@ -62,18 +62,17 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
     set(i, on ? { done: true, by: me?.id, at: new Date().toISOString() } : { done: false, by: undefined, at: undefined }); };
   const add = () => { const v = nl.trim(); if (!v) return; setNl(''); push([...items, { id: 'c' + Date.now(), label: v, level: 'rec', custom: true }]); };
   const del = async (i: number) => { if (await confirmDialog(`Xoá mục “${items[i].label}” khỏi hồ sơ này?`, 'Xoá mục')) push(items.filter((_, k) => k !== i)); };
-  const pct = p.total ? Math.round(p.done / p.total * 100) : 0;
+  const pct = p.total ? Math.round(p.done / p.total * 100) : 0; const full = p.total > 0 && p.done === p.total;
+  const shown = items.map((x, i) => ({ x, i })).filter(({ x }) => all || !x.done);
   return (
     <section className={'sc-card' + (p.total && !p.miss && p.done === p.total ? ' ok' : '')} aria-label="Checklist bước hiện tại">
-      <div className="sc-head">
-        <Ring done={p.done} total={p.total} size={44} stroke={5} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3>Checklist · {STATUS[step]}</h3>
-          <div className="sc-sub">{p.done}/{p.total} mục · {p.miss ? <b style={{ color: '#B45309' }}>còn {p.miss} mục bắt buộc</b> : 'đủ mục bắt buộc'}{busy ? ' · đang lưu…' : ''}</div>
-        </div>
-        <div className="sc-bar" aria-hidden="true"><i style={{ width: pct + '%' }} /></div>
-      </div>
-      <ul className="sc-list">{items.map((x, i) => (
+      <button className="sc-head sc-mini" aria-expanded={all} onClick={() => setAll(!all)} title={all ? 'Thu gọn' : 'Xem tất cả mục'}>
+        <Ring done={p.done} total={p.total} size={30} stroke={3.5} />
+        <b>Checklist</b><span className="sc-cnt">{p.done}/{p.total}</span>{busy && <span className="small muted">đang lưu…</span>}
+        <span className="sc-bar" aria-hidden="true"><i style={{ width: pct + '%' }} /></span>
+        <span className="sc-more">{all ? 'Thu gọn' : full ? 'Xem' : 'Tất cả'}<Icon name={all ? 'up' : 'down'} size={14} /></span>
+      </button>
+      {shown.length > 0 && <ul className="sc-list">{shown.map(({ x, i }) => (
         <li key={x.id} className={'sc-it' + (x.done ? ' done' : '')}>
           <input type="checkbox" checked={!!x.done} disabled={!canEdit || busy || !!x.auto} onChange={() => tick(i)} aria-label={x.label} title={x.auto ? 'Tự kiểm: ' + AUTO_HINT(x.auto) : undefined} />
           <div className="sc-l"><span>{x.label}</span>
@@ -85,8 +84,8 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
           {x.auto && <span className="sc-lv auto" title={'Tự kiểm: ' + AUTO_HINT(x.auto)}>⚡ Tự kiểm</span>}
           <span className={'sc-lv ' + x.level}>{LEVEL_NAME[x.level]}</span>
           {canEdit && x.custom && <button className="sc-del" aria-label="Xoá mục" onClick={() => del(i)}><Icon name="x" size={14} /></button>}
-        </li>))}</ul>
-      {canEdit && <div className="sc-add"><input value={nl} placeholder="Thêm mục riêng cho hồ sơ này…" onChange={(e) => setNl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        </li>))}</ul>}
+      {canEdit && all && <div className="sc-add"><input value={nl} placeholder="Thêm mục riêng cho hồ sơ này…" onChange={(e) => setNl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
         <button className="btn xs" disabled={!nl.trim()} onClick={add}><Icon name="plus" size={13} />Thêm</button></div>}
     </section>);
 }

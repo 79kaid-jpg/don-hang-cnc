@@ -2121,3 +2121,46 @@ html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){backg
 @media (max-width:800px){.gda{grid-template-columns:1fr}.gda-nav{position:static;max-height:none}.gda-grp{display:none}.gda-pick{display:block;width:100%;min-height:44px}}
 html[data-theme=dark] .gd-card,html[data-theme=dark] .pg-guide{background:rgba(58,110,165,.12);border-color:rgba(120,160,210,.3)}
 html[data-theme=dark] .gd-note{background:rgba(245,158,11,.12);color:#F5C27A;border-color:rgba(245,158,11,.3)}
+/* Đầu đơn gọn (icon) */
+.od-top.od-mini{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.od-mini .od-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0}
+.od-mini .od-h h1{font-size:20px;margin:0;line-height:1.2}
+.od-mini .od-due{font-size:12.5px;padding:3px 9px}
+.od-meta{display:flex;align-items:center;gap:14px;flex:1;min-width:0;color:var(--muted);font-size:13.5px;flex-wrap:wrap}
+.od-meta>span{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.od-meta svg{flex:none;opacity:.7}
+.od-mini .od-map{margin-left:auto;min-height:36px;width:36px}
+.od-pills{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.od-pill{--qc:var(--q0);display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:4px 12px 4px 6px;border-radius:999px;border:1px solid var(--line);background:transparent;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.od-pill.qt1{--qc:var(--q1)}.od-pill.qt2{--qc:var(--q2)}.od-pill.qt3{--qc:var(--q3)}
+.od-pill b{color:var(--qc)}.od-pill .od-pill-t{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.od-pill .od-dot{width:20px;height:20px;border-width:2px}
+.od-pill.s-done .od-dot{background:var(--qc);border-color:var(--qc)}
+.od-pill.s-wait .od-dot,.od-pill.s-sign .od-dot{border-color:var(--qc)}
+.od-pill.s-wait .od-dot::after,.od-pill.s-sign .od-dot::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--qc)}
+.od-pill.s-bad .od-dot{background:#c2410c;border-color:#c2410c}
+.od-pill.on{border-color:var(--qc);background:color-mix(in srgb,var(--qc) 9%,transparent);color:var(--ink)}
+.od-pill:hover{border-color:var(--qc)}
+@media (max-width:600px){.od-meta{flex-basis:100%;order:3;gap:10px;font-size:13px}.od-pill{padding-right:10px}.od-pill .od-pill-t{max-width:110px}}
+/* Checklist gọn */
+.sc-card{padding:8px 12px}
+.sc-head.sc-mini{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:4px 2px;background:none;border:0;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.sc-mini .sc-cnt{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.sc-mini .sc-bar{flex:1;max-width:none;margin:0 6px}
+.sc-mini .sc-more{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:#3A6EA5;white-space:nowrap}
+.sc-card .sc-list{margin-top:4px}
+/* Nút & khung nổi hướng dẫn */
+.gd-btn{font-size:15px;line-height:1}.gd-btn.on{border-color:#3A6EA5}
+.gd-pop-bg{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.28);display:flex;align-items:flex-start;justify-content:center;padding:72px 16px 16px;animation:fadein .15s}
+.gd-pop{width:min(520px,100%);max-height:calc(100vh - 96px);overflow:auto;background:var(--card,#fff);color:var(--ink);border-radius:16px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.gd-pop header{display:flex;align-items:center;gap:8px}.gd-pop header b{flex:1;font-size:15.5px}
+@media (max-width:600px){.gd-pop-bg{align-items:flex-end;padding:0}.gd-pop{border-radius:18px 18px 0 0;max-height:80vh;padding-bottom:calc(16px + env(safe-area-inset-bottom))}}
+html[data-theme=dark] .gd-pop{background:#1f2329}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@media (max-width:600px){
+  .od-mini .od-h{gap:8px}.od-mini .od-h h1{font-size:18px}.od-mini .od-map{order:2;width:34px;min-height:34px}
+  .od-meta{flex-direction:column;align-items:flex-start;gap:2px}
+  .od-pills{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:0 4px}
+  .od-pills::-webkit-scrollbar{display:none}
+  .od-pills li{flex:none}.od-pill:not(.on) .od-pill-t,.od-pill:not(.on) .age{display:none}.od-pill:not(.on){padding-right:10px}
+}
