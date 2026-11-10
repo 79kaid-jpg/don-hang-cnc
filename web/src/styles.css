@@ -2164,3 +2164,20 @@ html[data-theme=dark] .gd-pop{background:#1f2329}
   .od-pills::-webkit-scrollbar{display:none}
   .od-pills li{flex:none}.od-pill:not(.on) .od-pill-t,.od-pill:not(.on) .age{display:none}.od-pill:not(.on){padding-right:10px}
 }
+/* Người phụ trách + vào vai */
+.as-list{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;vertical-align:middle}
+.as-chip{display:inline-flex;align-items:center;gap:5px;padding:1px 8px 1px 2px;border-radius:999px;background:rgba(58,110,165,.08);color:var(--ink);font:inherit;font-size:12.5px;border:1px solid transparent;line-height:20px}
+.as-chip.go{cursor:pointer;min-height:26px}.as-chip.go:hover{border-color:#3A6EA5;background:rgba(58,110,165,.14)}
+.as-av{width:20px;height:20px;border-radius:50%;background:#3A6EA5;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+.as-ic{color:#3A6EA5;font-weight:700}
+.as-more,.as-none{font-size:12.5px;color:var(--muted)}
+@media (pointer:coarse){.as-chip.go{min-height:32px;padding-right:10px}}
+.by-adm{font-style:normal;margin-left:6px;font-size:11.5px;color:#A85A12}
+.msg.lock-mini{padding:8px 12px;font-size:13px}
+/* Thanh vào vai gọn */
+.acting{position:sticky;top:8px;z-index:60;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:6px 6px 6px 8px;border-radius:999px;background:#FBE9D8;border:1.5px solid #A85A12;color:#5C2E07;font-size:14px;box-shadow:0 6px 16px rgba(168,90,18,.18);margin-bottom:10px}
+.acting .act-av{width:28px;height:28px;border-radius:50%;background:#A85A12;color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.acting .act-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acting .act-real{font-size:12.5px;opacity:.75;white-space:nowrap}
+.acting .btn{min-height:34px;border-radius:999px;flex:none}
+@media (max-width:900px){.acting{top:calc(var(--top-h,56px) + 6px)}.acting .act-real{display:none}}

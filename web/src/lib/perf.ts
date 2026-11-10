@@ -49,7 +49,7 @@ export function computeScores(x: NonNullable<ReturnType<typeof usePerf>['data']>
   for (const d of ds) {
     const s = [...(d.signs ?? [])].sort((a, z) => a.at.localeCompare(z.at)); let prev = d.created_at;
     s.forEach((g, i) => { const at = +new Date(g.at); const h = Math.max(0, (at - +new Date(prev)) / 36e5); prev = g.at;
-      if (g.action === 'ky' && at >= from && at <= now) sgs.push({ u: g.user, role: d.company + '.' + g.role, h, ret: s[i + 1]?.action === 'tra_ve', at }); });
+      if (g.action === 'ky' && !(g as { by?: string }).by && at >= from && at <= now) sgs.push({ u: g.user, role: d.company + '.' + g.role, h, ret: s[i + 1]?.action === 'tra_ve', at }); });
   }
   const roleAvg: Record<string, number> = {};
   for (const r of new Set(sgs.map((s) => s.role))) { const l = sgs.filter((s) => s.role === r); roleAvg[r] = l.reduce((a, s) => a + s.h, 0) / l.length; }

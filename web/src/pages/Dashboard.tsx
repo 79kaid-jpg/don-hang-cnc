@@ -80,7 +80,7 @@ export default function Dashboard() {
     for (const d of ds) { const b = bs.find((x) => x.id === d.batch_id); if (!b) continue;
       const sg = [...(d.signs ?? [])].sort((a, z) => a.at.localeCompare(z.at)); let prev = d.created_at;
       for (const g of sg) { const h = Math.max(0, (+new Date(g.at) - +new Date(prev)) / 36e5); prev = g.at;
-        if (+new Date(g.at) < from) continue;
+        if (+new Date(g.at) < from || (g as { by?: string }).by) continue;
         const label = (b.proc !== 'QT0' ? (d.company === 'PN' ? 'PN' : COMPANY[d.company]) + ' · ' : '') + (ROLE_NAME[g.role] ?? g.role);
         const k = b.proc + '|' + label; (stepT[k] ??= { label, p: b.proc, hrs: [], items: [], o: COMPANIES.indexOf(d.company) * 10 + RO.indexOf(g.role) }).hrs.push(h); stepT[k].items.push(item(b, Math.round(h) + ' giờ'));
         if (g.user === me?.id) mine.push({ at: g.at, action: g.action, hrs: h, it: item(b, g.action === 'ky' ? 'Đã ký' : g.action === 'tra_ve' ? 'Trả về' : 'Từ chối') }); } }

@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 
 type CP = { role: string; user_id: string | null; group_id: string | null; sla_h: number | null };
 type LV = { id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number };
-type Sign = { role: string; user: string; at: string; action: string; note?: string; level?: string };
+type Sign = { role: string; user: string; at: string; action: string; note?: string; level?: string; by?: string };
 type St = { key: string; label: string; who: string; sla: number; state: 'done' | 'now' | 'todo'; sign?: Sign; extra?: boolean };
 
 const short = (n: string) => n.split(' ').slice(-2).join(' ');
@@ -51,8 +51,8 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
   const tone = !cur ? 'ok' : left < 0 ? 'late' : left < cur.sla * 0.25 ? 'warn' : 'ok';
   const fail = d.status === 'fail';
 
-  const events = [...signs.map((s) => ({ at: s.at, k: s.action, who: s.user, t: s.action === 'ky' ? (s.level ? lvs.find((l) => l.id === s.level)?.name ?? 'Duyệt thêm' : ROLE_NAME[s.role] ?? s.role) : s.action === 'tra_ve' ? 'Trả về' : s.action === 'fail' ? 'Fail' : s.action, note: s.note })),
-    ...(d.notes ?? []).filter((n) => !signs.some((g) => g.note === n.text && Math.abs(+new Date(g.at) - +new Date(n.at)) < 6e4)).map((n) => ({ at: n.at, k: 'note', who: n.user, t: 'Ghi chú', note: n.text }))].sort((a, z) => z.at.localeCompare(a.at));
+  const events = [...signs.map((s) => ({ at: s.at, k: s.action, who: s.user, by: s.by, t: s.action === 'ky' ? (s.level ? lvs.find((l) => l.id === s.level)?.name ?? 'Duyệt thêm' : ROLE_NAME[s.role] ?? s.role) : s.action === 'tra_ve' ? 'Trả về' : s.action === 'fail' ? 'Fail' : s.action, note: s.note })),
+    ...(d.notes ?? []).filter((n) => !signs.some((g) => g.note === n.text && Math.abs(+new Date(g.at) - +new Date(n.at)) < 6e4)).map((n) => ({ at: n.at, k: 'note', who: n.user, t: 'Ghi chú', note: n.text, by: (n as { by?: string }).by }))].sort((a, z) => z.at.localeCompare(a.at));
 
   return (
     <div className={'jn' + (open ? ' open' : '')}>
@@ -66,7 +66,7 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
         {steps.map((s) => (
           <li key={s.key} className={'jn-st ' + s.state + (s.extra ? ' extra' : '') + (s.state === 'now' ? ' ' + tone : '')}>
             <span className="jn-dot">{s.state === 'done' ? <Icon name="check" size={12} /> : s.extra ? <Icon name="shield" size={11} /> : null}</span>
-            <span className="jn-lb"><b>{s.label}</b><span>{s.state === 'done' && s.sign ? short(people[s.sign.user]?.full_name ?? s.who) : s.who}</span>
+            <span className="jn-lb"><b>{s.label}</b><span>{s.state === 'done' && s.sign ? short(people[s.sign.user]?.full_name ?? s.who) : s.who}{s.state === 'done' && s.sign?.by && <i className="by-adm" title={'Admin ' + (people[s.sign.by]?.full_name ?? '') + ' thay mặt'}>↪</i>}</span>
               {s.state === 'now' && <em>chờ {fmtLeft(el)}</em>}</span>
           </li>))}
         <li className={'jn-st end' + (done ? ' done' : ' todo')}><span className="jn-dot"><Icon name={done ? 'check' : 'arrow'} size={11} /></span><span className="jn-lb"><b>{endLabel}</b></span></li>
@@ -75,7 +75,7 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
         {events.length === 0 && <li className="small muted">Chưa có hoạt động.</li>}
         {events.map((e, i) => <li key={i} className={'jn-ev ' + e.k}>
           <span className="jn-ic"><Icon name={e.k === 'ky' ? 'check' : e.k === 'tra_ve' ? 'back' : e.k === 'fail' ? 'alert' : 'file'} size={12} /></span>
-          <div><b>{e.t}</b> · {people[e.who]?.full_name ?? '…'}<span className="small muted"> · {dt(e.at)}</span>{e.note && <div className="jn-note">{e.note}</div>}</div>
+          <div><b>{e.t}</b> · {people[e.who]?.full_name ?? '…'}{e.by && <span className="by-adm" title={'Thao tác bởi ' + (people[e.by]?.full_name ?? 'Admin') + ' (vào vai)'}>↪ {short(people[e.by]?.full_name ?? 'Admin')}</span>}<span className="small muted"> · {dt(e.at)}</span>{e.note && <div className="jn-note">{e.note}</div>}</div>
         </li>)}
       </ul>}
       {(cur || d.status !== 'da_duyet') && !fail && <Talk d={d} people={people} open={!!cur} />}

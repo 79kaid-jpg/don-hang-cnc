@@ -129,9 +129,10 @@ function Shell() {
       <main className="main" id="main">
         {acting && (
           <div className="acting" role="status">
-            <Icon name="eye" />
-            <span style={{ flex: '1 1 240px' }}>Đang <b>đăng nhập với tư cách {me.full_name}</b> ({me.roles.join(', ') || 'chưa có vai trò'}). Bạn thấy và làm đúng như người này; nhật ký ghi tên thật của bạn ({real?.full_name}).</span>
-            <button className="btn sm" onClick={async () => { await stopActing(); nav('/quan-tri'); }}><Icon name="x" size={16} />Thoát, về tài khoản của tôi</button>
+            <span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span>
+            <span className="act-t">Đang vào vai <b>{me.full_name}</b></span>
+            <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
+            <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}
         <Routes>
           <Route path="/" element={<MyWork />} />

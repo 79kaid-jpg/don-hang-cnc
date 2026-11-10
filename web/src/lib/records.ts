@@ -69,7 +69,7 @@ async function auditHtml(d: Doc, ppl: Record<string, Profile>, level: string | n
   const act: Record<string, string> = { ky: 'Đã ký', next: 'Đã ký', back: 'Trả về', fail: 'Thất bại' };
   const e = (x: string) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   const rows = (d.signs ?? []).map((s, i) => { const lv = (s as { level?: string | null }).level;
-    return `<tr><td style="text-align:center">${i + 1}</td><td>${e(lv ?? (s.role === 'duyet' && level && i === d.signs.length - 1 ? level : ROLE_NAME[s.role] ?? s.role))}</td><td><b>${e(ppl[s.user]?.full_name ?? '—')}</b></td><td>${act[s.action] ?? e(s.action)}</td><td style="white-space:nowrap">${s.at ? t(s.at) : ''}</td><td>${e(s.note ?? '')}</td></tr>`; }).join('');
+    return `<tr><td style="text-align:center">${i + 1}</td><td>${e(lv ?? (s.role === 'duyet' && level && i === d.signs.length - 1 ? level : ROLE_NAME[s.role] ?? s.role))}</td><td><b>${e(ppl[s.user]?.full_name ?? '—')}</b>${(s as { by?: string }).by ? `<br><span style="font-size:10px;color:#888">↪ ${e(ppl[(s as { by?: string }).by!]?.full_name ?? 'Admin')} thay mặt</span>` : ''}</td><td>${act[s.action] ?? e(s.action)}</td><td style="white-space:nowrap">${s.at ? t(s.at) : ''}</td><td>${e(s.note ?? '')}</td></tr>`; }).join('');
   if (!rows) return '';
   const td = 'border:1px solid #94A3B8;padding:4px 6px;font-size:10.5px;vertical-align:top';
   return `<div style="page-break-inside:avoid;break-inside:avoid;margin-top:14px;font-family:'Be Vietnam Pro',system-ui,sans-serif">

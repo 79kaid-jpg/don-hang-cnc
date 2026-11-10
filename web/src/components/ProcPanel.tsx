@@ -1,4 +1,5 @@
 import { GuideBox } from './GuideBox';
+import { Assignees } from './Assignees';
 import { useGuides, guideFor, guideByKey } from '../lib/guides';
 import { StepChecks, DocSteps, StepDot, useStepProg } from './StepChecks';
 import { createPortal } from 'react-dom';
@@ -137,7 +138,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const [h, setH] = useState<Record<string, string>>(d.header ?? {}); const [t, setT] = useState<Record<string, Row[]>>(d.tables ?? {}); const [files, setFiles] = useState(d.files ?? []);
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [dirty, setDirty] = useState(false);
   const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
-  useEffect(() => { sb.rpc('can_act', { p_doc: d.id }).then(({ data }) => setCan(!!data)); }, [d.id, d.status]);
+  const { acting } = useAuth(); const lockAct = acting && !/^\s*\[(MẪU|MAU|TEST)\]/i.test(o.project ?? '');
+  useEffect(() => { sb.rpc('can_act', { p_doc: d.id }).then(({ data }) => setCan(!!data && !lockAct)); }, [d.id, d.status, lockAct]);
   const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -225,7 +227,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     <section className="card pp-doc">
       <div className="pp-doc-head">
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
-          <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{role ? ' · phụ trách: ' + ROLE_NAME[role] : ''} · từ {dt(d.status_at)}</div></div>
+          <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{(role || lvName) && <> · <Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
           {d.status !== 'da_duyet' && d.status !== 'fail' && <GuideBox compact g={d.status === 'duyet_them' ? guideByKey(guides, 'sim.extra') : guideFor(guides, proc, d.company, d.status)} vars={{ cty: COMPANY[d.company], phieu: PROC_NAME[proc], cap: lvName ?? 'Cấp duyệt thêm' }} />}
           {editable && <button className="btn xs" disabled={!dirty} onClick={() => save()}><Icon name="check" size={13} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
@@ -239,7 +241,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status)) && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
-      {!can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
+      {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
+      {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
