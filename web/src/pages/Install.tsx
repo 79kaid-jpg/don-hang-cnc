@@ -114,7 +114,7 @@ export default function Install() {
         <h2 id="h-qt">4. Quy trình đơn hàng</h2>
         <p className="muted" style={{ margin: 0 }}>Bấm một quy trình rồi bấm từng bước để xem ai làm, nhập gì, ai duyệt và làm ở đâu trong app. Dùng để đối chiếu khi chạy đơn.</p>
         <ProcessGuide />
-        <div className="row"><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình đầy đủ (sơ đồ, bảng bước, 10 form)</a></div>
+        <div className="row"><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình (sơ đồ, bảng bước, biểu mẫu)</a></div>
       </section>
       <section className="card" aria-labelledby="h-kb" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h2 id="h-kb">5. Phím tắt (máy tính)</h2>
