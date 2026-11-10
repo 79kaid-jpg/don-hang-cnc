@@ -5,6 +5,7 @@ import { sb, type Profile } from '../lib/supabase';
 import { recordUrl, type DocRecord } from '../lib/records';
 import { COMPANY, PROC_NAME, type Proc } from '../lib/proc';
 import { Icon } from './Icon';
+import { viewUrl } from '../lib/viewer';
 
 const KIND: Record<DocRecord['kind'], [string, string]> = { trinh_duyet: ['Bản trình duyệt', 'wait'], duyet: ['Đã duyệt', 'done'], tu_choi: ['Thất bại', 'bad'] };
 const live = (r: DocRecord) => !r.note.startsWith('(đã huỷ');
@@ -12,20 +13,15 @@ const fdt = (s: string) => new Date(s).toLocaleString('vi-VN', { day: '2-digit',
 
 /** Ở bước Duyệt: hiện bản PDF trình duyệt ngay trong phiếu */
 export function ReviewPdf({ docId, status }: { docId: string; status: string }) {
-  const [r, setR] = useState<DocRecord | null>(null); const [url, setUrl] = useState(''); const [open, setOpen] = useState(true);
+  const [r, setR] = useState<DocRecord | null>(null); const [url, setUrl] = useState('');
   useEffect(() => { sb.from('doc_records').select('*').eq('doc_id', docId).eq('kind', 'trinh_duyet').order('at', { ascending: false }).then(async ({ data }) => {
     const x = ((data as DocRecord[]) ?? []).find(live) ?? null; setR(x); setUrl(x ? await recordUrl(x.path) : ''); }); }, [docId, status]);
   if (!['duyet', 'duyet_them'].includes(status)) return null;
   return (
-    <div className="rv">
-      <div className="rv-h"><Icon name="file" size={16} /><b>Bản trình duyệt (PDF)</b>
-        {r ? <span className="small muted">gửi lúc {fdt(r.at)}</span> : <span className="small muted">chưa có – phiếu gửi duyệt trước khi có chức năng này</span>}
-        <span style={{ flex: 1 }} />
-        {url && <><a className="btn sm" href={url} target="_blank" rel="noreferrer"><Icon name="share" size={14} />Mở toàn màn hình</a>
-          <button className="btn sm" onClick={() => setOpen(!open)}>{open ? 'Thu gọn' : 'Xem'}</button></>}
-      </div>
-      {url && open && <iframe className="rv-pdf" src={url} title="Bản trình duyệt" />}
-      <p className="small muted" style={{ margin: 0 }}>Xem kỹ bản in trước khi bấm <b>Duyệt</b>. Khi duyệt, app lưu bản PDF có dấu “ĐÃ DUYỆT” làm chứng từ.</p>
+    <div className="rv rv-mini">
+      <Icon name="file" size={16} /><b>Bản trình duyệt</b>
+      <span className="small muted rv-at">{r ? new Date(r.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : 'chưa có'}</span>
+      {url && <button className="btn sm rv-go" onClick={() => viewUrl(url, 'Ban-trinh-duyet.pdf')}><Icon name="eye" size={15} />Xem</button>}
     </div>);
 }
 
