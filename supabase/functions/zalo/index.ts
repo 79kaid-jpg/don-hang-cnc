@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     const { data: a } = await db.from('approvals').select('*, orders(id, code, project, created_by)').eq('id', approval_id).single();
     if (!a) return json({ ok: false, error: 'not found' });
     const [docName, tab] = DOC[a.doc_type] ?? [a.doc_type, 'LS'];
-    const link = `${APP}#/don/${a.order_id}?tab=${tab}`;
+    const link = `${APP}?z=1#/don/${a.order_id}?tab=${tab}`;
     let to: string | null = null; let text = '';
     if (event === 'cho') {
       to = a.approver_id;
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     const { data: ps } = await db.from('profiles').select('id, full_name, zalo_chat_id').in('id', [...ids, ...(actor ? [actor] : []), ...(r.doer_id ? [r.doer_id] : [])]);
     const name = (id: string | null) => ps?.find((p) => p.id === id)?.full_name ?? '';
     const lbl = STEP[step] ?? step; const tab = step.startsWith('qt0') ? 'F1' : step.startsWith('qt1') ? 'F2' : step.startsWith('qt2') ? 'QT2' : 'GH';
-    const link = `${APP}#/don/${order_id}?tab=${tab}`;
+    const link = `${APP}?z=1#/don/${order_id}?tab=${tab}`;
     const head = `${r.orders.code} · ${r.orders.project}\n${lbl}`;
     const text = event === 'returned' ? `↩️ Đơn bị trả về bước này\n${head}\nNgười trả về: ${name(actor)}\nLý do: ${r.return_note ?? ''}\nHạn mới: ${fmt(r.due_at)}${grp && !r.doer_id ? '\nNhóm ' + grp.name + ': bấm "Nhận việc"' : ''}\n${link}`
       : event === 'claimed' ? `✋ ${name(actor)} đã nhận việc\n${head}\nBạn không cần làm bước này nữa.\n${link}`
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     const CO: Record<string, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' };
     const FIN: Record<string, string> = { QT1: 'khách ký xác nhận', QT2: 'ký bàn giao / nhận vật liệu', QT3: 'khách ký nhận hàng' };
     let company = d.company, role = ROLE[d.status], what = '';
-    if (d.status === 'da_duyet' && proc !== 'QT0' && d.company === 'HW') { company = 'PN'; role = 'hoan_tat'; what = `Cả 3 công ty đã duyệt. Bước cuối: ${FIN[proc]} – in bản, ký tay, tải lên.`; }
+    if (d.status === 'da_duyet' && proc !== 'QT0' && d.company === 'HW') { const { data: fc } = await db.from('chain_people').select('company').eq('proc', proc).eq('role', 'hoan_tat').limit(1).maybeSingle(); company = fc?.company ?? 'HW'; role = 'hoan_tat'; what = `Cả 3 công ty đã duyệt. Bước cuối: ${FIN[proc]} – in bản, ký tay, tải lên.`; }
     let lvName = '';
     if (d.status === 'duyet_them') { const lid = d.apv?.queue?.[d.apv?.idx ?? 0]; const { data: lv } = await db.from('approval_levels').select('*').eq('id', lid).maybeSingle();
       if (!lv) return json({ ok: true, skipped: 'no level' }); role = 'level'; lvName = lv.name; STL.duyet_them = lv.name; (d as Record<string, unknown>)._lv = lv; }
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     void lvName;
     if (!ids.size) return json({ ok: true, skipped: 'không có người nhận' });
     const back = last?.action === 'tra_ve';
-    const link = `${APP}#/don/${b.order_id}?tab=${proc}`;
+    const link = `${APP}?z=1#/don/${b.order_id}?tab=${proc}`;
     const head = `${b.orders.code} · ${b.orders.project}\n${proc} · ${b.title}${proc === 'QT0' ? '' : ' · ' + CO[d.company]}`;
     const text = what ? `✍ ${head}\n${what}\n${link}` : back ? `↩️ Bị trả về – ${STL[d.status]}\n${head}\nLý do: ${last?.note ?? ''}\n${link}` : `📌 Đến lượt bạn: ${STL[d.status]}${proc === 'QT0' ? '' : ' (' + CO[company] + ')'}\n${head}\n${link}`;
     let pdf = '';
