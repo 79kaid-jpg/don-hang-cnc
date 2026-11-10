@@ -1,9 +1,12 @@
 import { GuideBox } from './GuideBox';
+import { FixMsg } from './FixMsg';
+import { goFix } from '../lib/gotoFix';
 import { viewHtml, viewUrl } from '../lib/viewer';
 import { Assignees } from './Assignees';
 import { useGuides, guideFor, guideByKey } from '../lib/guides';
 import { StepChecks, DocSteps, StepDot, useStepProg } from './StepChecks';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -147,7 +150,9 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const lvName = d.status === 'duyet_them' && apv ? lvs.find((l) => l.id === apv.queue[apv.idx])?.name : undefined;
   useFields();
   const pm = (f: FDef) => permOf(f, d.company, d.status, proc);
-  const guides = useGuides(); const adm = useAuth().can('admin_it');
+  const guides = useGuides(); const [fsp, setFsp] = useSearchParams();
+  useEffect(() => { const fx = fsp.get('fix'); if (!fx) return; const t = setTimeout(() => { setErr(fx); goFix(fx); const n = new URLSearchParams(fsp); n.delete('fix'); setFsp(n, { replace: true }); }, 900); return () => clearTimeout(t); }, [d.id, fsp.get('fix')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const adm = useAuth().can('admin_it');
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key));
@@ -296,14 +301,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
         })}
       </div>
 
-      {err && (() => { const fld = err.match(/bắt buộc:\s*([^,.;]+)/i)?.[1]?.trim(); const t = /checklist/i.test(err) ? 'check' : fld ? 'field' : /excel|file/i.test(err) ? '.pp-files' : /đơn giá|danh sách|bảng|thành phẩm|nguyên liệu/i.test(err) ? '.pp-tbl' : '';
-        const go = () => { if (t === 'check') dispatchEvent(new Event('pms-goto-check'));
-          else if (t === 'field') { const lb = [...document.querySelectorAll<HTMLElement>('label.f')].find((l) => (l.textContent ?? '').trim().startsWith(fld!));
-            lb?.scrollIntoView({ behavior: 'smooth', block: 'center' }); lb?.classList.add('flash'); setTimeout(() => lb?.classList.remove('flash'), 2400);
-            (lb?.querySelector('input,select,textarea') as HTMLElement | null)?.focus({ preventScroll: true }); }
-          else { const el = document.querySelector(t) as HTMLElement | null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('flash'); setTimeout(() => el?.classList.remove('flash'), 2400); } };
-        return t ? <button type="button" className="msg err msg-go" role="alert" onClick={go}><Icon name="alert" size={18} /><span>{err}<b className="msg-go-t">{t === 'check' ? 'Xem mục còn thiếu' : t === 'field' ? 'Đi tới ô cần nhập' : 'Đi tới chỗ cần sửa'} ›</b></span></button>
-          : <div className="msg err" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>; })()}
+      <FixMsg err={err} />
       {can && !['da_duyet', 'fail'].includes(d.status) && (
         <div className="pp-act">
           {ask ? (<div className="pp-ask">

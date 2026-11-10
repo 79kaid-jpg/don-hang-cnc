@@ -1,3 +1,4 @@
+import { FixMsg } from '../components/FixMsg';
 import { viewUrl } from '../lib/viewer';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -87,7 +88,7 @@ export default function WfRun() {
           {ins.status === 'dang_chay' && (can('admin_it') || ins.started_by === me?.id) && <button className="btn sm danger" onClick={cancel}>Huỷ lượt chạy</button>}
         </div>
       </div>
-      <Msg err={err} />
+      <FixMsg err={err} />
 
       <ol className="wf-progress" aria-label="Tiến trình">
         {shownSteps.map((s, i) => { const st = stepState(s.id); return (

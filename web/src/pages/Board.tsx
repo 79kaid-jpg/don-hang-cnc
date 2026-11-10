@@ -13,6 +13,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
+import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
@@ -255,7 +256,7 @@ export default function Board() {
 }
 
 function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next' | 'back'; proc: Proc; onClose: () => void; onDone: () => void }) {
-  const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const nav = useNavigate();
   const st = c.doc?.status ?? '';
   const go = async () => { setBusy(true); setErr('');
     try { const r = await advanceDoc(c.o!, c.b, c.doc!, action, note.trim()); setBusy(false); toast(action === 'next' ? 'Đã ký' : 'Đã trả về'); if (r.warn) setTimeout(() => toast(r.warn!), 1500); onDone(); }
@@ -267,7 +268,7 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
         <span className="chip wait">{action === 'next' ? (st === 'duyet' ? (proc === 'QT0' ? 'Đã duyệt' : c.doc?.company === 'HW' ? FINAL[proc] : (c.doc?.company === 'PN' ? 'IPC' : 'Hanwa') + ' · Lập') : STATUS[FLOW[proc][FLOW[proc].indexOf(st) + 1]]) : STATUS[FLOW[proc][FLOW[proc].indexOf(st) - 1]]}</span></div>
       <p className="small muted" style={{ margin: 0 }}>{c.b.title}. {action === 'next' ? 'Ký xác nhận bước này. Cần sửa số liệu, đính kèm file thì bấm “Mở hồ sơ”.' : 'Hồ sơ quay lại bước trước, người phụ trách được báo kèm lý do.'}</p>
       <label className="f">{action === 'back' ? 'Lý do trả về *' : 'Ghi chú (tuỳ chọn)'}<textarea rows={2} autoFocus value={note} onChange={(e) => setNote(e.target.value)} /></label>
-      {err && <div className="msg err" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}
+      <FixMsg err={err} onGo={() => nav('/don/' + c.b.order_id + '?tab=' + proc + '&fix=' + encodeURIComponent(err))} />
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <Link className="btn" to={'/don/' + c.b.order_id + '?tab=' + proc}>Mở hồ sơ</Link>
         <button className={action === 'next' ? 'btn primary' : 'btn rt-go'} disabled={busy || (action === 'back' && !note.trim())} onClick={go}>{busy ? 'Đang xử lý…' : action === 'next' ? 'Ký' : 'Trả về'}</button>
