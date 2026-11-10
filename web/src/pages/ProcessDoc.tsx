@@ -36,9 +36,9 @@ export default function ProcessDoc() {
   const rows = useMemo(() => cos.flatMap((co) => FLOW[p].map((st) => ({ co, st }))), [p]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const Detail = ({ co, st }: Sel) => {
-    if (co === 'KY') { const w = who('PN', 'hoan_tat'); return <div className="pd-det">
+    if (co === 'KY') { const fc = (cp.find((x) => x.proc === p && x.role === 'hoan_tat')?.company ?? 'HW') as Company; const w = who(fc, 'hoan_tat'); return <div className="pd-det">
       <div className="pd-det-h"><span className="pd-tag ky">Ký tay</span><h3>{FINAL[p]}</h3></div>
-      <dl className="pd-dl"><dt>Ai</dt><dd>Khách / kho ký trên bản in → <b>{w.names}</b> tải bản ký và hoàn tất</dd></dl>
+      <dl className="pd-dl"><dt>Ai</dt><dd>Khách / kho ký trên bản in → <b>{w.names}</b> ({COMPANY[fc]}) tải bản ký và hoàn tất</dd></dl>
       <GuideBox g={guideByKey(guides, 'sim.final')} /></div>; }
     const role = ROLE_OF[st]; const w = who(co, role); const ck = itemsOf(tpl, p, st); const rf = reqFields(co, st); const bl = BLOCK[p + '.' + st] ?? [];
     return <div className="pd-det">
@@ -69,7 +69,7 @@ export default function ProcessDoc() {
               {p !== 'QT0' && <li className="pd-hand" aria-hidden="true">{co === 'HW' ? '' : '→ ' + (co === 'PN' ? 'IPC' : 'Hanwa')}</li>}</ol>
           </div>)}
           {p !== 'QT0' ? <div className="pd-lane ky"><div className="pd-lh">Ký tay</div><ol className="pd-steps"><li><button className={'pd-node' + (sel.co === 'KY' ? ' on' : '')} onClick={() => go({ co: 'KY', st: 'ky' })}>
-            <span className="pd-n">✍</span><span className="pd-t"><b>{FINAL[p]}</b><small>rồi PN Admin hoàn tất</small></span></button></li></ol></div>
+            <span className="pd-n">✍</span><span className="pd-t"><b>{FINAL[p]}</b><small>{(() => { const fc = (cp.find((x) => x.proc === p && x.role === 'hoan_tat')?.company ?? 'HW') as Company; return 'rồi ' + COMPANY[fc] + ' hoàn tất · ' + who(fc, 'hoan_tat').names; })()}</small></span></button></li></ol></div>
             : <p className="small muted pd-after">{AFTER.QT0}</p>}
         </div>
         <aside className="pd-side"><Detail {...sel} /></aside>
@@ -79,7 +79,7 @@ export default function ProcessDoc() {
         <div className="tbl-wrap"><table className="pp-grid"><thead><tr><th>#</th><th>Công ty</th><th>Bước</th><th>Người</th><th>Hạn</th><th>Checklist bắt buộc</th><th>Chặn chuyển khi</th></tr></thead>
           <tbody>{rows.map(({ co, st }, i) => { const w = who(co, ROLE_OF[st]); const ck = itemsOf(tpl, p, st).filter((c) => c.level === 'req'); const rf = reqFields(co, st);
             return <tr key={co + st}><td>{i + 1}</td><td>{COMPANY[co]}</td><td><b>{STATUS[st]}</b></td><td>{w.names}</td><td>{w.sla}h</td><td>{ck.map((c) => c.label).join(' · ') || '—'}</td><td>{[...(BLOCK[p + '.' + st] ?? []), ...(rf.length ? ['Thiếu: ' + rf.join(', ')] : [])].join(' · ') || '—'}</td></tr>; })}
-            {p !== 'QT0' && <tr><td>{rows.length + 1}</td><td>Ngoài hệ thống</td><td><b>{FINAL[p]}</b></td><td>Ký tay → {who('PN', 'hoan_tat').names} hoàn tất</td><td>—</td><td>—</td><td>Chưa tải bản đã ký</td></tr>}</tbody></table></div>
+            {p !== 'QT0' && <tr><td>{rows.length + 1}</td><td>Ngoài hệ thống</td><td><b>{FINAL[p]}</b></td><td>Ký tay → {(() => { const fc = (cp.find((x) => x.proc === p && x.role === 'hoan_tat')?.company ?? 'HW') as Company; return COMPANY[fc] + ': ' + who(fc, 'hoan_tat').names; })()} hoàn tất</td><td>—</td><td>—</td><td>Chưa tải bản đã ký</td></tr>}</tbody></table></div>
       </section>
 
       <section className="card pd-form"><h2>Biểu mẫu · {PHIEU[p]}</h2>

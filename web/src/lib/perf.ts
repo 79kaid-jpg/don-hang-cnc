@@ -56,7 +56,7 @@ export function computeScores(x: NonNullable<ReturnType<typeof usePerf>['data']>
   // hồ sơ đang quá hạn trên tay từng người (theo người phụ trách bước hiện tại)
   const overdue: Record<string, number> = {};
   if (!offsetDays) for (const b of bs.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky')) {
-    const st = stepOf(b, ds); const company = st.key === 'ky' ? 'PN' : st.company ?? 'PN'; const role = st.key === 'ky' ? 'hoan_tat' : ROLE_OF[st.doc?.status ?? ''];
+    const st = stepOf(b, ds); const company = st.key === 'ky' ? (cp.find((c) => c.proc === b.proc && c.role === 'hoan_tat')?.company ?? 'HW') : st.company ?? 'PN'; const role = st.key === 'ky' ? 'hoan_tat' : ROLE_OF[st.doc?.status ?? ''];
     const since = ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort().pop() ?? b.created_at;
     if (!role || (Date.now() - +new Date(since)) / 36e5 < cfg.sla_h) continue;
     const r = cp.find((c) => c.proc === b.proc && c.company === company && c.role === role); if (!r) continue;

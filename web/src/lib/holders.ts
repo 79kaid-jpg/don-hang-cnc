@@ -16,7 +16,7 @@ export function useHolders() {
   return (b: Batch, ds: Doc[]): Holder | null => {
     if (b.status !== 'dang_lam' && b.status !== 'cho_ky') return null;
     const st = stepOf(b, ds);
-    const company = st.key === 'ky' ? 'PN' : st.company ?? 'PN';
+    const company = st.key === 'ky' ? cp.find((c) => c.proc === b.proc && c.role === 'hoan_tat')?.company ?? 'HW' : st.company ?? 'PN';
     const role = st.key === 'ky' ? 'hoan_tat' : ROLE_OF[st.doc?.status ?? ''];
     if (!role) return null;
     const r = cp.find((c) => c.proc === b.proc && c.company === company && c.role === role);

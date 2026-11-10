@@ -30,6 +30,13 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
       if (e2) setErr(errText(e2)); else toast(`Đã chuyển ${data} phiếu cho ${who}`);
     }
   };
+  const setFin = async (p: string, c: string) => {
+    if (!(await confirmDialog(`Chuyển bước ký tay & hoàn tất ${p} sang ${COMPANY[c as 'PN']}? Mặc định giao cho người Lập của ${COMPANY[c as 'PN']}.`, 'Chuyển'))) return;
+    const l = get(p, c, 'lap'); const has = rows.some((x) => x.proc === p && x.role === 'hoan_tat');
+    const rec = { company: c, user_id: l?.user_id ?? null, group_id: l?.group_id ?? null };
+    const { error } = has ? await sb.from('chain_people').update(rec).eq('proc', p).eq('role', 'hoan_tat') : await sb.from('chain_people').insert({ proc: p, role: 'hoan_tat', ...rec });
+    if (error) setErr(errText(error)); else { toast('Đã chuyển sang ' + COMPANY[c as 'PN']); load(); }
+  };
   const Cell = ({ p, c, r }: { p: string; c: string; r: string }) => { const x = get(p, c, r); const v = x?.group_id ? 'g:' + x.group_id : x?.user_id ? 'p:' + x.user_id : '';
     return <select value={v} disabled={!canEdit} onChange={(e) => set(p, c, r, e.target.value)} className={!v ? 'need' : ''} aria-label={p + ' ' + c + ' ' + r}>
       <option value="">— chưa giao —</option>
@@ -38,7 +45,7 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được sửa.</span></div>}
-      <p className="small muted" style={{ margin: 0 }}>Người hoặc nhóm ở mỗi ô được làm bước đó và nhận Zalo khi hồ sơ tới lượt. Giao cho nhóm thì ai trong nhóm cũng làm được. Ô “Tải bản ký tay” là người tải bản khách / kho đã ký ở bước cuối QT1–QT3.</p>
+      <p className="small muted" style={{ margin: 0 }}>Người hoặc nhóm ở mỗi ô được làm bước đó và nhận Zalo khi hồ sơ tới lượt. Giao cho nhóm thì ai trong nhóm cũng làm được. Dòng “Ký tay & hoàn tất”: chọn công ty in mẫu cho khách ký và tải bản ký (mặc định Hanwa – bên ký với khách cuối). Ô “Tải bản ký tay” là người tải bản khách / kho đã ký ở bước cuối QT1–QT3.</p>
       {err && <div className="msg err">{err}</div>}
       {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => (
         <section key={p} className="cp-sec">
@@ -46,7 +53,10 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
           <div className="tbl-wrap"><table className="tbl cp-tbl">
             <thead><tr><th>Bước</th>{(p === 'QT0' ? ['PN' as const] : COMPANIES).map((c) => <th key={c}>{COMPANY[c]}</th>)}</tr></thead>
             <tbody>{ROWS[p].map((r) => <tr key={r}><td><b>{ROLE_NAME[r]}</b></td>{(p === 'QT0' ? ['PN'] : COMPANIES).map((c) => <td key={c}><Cell p={p} c={c} r={r} /></td>)}</tr>)}
-              {p !== 'QT0' && <tr><td><b>{ROLE_NAME.hoan_tat}</b></td><td><Cell p={p} c="PN" r="hoan_tat" /></td><td colSpan={2} className="small muted">(do Phương Nam tải lên)</td></tr>}</tbody>
+              {p !== 'QT0' && (() => { const fc = rows.find((x) => x.proc === p && x.role === 'hoan_tat')?.company ?? 'HW';
+                return <tr className="cp-fin"><td><b>Ký tay & hoàn tất</b><div className="small muted">in mẫu, tải bản ký</div></td>{COMPANIES.map((c) => <td key={c}>{c === fc
+                  ? <Cell p={p} c={c} r="hoan_tat" />
+                  : canEdit ? <button className="btn xs cp-pick" onClick={() => setFin(p, c)} title={"Chọn " + COMPANY[c]}>Chọn bên này</button> : <span className="small muted">—</span>}</td>)}</tr>; })()}</tbody>
           </table></div>
         </section>))}
     </div>);
