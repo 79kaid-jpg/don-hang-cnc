@@ -1,0 +1,2 @@
+-- Đã áp dụng qua MCP (checklist_merge_template): _ck_merge, doc_check dùng mẫu hiện hành, _checklist_gate tính theo mẫu
+-- Xem nội dung trong Supabase: pg_get_functiondef('public._ck_merge'::regproc)

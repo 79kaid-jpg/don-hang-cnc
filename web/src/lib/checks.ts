@@ -23,9 +23,13 @@ export function useChecks(): CheckTpl[] {
 }
 /** Danh sách mục của một bước: bản đã lưu trong hồ sơ, không thì lấy từ mẫu */
 export function itemsOf(tpl: CheckTpl[], proc: string, step: string, saved?: Record<string, CheckItem[]> | null): CheckItem[] {
-  const s = saved?.[step];
-  if (Array.isArray(s)) return s.map((x) => x.auto !== undefined || x.custom ? x : { ...x, auto: tpl.find((t) => t.id === x.id)?.auto ?? null });
-  return tpl.filter((t) => t.proc === proc && t.step === step).map((t) => ({ id: t.id, label: t.label, level: t.level, auto: t.auto ?? null }));
+  // Giống máy chủ (_ck_merge): mẫu hiện hành + trạng thái tick đã lưu + mục tự thêm (luôn Khuyến nghị / Cần ghi chú)
+  const s = Array.isArray(saved?.[step]) ? saved![step] : [];
+  const base = tpl.filter((t) => t.proc === proc && t.step === step).map((t) => { const o = s.find((x) => x.id === t.id);
+    return { id: t.id, label: t.label, level: t.level, auto: t.auto ?? null, ...(o ? { done: o.done, by: o.by, at: o.at, note: o.note } : {}) } as CheckItem; });
+  const own = s.filter((x) => x.custom && !tpl.some((t) => t.id === x.id)).map((x) => ({ ...x, level: (x.level === 'note' ? 'note' : 'rec') as Level }));
+  if (!tpl.length && s.length) return s; // mẫu chưa tải xong
+  return [...base, ...own];
 }
 export const progress = (it: CheckItem[]) => ({ done: it.filter((x) => x.done).length, total: it.length, miss: it.filter((x) => x.level === 'req' && !x.done).length });
 // Tải lại sau khi đăng nhập / đổi người (lần tải trước khi có phiên trả về rỗng do RLS)
