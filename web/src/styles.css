@@ -2270,3 +2270,12 @@ html[data-theme=dark] .gd-pop{background:#1f2329}
 .mw-done>summary{list-style:none;cursor:pointer;min-height:48px}.mw-done>summary::-webkit-details-marker{display:none}
 .mw-done>summary h2{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted)}
 .mw-done>summary::after{content:'▸';margin-left:auto;color:var(--muted);transition:transform .15s}.mw-done[open]>summary::after{transform:rotate(90deg)}
+/* Bảng tấm: cột # ghim có nền đặc + header dễ đọc */
+.pp-grid tbody td:first-child{background:#fff}
+.pp-grid tbody tr:nth-child(even) td:first-child{background:#FAF8F3}
+.pp-grid tbody tr:hover td:first-child{background:#F3EFE5}
+.pp-grid thead th:first-child{background:var(--soft);z-index:3}
+.pp-grid tfoot td:first-child{background:var(--soft);position:sticky;left:0;z-index:2}
+.pp-grid td:first-child,.pp-grid th:first-child{box-shadow:inset -1px 0 0 var(--line),4px 0 6px -4px rgba(20,28,40,.18)}
+.pp-grid thead th{background:var(--soft);white-space:normal;text-wrap:balance;hyphens:none;word-break:normal;overflow-wrap:normal;line-height:1.25;font-weight:600;color:var(--muted)}
+.pp-grid thead th.n{min-width:92px;max-width:120px;text-align:right}
