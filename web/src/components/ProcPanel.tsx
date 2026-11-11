@@ -313,6 +313,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
 
   return (
     <section className="card pp-doc">
+      <div className="pp-main">
       <div className="pp-doc-head">
         <div><b style={{ fontSize: 17 }}>{proc === 'QT0' ? b.title : COMPANY[d.company] + ' · ' + b.title}</b>
           <div className="small muted">Bước: <b>{d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</b>{(role || lvName) && <> · <Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}</div></div>
@@ -333,7 +334,6 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
-      {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
       {(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}
       {proc === 'QT3' && d.company === 'HW' && <div className="f qt3-end"><span>Khách nhận hàng <span className="muted small">(Hanwa đổi được; mặc định là khách cuối của dự án)</span></span>
@@ -373,6 +373,22 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
+      <FixMsg err={err} />
+      {can && !['da_duyet', 'fail'].includes(d.status) && (
+        <div className="pp-act">
+          {ask ? (<div className="pp-ask">
+            <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
+            <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
+              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
+            <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
+            {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
+            {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
+            <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
+        </div>)}
+      {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
+      {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
+      </div>
+      <aside className="pp-side">
       <div className="pp-notes">
         <b>Ghi chú nối tiếp</b>
         {d.notes.length === 0 && <span className="small muted">Chưa có ghi chú.</span>}
@@ -388,20 +404,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
         })}
       </div>
 
-      <FixMsg err={err} />
-      {can && !['da_duyet', 'fail'].includes(d.status) && (
-        <div className="pp-act">
-          {ask ? (<div className="pp-ask">
-            <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
-            <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
-              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
-            <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
-            {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
-            {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
-            <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
-        </div>)}
-      {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       <Journey d={d} proc={proc} people={people} />
+      </aside>
     </section>);
 }
 
@@ -440,6 +444,30 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
   const kg = TABLES.nl.cols.find((x) => x.k === 'kg')!; const a = sumOf(nl, kg), z = sumOf(tp, kg); const l = a ? 1 - z / a : null;
   return <div className="pp-total"><span>Nguyên liệu: <b>{fmtN(a, 1)}</b> kg</span><span>Thành phẩm: <b>{fmtN(z, 1)}</b> kg</span>
     <span className={l != null && l > 0.15 ? 'kb-late' : ''}>Hao hụt: <b>{l == null ? '' : (l * 100).toFixed(1) + '%'}</b> (định mức ~15%)</span></div>;
+}
+
+/** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
+function MList({ cols, rows, editable, open, setOpen, set, onChange, totals }: { cols: Col[]; rows: Row[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
+  const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
+  const head = cols.find((c) => !c.n) ?? cols[0];
+  const right = cols.find((c) => c.k === 'don_gia') ?? cols.find((c) => c.k === 'tt') ?? cols.find((c) => c.k === 'kg');
+  const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
+  return <div className="pp-mlist">
+    {rows.length === 0 && <div className="small muted">Chưa có dòng nào.</div>}
+    {rows.map((r, i) => <div key={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
+      <button type="button" className="pp-mrow-h" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
+        <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? c.t + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
+        {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{right.t}</span></span>}</button>
+      {open === i && <div className="pp-mrow-e">
+        {cols.map((c) => <label key={c.k} className="f"><span>{c.t}{c.req && <b className="req"> *</b>}</span>
+          {c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
+            : <input value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
+        {editable && <button type="button" className="btn sm danger-soft" onClick={() => { onChange(rows.filter((_, j) => j !== i)); setOpen(-1); }}><Icon name="trash" size={14} />Bỏ dòng</button>}
+      </div>}
+    </div>)}
+    {editable && <button type="button" className="btn sm" onClick={() => { onChange([...rows, {}]); setOpen(rows.length); }}><Icon name="plus" size={14} />Thêm dòng</button>}
+    {rows.length > 0 && Object.keys(totals).length > 0 && <div className="pp-mtot small">Tổng {rows.length} dòng · {Object.entries(totals).map(([k, v]) => { const c = cols.find((x) => x.k === k)!; return c.t + ' ' + fmtN(v, c.d ?? 0); }).join(' · ')}</div>}
+  </div>;
 }
 
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
@@ -513,10 +541,11 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
     const ws = X.utils.aoa_to_sheet([hd, ...ex]); ws['!cols'] = hd.map((h, j) => ({ wch: Math.max(10, h.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   const fileRef = useRef<HTMLInputElement>(null);
+  const [asTbl, setAsTbl] = useState(false); const [mi, setMi] = useState(-1);
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
-    <div className="pp-tbl" onPaste={editable ? pasteAny : undefined}>
+    <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined}>
       <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span></b>
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
@@ -539,6 +568,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         <button className="btn sm primary" onClick={() => applyCol(fill.k, fill.v)}>Tất cả</button>
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
+      <MList cols={cols} rows={rows} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />
+      {rows.length > 0 && <button type="button" className="link-btn pp-mtog" onClick={() => setAsTbl(!asTbl)}><Icon name={asTbl ? 'list' : 'sheet'} size={14} />{asTbl ? 'Xem dạng danh sách' : 'Xem dạng bảng'}</button>}
       <div className="tbl-wrap"><table className="tbl pp-grid">
         <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : 't'}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>

@@ -2473,3 +2473,34 @@ html[data-theme=dark] .odt-dot.s-done{background:#4CAF7A}
   .pp-step li+li::before{margin:0 2px}
   .pp-step button,.pp-step-b{padding:0 4px;gap:6px}
 }
+/* ═══ Chi tiết đơn – lần 3 ═══ */
+.pp-main,.pp-side{display:flex;flex-direction:column;gap:inherit;min-width:0}
+.pp-mlist,.pp-mtog{display:none}
+@media (min-width:1440px){
+  .pp-doc{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px 24px;align-items:start}
+  .pp-side{position:sticky;top:12px;border-left:1px solid var(--line);padding-left:20px}
+}
+@media (max-width:1024px){
+  .pp-act{position:sticky;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(6px);border-top:1px solid var(--line);margin:0 -16px;padding:10px 16px;box-shadow:0 -4px 12px rgba(20,28,40,.06)}
+}
+@media (max-width:760px){
+  .pp-act{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));margin:0 -14px;padding:10px 14px;flex-wrap:wrap}
+  .pp-act .btn.primary{flex:1 1 auto;min-height:48px}
+  .pp-act .pp-hint{flex-basis:100%}
+  .pp-tbl:not(.as-tbl) .tbl-wrap{display:none}
+  .pp-tbl:not(.as-tbl) .pp-mlist{display:flex}
+  .pp-mtog{display:inline-flex}
+  .pp-mlist{flex-direction:column;gap:6px}
+  .pp-mrow{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+  .pp-mrow.on{border-color:var(--gold)}
+  .pp-mrow-h{width:100%;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border:0;background:none;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+  .pp-mrow-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .pp-mrow-m b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pp-mrow-r{display:flex;flex-direction:column;align-items:flex-end;font-size:13px;white-space:nowrap}
+  .pp-mrow-e{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px 12px;border-top:1px solid var(--line);background:var(--soft)}
+  .pp-mrow-e output{min-height:40px;display:flex;align-items:center;font-weight:600}
+  .pp-mrow-e>.btn{grid-column:1/-1;justify-self:start}
+  .pp-mtot{padding:4px 2px;color:var(--muted)}
+}
+@media (max-width:760px){.pp-mrow-m .small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
+.qt-panel.od-panel{overflow:clip}
