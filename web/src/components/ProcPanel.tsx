@@ -17,6 +17,7 @@ import {
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row
 } from '../lib/proc';
 import { Icon } from './Icon';
+import { CoBar } from './CoBar';
 import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
 import { ReviewPdf } from './Records';
@@ -155,7 +156,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
   const adm = useAuth().can('admin_it');
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
-  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key));
+  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
   const [ship, setShip] = useState<string[]>([]); const [carriers, setCarriers] = useState<Customer[]>([]);
   const hasCarrier = hFields.some((f) => f.type === 'carrier');
@@ -253,6 +254,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
+      {proc === 'QT1' && <CoBar docId={d.id} can={can} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
