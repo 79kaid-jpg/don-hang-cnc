@@ -85,16 +85,15 @@ export default function OrderDetail() {
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card od-top od-mini">
         <div className="od-h">
-          <h1 className={coMine ? '' : 'od-nocode'}>{coMine ?? 'Chưa có mã đơn ' + viewCo}</h1>
+          <h1 title={adm0 ? 'Mã nội bộ: ' + o.code : undefined}>{o.project || 'Chưa có dự án'}</h1>
           {o.due_date && <span className={'od-due ' + dueCls(o.due_date)} title="Hạn giao"><Icon name="clock" size={13} />{date(o.due_date)}</span>}
           <span className="od-meta">
             {chain && <span title="Khách hàng"><Icon name="users" size={14} />{chain}</span>}
-            {o.project && <span title="Dự án"><Icon name="tag" size={14} />{o.project}</span>}
+
           </span>
           <Link className="btn sm icon-btn od-map" to={'/so-do?don=' + o.id} aria-label="Xem trên sơ đồ" title="Xem trên sơ đồ"><Icon name="flow" size={18} /></Link>
         </div>
-        {(coAll.length > 0 || adm0) && <div className="od-codes" aria-label="Mã đơn các công ty">{coAll.map((r) => <span key={r.id} className={'od-cc' + (r.company === viewCo ? ' on' : '')} title={'Mã đơn ' + r.company}><b>{r.company}</b>{r.code}</span>)}
-          {adm0 && <span className="od-cc int" title="Mã nội bộ hệ thống"><b>Nội bộ</b>{o.code}</span>}</div>}
+        {coAll.some((r) => r.company === viewCo) && <div className="od-codes" aria-label={'Mã đơn ' + viewCo}>{coAll.filter((r) => r.company === viewCo).map((r) => <span key={r.id} className="od-cc on" title={'Mã đơn ' + r.company}><b>{r.company}</b>{r.code}</span>)}</div>}
         <ol className="od-pills" aria-label="Tiến độ 4 quy trình">
           {PROCS.map((p) => { const s = sum(p); return (
             <li key={p}><button className={'od-pill ' + p.toLowerCase() + ' s-' + s.cls + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })} aria-current={tab === p ? 'step' : undefined} title={PROC_SHORT[p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}>

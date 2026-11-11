@@ -2388,3 +2388,5 @@ html[data-glass=facade]:not([data-theme=dark]) .skel{background:rgba(255,255,255
 .xs-st.ok{background:#E2F3E9;color:#245A39}.xs-st.warn{background:#FBEFD9;color:#7A4E06}
 details.xs-st{display:inline-block}details.xs-st summary{cursor:pointer;display:inline-flex;align-items:center;gap:4px;list-style:none}
 .xs-st.bad{background:#FBE1DC;color:#9A1C12}
+.od-cc{min-height:24px;font-size:12px;padding:1px 8px 1px 2px}.od-cc b{font-size:10.5px;padding:1px 6px}
+@media (max-width:760px){.od-codes{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.od-codes::-webkit-scrollbar{display:none}.od-cc{flex:none}}
