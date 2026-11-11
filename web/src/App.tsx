@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Skeleton } from './components/ui';
+import { useEffect, useState , lazy, Suspense } from 'react';
 import { Appearance } from './components/Appearance';
 import { scrollTop, scrollToY } from './lib/scroll';
 import { NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
@@ -12,23 +13,23 @@ import Orders from './pages/Orders';
 import Board from './pages/Board';
 import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
-import Admin from './pages/Admin';
-import FlowMap from './pages/FlowMap';
+const Admin = lazy(() => import('./pages/Admin'));
+const FlowMap = lazy(() => import('./pages/FlowMap'));
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
 import { Bell } from './components/Bell';
 import { AccountMenu } from './components/AccountMenu';
 import { ShortcutHost } from './components/Shortcuts';
-import WfHome from './wf/WfHome';
-import WfEditor from './wf/WfEditor';
-import WfRun from './wf/WfRun';
-import WfPrint from './wf/WfPrint';
+const WfHome = lazy(() => import('./wf/WfHome'));
+const WfEditor = lazy(() => import('./wf/WfEditor'));
+const WfRun = lazy(() => import('./wf/WfRun'));
+const WfPrint = lazy(() => import('./wf/WfPrint'));
 import './wf/wf.css';
-import Dashboard from './pages/Dashboard';
-import ProjectReport from './pages/ProjectReport';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProjectReport = lazy(() => import('./pages/ProjectReport'));
 import { Viewer } from './components/Viewer';
-import ProcessDoc from './pages/ProcessDoc';
-import Simulate from './pages/Simulate';
+const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
+const Simulate = lazy(() => import('./pages/Simulate'));
 
 function Shell() {
   const { session, me, can, acting, real, stopActing } = useAuth();
@@ -137,7 +138,7 @@ function Shell() {
             <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
             <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}
-        <Routes>
+        <Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/thong-ke" element={<Dashboard />} />
           <Route path="/bao-cao-du-an" element={<ProjectReport />} />
@@ -156,7 +157,7 @@ function Shell() {
           <Route path="/quy-trinh" element={<ProcessDoc />} />
           <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+        </Routes></Suspense>
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
