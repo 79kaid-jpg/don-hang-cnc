@@ -13,6 +13,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
+import { useMyCo, useCoIdx } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 
@@ -31,7 +32,8 @@ let kbCache: { u?: string; a: Batch[]; b: Order[]; c: Customer[]; d: Mine[]; e: 
 export default function Board() {
   const nav = useNavigate(); const ckTpl = useChecks(); useFields();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
-  const { can: canA, me: meP } = useAuth(); const adm = canA('admin_it');
+  const { can: canA, me: meP } = useAuth(); const { co: viewCo } = useMyCo(); const CI = useCoIdx();
+  const coCode = (order: string, batch: string) => CI.codeOf(order, viewCo, qt === 'QT1' ? batch : undefined); const adm = canA('admin_it');
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
   const [picking, setPicking] = useState(false);
@@ -58,7 +60,7 @@ export default function Board() {
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
       // Phần của công ty mình đã duyệt, hồ sơ đang ở công ty khác / chờ khách ký → cột "Đã duyệt · đang ở bên khác"
       return docs.some((x) => x.batch_id === b.id && x.company === myCo && x.status === 'da_duyet') ? COLS.findIndex((c) => c.key === 'xong_minh') : -1; })() };
-  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm]); // eslint-disable-line
+  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title + ' ' + CI.text(c.b.order_id)).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm, CI.ready]); // eslint-disable-line
   // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
   const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);
     return Math.max(+new Date(c.doc?.status_at ?? 0), ...ds.map((x) => +new Date(x.status_at ?? 0)), +new Date((c.b as { updated_at?: string }).updated_at ?? 0)); };
@@ -217,7 +219,7 @@ export default function Board() {
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
-                          <span className="kb-top"><span className="kb-code">{it.o?.code}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
+                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <span className="kb-nocode">Chưa có mã</span>}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
                             const n = Math.ceil((new Date(dd + 'T23:59:59').getTime() - Date.now()) / 864e5); const done = ['hoan_tat', 'fail'].includes(it.b.status);
                             const cls = done ? '' : n < 0 ? ' late' : n <= 3 ? ' soon' : '';
                             return <span className={'kb-due' + cls} title={'Hạn giao ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />Giao {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}

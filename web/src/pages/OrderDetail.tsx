@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useMyCo, useCoIdx } from '../lib/myco';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -28,7 +29,9 @@ const TABS = [['F0', 'F0 Tiếp nhận'], ['QT0', 'QT0 Bóc tách'], ['QT1', 'QT
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 
 export default function OrderDetail() {
+  const { co: viewCo } = useMyCo(); const CI = useCoIdx(); const adm0 = useAuth().can('admin_it');
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
+  const coAll = CI.allOf(id).sort((a, z) => ['PN', 'IPC', 'HW'].indexOf(a.company) - ['PN', 'IPC', 'HW'].indexOf(z.company)); const coMine = CI.codeOf(id, viewCo);
   const tab0 = sp.get('tab') ?? 'QT0'; const tab = TABS.some(([k]) => k === tab0) ? tab0 : 'QT0';
   const { can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
@@ -81,7 +84,7 @@ export default function OrderDetail() {
       <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
       <div className="card od-top od-mini">
         <div className="od-h">
-          <h1>{o.code}</h1>
+          <h1 className={coMine ? '' : 'od-nocode'}>{coMine ?? 'Chưa có mã đơn ' + viewCo}</h1>
           {o.due_date && <span className={'od-due ' + dueCls(o.due_date)} title="Hạn giao"><Icon name="clock" size={13} />{date(o.due_date)}</span>}
           <span className="od-meta">
             {chain && <span title="Khách hàng"><Icon name="users" size={14} />{chain}</span>}
@@ -89,6 +92,8 @@ export default function OrderDetail() {
           </span>
           <Link className="btn sm icon-btn od-map" to={'/so-do?don=' + o.id} aria-label="Xem trên sơ đồ" title="Xem trên sơ đồ"><Icon name="flow" size={18} /></Link>
         </div>
+        {(coAll.length > 0 || adm0) && <div className="od-codes" aria-label="Mã đơn các công ty">{coAll.map((r) => <span key={r.id} className={'od-cc' + (r.company === viewCo ? ' on' : '')} title={'Mã đơn ' + r.company}><b>{r.company}</b>{r.code}</span>)}
+          {adm0 && <span className="od-cc int" title="Mã nội bộ hệ thống"><b>Nội bộ</b>{o.code}</span>}</div>}
         <ol className="od-pills" aria-label="Tiến độ 4 quy trình">
           {PROCS.map((p) => { const s = sum(p); return (
             <li key={p}><button className={'od-pill ' + p.toLowerCase() + ' s-' + s.cls + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })} aria-current={tab === p ? 'step' : undefined} title={PROC_SHORT[p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}>

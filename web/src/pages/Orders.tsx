@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, type Customer, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useMyCo, useCoIdx } from '../lib/myco';
 import { date } from '../lib/format';
 import { Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -12,7 +13,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3']; const PAGE = 30;
 
 export default function Orders() {
-  const { can } = useAuth(); const nav = useNavigate();
+  const { can } = useAuth(); const nav = useNavigate(); const { co: myCo } = useMyCo(); const CI = useCoIdx(); const adm = can('admin_it');
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(''); const [qq, setQq] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
   const [kq, setKq] = useState<'' | 'ok' | 'fail'>('');
@@ -23,7 +24,7 @@ export default function Orders() {
   // Tải theo trang (30 đơn) – lọc mã/dự án, quá hạn, sắp hạn, đơn đã xong ngay trên máy chủ
   const today = new Date().toISOString().slice(0, 10); const in3 = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
   const query = (head = false) => { let x = sb.from('orders').select('*', head ? { count: 'exact', head: true } : undefined);
-    if (qq) x = x.or(`code.ilike.%${qq.replace(/[%,()]/g, ' ')}%,project.ilike.%${qq.replace(/[%,()]/g, ' ')}%`);
+    if (qq) { const ids = [...new Set(CI.match(qq))].slice(0, 100); x = x.or(`code.ilike.%${qq.replace(/[%,()]/g, ' ')}%,project.ilike.%${qq.replace(/[%,()]/g, ' ')}%` + (ids.length ? `,id.in.(${ids.join(',')})` : '')); }
     if (!done && !kq) x = x.not('status', 'in', '(hoan_tat,huy)');
     return x; };
   const load = async (reset: boolean) => {
@@ -84,7 +85,7 @@ export default function Orders() {
           {list.map(({ o, due, hs, stuck, steps }) => (
             <li key={o.id}><div role="link" tabIndex={0} className={'oc ' + (due?.cls ?? '') + (stuck ? ' stuck' : '')} onClick={() => nav('/don/' + o.id)} onKeyDown={(e) => e.key === 'Enter' && nav('/don/' + o.id)}>
               <div className="oc-a">
-                <Link to={'/don/' + o.id} className="oc-code" onClick={(e) => e.stopPropagation()}>{o.code}</Link>
+                <Link to={'/don/' + o.id} className="oc-code" onClick={(e) => e.stopPropagation()}>{CI.codeOf(o.id, myCo) ?? <span className="kb-nocode">Chưa có mã</span>}</Link>{adm && <span className="small muted">{o.code}</span>}
                 {due && <span className={'chip ' + ({ late: 'bad', soon: 'warn', done: 'done', off: 'idle' } as Record<string, string>)[due.cls]}><Icon name={due.ic} size={13} />{due.t}</span>}
                 <span className="oc-due small muted"><Icon name="clock" size={13} />{date(o.due_date)}</span>
               </div>

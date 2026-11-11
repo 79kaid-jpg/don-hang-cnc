@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useMyCo, setViewCo, type Co } from '../lib/myco';
 
 /** Giao diện: sáng / tối / theo máy + cỡ chữ (lưu trên máy này) */
 type Th = 'light' | 'dark' | 'auto'; type Fs = 'md' | 'lg';
@@ -12,6 +13,7 @@ export function applyAppearance() {
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#1b1813' : get('ui-glass', 'off') === 'facade' ? '#14181D' : '#E4ECF5');
 }
 export function Appearance() {
+  const mc = useMyCo();
   const [th, setTh] = useState<Th>(get('ui-theme', 'light') as Th); const [fs, setFs] = useState<Fs>(get('ui-fs', 'md') as Fs); const [gl, setGl] = useState(get('ui-glass', 'off'));
   useEffect(() => { try { localStorage.setItem('ui-theme', th); localStorage.setItem('ui-fs', fs); localStorage.setItem('ui-glass', gl); } catch { /* */ } applyAppearance(); }, [th, fs, gl]);
   return (
@@ -27,6 +29,10 @@ export function Appearance() {
           <button type="button" role="radio" aria-checked={gl === 'on'} title="Khung kính mờ (chế độ sáng)" onClick={() => setGl('on')}><Icon name="star" size={15} /><span>Kính</span></button>
           <button type="button" role="radio" aria-checked={gl === 'facade'} title="Tấm nhôm đục lỗ (chế độ sáng)" onClick={() => setGl('facade')}><Icon name="fgrid" size={15} /><span>Facade</span></button>
         </div></div>
+      {mc.canSwitch && <div className="ap-row"><span className="ap-lb">Xem mã đơn</span>
+        <div className="ap-seg" role="radiogroup" aria-label="Xem mã đơn theo công ty">
+          {(['PN', 'IPC', 'HW'] as Co[]).map((c) => <button key={c} type="button" role="radio" aria-checked={mc.co === c} onClick={() => setViewCo(c)}><span>{c}</span></button>)}
+        </div></div>}
       <div className="ap-row"><span className="ap-lb">Cỡ chữ</span>
         <div className="ap-seg" role="radiogroup" aria-label="Cỡ chữ">
           <button type="button" role="radio" aria-checked={fs === 'md'} title="Chữ vừa" onClick={() => setFs('md')}><span className="ap-a1">A</span><span>Vừa</span></button>
