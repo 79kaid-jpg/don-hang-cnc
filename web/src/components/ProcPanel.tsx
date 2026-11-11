@@ -18,7 +18,7 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { CoBar, CoLink } from './CoBar';
-import { reloadCoIdx } from '../lib/myco';
+import { reloadCoIdx, useCoIdx, useMyCo } from '../lib/myco';
 import { checkExcelFile, compareExcel, type XCheck } from '../lib/excelCheck';
 import { CustomerPicker } from './CustomerPicker';
 import { Journey } from './Journey';
@@ -64,9 +64,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
       </div>
       {creating && <NewBatch o={o} proc={proc} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); setBid(id); setCo(''); load(); }} />}
       {batches.length === 0 ? <div className="empty"><Icon name="inbox" size={28} /><b>Chưa có hồ sơ {proc} cho đơn này</b><span className="small muted">Bấm “{'Bắt đầu ' + proc}” để mở.</span></div> : (<>
-        {batches.length > 1 && <div className="pp-batches" role="tablist">{batches.map((b) => (
-          <button key={b.id} role="tab" aria-selected={B?.id === b.id} className={B?.id === b.id ? 'on' : ''} onClick={() => { setBid(b.id); setCo(''); }}>
-            {b.title}<span className={'pp-bs ' + b.status}>{b.status === 'dang_lam' ? 'đang làm' : b.status === 'cho_ky' ? 'chờ ký tay' : b.status === 'hoan_tat' ? 'xong' : b.status}</span></button>))}</div>}
+        {batches.length > 1 && B && <BatchSel o={o} batches={batches} B={B} onPick={(id) => { setBid(id); setCo(''); }} />}
         {B && <Chain proc={proc} b={B} docs={bDocs} sel={D?.company} onPick={setCo} />}
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
@@ -74,6 +72,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
         {B && B.proc === 'QT2' && <Check5 b={B} />}
         {D && B && D.can_view === false && <div className="card lock-card"><Icon name="shield" size={22} /><div><b>Hồ sơ của {COMPANY[D.company]}</b><br />
           <span className="small muted">Bạn chỉ xem được hồ sơ của công ty mình. Tiến độ: {D.status === 'da_duyet' ? 'đã duyệt' : D.status === 'fail' ? 'thất bại' : 'đang xử lý'}.</span></div></div>}
+        {B && cur && proc !== 'QT0' && <YourTurn o={o} b={B} cur={cur} />}
         {D && B && D.can_view !== false && <DocView key={D.id + D.status} o={o} b={B} d={D} people={people} onChanged={load} />}
       </>)}
     </div>);
@@ -85,14 +84,47 @@ function Chain({ proc, b, docs, sel, onPick }: { proc: Proc; b: Batch; docs: Doc
     return <ol className="pp-chain">{FLOW.QT0.map((s, k) => <li key={s} className={done || k < i ? 'done' : k === i ? 'cur' : ''}><StepDot n={k + 1} done={done || k < i} p={prog[s]} />{STATUS[s]}</li>)}
       <li className={done ? 'done' : d?.status === 'fail' ? 'bad' : ''}><span className="dot">{done ? <Icon name="check" size={12} /> : '★'}</span>{d?.status === 'fail' ? 'Fail' : 'DS tấm đã ký'}</li></ol>;
   }
+  const SH: Record<string, string> = { PN: 'PN', IPC: 'IPC', HW: 'HW' };
   return (
-    <ol className="pp-chain co">
-      {COMPANIES.map((c) => { const d = docs.find((x) => x.company === c); const st = !d ? 'todo' : d.status === 'da_duyet' ? 'done' : 'cur';
-        return <li key={c} className={'c-' + c + ' ' + st + (sel === c ? ' sel' : '')}>
-          <button disabled={!d} onClick={() => onPick(c)}><span className="dot">{st === 'done' ? <Icon name="check" size={12} /> : c === 'PN' ? 1 : c === 'IPC' ? 2 : 3}</span>
-            <b>{COMPANY[c]}</b><span className="small">{!d ? 'chưa tới' : STATUS[d.status]}</span></button></li>; })}
-      <li className={b.status === 'hoan_tat' ? 'done' : b.status === 'cho_ky' ? 'cur' : 'todo'}><span className="dot">{b.status === 'hoan_tat' ? <Icon name="check" size={12} /> : '✍'}</span><b>{FINAL[proc]}</b><span className="small">ký tay</span></li>
+    <ol className="pp-step" aria-label="Tiến độ các công ty">
+      {COMPANIES.map((c) => { const d = docs.find((x) => x.company === c); const st = !d ? 'todo' : d.status === 'da_duyet' ? 'done' : d.status === 'fail' ? 'bad' : 'cur';
+        return <li key={c} className={st + (sel === c ? ' sel' : '')}>
+          <button type="button" disabled={!d} onClick={() => onPick(c)} aria-pressed={sel === c} title={COMPANY[c] + ': ' + (!d ? 'chưa tới' : STATUS[d.status])}>
+            <span className="dot">{st === 'done' ? <Icon name="check" size={11} /> : st === 'bad' ? '!' : ''}</span>
+            <span className="pp-step-t"><b>{SH[c] ?? c}</b><small>{!d ? 'chưa tới' : STATUS[d.status]}</small></span></button></li>; })}
+      <li className={b.status === 'hoan_tat' ? 'done' : b.status === 'cho_ky' ? 'cur' : 'todo'}><span className="pp-step-b" title={FINAL[proc]}>
+        <span className="dot">{b.status === 'hoan_tat' ? <Icon name="check" size={11} /> : ''}</span><span className="pp-step-t"><b>Ký</b><small>{b.status === 'hoan_tat' ? 'đã ký' : b.status === 'cho_ky' ? 'chờ ký' : 'ký tay'}</small></span></span></li>
     </ol>);
+}
+
+const BS = (s: string) => s === 'dang_lam' ? 'đang làm' : s === 'cho_ky' ? 'chờ ký tay' : s === 'hoan_tat' ? 'xong' : s === 'fail' ? 'thất bại' : s;
+/** Chọn đơn (lần/lệnh/đợt) theo mã của công ty người xem */
+function BatchSel({ o, batches, B, onPick }: { o: Order; batches: Batch[]; B: Batch; onPick: (id: string) => void }) {
+  const { co } = useMyCo(); const { codeOf } = useCoIdx();
+  const lb = (b: Batch) => codeOf(o.id, co, b.id) || b.title;
+  const i = batches.findIndex((x) => x.id === B.id);
+  const ref = useRef<HTMLDetailsElement>(null);
+  return <>
+    <div className="pp-bseg" role="tablist" aria-label="Chọn đơn">{batches.map((b) => (
+      <button key={b.id} type="button" role="tab" aria-selected={B.id === b.id} className={B.id === b.id ? 'on' : ''} onClick={() => onPick(b.id)} title={b.title}>
+        <b>{lb(b)}</b><span className={'pp-bs ' + b.status}>{BS(b.status)}</span></button>))}</div>
+    <details className="pp-bdd" ref={ref}><summary><span className="pp-bco">{co}</span><b>{lb(B)}</b><span className="small muted">{i + 1}/{batches.length}</span><span aria-hidden="true" className="muted">▾</span></summary>
+      <div className="pp-bmenu" role="listbox">{batches.map((b) => (
+        <button key={b.id} type="button" role="option" aria-selected={B.id === b.id} className={B.id === b.id ? 'on' : ''} onClick={() => { if (ref.current) ref.current.open = false; onPick(b.id); }}>
+          <b>{lb(b)}</b><span className="small muted">{b.title} · {BS(b.status)}</span></button>))}</div></details>
+  </>;
+}
+
+/** Thẻ "Việc của bạn": bước đang chạy, mã đơn của mình, tham chiếu PN */
+function YourTurn({ o, b, cur }: { o: Order; b: Batch; cur: Doc }) {
+  const { co } = useMyCo(); const { codeOf } = useCoIdx();
+  if (b.status !== 'dang_lam') return null;
+  const mine = cur.company === co; const my = codeOf(o.id, co, b.id); const pn = co !== 'PN' ? codeOf(o.id, 'PN', b.id) : null;
+  return <div className={'card pp-turn' + (mine ? ' mine' : '')}>
+    <span className="pp-turn-k">{mine ? 'Việc của bạn' : 'Đang chờ'}</span>
+    <b className="pp-turn-t">{COMPANY[cur.company]} · {STATUS[cur.status]}</b>
+    {(my || pn) && <dl className="pp-turn-d">{my && <><dt>Mã đơn {co}</dt><dd>{my}</dd></>}{pn && <><dt>Tham chiếu PN</dt><dd>{pn}</dd></>}</dl>}
+  </div>;
 }
 
 function Check5({ b }: { b: Batch }) {
