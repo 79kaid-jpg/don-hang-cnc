@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -42,6 +42,7 @@ export default function OrderDetail() {
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
   const load = useCallback(async () => {
+    reloadCoIdx();
     const [a, g, h, i, j] = await Promise.all([
       sb.from('orders').select('*').eq('id', id).single(),
       sb.from('profiles').select('*'),

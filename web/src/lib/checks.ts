@@ -1,3 +1,4 @@
+import { compareExcel, type XCheck } from './excelCheck';
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import { fieldsOf, permOf } from './fields';
@@ -40,8 +41,9 @@ sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESH
  *  t:<bảng>        bảng có ít nhất 1 dòng
  *  c:<bảng>.<cột>  mọi dòng của bảng đã nhập cột này
  *  f:<loại file>   đã tải file loại này
+ *  x:<loại file>   file Excel bóc tách hợp lệ và khớp danh sách tấm
  *  req             mọi trường bắt buộc của bước đã nhập (ô thông tin + file) */
-type DocData = { header?: Record<string, string>; tables?: Record<string, Record<string, unknown>[]>; files?: { kind: string }[] };
+type DocData = { header?: Record<string, string>; tables?: Record<string, Record<string, unknown>[]>; files?: { kind: string; check?: XCheck }[] };
 const filled = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
 export function evalAuto(rule: string, d: DocData, reqKeys: { h: string[]; f: string[] } = { h: [], f: [] }): boolean {
   const [k, a = ''] = [rule.slice(0, rule.indexOf(':') < 0 ? rule.length : rule.indexOf(':')), rule.split(':').slice(1).join(':')];
@@ -49,6 +51,8 @@ export function evalAuto(rule: string, d: DocData, reqKeys: { h: string[]; f: st
   if (k === 't') return (d.tables?.[a] ?? []).length > 0;
   if (k === 'c') { const [tb, col] = a.split('.'); const rs = d.tables?.[tb] ?? []; return rs.length > 0 && rs.every((r) => filled(r[col])); }
   if (k === 'f') return (d.files ?? []).some((f) => f.kind === a);
+  // x:<loại file> – file Excel đã kiểm và khớp danh sách tấm (ds)
+  if (k === 'x') { const fs = (d.files ?? []).filter((f) => f.kind === a); return fs.length > 0 && fs.every((f) => f.check && compareExcel(f.check, d.tables?.ds ?? []).ok); }
   if (k === 'req') return reqKeys.h.every((x) => filled(d.header?.[x])) && reqKeys.f.every((x) => (d.files ?? []).some((f) => f.kind === x));
   return false;
 }
@@ -61,7 +65,7 @@ export function applyAuto(items: CheckItem[], d: DocData, reqKeys?: { h: string[
     return x; });
   return { items: out, changed };
 }
-export const AUTO_HINT = (rule: string) => rule === 'req' ? 'đủ trường bắt buộc' : rule.startsWith('h:') ? 'ô thông tin đã nhập' : rule.startsWith('t:') ? 'bảng có dữ liệu' : rule.startsWith('c:') ? 'cột đã nhập đủ' : rule.startsWith('f:') ? 'đã tải file' : '';
+export const AUTO_HINT = (rule: string) => rule === 'req' ? 'đủ trường bắt buộc' : rule.startsWith('x:') ? 'file Excel bóc tách khớp danh sách tấm' : rule.startsWith('h:') ? 'ô thông tin đã nhập' : rule.startsWith('t:') ? 'bảng có dữ liệu' : rule.startsWith('c:') ? 'cột đã nhập đủ' : rule.startsWith('f:') ? 'đã tải file' : '';
 export const reqKeysOf = (proc: Proc, co: string, status: string) => ({
   h: fieldsOf(proc, 'header').filter((f) => permOf(f, co, status, proc) === 'required').map((f) => f.key),
   f: fieldsOf(proc, 'file').filter((f) => permOf(f, co, status, proc) === 'required').map((f) => f.key) });

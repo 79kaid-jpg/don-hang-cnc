@@ -25,8 +25,8 @@ export function StepDot({ n, done, p }: { n: number | string; done: boolean; p?:
 }
 
 /** Thanh bước của phiếu QT1–QT3 (Lập → Kiểm tra → Duyệt), mỗi bước kèm vòng checklist */
-export function DocSteps({ proc, d }: { proc: Proc; d: DocCk }) {
-  const prog = useStepProg(proc, d); const fl = FLOW[proc]; const fin = d.status === 'da_duyet';
+export function DocSteps({ proc, d, live }: { proc: Proc; d: DocCk; live?: Partial<DocCk> }) {
+  const prog = useStepProg(proc, live ? { ...d, ...live } as DocCk : d); const fl = FLOW[proc]; const fin = d.status === 'da_duyet';
   const ci = fl.indexOf(d.status === 'duyet_them' ? 'duyet' : d.status);
   return <ol className="pp-chain doc-steps" aria-label="Các bước của phiếu">{fl.map((s, k) =>
     <li key={s} className={fin || k < ci ? 'done' : k === ci ? 'cur' : ''}><StepDot n={k + 1} done={fin || k < ci} p={prog[s]} />{STATUS[s]}</li>)}</ol>;
@@ -152,5 +152,6 @@ function AutoPick({ proc, value, disabled, onChange }: { proc: Proc; value: stri
     <optgroup label="⚡ Bảng có dữ liệu">{tbs.map((t) => <option key={t.k} value={'t:' + t.k}>{t.t}</option>)}</optgroup>
     <optgroup label="⚡ Cột đã nhập đủ mọi dòng">{tbs.flatMap((t) => t.cols.filter((c) => !c.calc).map((c) => <option key={t.k + c.k} value={'c:' + t.k + '.' + c.k}>{t.t} · {c.t}</option>))}</optgroup>
     <optgroup label="⚡ Đã tải file">{fs.map((f) => <option key={f.key} value={'f:' + f.key}>{f.label}</option>)}</optgroup>
+    {fs.some((f) => f.key === 'excel') && <optgroup label="⚡ Excel khớp danh sách tấm"><option value="x:excel">Excel bóc tách khớp danh sách tấm</option></optgroup>}
   </select>;
 }

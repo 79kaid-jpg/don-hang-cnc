@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sb, type Approval, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { DOC, ORDER_STATUS, dt } from '../lib/format';
 import { Chip, Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -43,7 +43,7 @@ export default function MyWork() {
   const [rows, setRows] = useState<M[] | null>(null); const [fq, setFq] = useState('');
   const [st, setSt] = useState<{ run: number; late: number; stuck: number } | null>(null);
   const [mine, setMine] = useState<{ id: string; order_id: string; proc: Proc; code: string; title: string; action: string; at: string }[]>([]);
-  useEffect(() => { if (!me) return;
+  useEffect(() => { if (!me) return; reloadCoIdx();
     Promise.all([sb.from('orders').select('id, code, due_date, status'), sb.from('batches').select('id, order_id, proc, title, status'), sb.from('docs_v').select('id, batch_id, status_at, signs')]).then(([o, b, d]) => {
       const os = (o.data ?? []) as Pick<Order, 'id' | 'code' | 'due_date' | 'status'>[]; const bs = (b.data ?? []) as Batch[]; const ds = (d.data ?? []) as Doc[];
       const live = bs.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky');

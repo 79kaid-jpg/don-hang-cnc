@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, type Customer, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { date } from '../lib/format';
 import { Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -28,7 +28,7 @@ export default function Orders() {
     if (!done && !kq) x = x.not('status', 'in', '(hoan_tat,huy)');
     return x; };
   const load = async (reset: boolean) => {
-    const g = reset ? ++gen.current : gen.current; setBusy(true);
+    const g = reset ? ++gen.current : gen.current; setBusy(true); if (reset) reloadCoIdx();
     const from = reset ? 0 : rows?.length ?? 0;
     let x = query(); if (f === 'late') x = x.lt('due_date', today); if (f === 'soon') x = x.gte('due_date', today).lte('due_date', in3);
     const { data } = await x.order('created_at', { ascending: false }).range(from, from + PAGE - 1);

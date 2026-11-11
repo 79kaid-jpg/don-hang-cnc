@@ -13,7 +13,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 
@@ -43,6 +43,7 @@ export default function Board() {
   const [col, setCol] = useState(''); const holder = useHolders();
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
   const load = async () => {
+    reloadCoIdx();
     const [a, b, c, d, e] = await Promise.all([
       sb.from('batches').select('*').or(`status.in.(dang_lam,cho_ky),and(status.in.(hoan_tat,fail),done_at.gte.${new Date(Date.now() - 14 * 864e5).toISOString()})`).order('created_at'),
       sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs_v').select('*')]);
@@ -225,7 +226,7 @@ export default function Board() {
                             return <span className={'kb-due' + cls} title={'Hạn giao ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />Giao {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                               {!done && (n < 0 ? ' · trễ ' + -n + 'n' : n <= 3 ? (n === 0 ? ' · hôm nay' : ' · còn ' + n + 'n') : '')}</span>; })()}</span>
                           <span className="kb-pj">{(it.o?.project ?? '').replace(/^\[(TEST|MẪU)\]\s*/i, '') || '—'}</span>
-                          <span className="small muted kb-sub">{[it.b.title, (() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
+                          <span className="small muted kb-sub"><b className="kb-bt">{it.b.title}</b>{' · '}{[(() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
                         {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
                           const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];

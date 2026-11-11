@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sb, errText } from '../lib/supabase';
 import { useCompanies, type CoOrder } from '../lib/coorders';
+import { reloadCoIdx } from '../lib/myco';
 import { useAuth } from '../lib/auth';
 import { Icon } from './Icon';
 import { toast, confirmDialog } from './ui';
@@ -19,7 +20,7 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
   if (!co) return null;
   const me = cos?.find((c) => c.code === co.company); const canCode = (me?.allow_edit && (can || adm)) || role('admin_it'); const canRef = can || adm;
   const saveCode = async () => { if (ed === null) return; setBusy(true); const { data, error } = await sb.rpc('co_set_code', { p_doc: docId, p_code: ed }); setBusy(false);
-    if (error) return toast(errText(error)); setEd(null); toast('Đã đổi mã: ' + data); load(); };
+    if (error) return toast(errText(error)); setEd(null); toast('Đã đổi mã: ' + data); load(); reloadCoIdx(); };
   const setRef = async (id: string) => { const { error } = await sb.rpc('co_set_ref', { p_doc: docId, p_ref: id || null }); if (error) return toast(errText(error)); load(); };
   const copy = async () => { if (!(await confirmDialog('Chép danh sách tấm từ đơn tham chiếu? Danh sách hiện tại sẽ bị thay; giá để trống cho bạn nhập.', 'Chép'))) return;
     const { data, error } = await sb.rpc('co_copy_ref', { p_doc: docId }); if (error) return toast(errText(error));

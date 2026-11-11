@@ -18,6 +18,8 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { CoBar, CoLink } from './CoBar';
+import { reloadCoIdx } from '../lib/myco';
+import { checkExcelFile, compareExcel, type XCheck } from '../lib/excelCheck';
 import { CustomerPicker } from './CustomerPicker';
 import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
@@ -37,6 +39,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   const [bid, setBid] = useState(''); const [co, setCo] = useState<Company | ''>('');
   const [creating, setCreating] = useState(autoNew);
   const load = useCallback(async () => {
+    reloadCoIdx();
     const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
     const bs = (b as Batch[]) ?? []; setBatches(bs);
     if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); setDocs((d as Doc[]) ?? []); } else setDocs([]);
@@ -257,9 +260,11 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     const old = replace ? files.filter((x) => x.kind === kind) : [];
     const nf = files.filter((x) => !old.includes(x));
     for (const file of Array.from(e.target.files ?? [])) {
+      let check: XCheck | undefined;
+      if (kind === 'excel') { const r = await checkExcelFile(file); if (!r.ok) { setErr(r.error); e.target.value = ''; return; } check = r.c; }
       const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
-      nf.push({ kind, name: file.name, path, at: new Date().toISOString() });
+      nf.push({ kind, name: file.name, path, at: new Date().toISOString(), ...(check ? { check } : {}) });
     }
     e.target.value = '';
     if (await persist(nf, replace ? 'Đã thay file' : 'Đã tải file') && old.length) sb.storage.from('files').remove(old.map((x) => x.path));
@@ -289,7 +294,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
       {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
-      {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} />}
+      {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
       {(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}
@@ -319,6 +324,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
               {mine.map((x) => <span key={x.path} className="row" style={{ gap: 2 }}><FileLink f={x} />
                 {ed && <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>}</span>)}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
+              {k === 'excel' && mine.length > 0 && <XStatus files={mine as never} ds={(t.ds ?? []) as never} />}
               {ed && mine.length > 0 && <label className="btn xs" title="Thay toàn bộ file hiện có bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
               {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
       </div>
@@ -486,7 +492,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
       {msg && <div className="small muted">{msg}</div>}
       {hdr && <div className="fill-bar" role="dialog" aria-label={'Đặt chung ' + colT(hdr.k)}>
         <span className="fill-t"><Icon name="list" size={15} /><span>Đặt chung <b>{colT(hdr.k)}</b> cho {rows.length} dòng</span></span>
-        <input autoFocus value={hdr.v} inputMode="decimal" onChange={(e) => setHdr({ ...hdr, v: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter' && hdr.v.trim()) applyCol(hdr.k, hdr.v); if (e.key === 'Escape') setHdr(null); }} placeholder="Nhập giá trị" />
+        <input autoFocus value={hdr.v} inputMode="decimal" onChange={(e) => setHdr({ ...hdr, v: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); /* phải bấm nút, không tự áp dụng */ if (e.key === 'Escape') setHdr(null); }} placeholder="Nhập giá trị" />
         <button className="btn sm primary" disabled={!hdr.v.trim()} onClick={() => applyCol(hdr.k, hdr.v)}>Áp dụng tất cả</button>
         <button className="btn sm" disabled={!hdr.v.trim()} onClick={() => applyCol(hdr.k, hdr.v, true)}>Chỉ ô trống</button>
         <button className="btn sm icon-btn" onClick={() => setHdr(null)} aria-label="Đóng"><Icon name="x" size={15} /></button></div>}
@@ -503,7 +509,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
           {rows.map((r, i) => <tr key={i}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={c.n ? 'n' : 't'}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
+                data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
+                  const nx = (e.currentTarget.closest('table') as HTMLElement | null)?.querySelector<HTMLInputElement>('[data-cell="' + (i + 1) + ':' + c.k + '"]'); if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
               : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
           {editable && rows.length === 0 && <tr><td colSpan={cols.length + 2}><div className="pp-dropzone" tabIndex={0} role="textbox" aria-label="Dán dữ liệu từ Excel">
@@ -558,4 +565,14 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
 }
 function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   viewHtml(docHtml(o, b, d, people, false), PROC_NAME[b.proc] + ' · ' + b.title);
+}
+
+/** Kết quả đối chiếu Excel bóc tách ↔ danh sách tấm */
+function XStatus({ files, ds }: { files: { name: string; check?: XCheck }[]; ds: Record<string, unknown>[] }) {
+  const f = files.find((x) => x.check); if (!f?.check) return <span className="xs-st warn" title="File tải trước khi có kiểm tra – tải lại để đối chiếu"><Icon name="alert" size={13} />Chưa kiểm tra file</span>;
+  const r = compareExcel(f.check, ds);
+  if (r.ok) return <span className="xs-st ok"><Icon name="check" size={13} />Khớp {r.fileRows} mã · {r.fileQty} tấm</span>;
+  return <details className="xs-st warn"><summary><Icon name="alert" size={13} />Lệch: file {r.fileRows} mã/{r.fileQty} tấm · danh sách {r.listRows} mã/{r.listQty} tấm</summary>
+    {r.missing.length > 0 && <div className="small">Thiếu trong danh sách: {r.missing.slice(0, 20).join(', ')}{r.missing.length > 20 ? '…' : ''}</div>}
+    {r.extra.length > 0 && <div className="small">Không có trong file: {r.extra.slice(0, 20).join(', ')}{r.extra.length > 20 ? '…' : ''}</div>}</details>;
 }

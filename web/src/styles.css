@@ -2384,3 +2384,7 @@ html[data-glass=facade]:not([data-theme=dark]) .skel{background:rgba(255,255,255
 .prr-prog small{grid-column:1/-1;color:var(--muted);font-weight:500}
 @media (max-width:600px){.prr-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.prr-prog{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .prr-prog span{color:var(--qc)}
+.kb-bt{color:var(--ink);font-weight:700}
+.xs-st{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:6px}
+.xs-st.ok{background:#E2F3E9;color:#245A39}.xs-st.warn{background:#FBEFD9;color:#7A4E06}
+details.xs-st{display:inline-block}details.xs-st summary{cursor:pointer;display:inline-flex;align-items:center;gap:4px;list-style:none}
