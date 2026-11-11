@@ -35,7 +35,7 @@ function Shell() {
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
   // Trình tạo quy trình: hiện mục menu cho người thiết kế, hoặc người đang có việc / phiếu duyệt trong quy trình mới
-  const [wfN, setWfN] = useState(0);
+  const [wfN, setWfN] = useState(() => { try { return Number(localStorage.getItem('wf-n') ?? 0); } catch { return 0; } });
   // Menu trái: ẩn/hiện (nhớ theo trình duyệt); khi ẩn có nút nổi để mở menu dạng lớp phủ
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('side-hidden') === '1'; } catch { return false; } });
   const [peek, setPeek] = useState(false); const [sheet, setSheet] = useState(false);
@@ -58,7 +58,7 @@ function Shell() {
   useEffect(() => { if (navType !== 'POP') scrollToY(0); }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { let y = 0; const f = () => { const t = scrollTop(); const d = t - y; if (Math.abs(d) > 8) { document.body.classList.toggle('scroll-down', d > 0 && t > 80); y = t; } };
     addEventListener('scroll', f, { passive: true, capture: true }); return () => removeEventListener('scroll', f, { capture: true }); }, []);
-  useEffect(() => { if (me) sb.rpc('wf_inbox').then(({ data }) => setWfN(((data ?? []) as unknown[]).length)); }, [me]);
+  useEffect(() => { if (me) sb.rpc('wf_inbox').then(({ data }) => { const n = ((data ?? []) as unknown[]).length; setWfN(n); try { localStorage.setItem('wf-n', String(n)); } catch { /* */ } }); }, [me]);
   useEffect(() => {
     if (!me) return;
     const count = () => sb.from('approvals').select('id', { count: 'exact', head: true })

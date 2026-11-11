@@ -2289,7 +2289,7 @@ html[data-glass=facade]:not([data-theme=dark]){
   --cham:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%);
   --bg:#E9ECEF; --r:4px; --r-sm:3px;
 }
-html[data-glass=facade]:not([data-theme=dark]) body{background-color:#E9ECEF;background-image:var(--fc-mesh),var(--fc-fold);background-size:8px 8px,420px 420px,420px 420px;background-attachment:fixed}
+html[data-glass=facade]:not([data-theme=dark]) body{background-color:#E9ECEF;background-image:var(--fc-mesh),var(--fc-fold);background-size:8px 8px,420px 420px,420px 420px}
 /* thanh trên (điện thoại) + menu dưới: than đục lỗ */
 html[data-glass=facade]:not([data-theme=dark]) .topbar{background-color:var(--fc-ink)!important;background-image:var(--fc-dark),linear-gradient(115deg,rgba(255,255,255,.06) 0 40%,transparent 40%)!important;background-size:7px 7px,100% 100%!important;border-bottom:0;color:#fff;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html[data-glass=facade]:not([data-theme=dark]) .topbar .tb-title,html[data-glass=facade]:not([data-theme=dark]) .topbar .tb-btn{color:#fff}
@@ -2316,3 +2316,6 @@ html[data-glass=facade]:not([data-theme=dark]) .btn.primary:hover{background-col
 html[data-glass=facade]:not([data-theme=dark]) .btn.primary:focus-visible{outline:0;box-shadow:inset 0 0 0 3px var(--fc-glow)}
 html[data-glass=facade]:not([data-theme=dark]) .chip{border-radius:2px}
 @media (prefers-reduced-motion:reduce){html[data-glass=facade] .bottom-nav a.active::after{animation:none}}
+html[data-glass=facade]:not([data-theme=dark]) .skel{background:rgba(255,255,255,.6);box-shadow:inset 0 0 0 1px rgba(40,52,66,.08);animation:fc-skel 1.6s ease-in-out infinite}
+@keyframes fc-skel{0%,100%{opacity:.55}50%{opacity:.9}}
+@media (prefers-reduced-motion:reduce){html[data-glass=facade] .skel{animation:none}}

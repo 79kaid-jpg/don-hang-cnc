@@ -25,6 +25,9 @@ const ENTRY = ['tiep_nhan', 'boc_tach', 'tao_ds', 'lap'];
 const NEXT_BTN: Record<string, string> = { tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Chuyển tạo DS tấm', tao_ds: 'Gửi kiểm tra', lap: 'Gửi kiểm tra', kiem_tra: 'Gửi duyệt', duyet: 'Duyệt', duyet_them: 'Duyệt' };
 type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: boolean; i: number };
 
+/** Bộ nhớ tạm trong phiên: mở lại Kanban hiện ngay, không chớp màn chờ */
+let kbCache: { u?: string; a: Batch[]; b: Order[]; c: Customer[]; d: Mine[]; e: Doc[] } | null = null;
+
 export default function Board() {
   const nav = useNavigate(); const ckTpl = useChecks(); useFields();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
@@ -41,10 +44,12 @@ export default function Board() {
     const [a, b, c, d, e] = await Promise.all([
       sb.from('batches').select('*').or(`status.in.(dang_lam,cho_ky),and(status.in.(hoan_tat,fail),done_at.gte.${new Date(Date.now() - 14 * 864e5).toISOString()})`).order('created_at'),
       sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs_v').select('*')]);
-    setBatches((a.data as Batch[]) ?? []); setOrders(Object.fromEntries(((b.data as Order[]) ?? []).map((x) => [x.id, x])));
-    setCust(Object.fromEntries(((c.data as Customer[]) ?? []).map((x) => [x.id, x]))); setMine((d.data as Mine[]) ?? []); setDocs((e.data as Doc[]) ?? []);
+    kbCache = { u: meP?.id, a: (a.data as Batch[]) ?? [], b: (b.data as Order[]) ?? [], c: (c.data as Customer[]) ?? [], d: (d.data as Mine[]) ?? [], e: (e.data as Doc[]) ?? [] }; apply(kbCache);
   };
-  useEffect(() => { load(); }, []);
+  const apply = (k: NonNullable<typeof kbCache>) => { setBatches(k.a); setOrders(Object.fromEntries(k.b.map((x) => [x.id, x])));
+    setCust(Object.fromEntries(k.c.map((x) => [x.id, x]))); setMine(k.d); setDocs(k.e); };
+  // Hiện ngay dữ liệu lần trước (trong phiên), rồi cập nhật ngầm
+  useEffect(() => { if (kbCache && kbCache.u === meP?.id) apply(kbCache); load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
   const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')),
     ...(!adm && qt !== 'QT0' ? [{ key: 'xong_minh', title: 'Đang ở bên khác', group: 'Đã duyệt' }] : []), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
@@ -182,7 +187,7 @@ export default function Board() {
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
           {PROCS.map((p) => <button key={p} role="tab" aria-selected={qt === p} className={(qt === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => pick(p)}>
-            <b>{p}</b><span>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span><span className="kb-count">{countIn(p)}</span></button>)}
+            <b>{p}</b><span>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span><span className="kb-count">{batches ? countIn(p) : '–'}</span></button>)}
         </div>
         <div className="qt-panel" key={qt}>
           <div className="kb-picker" role="tablist" aria-label="Chọn bước">
@@ -207,7 +212,7 @@ export default function Board() {
                   <div className="kb-list">
                     {(tgt || eat === i) && <div className={'kb-slot open' + (isBack ? ' back' : '') + (eat === i ? ' eat' : '')} aria-hidden="true"><span className="kb-slot-mouth" />
                       <span className="kb-slot-txt"><Icon name={isBack ? 'back' : 'inbox'} size={16} />{isBack ? 'Thả để trả về' : 'Thả để ký, chuyển sang'} {c.title}</span></div>}
-                    {!batches ? <Skeleton rows={2} h={110} /> : list.length === 0 && <p className="kb-empty">Không có hồ sơ</p>}
+                    {!batches ? <Skeleton rows={1} h={110} /> : list.length === 0 && <p className="kb-empty">Không có hồ sơ</p>}
                     {list.map((it) => (
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
