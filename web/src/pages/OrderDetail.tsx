@@ -128,7 +128,7 @@ type P = { o: Order; lines: Line[]; can: (r: string) => boolean; load: () => voi
 
 function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<string, Customer>; people: Record<string, Profile> }) {
   const editable = can('admin_it') || ((can('kinh_doanh') || can('admin_cnc')) && ['tiep_nhan', 'boc_tach', 'kiem_tra_f1', 'xndh'].includes(o.status));
-  const [f, setF] = useState({ project: o.project, contact: o.contact, channel: o.channel, description: o.description, due_date: o.due_date ?? '', quote_due: o.quote_due ?? '', extractor_id: o.extractor_id ?? '' });
+  const [f, setF] = useState({ project: o.project, project_id: (o as { project_id?: string | null }).project_id ?? '', customer_id: o.customer_id ?? '', contact: o.contact, channel: o.channel, description: o.description, due_date: o.due_date ?? '', quote_due: o.quote_due ?? '', extractor_id: o.extractor_id ?? '' });
   const [extra, setExtra] = useState<Record<string, string>>(((o as Order & { extra?: Record<string, string> }).extra) ?? {});
   const [files, setFiles] = useState<{ name: string; url: string }[]>([]);
   const listFiles = useCallback(async () => {
@@ -140,7 +140,7 @@ function F0({ o, can, load, setErr, setOk, cust, people }: P & { cust: Record<st
   }, [o.id]);
   useEffect(() => { listFiles(); }, [listFiles]);
   const save = async () => {
-    const { error } = await sb.from('orders').update({ ...f, extra, due_date: f.due_date || null, quote_due: f.quote_due || null, extractor_id: f.extractor_id || null }).eq('id', o.id);
+    const { error } = await sb.from('orders').update({ ...f, customer_id: undefined, project_id: f.project_id || null, extra, due_date: f.due_date || null, quote_due: f.quote_due || null, extractor_id: f.extractor_id || null }).eq('id', o.id);
     if (error) setErr(errText(error)); else { setOk('Đã lưu F0.'); load(); }
   };
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
