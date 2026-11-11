@@ -17,7 +17,7 @@ import {
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row
 } from '../lib/proc';
 import { Icon } from './Icon';
-import { CoBar } from './CoBar';
+import { CoBar, CoLink } from './CoBar';
 import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
 import { ReviewPdf } from './Records';
@@ -97,21 +97,58 @@ function Check5({ b }: { b: Batch }) {
 function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose: () => void; onDone: (id: string) => void }) {
   const [title, setTitle] = useState(''); const [use0, setUse0] = useState(true); const [ck, setCk] = useState<Record<string, boolean>>({}); const [err, setErr] = useState('');
   const n = Object.values(ck).filter(Boolean).length;
+  // Tách đơn: chọn tấm từ QT0 · QT2/QT3: chọn đơn PN
+  const [rows0, setRows0] = useState<Row[] | null>(null); const [used, setUsed] = useState<Record<number, string>>({}); const [pick, setPick] = useState<Set<number>>(new Set());
+  const [pnOrders, setPnOrders] = useState<{ id: string; code: string }[]>([]); const [coId, setCoId] = useState('');
+  useEffect(() => {
+    if (proc === 'QT1') (async () => {
+      const { data: bs } = await sb.from('batches').select('id, proc, status, done_at, title').eq('order_id', o.id);
+      const b0 = ((bs ?? []) as Batch[]).filter((x) => x.proc === 'QT0' && x.status === 'hoan_tat').sort((a, z) => (z.done_at ?? '').localeCompare(a.done_at ?? ''))[0];
+      if (!b0) return setRows0([]);
+      const q1 = ((bs ?? []) as Batch[]).filter((x) => x.proc === 'QT1');
+      const { data: ds } = await sb.from('docs_v').select('batch_id, company, tables').in('batch_id', [b0.id, ...q1.map((x) => x.id)]);
+      const all = (ds ?? []) as { batch_id: string; company: string; tables: Record<string, Row[]> }[];
+      const r0 = all.find((d) => d.batch_id === b0.id)?.tables?.ds ?? []; setRows0(r0);
+      const key = (r: Row) => [r.ma_tam, r.vat_lieu, r.day, r.dai, r.rong].join('|');
+      const u: Record<number, string> = {};
+      all.filter((d) => d.company === 'PN' && d.batch_id !== b0.id).forEach((d) => { const ks = new Set((d.tables?.ds ?? []).map(key)); const t = q1.find((x) => x.id === d.batch_id)?.title ?? '';
+        r0.forEach((r, i) => { if (ks.has(key(r))) u[i] = t; }); });
+      setUsed(u); setPick(new Set(r0.map((_, i) => i).filter((i) => !u[i])));
+    })();
+    if (proc === 'QT2' || proc === 'QT3') sb.from('co_orders').select('id, code').eq('order_id', o.id).eq('company', 'PN').order('created_at').then(({ data }) => {
+      const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); if (l.length === 1) setCoId(l[0].id); });
+  }, [o.id, proc]);
+  const weld = (r: Row) => Number(String(r.duong_han ?? '').replace(',', '.')) > 0;
+  const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
   const go = async () => {
     setErr('');
-    const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0 } : proc === 'QT2' ? { checklist: ck } : {} });
+    const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
   return (
     createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-      <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.code}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+      <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.project ?? ''}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
       <label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
-      {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tắt khi phải tách đơn: khác giá cong/thẳng, hàn/không hàn, đơn quá lớn)</span></span></label>}
+      {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tách đơn: chỉ tick các tấm thuộc đơn này)</span></span></label>}
+      {proc === 'QT1' && use0 && rows0 !== null && (rows0.length === 0 ? <p className="small muted">Chưa có danh sách tấm QT0 đã duyệt.</p> : <div className="nb-pick">
+        <div className="nb-pick-h"><b>Chọn tấm cho XNĐH này</b><span className="small muted">{pick.size}/{rows0.length} tấm</span></div>
+        <div className="nb-flt">
+          <button type="button" className="chip" onClick={() => sel((_, i) => !used[i])}>Chưa dùng</button>
+          <button type="button" className="chip" onClick={() => sel((r, i) => !used[i] && weld(r))}>Có hàn</button>
+          <button type="button" className="chip" onClick={() => sel((r, i) => !used[i] && !weld(r))}>Không hàn</button>
+          <button type="button" className="chip" onClick={() => sel(() => true)}>Tất cả</button>
+          <button type="button" className="chip" onClick={() => setPick(new Set())}>Bỏ chọn</button></div>
+        <ul className="nb-rows">{rows0.map((r, i) => <li key={i}><label className={'nb-row' + (pick.has(i) ? ' on' : '') + (used[i] ? ' used' : '')}>
+          <input type="checkbox" checked={pick.has(i)} onChange={() => { const n2 = new Set(pick); if (n2.has(i)) n2.delete(i); else n2.add(i); setPick(n2); }} />
+          <span className="nb-t"><b>{String(r.ma_tam ?? '#' + (i + 1))}</b><span className="small muted">{[r.vat_lieu, r.day && r.day + 'mm', r.so_tam && r.so_tam + ' tấm', weld(r) && 'có hàn'].filter(Boolean).join(' · ')}</span>{used[i] && <span className="nb-used">Đã ở {used[i]}</span>}</span></label></li>)}</ul>
+      </div>)}
+      {(proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && <label className="f">Thuộc đơn PN *<select value={coId} onChange={(e) => setCoId(e.target.value)}>
+        <option value="">— Chọn đơn —</option>{pnOrders.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select></label>}
       {proc === 'QT2' && <div className="f">Đủ 5 điều kiện mới được lập lệnh ({n}/5)
         {CHECK5.map((t, i) => <label key={t} className={'ck-item' + (ck['c' + (i + 1)] ? ' on' : '')}><input type="checkbox" checked={!!ck['c' + (i + 1)]} onChange={() => setCk({ ...ck, ['c' + (i + 1)]: !ck['c' + (i + 1)] })} /><span>{t}</span></label>)}</div>}
       {err && <div className="msg err"><Icon name="alert" size={18} /><span>{err}</span></div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Huỷ</button>
-        <button className="btn primary" disabled={proc === 'QT2' && n < 5} onClick={go}>{proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
+        <button className="btn primary" disabled={(proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)} onClick={go}>{proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
     </div></div>, document.body));
 }
 
@@ -254,6 +291,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       <ReviewPdf docId={d.id} status={d.status} />
+      {(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}
       {proc === 'QT1' && <CoBar docId={d.id} can={can} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };

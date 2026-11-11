@@ -45,3 +45,15 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
       </div>}
     </div>);
 }
+
+/** QT2/QT3: hồ sơ thuộc đơn nào – hiện mã đơn của công ty đang xem hồ sơ (theo chuỗi tham chiếu từ đơn PN) */
+export function CoLink({ coOrderId, company }: { coOrderId: string | null | undefined; company: string }) {
+  const [code, setCode] = useState<string | null>(null);
+  useEffect(() => { if (!coOrderId) return setCode(null);
+    sb.from('co_orders').select('id, company, code, ref_id').then(({ data }) => { const all = (data ?? []) as { id: string; company: string; code: string; ref_id: string | null }[];
+      let cur = all.find((x) => x.id === coOrderId);
+      while (cur && cur.company !== company) { const nx = all.find((x) => x.ref_id === cur!.id); if (!nx) break; cur = nx; }
+      setCode(cur && cur.company === company ? cur.code : null); }); }, [coOrderId, company]);
+  if (!coOrderId) return null;
+  return <div className="cob cob-link"><span className="cob-lb">Thuộc đơn {company}</span><b className="cob-v">{code ?? 'Chưa có đơn ' + company + ' tham chiếu'}</b></div>;
+}

@@ -2359,3 +2359,13 @@ html[data-glass=facade]:not([data-theme=dark]) .skel{background:rgba(255,255,255
 .od-cc.on{border-color:var(--gold);color:var(--gold-ink);background:var(--gold-tint)}.od-cc.on b{background:var(--gold);color:#fff}
 .od-cc.int{border-style:dashed}
 .oc-a .small.muted{white-space:nowrap}
+/* Tách đơn: chọn tấm từ QT0 */
+.nb-pick{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line2);border-radius:var(--r-sm);padding:10px;background:var(--soft)}
+.nb-pick-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.nb-flt{display:flex;flex-wrap:wrap;gap:6px}.nb-flt .chip{cursor:pointer;min-height:34px}
+.nb-rows{list-style:none;margin:0;padding:0;max-height:min(46vh,380px);overflow:auto;display:flex;flex-direction:column;gap:4px}
+.nb-row{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 10px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);cursor:pointer}
+.nb-row.on{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}.nb-row.used:not(.on){opacity:.65}
+.nb-row input{width:20px;height:20px;flex:none}.nb-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.cob-link{padding:8px 14px}.cob-link .cob-v{font-size:15px;overflow-wrap:anywhere}
+.nb-t b{overflow-wrap:anywhere;font-size:14px}.nb-used{font-size:12px;font-weight:600;color:var(--gold-ink)}
