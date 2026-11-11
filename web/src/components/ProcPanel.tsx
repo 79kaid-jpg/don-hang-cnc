@@ -256,6 +256,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
     if (!(await confirmDialog(`Gỡ file “${name}”?`, 'Gỡ file'))) return;
     if (await persist(files.filter((x) => x.path !== path), 'Đã gỡ ' + name)) sb.storage.from('files').remove([path]);
   };
+  const [xv, setXv] = useState(0);
   const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string, replace = false) => {
     const old = replace ? files.filter((x) => x.kind === kind) : [];
     const nf = files.filter((x) => !old.includes(x));
@@ -267,7 +268,10 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
       nf.push({ kind, name: file.name, path, at: new Date().toISOString(), ...(check ? { check } : {}) });
     }
     e.target.value = '';
-    if (await persist(nf, replace ? 'Đã thay file' : 'Đã tải file') && old.length) sb.storage.from('files').remove(old.map((x) => x.path));
+    const saved = await persist(nf, replace ? 'Đã thay file' : 'Đã tải file');
+    if (saved && old.length) sb.storage.from('files').remove(old.map((x) => x.path));
+    // Máy chủ kiểm lại file Excel bóc tách (kết quả dùng để chặn chuyển bước)
+    if (saved && kind === 'excel') { for (const x of nf.filter((y) => y.kind === 'excel' && !files.some((z) => z.path === y.path))) await sb.functions.invoke('excel-check', { body: { path: x.path } }); setXv((v) => v + 1); }
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
@@ -324,7 +328,7 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
               {mine.map((x) => <span key={x.path} className="row" style={{ gap: 2 }}><FileLink f={x} />
                 {ed && <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>}</span>)}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
-              {k === 'excel' && mine.length > 0 && <XStatus files={mine as never} ds={(t.ds ?? []) as never} />}
+              {k === 'excel' && mine.length > 0 && <XStatus key={xv} files={mine as never} ds={(t.ds ?? []) as never} canRecheck={ed} />}
               {ed && mine.length > 0 && <label className="btn xs" title="Thay toàn bộ file hiện có bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
               {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
       </div>
@@ -567,12 +571,20 @@ function printDoc(o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   viewHtml(docHtml(o, b, d, people, false), PROC_NAME[b.proc] + ' · ' + b.title);
 }
 
-/** Kết quả đối chiếu Excel bóc tách ↔ danh sách tấm */
-function XStatus({ files, ds }: { files: { name: string; check?: XCheck }[]; ds: Record<string, unknown>[] }) {
-  const f = files.find((x) => x.check); if (!f?.check) return <span className="xs-st warn" title="File tải trước khi có kiểm tra – tải lại để đối chiếu"><Icon name="alert" size={13} />Chưa kiểm tra file</span>;
-  const r = compareExcel(f.check, ds);
-  if (r.ok) return <span className="xs-st ok"><Icon name="check" size={13} />Khớp {r.fileRows} mã · {r.fileQty} tấm</span>;
-  return <details className="xs-st warn"><summary><Icon name="alert" size={13} />Lệch: file {r.fileRows} mã/{r.fileQty} tấm · danh sách {r.listRows} mã/{r.listQty} tấm</summary>
-    {r.missing.length > 0 && <div className="small">Thiếu trong danh sách: {r.missing.slice(0, 20).join(', ')}{r.missing.length > 20 ? '…' : ''}</div>}
-    {r.extra.length > 0 && <div className="small">Không có trong file: {r.extra.slice(0, 20).join(', ')}{r.extra.length > 20 ? '…' : ''}</div>}</details>;
+/** Kết quả đối chiếu Excel bóc tách ↔ danh sách tấm – ưu tiên kết quả máy chủ (excel_checks) */
+function XStatus({ files, ds, canRecheck }: { files: { name: string; path: string; check?: XCheck }[]; ds: Record<string, unknown>[]; canRecheck?: boolean }) {
+  const [srv, setSrv] = useState<Record<string, { ok: boolean; error: string | null; codes: string[]; qty: number; rows: number }> | null>(null); const [busy, setBusy] = useState(false);
+  const load = () => sb.from('excel_checks').select('*').in('path', files.map((f) => f.path)).then(({ data }) => setSrv(Object.fromEntries(((data ?? []) as { path: string; ok: boolean; error: string | null; codes: string[]; qty: number; rows: number }[]).map((r) => [r.path, r]))));
+  useEffect(() => { load(); }, [files.map((f) => f.path).join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recheck = async () => { setBusy(true); for (const f of files) await sb.functions.invoke('excel-check', { body: { path: f.path } }); await load(); setBusy(false); };
+  if (!srv) return <span className="xs-st"><Icon name="clock" size={13} />Đang kiểm…</span>;
+  const f = files[0]; const r = srv[f.path];
+  const again = canRecheck && <button type="button" className="btn xs" disabled={busy} onClick={recheck}>{busy ? 'Đang kiểm…' : 'Kiểm tra lại'}</button>;
+  if (!r) return <span className="row" style={{ gap: 6 }}><span className="xs-st warn"><Icon name="alert" size={13} />Máy chủ chưa kiểm file này</span>{again}</span>;
+  if (!r.ok) return <span className="row" style={{ gap: 6 }}><span className="xs-st bad"><Icon name="x" size={13} />File không hợp lệ: {r.error}</span>{again}</span>;
+  const c = compareExcel({ codes: r.codes, qty: Number(r.qty), rows: r.rows }, ds);
+  if (c.ok) return <span className="xs-st ok"><Icon name="check" size={13} />Khớp {c.fileRows} mã · {c.fileQty} tấm</span>;
+  return <details className="xs-st warn"><summary><Icon name="alert" size={13} />Lệch: file {c.fileRows} mã/{c.fileQty} tấm · danh sách {c.listRows} mã/{c.listQty} tấm</summary>
+    {c.missing.length > 0 && <div className="small">Thiếu trong danh sách: {c.missing.slice(0, 20).join(', ')}{c.missing.length > 20 ? '…' : ''}</div>}
+    {c.extra.length > 0 && <div className="small">Không có trong file: {c.extra.slice(0, 20).join(', ')}{c.extra.length > 20 ? '…' : ''}</div>}</details>;
 }

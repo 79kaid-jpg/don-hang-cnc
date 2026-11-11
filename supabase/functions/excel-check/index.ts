@@ -18,12 +18,13 @@ const num = (v: unknown) => { const n = Number(String(v ?? '').replace(/\s/g, ''
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const user = createClient(URL_, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: 'Bearer ' + jwt } } });
+  const user = createClient(URL_, req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: 'Bearer ' + jwt } } });
   const { data: u } = await user.auth.getUser(jwt); if (!u?.user) return json({ error: 'Chưa đăng nhập' }, 401);
   const { path } = await req.json().catch(() => ({ path: '' }));
   if (typeof path !== 'string' || !path || path.includes('..')) return json({ error: 'Thiếu đường dẫn file' }, 400);
   // File phải đang gắn vào hồ sơ mà người gọi xem được (docs_v theo quyền của người gọi)
-  const { data: owned } = await user.from('docs_v').select('id').contains('files', [{ path }]).limit(1);
+  const { data: holder } = await svc.from('docs').select('id').contains('files', JSON.stringify([{ path }])).limit(1);
+  const { data: owned } = holder?.length ? await user.from('docs_v').select('id').eq('id', holder[0].id).limit(1) : { data: [] };
   if (!owned?.length) return json({ error: 'Không tìm thấy file trong hồ sơ bạn xem được' }, 403);
   let res: { ok: boolean; error?: string; codes?: string[]; qty?: number; rows?: number } = { ok: false };
   const name = path.split('/').pop() ?? path;
