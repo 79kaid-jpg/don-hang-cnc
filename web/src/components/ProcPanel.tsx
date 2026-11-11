@@ -37,6 +37,7 @@ const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v)
 export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
   const [bid, setBid] = useState(''); const [co, setCo] = useState<Company | ''>('');
+  const [info, setInfo] = useState(false);
   const [creating, setCreating] = useState(autoNew);
   const load = useCallback(async () => {
     reloadCoIdx();
@@ -53,12 +54,13 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   return (
     <div className="pp">
       <div className="pp-head">
-        <div><h2 style={{ margin: 0 }} className="row"><QtTag qt={proc} /> {PROC_NAME[proc]}</h2>
-          <p className="small muted" style={{ margin: '4px 0 0' }}>{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
+        <div style={{ minWidth: 0 }}><h2 style={{ margin: 0 }} className="row pp-h2"><QtTag qt={proc} /> {PROC_NAME[proc]}
+          <button type="button" className="btn xs icon-btn pp-info" aria-expanded={info} aria-label="Hướng dẫn quy trình" title="Hướng dẫn quy trình" onClick={() => setInfo(!info)}><Icon name="info" size={15} /></button></h2>
+          {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
             : proc === 'QT1' ? 'Phương Nam lập → duyệt → IPC chép danh sách, đổi giá → duyệt → Hanwa → duyệt. Mỗi bên in bộ của mình cho khách ký.'
             : proc === 'QT2' ? 'Đầu vào là Excel lệnh gia công từ phần mềm sản xuất. Một đơn có thể chia nhiều lệnh. Cả 3 công ty đều lập hồ sơ.'
-            : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p></div>
-        <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{batches.length ? 'Mở ' + BATCH_WORD[proc] + ' mới' : 'Bắt đầu ' + proc}</button>
+            : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p>}</div>
+        <button className={batches.length ? 'btn sm ghost pp-new' : 'btn primary'} onClick={() => setCreating(true)}><Icon name="plus" size={16} />{batches.length ? (proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới') : 'Bắt đầu ' + proc}</button>
       </div>
       {creating && <NewBatch o={o} proc={proc} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); setBid(id); setCo(''); load(); }} />}
       {batches.length === 0 ? <div className="empty"><Icon name="inbox" size={28} /><b>Chưa có hồ sơ {proc} cho đơn này</b><span className="small muted">Bấm “{'Bắt đầu ' + proc}” để mở.</span></div> : (<>

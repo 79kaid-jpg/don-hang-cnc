@@ -82,29 +82,31 @@ export default function OrderDetail() {
   const dueCls = (d: string) => { const n = Math.ceil((new Date(d + 'T23:59:59').getTime() - Date.now()) / 864e5); return n < 0 ? 'late' : n <= 3 ? 'soon' : ''; };
   return (
     <>
-      <Link to="/bang" className="small" style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32 }}><Icon name="back" size={16} />Bảng đơn hàng</Link>
-      <div className="card od-top od-mini">
-        <div className="od-h">
-          <h1 title={adm0 ? 'Mã nội bộ: ' + o.code : undefined}>{o.project || 'Chưa có dự án'}</h1>
-          {o.due_date && <span className={'od-due ' + dueCls(o.due_date)} title="Hạn giao"><Icon name="clock" size={13} />{date(o.due_date)}</span>}
-          <span className="od-meta">
-            {chain && <span title="Khách hàng"><Icon name="users" size={14} />{chain}</span>}
-
-          </span>
-          <Link className="btn sm icon-btn od-map" to={'/so-do?don=' + o.id} aria-label="Xem trên sơ đồ" title="Xem trên sơ đồ"><Icon name="flow" size={18} /></Link>
+      <header className="odh">
+        <div className="odh-r">
+          <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" title="Về bảng đơn hàng"><Icon name="back" size={20} /></Link>
+          <div className="odh-t">
+            <h1>{o.project || 'Chưa có dự án'}</h1>
+            <div className="odh-sub">{chain && <span>{chain}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>
+          </div>
+          <Link className="btn sm odh-map" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Sơ đồ</Link>
+          <details className="odh-more"><summary className="btn icon-btn" aria-label="Thêm"><Icon name="more" size={20} /></summary>
+            <div className="odh-menu" role="menu">
+              <Link role="menuitem" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link>
+              <button role="menuitem" type="button" onClick={() => setSp({ tab: 'QT1', new: '1' })}><Icon name="plus" size={16} />Tách đơn mới (XNĐH)</button>
+              {coAll.filter((r) => r.company === viewCo).length > 0 && <div className="odh-mi"><span className="small muted">Mã đơn {viewCo}</span>{coAll.filter((r) => r.company === viewCo).map((r) => <b key={r.id}>{r.code}</b>)}</div>}
+              {adm0 && <div className="odh-mi"><span className="small muted">Mã nội bộ</span><b>{o.code}</b></div>}
+            </div></details>
         </div>
-        {coAll.some((r) => r.company === viewCo) && <div className="od-codes" aria-label={'Mã đơn ' + viewCo}>{coAll.filter((r) => r.company === viewCo).map((r) => <span key={r.id} className="od-cc on" title={'Mã đơn ' + r.company}><b>{r.company}</b>{r.code}</span>)}</div>}
-        <ol className="od-pills" aria-label="Tiến độ 4 quy trình">
-          {PROCS.map((p) => { const s = sum(p); return (
-            <li key={p}><button className={'od-pill ' + p.toLowerCase() + ' s-' + s.cls + (tab === p ? ' on' : '')} onClick={() => setSp({ tab: p })} aria-current={tab === p ? 'step' : undefined} title={PROC_SHORT[p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}>
-              <i className="od-dot">{s.cls === 'done' ? <Icon name="check" size={11} /> : s.cls === 'bad' ? <Icon name="x" size={11} /> : null}</i>
-              <b>{p}</b><span className="od-pill-t">{s.d || s.t}</span>{s.since && <Age since={s.since} />}
-            </button></li>); })}
-        </ol>
-      </div>
-      <div className="qt-group od-group"><div className="qt-tabs" role="tablist">
-        {TABS.map(([k, t]) => <button style={{ whiteSpace: 'nowrap' }} key={k} role="tab" aria-selected={tab === k} className={(tab === k ? 'on ' : '') + (k.startsWith('QT') ? 'q' + k.slice(2) : '')} onClick={() => setSp({ tab: k })}><b>{t.split(' ')[0]}</b><span>{t.split(' ').slice(1).join(' ') || '\u00a0'}</span></button>)}
-      </div><div className="qt-panel od-panel" key={tab}>
+        <nav className="odt" role="tablist" aria-label="Quy trình">
+          {TABS.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null;
+            return <button key={k} role="tab" aria-selected={tab === k} className={'odt-b' + (tab === k ? ' on' : '') + (s ? '' : ' odt-x')} onClick={() => setSp({ tab: k })} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
+              {s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}<span className="odt-k">{k === 'F0' ? 'Tiếp nhận' : k === 'CT' ? 'Chứng từ' : k === 'LS' ? 'Lịch sử' : k}</span>{s && <span className="odt-n">{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
+          <details className="odt-more"><summary className={'odt-b' + (['F0', 'CT', 'LS'].includes(tab) ? ' on' : '')} aria-label="Tab khác"><Icon name="more" size={18} /></summary>
+            <div className="odh-menu" role="menu">{TABS.filter(([k]) => !PROCS.includes(k as Proc)).map(([k, t]) => <button key={k} role="menuitem" type="button" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setSp({ tab: k }); }}>{t.split(' ').slice(1).join(' ')}</button>)}</div></details>
+        </nav>
+      </header>
+      <div className="qt-group od-group"><div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} />}
