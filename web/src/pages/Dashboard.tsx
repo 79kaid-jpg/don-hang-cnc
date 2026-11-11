@@ -21,6 +21,8 @@ import { toast } from '../components/ui';
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 const QC: Record<Proc, string> = { QT0: '#2F6FB0', QT1: '#7A4DB3', QT2: '#B4690E', QT3: '#2E8B57' };
 const DAY = 864e5;
+/** Màu công ty dùng chung cho mọi biểu đồ – khác cả sắc lẫn độ sáng */
+const CO_COL: Record<string, string> = { PN: '#1F4A73', IPC: '#2A9D8F', HW: '#D9822B' };
 type D = Doc & { signs: { role: string; user: string; at: string; action: string }[] };
 type Item = { key: string; order_id: string; code: string; title: string; proc: Proc; note?: string; bad?: boolean; since?: string };
 type Drill = { title: string; sub?: string; items: Item[] };
@@ -179,10 +181,10 @@ export default function Dashboard() {
             </Card>
             <Card id="c-co" title="Tồn theo công ty" sub="QT1–QT3 đang ở bên nào">
               <div className="db-donut-row">{(() => { const tot = Math.max(1, M.byCo.reduce((a, x) => a + x.items.length, 0)); let acc = 0;
-                const col = { PN: '#3A6EA5', IPC: '#2F6FB0', HW: '#B4690E' } as const;
+                const col = CO_COL; const gap = M.byCo.filter((x) => x.items.length).length > 1 ? 0.8 : 0;
                 return <><svg viewBox="0 0 42 42" className="db-donut" role="img" aria-label="Tồn theo công ty">
                   <circle cx="21" cy="21" r="15.9" fill="none" stroke="#E9ECEF" strokeWidth="6" />
-                  {M.byCo.map((x) => { const v = (x.items.length / tot) * 100; const el = <circle key={x.c} cx="21" cy="21" r="15.9" fill="none" stroke={col[x.c]} strokeWidth="6" strokeDasharray={v + ' ' + (100 - v)} strokeDashoffset={25 - acc} style={{ cursor: 'pointer' }} onClick={() => open(COMPANY[x.c], x.items)} />; acc += v; return el; })}
+                  {M.byCo.map((x) => { const v = (x.items.length / tot) * 100; const el = <circle key={x.c} cx="21" cy="21" r="15.9" fill="none" stroke={col[x.c]} strokeWidth="6" strokeDasharray={Math.max(0, v - gap) + ' ' + (100 - v + gap)} strokeDashoffset={25 - acc} style={{ cursor: 'pointer' }} onClick={() => open(COMPANY[x.c], x.items)} />; acc += v; return el; })}
                   <text x="21" y="23" textAnchor="middle" fontSize="8" fontWeight="800">{tot}</text></svg>
                   <ul className="db-dl">{M.byCo.map((x) => <li key={x.c}><button onClick={() => open(COMPANY[x.c], x.items)}><i style={{ background: col[x.c] }} />{COMPANY[x.c]}<b>{x.items.length}</b></button></li>)}</ul></>; })()}</div>
             </Card>
@@ -324,7 +326,7 @@ function People({ people, open }: { people: { who: string; items: Item[]; stuck:
   const [by, setBy] = useState(false);
   const max = Math.max(1, ...people.map((p) => p.items.length));
   const coOf = (p: { co: Record<string, number> }) => Object.entries(p.co).sort((a, z) => z[1] - a[1])[0]?.[0] ?? 'PN';
-  const CC = { PN: '#3A6EA5', IPC: '#2F6FB0', HW: '#B4690E' } as Record<string, string>;
+  const CC = CO_COL as Record<string, string>;
   const row = (p: typeof people[number]) => <button key={p.who} className="db-hbar" onClick={() => open(p.who, p.items, p.items.length + ' hồ sơ đang chờ')}>
     <span className="db-hl"><span className="avatar xs">{p.who.replace(/\(.*?\)/g, '').trim()[0]}</span>{p.who}</span>
     <span className="db-ht"><i style={{ width: (p.items.length / max) * 100 + '%', background: by ? CC[coOf(p)] : '#3A6EA5' }}>{p.stuck > 0 && <em style={{ width: (p.stuck / p.items.length) * 100 + '%' }} />}</i></span><b>{p.items.length}</b></button>;
