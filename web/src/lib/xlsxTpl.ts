@@ -10,9 +10,10 @@ export type TplData = { vars: Record<string, string | number>; tables: Record<st
 /** Mã công ty trong danh mục khách hàng */
 export const CO_CODE: Record<string, string> = { PN: 'PNCNC', IPC: 'IPC', HW: 'HANWA' };
 /** Bên mua theo công ty duyệt: PN → IPC, IPC → Hanwa, Hanwa → khách cuối */
-export function parties(o: Order, company: string, proc: string, custs: Customer[]) {
+export function parties(o: Order, company: string, proc: string, custs: Customer[], endOverride?: string | null) {
   const by = (code: string) => custs.find((c) => c.code.toUpperCase() === code) ?? null;
-  const end = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)) ?? null;
+  // Hanwa đổi được khách nhận ở QT3 (lưu trong phiếu: header.end_customer_id)
+  const end = custs.find((c) => c.id === ((company === 'HW' && proc === 'QT3' && endOverride) || (o.customer_id ?? o.kh2_id ?? o.kh1_id))) ?? null;
   const seller = by(CO_CODE[company] ?? 'PNCNC');
   const buyer = proc === 'QT0' ? end : company === 'PN' ? by('IPC') : company === 'IPC' ? by('HANWA') : end;
   return { seller, buyer, end };
@@ -46,7 +47,7 @@ export function soChu(v: number) {
 
 /* ---------- dữ liệu của một phiếu ---------- */
 export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, cust: Record<string, string>, kh?: Customer | null, custs: Customer[] = []): TplData {
-  const P = parties(o, d.company, b.proc, custs); const S = P.seller, K = P.buyer;
+  const P = parties(o, d.company, b.proc, custs, (d.header as Record<string, string> | undefined)?.end_customer_id); const S = P.seller, K = P.buyer;
   const nm = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
   const fd = (s?: string) => (s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
   const sg = (r: string) => [...(d.signs ?? [])].reverse().find((x) => x.role === r && x.action === 'ky');

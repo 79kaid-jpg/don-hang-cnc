@@ -15,7 +15,7 @@ const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3']; const PAGE = 30;
 export default function Orders() {
   const { can } = useAuth(); const nav = useNavigate(); const { co: myCo } = useMyCo(); const CI = useCoIdx(); const adm = can('admin_it');
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
-  const [q, setQ] = useState(''); const [qq, setQq] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
+  const [q, setQ] = useState(() => new URLSearchParams(location.hash.split('?')[1] ?? '').get('q') ?? ''); const [qq, setQq] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
   const [kq, setKq] = useState<'' | 'ok' | 'fail'>('');
   const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   const [more, setMore] = useState(false); const [busy, setBusy] = useState(false); const [srv, setSrv] = useState({ late: 0, soon: 0 });

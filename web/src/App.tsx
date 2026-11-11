@@ -25,6 +25,7 @@ import WfRun from './wf/WfRun';
 import WfPrint from './wf/WfPrint';
 import './wf/wf.css';
 import Dashboard from './pages/Dashboard';
+import ProjectReport from './pages/ProjectReport';
 import { Viewer } from './components/Viewer';
 import ProcessDoc from './pages/ProcessDoc';
 import Simulate from './pages/Simulate';
@@ -139,6 +140,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/thong-ke" element={<Dashboard />} />
+          <Route path="/bao-cao-du-an" element={<ProjectReport />} />
           {can('admin_it') && <Route path="/mo-phong" element={<Simulate />} />}
           <Route path="/bang" element={<Board />} />
           <Route path="/so-do" element={<FlowMap />} />

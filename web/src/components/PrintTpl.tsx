@@ -37,7 +37,7 @@ export function useTpl(proc: string, company: string) {
 export async function render(t: Tpl, o: Order, b: Batch, d: Doc, people: Record<string, Profile>) {
   const { data } = await sb.from('customers').select('*'); const cs = (data as Customer[]) ?? []; const cust = Object.fromEntries(cs.map((c) => [c.id, c.name]));
   const td = buildData(o, b, d, people, cust, cs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id)), cs);
-  const pt = parties(o, d.company, b.proc, cs); td.images = {};
+  const pt = parties(o, d.company, b.proc, cs, (d.header as Record<string, string> | undefined)?.end_customer_id); td.images = {};
   for (const [k, c] of [['ben_ban_logo', pt.seller], ['kh_logo', pt.buyer]] as const) { const im = c?.logo_path ? await loadImg(c.logo_path) : null; if (im) td.images[k] = im; }
   const wb = await fillXlsx(await loadBuf(t), td); return { wb, html: toHtml(wb), landscape: isLandscape(wb) };
 }
