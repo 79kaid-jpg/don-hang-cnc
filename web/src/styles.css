@@ -2279,3 +2279,40 @@ html[data-theme=dark] .gd-pop{background:#1f2329}
 .pp-grid td:first-child,.pp-grid th:first-child{box-shadow:inset -1px 0 0 var(--line),4px 0 6px -4px rgba(20,28,40,.18)}
 .pp-grid thead th{background:var(--soft);white-space:normal;text-wrap:balance;hyphens:none;word-break:normal;overflow-wrap:normal;line-height:1.25;font-weight:600;color:var(--muted)}
 .pp-grid thead th.n{min-width:92px;max-width:120px;text-align:right}
+
+/* ═══ THEME FACADE – tấm nhôm đục lỗ (chọn ở Tài khoản → Kiểu → Facade; chỉ chế độ sáng) ═══ */
+html[data-glass=facade]:not([data-theme=dark]){
+  --fc-ink:#14181D; --fc-dot:rgba(40,52,66,.15); --fc-steel:#2F5F93; --fc-glow:#8EC1FF;
+  --fc-mesh:radial-gradient(circle,var(--fc-dot) 1.1px,transparent 1.6px);
+  --fc-fold:linear-gradient(135deg,rgba(255,255,255,.6) 0 25%,transparent 25% 50%,rgba(140,152,166,.12) 50% 75%,transparent 75%),linear-gradient(45deg,rgba(140,152,166,.12) 0 25%,transparent 25% 50%,rgba(255,255,255,.55) 50% 75%,transparent 75%);
+  --fc-dark:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1.5px);
+  --cham:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%);
+  --bg:#E9ECEF; --r:4px; --r-sm:3px;
+}
+html[data-glass=facade]:not([data-theme=dark]) body{background-color:#E9ECEF;background-image:var(--fc-mesh),var(--fc-fold);background-size:8px 8px,420px 420px,420px 420px;background-attachment:fixed}
+/* thanh trên (điện thoại) + menu dưới: than đục lỗ */
+html[data-glass=facade]:not([data-theme=dark]) .topbar{background-color:var(--fc-ink)!important;background-image:var(--fc-dark),linear-gradient(115deg,rgba(255,255,255,.06) 0 40%,transparent 40%)!important;background-size:7px 7px,100% 100%!important;border-bottom:0;color:#fff;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html[data-glass=facade]:not([data-theme=dark]) .topbar .tb-title,html[data-glass=facade]:not([data-theme=dark]) .topbar .tb-btn{color:#fff}
+html[data-glass=facade]:not([data-theme=dark]) .topbar .tb-btn:hover{background:rgba(255,255,255,.1)}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav{background-color:var(--fc-ink)!important;background-image:var(--fc-dark)!important;background-size:7px 7px!important;border-top:0;box-shadow:0 -6px 18px rgba(20,28,40,.18)}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav a{color:#8D99A6;overflow:hidden}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav a>*{position:relative;z-index:1}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav a.active{color:#fff;font-weight:800}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav a.active::before{left:22%;right:22%;width:auto;height:3px;border-radius:0;background:var(--fc-glow);box-shadow:0 0 10px #6AA8F5;z-index:2}
+html[data-glass=facade]:not([data-theme=dark]) .bottom-nav a.active::after{content:'';position:absolute;inset:0;z-index:0;background-image:radial-gradient(circle,rgba(120,180,255,.7) 1.2px,transparent 1.8px),radial-gradient(ellipse at 50% 0%,rgba(90,150,230,.45),transparent 70%);background-size:7px 7px,100% 100%;animation:fc-on .3s ease-out}
+@keyframes fc-on{from{opacity:0}to{opacity:1}}
+/* menu trái (máy tính): nhôm sáng đục lỗ, mục chọn vát góc */
+html[data-glass=facade]:not([data-theme=dark]) .side{background-color:#F4F6F8;background-image:var(--fc-mesh),linear-gradient(180deg,#fff,#E9EDF1);background-size:7px 7px,100% 100%;border-right:1px solid #CDD3DA}
+html[data-glass=facade]:not([data-theme=dark]) .nav-item{border-radius:0}
+html[data-glass=facade]:not([data-theme=dark]) .nav-item.active{background-color:var(--fc-ink);background-image:var(--fc-dark);background-size:7px 7px;color:#fff;box-shadow:inset 3px 0 0 var(--fc-glow);clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+html[data-glass=facade]:not([data-theme=dark]) .nav-item.active svg{color:var(--fc-glow)}
+/* thẻ, đầu thẻ */
+html[data-glass=facade]:not([data-theme=dark]) .card{border-color:#D3D9DF;box-shadow:0 1px 2px rgba(20,28,40,.06)}
+html[data-glass=facade]:not([data-theme=dark]) .card-head{background-color:#F1F3F5;background-image:var(--fc-mesh);background-size:7px 7px}
+/* nút: vát góc, nút chính có lỗ đục + mảng sáng kim loại */
+html[data-glass=facade]:not([data-theme=dark]) .btn{border-radius:2px}
+html[data-glass=facade]:not([data-theme=dark]) .btn.primary{border-color:var(--fc-steel);background-color:var(--fc-steel);background-image:radial-gradient(circle,rgba(255,255,255,.16) 1px,transparent 1.5px),linear-gradient(135deg,rgba(255,255,255,.13) 0 50%,transparent 50%);background-size:6px 6px,100% 100%;clip-path:var(--cham)}
+html[data-glass=facade]:not([data-theme=dark]) .btn.primary:hover{background-color:#244C77}
+html[data-glass=facade]:not([data-theme=dark]) .btn.primary:focus-visible{outline:0;box-shadow:inset 0 0 0 3px var(--fc-glow)}
+html[data-glass=facade]:not([data-theme=dark]) .chip{border-radius:2px}
+@media (prefers-reduced-motion:reduce){html[data-glass=facade] .bottom-nav a.active::after{animation:none}}

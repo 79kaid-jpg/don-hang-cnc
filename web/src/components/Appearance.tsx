@@ -9,7 +9,7 @@ export function applyAppearance() {
   const dark = th === 'dark' || (th === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'; document.documentElement.dataset.fs = fs;
   document.documentElement.dataset.glass = get('ui-glass', 'off');
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#1b1813' : '#E4ECF5');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#1b1813' : get('ui-glass', 'off') === 'facade' ? '#14181D' : '#E4ECF5');
 }
 export function Appearance() {
   const [th, setTh] = useState<Th>(get('ui-theme', 'light') as Th); const [fs, setFs] = useState<Fs>(get('ui-fs', 'md') as Fs); const [gl, setGl] = useState(get('ui-glass', 'off'));
@@ -23,8 +23,9 @@ export function Appearance() {
         </div></div>
       <div className="ap-row"><span className="ap-lb">Kiểu</span>
         <div className="ap-seg" role="radiogroup" aria-label="Kiểu giao diện">
-          <button type="button" role="radio" aria-checked={gl !== 'on'} title="Giao diện mặc định" onClick={() => setGl('off')}><Icon name="panel" size={15} /><span>Mặc định</span></button>
+          <button type="button" role="radio" aria-checked={gl !== 'on' && gl !== 'facade'} title="Giao diện mặc định" onClick={() => setGl('off')}><Icon name="panel" size={15} /><span>Mặc định</span></button>
           <button type="button" role="radio" aria-checked={gl === 'on'} title="Khung kính mờ (chế độ sáng)" onClick={() => setGl('on')}><Icon name="star" size={15} /><span>Kính</span></button>
+          <button type="button" role="radio" aria-checked={gl === 'facade'} title="Tấm nhôm đục lỗ (chế độ sáng)" onClick={() => setGl('facade')}><Icon name="fgrid" size={15} /><span>Facade</span></button>
         </div></div>
       <div className="ap-row"><span className="ap-lb">Cỡ chữ</span>
         <div className="ap-seg" role="radiogroup" aria-label="Cỡ chữ">
