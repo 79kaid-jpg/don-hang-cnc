@@ -456,7 +456,7 @@ function MList({ cols, rows, editable, open, setOpen, set, onChange, totals }: {
     {rows.map((r, i) => <div key={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
       <button type="button" className="pp-mrow-h" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
         <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? c.t + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
-        {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{right.t}</span></span>}</button>
+        {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{/\(([^)]+)\)/.exec(right.t)?.[1] ?? right.t}</span></span>}</button>
       {open === i && <div className="pp-mrow-e">
         {cols.map((c) => <label key={c.k} className="f"><span>{c.t}{c.req && <b className="req"> *</b>}</span>
           {c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
