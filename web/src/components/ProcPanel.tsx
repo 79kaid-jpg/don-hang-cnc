@@ -99,7 +99,8 @@ const BS = (s: string) => s === 'dang_lam' ? 'đang làm' : s === 'cho_ky' ? 'ch
 /** Chọn đơn (lần/lệnh/đợt) theo mã của công ty người xem */
 function BatchSel({ o, batches, B, onPick }: { o: Order; batches: Batch[]; B: Batch; onPick: (id: string) => void }) {
   const { co } = useMyCo(); const { codeOf } = useCoIdx();
-  const lb = (b: Batch) => { const c = codeOf(o.id, co, b.id); if (!c) return b.title; const m = c.split(',')[0].trim().split('-'); return m.length > 1 ? m.slice(-1)[0] : c; };
+  const dm = (b: Batch) => { const c = codeOf(o.id, co, b.id); const m = c && /^(\d{4})(\d{2})(\d{2})-/.exec(c); if (m) return m[3] + '/' + m[2]; const d = new Date(b.created_at); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
+  const lb = (b: Batch) => <>{b.title}<small className="pp-bdm">{dm(b)}</small></>;
   const full = (b: Batch) => codeOf(o.id, co, b.id) || b.title;
   const i = batches.findIndex((x) => x.id === B.id);
   const ref = useRef<HTMLDetailsElement>(null);
@@ -110,7 +111,7 @@ function BatchSel({ o, batches, B, onPick }: { o: Order; batches: Batch[]; B: Ba
     <details className="pp-bdd" ref={ref}><summary><i className={'pp-bdot ' + B.status} aria-hidden="true" /><b>{lb(B)}</b><span className="small muted">{i + 1}/{batches.length}</span><span aria-hidden="true" className="muted">▾</span></summary>
       <div className="pp-bmenu" role="listbox">{batches.map((b) => (
         <button key={b.id} type="button" role="option" aria-selected={B.id === b.id} title={full(b) + ' · ' + BS(b.status)} className={B.id === b.id ? 'on' : ''} onClick={() => { if (ref.current) ref.current.open = false; onPick(b.id); }}>
-          <i className={'pp-bdot ' + b.status} aria-hidden="true" /><b>{lb(b)}</b><span className="small muted">· {b.title}</span>{B.id === b.id && <Icon name="check" size={15} />}</button>))}</div></details>
+          <i className={'pp-bdot ' + b.status} aria-hidden="true" /><b>{lb(b)}</b>{B.id === b.id && <Icon name="check" size={15} />}</button>))}</div></details>
   </>;
 }
 

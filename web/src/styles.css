@@ -2633,3 +2633,4 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .pp-bmenu button{flex-direction:row;align-items:center;gap:8px;min-height:44px;padding:0 14px}
 .pp-bmenu button b{font-size:14px}
 .pp-bmenu button svg{margin-left:auto;color:var(--gold)}
+.pp-bdm{font-weight:500;font-size:.82em;color:var(--muted);margin-left:6px}.pp-bseg button.on .pp-bdm{color:rgba(255,255,255,.7)}
