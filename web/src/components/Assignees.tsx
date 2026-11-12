@@ -7,7 +7,7 @@ type Who = { user_id: string | null; group_id: string | null };
 const gCache: Record<string, { name: string; member_ids: string[] }> = {};
 
 /** Người phụ trách thật của bước (tên người, không phải tên vai trò) + nút ↪ vào vai cho Admin */
-export function Assignees({ proc, company, role, level, people }: { proc: string; company: string; role?: string; level?: Who; people: Record<string, Profile> }) {
+export function Assignees({ proc, company, role, level, people, mini }: { proc: string; company: string; role?: string; level?: Who; people: Record<string, Profile>; mini?: boolean }) {
   const { real, acting, actAs } = useAuth();
   const [w, setW] = useState<Who | null>(level ?? null); const [, setTick] = useState(0);
   useEffect(() => { if (level) { setW(level); return; } if (!role) return;
@@ -18,6 +18,7 @@ export function Assignees({ proc, company, role, level, people }: { proc: string
   const ids = w.user_id ? [w.user_id] : w.group_id ? gCache[w.group_id]?.member_ids ?? [] : [];
   const canAct = !!real?.roles.includes('admin_it') && !acting;
   const go = async (id: string) => { const e = await actAs(id); if (e) toast(e); else location.reload(); };
+  if (mini) { const n = ids.length ? people[ids[0]]?.full_name ?? '…' : ''; return <span className="pp-sh-av" title={ids.map((i) => people[i]?.full_name).join(', ') || 'chưa gán'}>{n ? n.trim().split(' ').pop()?.[0] : '?'}{ids.length > 1 && <i>+{ids.length - 1}</i>}</span>; }
   if (!ids.length) return <span className="as-none">chưa gán</span>;
   const shown = ids.slice(0, 2);
   return <span className="as-list">{shown.map((id) => { const n = people[id]?.full_name ?? '…';

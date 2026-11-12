@@ -2671,3 +2671,5 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 }
 @media (min-width:1440px) and (prefers-reduced-motion:reduce){.pp-shutter,.pp-doc{transition:none}}
 html[data-theme=dark] .pp-shutter{background-color:#2A333D}
+@media (min-width:1440px){.pp-sh-av{position:relative;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff;font-weight:700;font-size:13px;box-shadow:0 0 0 3px var(--gold-tint),0 1px 3px rgba(20,28,40,.2)}
+.pp-sh-av i{position:absolute;right:-6px;bottom:-4px;font-style:normal;font-size:9.5px;background:var(--surface);color:var(--ink);border-radius:8px;padding:0 3px;box-shadow:0 1px 2px rgba(0,0,0,.2)}}

@@ -408,6 +408,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       <aside className="pp-side">
         <button type="button" className="pp-sidebtn" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình (phím ])'} aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><Icon name={shut ? 'back' : 'arrow'} size={14} /></button>
         <div className="pp-shutter" onClick={() => setShut(false)} aria-hidden={!shut}>
+          {(role || lvName) && !['da_duyet', 'fail'].includes(d.status) && <Assignees mini proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} />}
           <span className="pp-sh-i" title="Ghi chú"><Icon name="chat" size={15} />{(d.notes ?? []).length || ''}</span>
           <span className="pp-sh-i" title="Đã chờ ở bước này"><Icon name="clock" size={15} />{waitH < 1 ? Math.round(waitH * 60) + "'" : waitH < 48 ? Math.round(waitH) + 'h' : Math.round(waitH / 24) + 'd'}</span>
         </div>
