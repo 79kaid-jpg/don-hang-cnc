@@ -215,6 +215,11 @@ function Final({ b, o, onDone }: { b: Batch; o: Order; onDone: () => void }) {
 
 function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order; b: Batch; d: Doc; people: Record<string, Profile>; onChanged: () => void; docs?: Doc[]; onPickCo?: (c: Company) => void }) {
   const [admInfo, setAdmInfo] = useState(false);
+  const [shut, setShutS] = useState(() => { try { return localStorage.getItem('pp-side-shut') === '1'; } catch { return false; } });
+  const setShut = (v: boolean) => { setShutS(v); try { localStorage.setItem('pp-side-shut', v ? '1' : '0'); } catch { /* */ } };
+  useEffect(() => { const k = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.key === ']' && !/INPUT|TEXTAREA|SELECT/.test(t.tagName) && !t.isContentEditable) setShutS((v) => { try { localStorage.setItem('pp-side-shut', v ? '0' : '1'); } catch { /* */ } return !v; }); };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, []);
+  const waitH = Math.max(0, (Date.now() - new Date(d.status_at).getTime()) / 36e5);
   const proc = b.proc;
   const [can, setCan] = useState(false);
   const [h, setH] = useState<Record<string, string>>(d.header ?? {}); const [t, setT] = useState<Record<string, Row[]>>(d.tables ?? {}); const [files, setFiles] = useState(d.files ?? []);
@@ -315,7 +320,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
 
   return (
-    <section className="card pp-doc">
+    <section className={'card pp-doc' + (shut ? ' shut' : '')}>
       <div className="pp-main">
       <div className="pp-doc-head">
         <div className="pp-dh"><div className="pp-dh1">{proc === 'QT0' || docs.length < 2 ? <b className="pp-dco">{proc === 'QT0' ? b.title : COMPANY[d.company]}</b>
@@ -401,6 +406,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
+        <button type="button" className="pp-sidebtn" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình (phím ])'} aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><Icon name={shut ? 'back' : 'arrow'} size={14} /></button>
+        <div className="pp-shutter" onClick={() => setShut(false)} aria-hidden={!shut}>
+          <span className="pp-sh-i" title="Ghi chú"><Icon name="chat" size={15} />{(d.notes ?? []).length || ''}</span>
+          <span className="pp-sh-i" title="Đã chờ ở bước này"><Icon name="clock" size={15} />{waitH < 1 ? Math.round(waitH * 60) + "'" : waitH < 48 ? Math.round(waitH) + 'h' : Math.round(waitH / 24) + 'd'}</span>
+        </div>
       <div className="pp-notes">
         <b>Ghi chú nối tiếp</b>
         {d.notes.length === 0 && <span className="small muted">Chưa có ghi chú.</span>}

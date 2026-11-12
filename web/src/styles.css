@@ -2645,3 +2645,29 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .cob-empty{display:none}
 /* Thanh nút dính đáy (tablet/laptop nhỏ): nền đặc, không chồng chữ bảng */
 .pp-act{background-color:var(--surface)!important;backdrop-filter:none!important;z-index:30}
+
+/* Cột phải đóng/mở – tấm facade đục lỗ trượt (≥1440) */
+.pp-sidebtn,.pp-shutter{display:none}
+@media (min-width:1440px){
+  .pp-doc{transition:grid-template-columns .28s cubic-bezier(.2,.8,.2,1)}
+  .pp-doc.shut{grid-template-columns:minmax(0,1fr) 48px}
+  .pp-side{position:sticky;overflow:hidden;min-height:180px}
+  .pp-doc.shut .pp-side{padding-left:0;border-left:0}
+  .pp-doc.shut .pp-side>:not(.pp-shutter):not(.pp-sidebtn){visibility:hidden}
+  .pp-sidebtn{display:grid;place-items:center;position:absolute;top:0;right:0;z-index:3;width:32px;height:32px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer}
+  .pp-sidebtn svg{transform:rotate(180deg)}
+  .pp-doc.shut .pp-sidebtn{left:8px;right:auto;top:8px;transform:none}
+  .pp-doc.shut .pp-sidebtn svg{transform:none}
+  .pp-shutter{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:52px;position:absolute;inset:0;z-index:2;cursor:pointer;border-radius:12px;
+    background-color:#DCE2E8;background-image:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0) 45%,rgba(31,42,54,.07)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='22.517'%3E%3Cpath d='M10.70 5.63 L8.60 9.27 L4.40 9.27 L2.30 5.63 L4.40 1.99 L8.60 1.99ZM23.70 16.89 L21.60 20.53 L17.40 20.53 L15.30 16.89 L17.40 13.25 L21.60 13.25Z' fill='rgba%2847%2C74%2C99%2C.24%29'/%3E%3C/svg%3E");
+    box-shadow:inset 1px 0 0 rgba(31,42,54,.18),inset -1px 0 0 rgba(255,255,255,.6);
+    transform:translateX(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+  .pp-doc.shut .pp-shutter{transform:none}
+  .pp-sh-i{display:flex;flex-direction:column;align-items:center;gap:2px;width:34px;padding:6px 0;border-radius:17px;background:var(--surface);font-size:11px;font-weight:700;color:var(--ink);box-shadow:0 1px 3px rgba(20,28,40,.18)}
+  .pp-side .jn-top .jn-steps{flex-wrap:wrap;row-gap:18px}
+  .pp-side .jn-av{width:24px;height:24px;font-size:11px}
+  .pp-side .jn-top .jn-st:not(:last-child){padding-right:18px}
+  .pp-side .jn-top .jn-st:not(:last-child)::after{left:24px;top:12px}
+}
+@media (min-width:1440px) and (prefers-reduced-motion:reduce){.pp-shutter,.pp-doc{transition:none}}
+html[data-theme=dark] .pp-shutter{background-color:#2A333D}

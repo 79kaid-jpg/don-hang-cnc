@@ -13,7 +13,9 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
   const [co, setCo] = useState<CoOrder | null>(null); const [cands, setCands] = useState<CoOrder[]>([]);
   const [ed, setEd] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => { const mq = window.matchMedia('(min-width:761px)'); const f = () => setSlot(mq.matches ? document.getElementById('pp-codeslot') : null); f(); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
+  useEffect(() => { const mq = window.matchMedia('(min-width:761px)'); const f = () => setSlot(mq.matches ? document.getElementById('pp-codeslot') : null); f();
+    const t = window.setInterval(() => { const el = mq.matches ? document.getElementById('pp-codeslot') : null; setSlot((x) => (x === el ? x : el)); }, 400);
+    mq.addEventListener('change', f); return () => { mq.removeEventListener('change', f); window.clearInterval(t); }; }, []);
   const load = async () => { const { data } = await sb.from('co_orders').select('*').eq('doc_id', docId).maybeSingle(); setCo(data as CoOrder | null); };
   useEffect(() => { load(); }, [docId]);
   const seller = cos?.find((c) => c.buyer === co?.company);
