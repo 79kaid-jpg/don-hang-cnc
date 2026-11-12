@@ -214,7 +214,7 @@ function Final({ b, o, onDone }: { b: Batch; o: Order; onDone: () => void }) {
 }
 
 function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order; b: Batch; d: Doc; people: Record<string, Profile>; onChanged: () => void; docs?: Doc[]; onPickCo?: (c: Company) => void }) {
-  const [admInfo, setAdmInfo] = useState(false);
+  const [admInfo, setAdmInfo] = useState(false); const [viewInfo, setViewInfo] = useState(false);
   const [shut, setShutS] = useState(() => { try { return localStorage.getItem('pp-side-shut') === '1'; } catch { return false; } });
   const setShut = (v: boolean) => { setShutS(v); try { localStorage.setItem('pp-side-shut', v ? '1' : '0'); } catch { /* */ } };
   useEffect(() => { const k = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.key === ']' && !/INPUT|TEXTAREA|SELECT/.test(t.tagName) && !t.isContentEditable) setShutS((v) => { try { localStorage.setItem('pp-side-shut', v ? '0' : '1'); } catch { /* */ } return !v; }); };
@@ -330,6 +330,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             {can && !['da_duyet', 'fail'].includes(d.status) && <span className="pp-mine">Việc của bạn</span>}</div>
           <div className="small muted">{(role || lvName) && <><Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}</div></div>
         <div className="row" style={{ gap: 6 }}>
+          {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <button type="button" className={'btn xs icon-only pp-admi pp-vwi' + (viewInfo ? ' on' : '')} aria-expanded={viewInfo} title="Bạn đang xem (không có quyền làm bước này)" aria-label="Bạn đang xem – xem chi tiết" onClick={() => setViewInfo(!viewInfo)}><Icon name="eye" size={14} /></button>}
           {admEdit && <button type="button" className={'btn xs icon-only pp-admi' + (admInfo ? ' on' : '')} aria-expanded={admInfo} title="Đang sửa với quyền Admin" aria-label="Đang sửa với quyền Admin – xem chi tiết" onClick={() => setAdmInfo(!admInfo)}><Icon name="shield" size={14} /></button>}
           {d.status !== 'da_duyet' && d.status !== 'fail' && <GuideBox compact g={d.status === 'duyet_them' ? guideByKey(guides, 'sim.extra') : guideFor(guides, proc, d.company, d.status)} vars={{ cty: COMPANY[d.company], phieu: PROC_NAME[proc], cap: lvName ?? 'Cấp duyệt thêm' }} />}
           {editable && <button className="btn xs" disabled={!dirty} onClick={() => save()}><Icon name="check" size={13} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
@@ -344,7 +345,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {admEdit && admInfo && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
       {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
-      {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
+      {(() => { const tk = tablesOf(proc)[0]?.key; const rs = (tk && (t as Record<string, Row[]>)[tk]) || []; if (!tk || rs.length === 0) return null; const cs = colsOf(proc, tk);
+        const g = (k: string) => { const c = cs.find((x) => x.k === k); return c ? sumOf(rs, c) : null; }; const f = (v: number | null, dd: number, u: string) => v == null ? null : fmtN(v, dd) + u;
+        const kg = g('kg'); const parts = [rs.length + ' dòng', f(g('so_tam'), 0, ' tấm'), f(g('m2'), 1, ' m²'), kg == null ? null : kg >= 1000 ? fmtN(kg / 1000, 1) + ' t' : fmtN(kg, 0) + ' kg', f(g('tt'), 0, ' đ')].filter(Boolean);
+        return <div className="pp-sum" aria-label="Tóm tắt">{parts.map((x, i) => <span key={i}>{x}</span>)}</div>; })()}
+      {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && viewInfo && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
       {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
       <ReviewPdf docId={d.id} status={d.status} />
@@ -471,7 +476,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
   const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
   return <div className="pp-mlist">
     {rows.length === 0 && <div className="small muted">Chưa có dòng nào.</div>}
-    {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <div key={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
+    {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <div key={i} data-row={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
       <button type="button" className="pp-mrow-h" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
         <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? c.t + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
         {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{/\(([^)]+)\)/.exec(right.t)?.[1] ?? right.t}</span></span>}</button>
@@ -559,8 +564,10 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   const fileRef = useRef<HTMLInputElement>(null);
   const [asTbl, setAsTbl] = useState(false); const [mi, setMi] = useState(-1);
-  const [q, setQ] = useState(''); const [errOnly, setErrOnly] = useState(false);
-  const step = typeof window !== 'undefined' && window.matchMedia('(max-width:760px)').matches ? 10 : 25;
+  const [q, setQ] = useState(''); const [errOnly, setErrOnly] = useState(false); const errJ = useRef(-1);
+  const [mob, setMob] = useState(() => window.matchMedia('(max-width:760px)').matches);
+  useEffect(() => { const mq = window.matchMedia('(max-width:760px)'); const f = () => setMob(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
+  const step = mob ? 10 : 25;
   const [lim, setLim] = useState(0); const L = lim || step;
   const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
   const ql = q.trim().toLowerCase();
@@ -595,17 +602,21 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
       {rows.length > 10 && <div className="pp-find">
         <label className="pp-q"><Icon name="search" size={15} /><input type="search" placeholder="Tìm mã tấm, vật liệu…" value={q} onChange={(e) => { setQ(e.target.value); setLim(0); }} aria-label="Tìm tấm" /></label>
-        {nBad > 0 && <button type="button" className={'pp-chip' + (errOnly ? ' on' : '')} aria-pressed={errOnly} onClick={() => { setErrOnly(!errOnly); setLim(0); }}>Lỗi {nBad}</button>}
+        {nBad > 0 && <button type="button" className={'pp-chip' + (errOnly ? ' on' : '')} aria-pressed={errOnly} title="Chỉ hiện dòng lỗi" onClick={() => { setErrOnly(!errOnly); setLim(0); }}>Lỗi {nBad}</button>}
+        {nBad > 0 && <button type="button" className="pp-chip nx" title="Đến dòng lỗi tiếp theo" aria-label="Đến dòng lỗi tiếp theo" onClick={() => {
+          const bads = rows.map((_, i) => i).filter((i) => bad(rows[i])); const cur = errJ.current; const nx = bads.find((i) => i > cur) ?? bads[0]; errJ.current = nx;
+          const pos = hit.indexOf(nx); if (pos < 0) { setQ(''); setErrOnly(false); } setLim((x) => Math.max(x || step, (pos < 0 ? nx : pos) + 1));
+          setTimeout(() => { const el = [...document.querySelectorAll<HTMLElement>('[data-row="' + nx + '"]')].find((x) => x.offsetParent) ?? null; if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('pp-flash'); setTimeout(() => el.classList.remove('pp-flash'), 1200); } }, 60); }}><Icon name="arrow" size={13} /></button>}
         {(ql || errOnly) && <span className="small muted">{hit.length}/{rows.length}</span>}
       </div>}
-      <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />
-      <div className="tbl-wrap"><table className="tbl pp-grid">
+      {mob && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
+      {(!mob || asTbl) && <div className="tbl-wrap"><table className="tbl pp-grid">
         <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : 't'}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
-          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i}><td className="muted">{i + 1}</td>
-            {cols.map((c) => <td key={c.k} className={c.n ? 'n' : 't'}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : undefined}><td className="muted">{i + 1}</td>
+            {cols.map((c) => <td key={c.k} className={(c.n ? 'n' : 't') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
                   const nx = (e.currentTarget.closest('table') as HTMLElement | null)?.querySelector<HTMLInputElement>('[data-cell="' + (i + 1) + ':' + c.k + '"]'); if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
@@ -616,9 +627,13 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
         {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
-      </table></div>
-      {hit.length > shown.length && <button type="button" className="btn sm pp-more" onClick={() => setLim(L + step)}>Xem thêm {Math.min(step, hit.length - shown.length)} <span className="muted">(còn {hit.length - shown.length})</span></button>}
-      {hit.length > shown.length && <button type="button" className="link-btn pp-all" onClick={() => setLim(hit.length)}>Hiện tất cả {hit.length}</button>}
+      </table></div>}
+      {hit.length > step && <div className="pp-pager">
+        <span className="small muted">Hiện 1–{shown.length} / {hit.length}</span>
+        {hit.length > shown.length && <button type="button" className="btn sm" onClick={() => setLim(L + step)}>Xem thêm {Math.min(step, hit.length - shown.length)}</button>}
+        {hit.length > shown.length && <button type="button" className="link-btn" onClick={() => setLim(hit.length)}>Hiện tất cả</button>}
+        {L > step && <button type="button" className="btn sm" onClick={() => { setLim(0); requestAnimationFrame(() => document.querySelector('.pp-tbl')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); }}><span className="pp-upic"><Icon name="back" size={14} /></span>Thu gọn</button>}
+      </div>}
       {hit.length === 0 && rows.length > 0 && <div className="small muted pp-none">Không có tấm khớp.</div>}
     </div>);
 }

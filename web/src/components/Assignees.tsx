@@ -1,3 +1,4 @@
+import { cached } from '../lib/qcache';
 import { useEffect, useState } from 'react';
 import { sb, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -11,9 +12,9 @@ export function Assignees({ proc, company, role, level, people, mini }: { proc: 
   const { real, acting, actAs } = useAuth();
   const [w, setW] = useState<Who | null>(level ?? null); const [, setTick] = useState(0);
   useEffect(() => { if (level) { setW(level); return; } if (!role) return;
-    sb.from('chain_people').select('user_id, group_id').eq('proc', proc).eq('company', company).eq('role', role).maybeSingle().then(({ data }) => setW((data as Who) ?? { user_id: null, group_id: null })); }, [proc, company, role, level?.user_id, level?.group_id]);
+    cached('cp:' + proc + ':' + company, () => sb.from('chain_people').select('role, user_id, group_id, sla_h').eq('proc', proc).eq('company', company)).then((r) => ({ data: ((r.data ?? []) as (Who & { role: string })[]).find((x) => x.role === role) ?? null })).then(({ data }) => setW((data as Who) ?? { user_id: null, group_id: null })); }, [proc, company, role, level?.user_id, level?.group_id]);
   useEffect(() => { const g = w?.group_id; if (!g || gCache[g]) return;
-    sb.from('work_groups').select('name, member_ids').eq('id', g).single().then(({ data }) => { if (data) { gCache[g] = data as never; setTick((x) => x + 1); } }); }, [w?.group_id]);
+    cached('wg', () => sb.from('work_groups').select('id, name, member_ids')).then((r) => ({ data: ((r.data ?? []) as { id: string }[]).find((x) => x.id === g) ?? null })).then(({ data }) => { if (data) { gCache[g] = data as never; setTick((x) => x + 1); } }); }, [w?.group_id]);
   if (!w) return null;
   const ids = w.user_id ? [w.user_id] : w.group_id ? gCache[w.group_id]?.member_ids ?? [] : [];
   const canAct = !!real?.roles.includes('admin_it') && !acting;

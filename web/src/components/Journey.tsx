@@ -1,3 +1,4 @@
+import { cached } from '../lib/qcache';
 import { useEffect, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { toast } from './ui';
@@ -20,11 +21,11 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
   const [dl, setDl] = useState<{ user_id: string; to_user: string }[]>([]); const [open, setOpen] = useState(false); const [pk, setPk] = useState('');
   const company = proc === 'QT0' ? 'PN' : d.company;
   useEffect(() => {
-    sb.from('chain_people').select('role, user_id, group_id, sla_h').eq('proc', proc).eq('company', company).then(({ data }) => setCp((data as CP[]) ?? []));
+    cached('cp:' + proc + ':' + company, () => sb.from('chain_people').select('role, user_id, group_id, sla_h').eq('proc', proc).eq('company', company)).then(({ data }) => setCp((data as CP[]) ?? []));
     const q = sb.from('approval_levels').select('id, name, user_id, group_id, sla_h, ord');
     (d.apv?.queue?.length ? q.in('id', d.apv.queue) : q.eq('proc', proc).eq('company', company).eq('active', true)).order('ord')
       .then(({ data }) => { const l = (data as LV[]) ?? []; setLvs(d.apv?.queue?.length ? d.apv.queue.map((id) => l.find((x) => x.id === id)!).filter(Boolean) : l); });
-    sb.from('work_groups').select('id, name').then(({ data }) => setGs(Object.fromEntries(((data as { id: string; name: string }[]) ?? []).map((g) => [g.id, g.name]))));
+    cached('wg', () => sb.from('work_groups').select('id, name, member_ids')).then(({ data }) => setGs(Object.fromEntries(((data as { id: string; name: string }[]) ?? []).map((g) => [g.id, g.name]))));
     const today = new Date().toISOString().slice(0, 10);
     sb.from('delegations').select('user_id, to_user, from_date, to_date').lte('from_date', today).gte('to_date', today).then(({ data }) => setDl((data as { user_id: string; to_user: string }[]) ?? []));
   }, [d.id, d.status, proc, company]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -2673,3 +2673,23 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 html[data-theme=dark] .pp-shutter{background-color:#2A333D}
 @media (min-width:1440px){.pp-sh-av{position:relative;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff;font-weight:700;font-size:13px;box-shadow:0 0 0 3px var(--gold-tint),0 1px 3px rgba(20,28,40,.2)}
 .pp-sh-av i{position:absolute;right:-6px;bottom:-4px;font-style:normal;font-size:9.5px;background:var(--surface);color:var(--ink);border-radius:8px;padding:0 3px;box-shadow:0 1px 2px rgba(0,0,0,.2)}}
+/* Bảng tấm: tiêu đề cố định, mã 1 dòng, tô lỗi, phân đoạn */
+.pp-tbl .tbl-wrap{max-height:min(72vh,900px);overflow:auto}
+.pp-grid thead th{position:sticky;top:0;z-index:2;background:var(--soft)}
+.pp-grid tfoot td{position:sticky;bottom:0;z-index:2;background:var(--soft)}
+.pp-grid td:nth-child(2){white-space:nowrap;max-width:26ch;overflow:hidden;text-overflow:ellipsis}
+.pp-grid tr.pp-bad>td:first-child{box-shadow:inset 3px 0 0 var(--red);color:var(--red);font-weight:700}
+.pp-grid td.pp-cbad{background:#FDECEC}
+.pp-grid td.pp-cbad input{border-color:#E5A3A3;background:#FFF7F7}
+.pp-mrow:has(+ *) {}
+.pp-flash>td,.pp-mrow.pp-flash{animation:ppflash 1.2s ease}
+@keyframes ppflash{0%,40%{background:var(--gold-tint)}100%{background:transparent}}
+.pp-chip.nx{width:36px;padding:0;display:inline-grid;place-items:center}
+.pp-pager{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+.pp-pager .small{margin-right:4px}
+html[data-theme=dark] .pp-grid td.pp-cbad{background:#3A2222}
+@media (prefers-reduced-motion:reduce){.pp-flash>td,.pp-mrow.pp-flash{animation:none}}
+.pp-sum{display:flex;flex-wrap:wrap;gap:4px 0;margin:2px 0 10px;font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.pp-sum span+span::before{content:'·';margin:0 8px;color:var(--muted);font-weight:400}
+.pp-vwi{color:var(--muted)}.pp-vwi.on{background:var(--muted);border-color:var(--muted);color:#fff}
+.pp-upic{display:inline-flex;transform:rotate(90deg)}
