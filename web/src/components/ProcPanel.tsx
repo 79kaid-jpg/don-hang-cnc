@@ -54,17 +54,17 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   return (
     <div className="pp">
       <div className="pp-head">
-        <div style={{ minWidth: 0 }}><h2 style={{ margin: 0 }} className="row pp-h2"><QtTag qt={proc} /> {PROC_NAME[proc]}
-          <button type="button" className="btn xs icon-btn pp-info" aria-expanded={info} aria-label="Hướng dẫn quy trình" title="Hướng dẫn quy trình" onClick={() => setInfo(!info)}><Icon name="info" size={15} /></button></h2>
-          {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
+        <div className="pp-hl"><button type="button" className={'pp-qt' + (info ? ' on' : '')} aria-expanded={info} aria-label={PROC_NAME[proc] + ' – xem mô tả'} title={PROC_NAME[proc]} onClick={() => setInfo(!info)}><QtTag qt={proc} /><Icon name="info" size={13} /></button>
+          {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
+        {batches.length ? <button type="button" className="btn sm icon-btn pp-new" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={18} /></button>
+          : <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
+      </div>
+      {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
             : proc === 'QT1' ? 'Phương Nam lập → duyệt → IPC chép danh sách, đổi giá → duyệt → Hanwa → duyệt. Mỗi bên in bộ của mình cho khách ký.'
             : proc === 'QT2' ? 'Đầu vào là Excel lệnh gia công từ phần mềm sản xuất. Một đơn có thể chia nhiều lệnh. Cả 3 công ty đều lập hồ sơ.'
-            : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p>}</div>
-        <button className={batches.length ? 'btn sm ghost pp-new' : 'btn primary'} onClick={() => setCreating(true)}><Icon name="plus" size={16} />{batches.length ? (proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới') : 'Bắt đầu ' + proc}</button>
-      </div>
+            : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p>}
       {creating && <NewBatch o={o} proc={proc} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); setBid(id); setCo(''); load(); }} />}
       {batches.length === 0 ? <div className="empty"><Icon name="inbox" size={28} /><b>Chưa có hồ sơ {proc} cho đơn này</b><span className="small muted">Bấm “{'Bắt đầu ' + proc}” để mở.</span></div> : (<>
-        {batches.length > 1 && B && <BatchSel o={o} batches={batches} B={B} onPick={(id) => { setBid(id); setCo(''); }} />}
         {B && <Chain proc={proc} b={B} docs={bDocs} sel={D?.company} onPick={setCo} />}
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
@@ -101,17 +101,18 @@ const BS = (s: string) => s === 'dang_lam' ? 'đang làm' : s === 'cho_ky' ? 'ch
 /** Chọn đơn (lần/lệnh/đợt) theo mã của công ty người xem */
 function BatchSel({ o, batches, B, onPick }: { o: Order; batches: Batch[]; B: Batch; onPick: (id: string) => void }) {
   const { co } = useMyCo(); const { codeOf } = useCoIdx();
-  const lb = (b: Batch) => codeOf(o.id, co, b.id) || b.title;
+  const lb = (b: Batch) => { const c = codeOf(o.id, co, b.id); if (!c) return b.title; const m = c.split(',')[0].trim().split('-'); return m.length > 1 ? m.slice(-1)[0] : c; };
+  const full = (b: Batch) => codeOf(o.id, co, b.id) || b.title;
   const i = batches.findIndex((x) => x.id === B.id);
   const ref = useRef<HTMLDetailsElement>(null);
   return <>
     <div className="pp-bseg" role="tablist" aria-label="Chọn đơn">{batches.map((b) => (
-      <button key={b.id} type="button" role="tab" aria-selected={B.id === b.id} className={B.id === b.id ? 'on' : ''} onClick={() => onPick(b.id)} title={b.title}>
-        <b>{lb(b)}</b><span className={'pp-bs ' + b.status}>{BS(b.status)}</span></button>))}</div>
-    <details className="pp-bdd" ref={ref}><summary><span className="pp-bco">{co}</span><b>{lb(B)}</b><span className="small muted">{i + 1}/{batches.length}</span><span aria-hidden="true" className="muted">▾</span></summary>
+      <button key={b.id} type="button" role="tab" aria-selected={B.id === b.id} className={B.id === b.id ? 'on' : ''} onClick={() => onPick(b.id)} title={full(b) + ' · ' + BS(b.status)}>
+        <i className={'pp-bdot ' + b.status} aria-hidden="true" /><b>{lb(b)}</b></button>))}</div>
+    <details className="pp-bdd" ref={ref}><summary><i className={'pp-bdot ' + B.status} aria-hidden="true" /><b>{lb(B)}</b><span className="small muted">{i + 1}/{batches.length}</span><span aria-hidden="true" className="muted">▾</span></summary>
       <div className="pp-bmenu" role="listbox">{batches.map((b) => (
         <button key={b.id} type="button" role="option" aria-selected={B.id === b.id} className={B.id === b.id ? 'on' : ''} onClick={() => { if (ref.current) ref.current.open = false; onPick(b.id); }}>
-          <b>{lb(b)}</b><span className="small muted">{b.title} · {BS(b.status)}</span></button>))}</div></details>
+          <b>{full(b)}</b><span className="small muted">{b.title} · {BS(b.status)}</span></button>))}</div></details>
   </>;
 }
 

@@ -2513,3 +2513,18 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .jn-st.pk .jn-dot{box-shadow:0 0 0 3px var(--gold-tint),0 0 0 5px var(--gold)}
 .jn-steps{padding:14px 16px}
 .jn-pick{margin:0 12px 12px;padding:8px 12px;border-radius:var(--r-sm);background:var(--soft);font-size:13.5px;overflow-wrap:anywhere}
+/* Đầu QT gọn: nút QT (xem mô tả) · mã đơn ngắn · + */
+.pp-head{align-items:center}
+.pp-hl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%}
+.pp-qt{display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 8px 0 4px;border:1px solid transparent;border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer}
+.pp-qt:hover,.pp-qt.on{border-color:var(--line2);background:var(--surface)}
+.pp-qt:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.pp-hl .pp-bseg{flex:1 1 auto;min-width:0}
+.pp-hl .pp-bdd{flex:1 1 auto;min-width:0}
+.pp-hl .pp-new{margin-left:auto;width:40px;height:40px;flex:none}
+.pp-bdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.pp-bdot.hoan_tat{background:#2E7D4F}.pp-bdot.fail{background:var(--red)}.pp-bdot.cho_ky{background:var(--wait)}
+.pp-bseg button.on .pp-bdot{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.pp-bdd>summary{min-height:40px}
+.pp-desc{margin:0}
+.odh-pn{font-weight:500;color:var(--muted);font-size:.8em;margin-left:8px}

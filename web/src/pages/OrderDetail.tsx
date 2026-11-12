@@ -14,6 +14,7 @@ import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom'
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
+import { useProjects } from '../lib/projects';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
 import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -29,6 +30,7 @@ const TABS = [['F0', 'F0 Tiếp nhận'], ['QT0', 'QT0 Bóc tách'], ['QT1', 'QT
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 
 export default function OrderDetail() {
+  const projs = useProjects();
   const { co: viewCo } = useMyCo(); const CI = useCoIdx(); const adm0 = useAuth().can('admin_it');
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
   const coAll = CI.allOf(id).sort((a, z) => ['PN', 'IPC', 'HW'].indexOf(a.company) - ['PN', 'IPC', 'HW'].indexOf(z.company)); const coMine = CI.codeOf(id, viewCo);
@@ -78,6 +80,7 @@ export default function OrderDetail() {
   if (!o) return <Skeleton rows={4} h={72} />;
   const chain = cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')]?.name ?? '';
   const props = { o, lines: [] as Line[], run, can, load, setErr, setOk };
+  const prj = projs?.find((x) => x.id === (o as { project_id?: string | null }).project_id || (!!o.project && x.code === o.project));
   const sum = (p: Proc) => procSummary(p, bs, ds);
   const dueCls = (d: string) => { const n = Math.ceil((new Date(d + 'T23:59:59').getTime() - Date.now()) / 864e5); return n < 0 ? 'late' : n <= 3 ? 'soon' : ''; };
   return (
@@ -86,7 +89,7 @@ export default function OrderDetail() {
         <div className="odh-r">
           <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" title="Về bảng đơn hàng"><Icon name="back" size={20} /></Link>
           <div className="odh-t">
-            <h1>{o.project || 'Chưa có dự án'}</h1>
+            <h1>{o.project || 'Chưa có dự án'}{prj?.name && prj.name !== o.project && <span className="odh-pn">{prj.name}</span>}</h1>
             <div className="odh-sub">{chain && <span>{chain}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>
           </div>
           <Link className="btn sm odh-map" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Sơ đồ</Link>
