@@ -650,7 +650,6 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
       </table></div>
       <div ref={endRef} className="pp-tend" />
-      {(edge.l || edge.r) && !nativeVis && <div className="pp-hbar" ref={barRef} onScroll={(e) => { if (lockS.current === 'w') return; lockS.current = 'b'; if (wrapRef.current) wrapRef.current.scrollLeft = e.currentTarget.scrollLeft; requestAnimationFrame(() => { lockS.current = ''; }); }}><div style={{ width: sw }} /></div>}
       {(edge.l || edge.r) && <div className="pp-hhint small muted">Kéo ✋ ở ô không nhập, ⇧ + lăn chuột, hoặc bấm ‹ › để cuộn ngang</div>}
       </div>}
       {hit.length > step && <div className="pp-pager">
