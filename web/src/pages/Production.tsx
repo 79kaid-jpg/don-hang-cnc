@@ -5,6 +5,9 @@ import { sb } from '../lib/supabase';
 import { m2Of, kgOf, type Row } from '../lib/proc';
 import { useMyCo, setViewCo, CO_NAME, type Co } from '../lib/myco';
 import { Skeleton } from '../components/ui';
+import { useAuth } from '../lib/auth';
+import { PlanSheet } from '../components/PlanEdit';
+import { Icon } from '../components/Icon';
 
 type P = { id: string; code: string; name: string; end_customer_id: string | null; status: string };
 type O = { id: string; project_id: string | null; due_date: string | null; customer_id: string | null };
@@ -35,6 +38,7 @@ export default function Production() {
   const [sp, setSp] = useSearchParams(); const fm = sp.get('m'), fp = sp.get('pj'), fk = sp.get('kh');
   const setF = (k: string, v: string | null) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); setSp(n, { replace: true }); };
   const [hov, setHov] = useState<number | null>(null);
+  const { can } = useAuth(); const [pe, setPe] = useState<string | null>(null);
   const [drill, setDrill] = useState<{ t: string; sub?: string; kind: 'trip' | 'rem'; ids: string[] } | null>(null);
   type ST = { q1: { id: string; order_id: string; title: string; created_at: string; o: number[]; r: number[] }[]; q3: { id: string; order_id: string; title: string; done_at: string; q1: string | null; d: number[] }[]; hasVal: boolean };
   const [data, setData] = useState<{ p: P[]; o: O[]; cu: Record<string, string>; plan: Record<string, number> } | null>(null);
@@ -133,10 +137,12 @@ export default function Production() {
         {fk && <button type="button" className="pd-chip" onClick={() => setF('kh', null)}>{data!.cu[fk] ?? 'Khách'} ×</button>}
         <button type="button" className="link-btn small" onClick={() => setSp(new URLSearchParams(), { replace: true })}>Bỏ tất cả</button></div>}
       <section className="pd-kpis">
+        <div className="pd-hw">
         <button type="button" className="pd-k pd-kb hero" onClick={() => setDrill({ t: 'Các đợt đã giao · ' + title, sub: M.tripsIn.length + ' đợt', kind: 'trip', ids: M.tripsIn.map((t) => t.b.id) })}><span>Đã giao</span><b>{ufmt(M.del, u)}<small>{UNAME[u]}</small></b>
           <div><Delta v={ch} /> <span className="muted">so với {perName}</span></div>
           {u === 't' && M.planP > 0 && <><div className="pd-plan"><i style={{ width: Math.min(100, M.del.kg / 10 / M.planP) + '%' }} /></div><span className="muted small">{Math.round(M.del.kg / 10 / M.planP)}% kế hoạch ({fmt(M.planP)} t)</span></>}
           <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.kg)} /></svg></button>
+        {can('admin_it') && M.per2 === 'M' && <button type="button" className="pd-pled" aria-label="Sửa kế hoạch tháng" title="Sửa kế hoạch tháng" onClick={() => setPe(M.cur)}><Icon name="edit" size={16} /></button>}</div>
         <div className="pd-k"><span>Giá trị đã giao</span><b>{M.hasVal ? tỷ(M.del.val) : '—'}<small>đ</small></b><div><Delta v={chV} /> <span className="muted">theo giá {co}</span></div>
           <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.val)} /></svg></div>
         <div className="pd-k"><span>Đặt mới (XNĐH)</span><b>{ufmt(M.ordP, u)}<small>{UNAME[u]}</small></b><div><span className="muted">đặt / giao </span><b className={bb != null && bb >= 1 ? 'pd-up' : 'pd-dn'}>{bb == null ? '—' : fmt(bb, 2)}</b></div>
@@ -188,6 +194,7 @@ export default function Production() {
           <div className="pd-cust">{M.custTop.map((c) => <div key={c.n} role={c.id ? 'button' : undefined} tabIndex={c.id ? 0 : undefined} className={fk === c.id ? 'on' : ''} onClick={() => c.id && setF('kh', fk === c.id ? null : c.id)}><span className="pd-ell">{c.n}</span><i><b style={{ width: uv(c.q, u) / cm * 100 + '%' }} /></i><b className="r">{ufmt(c.q, u)}</b></div>)}</div>
         </div>
       </section>
+      {pe && <PlanSheet ym={pe} value={data!.plan[pe] ?? null} onClose={() => setPe(null)} onSaved={(v) => setData((d) => { if (!d) return d; const plan = { ...d.plan }; if (v == null) delete plan[pe]; else plan[pe] = v; return { ...d, plan }; })} />}
       {drill && createPortal(<div className="pd-dr-bg" onClick={() => setDrill(null)}>
         <aside className="pd-dr" role="dialog" aria-modal="true" aria-label={drill.t} onClick={(e) => e.stopPropagation()}>
           <header><div><b>{drill.t}</b>{drill.sub && <span className="muted small">{drill.sub}</span>}</div><button type="button" className="btn sm" onClick={() => setDrill(null)} aria-label="Đóng">✕</button></header>

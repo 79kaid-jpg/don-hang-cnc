@@ -1,3 +1,4 @@
+import { PlanGrid } from '../components/PlanEdit';
 import { ChainPeopleAdmin } from '../components/ChainPeople';
 import { FieldsAdmin } from '../components/FieldsAdmin';
 import { CustomersAdmin } from '../components/CustomersAdmin';
@@ -26,7 +27,7 @@ const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWA: 'Hanw
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can, real, actAs } = useAuth(); const nav = useNavigate();
-  type Tab = 'so' | 'pj' | 'kh' | 'fields' | 'users' | 'groups' | 'flows' | 'ck' | 'guide' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl';
+  type Tab = 'so' | 'pj' | 'kh' | 'fields' | 'users' | 'groups' | 'flows' | 'ck' | 'guide' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl' | 'plan';
   const [asp, setAsp] = useSearchParams(); const tParam = asp.get('t') as Tab | null;
   const tab: Tab = tParam ?? 'users';
   const setTab = (t: Tab) => { const n = new URLSearchParams(asp); n.set('t', t); setAsp(n); };
@@ -52,13 +53,13 @@ export default function Admin() {
 
   const TABS: [typeof tab, string, string, string][] = [
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
-    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['pj', 'Dự án', 'Mã dự án, khách cuối, đóng dự án', 'fgrid'], ['so', 'Đánh số đơn', 'Mẫu mã đơn theo công ty', 'fgrid'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['guide', 'Hướng dẫn bước', 'Mục đích, việc cần làm, lưu ý', 'eye'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối & API', 'Base, Zalo, Google, Anthropic…', 'shield']];
+    ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['pj', 'Dự án', 'Mã dự án, khách cuối, đóng dự án', 'fgrid'], ['so', 'Đánh số đơn', 'Mẫu mã đơn theo công ty', 'fgrid'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['guide', 'Hướng dẫn bước', 'Mục đích, việc cần làm, lưu ý', 'eye'], ['plan', 'Kế hoạch sản lượng', 'Số tấn mục tiêu từng tháng', 'chart'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối & API', 'Base, Zalo, Google, Anthropic…', 'shield']];
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
   const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
   const NAV: [string, (typeof TABS)[number][]][] = [['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
-    ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['perf', 'base'].includes(t[0]))]];
+    ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['plan', 'perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
   const ini = (n: string) => (n || '?').replace(/\(.*?\)/g, '').split(' ').filter((x) => /\p{L}/u.test(x)).slice(-2).map((x) => x[0]).join('').toUpperCase() || '?';
   const filtered = fRole !== '' || fZ || fU !== '' || fAct !== 'on' || q !== '';
@@ -127,6 +128,7 @@ export default function Admin() {
       {tab === 'fields' && <FieldsAdmin canEdit={can('admin_it')} />}
       {tab === 'apv' && <ApprovalFlows canEdit={can('admin_it')} />}
       {tab === 'tpl' && <PrintTemplates canEdit={can('admin_it')} />}
+      {tab === 'plan' && <PlanGrid canEdit={can('admin_it')} />}
       {tab === 'perf' && <PerfAdmin canEdit={can('admin_it')} />}
       {tab === 'base' && <BaseConnect canEdit={can('admin_it')} />}
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}
