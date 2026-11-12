@@ -2568,3 +2568,15 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .jn-chev:focus-visible{outline:2px solid var(--ring)}
 .jn-pick{margin:0 12px 12px}
 @media (max-width:760px){.jn-top .jn-steps{order:3;flex-basis:100%}}
+/* Hành trình: avatar người làm + đồng hồ chờ */
+.jn-top .jn-steps{padding:6px 4px 16px}
+.jn-av{width:28px;height:28px;font-size:12.5px;font-weight:700;background:var(--surface);color:var(--muted);border:2px solid var(--line2)}
+.jn-st.done .jn-av{background:#E3F2E9;color:#1F5E3A;border-color:#2E7D4F}
+.jn-st.now .jn-av{background:var(--gold);color:#fff;border-color:var(--gold)}
+.jn-st.todo .jn-av{opacity:.55}
+.jn-ok{position:absolute;right:-4px;bottom:-4px;width:14px;height:14px;border-radius:50%;background:#2E7D4F;color:#fff;display:grid;place-items:center;border:1.5px solid var(--surface)}
+.jn-wait{position:absolute;left:14px;transform:translateX(-50%);top:calc(100% - 12px);display:inline-flex;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--gold-ink);white-space:nowrap;line-height:1}
+.jn-wait.warn{color:var(--wait)}.jn-wait.late{color:var(--red)}
+.jn-top .jn-st{align-items:flex-start}
+.jn-top .jn-st:not(:last-child)::after{top:20px}
+.jn-top .jn-steps{padding-bottom:20px!important}.jn-wait{top:32px;z-index:2}.jn-top{padding-bottom:0}
