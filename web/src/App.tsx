@@ -25,7 +25,7 @@ const WfEditor = lazy(() => import('./wf/WfEditor'));
 const WfRun = lazy(() => import('./wf/WfRun'));
 const WfPrint = lazy(() => import('./wf/WfPrint'));
 import './wf/wf.css';
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Stats = lazy(() => import('./pages/Stats'));
 const ProjectReport = lazy(() => import('./pages/ProjectReport'));
 import { Viewer } from './components/Viewer';
 const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
@@ -140,7 +140,7 @@ function Shell() {
           </div>)}
         <Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
           <Route path="/" element={<MyWork />} />
-          <Route path="/thong-ke" element={<Dashboard />} />
+          <Route path="/thong-ke" element={<Stats />} />
           <Route path="/bao-cao-du-an" element={<ProjectReport />} />
           {can('admin_it') && <Route path="/mo-phong" element={<Simulate />} />}
           <Route path="/bang" element={<Board />} />
