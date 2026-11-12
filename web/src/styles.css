@@ -2839,3 +2839,4 @@ div.pd-tr[role=button]{cursor:pointer}div.pd-tr[role=button]:hover{background:va
 .pd-chart .cross,.pd-chart .o,.pd-chart .p,.pd-chart .v{pointer-events:none}
 .pd-dr-bg{z-index:1000}@media (max-width:760px){.pd-dr{padding-bottom:env(safe-area-inset-bottom,0px)}}
 .pd-dr-bg{z-index:100000}
+.pd-cog{display:inline-flex;align-items:center;gap:6px}

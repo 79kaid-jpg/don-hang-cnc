@@ -134,7 +134,7 @@ export default function Production() {
         <div><div className="pd-eyebrow">SẢN LƯỢNG DỰ ÁN</div><h2 className="pd-title">{title}</h2><span className="muted small">số liệu đến {today().slice(8, 10)}/{today().slice(5, 7)} · đã giao = đợt QT3 khách ký nhận</span></div>
         <div className="pd-seg" role="group" aria-label="Đơn vị">{(['t', 'm2', 'tam'] as Unit[]).map((k) => <button key={k} aria-pressed={u === k} onClick={() => setU(k)}>{k === 't' ? 'Tấn' : k === 'm2' ? 'm²' : 'Tấm'}</button>)}</div>
         <div className="pd-seg" role="group" aria-label="Kỳ">{([['M', 'Tháng'], ['Q', 'Quý'], ['Y', 'Năm']] as [Per, string][]).map(([k, t]) => <button key={k} aria-pressed={per === k} onClick={() => setPer(k)}>{t}</button>)}</div>
-        {canSwitch && <label className="pd-co">Giá theo<select value={co} onChange={(e) => { const c = e.target.value as Co; setCo(c); setViewCo(c); }}>{(['PN', 'IPC', 'HW'] as Co[]).map((c) => <option key={c} value={c}>{CO_NAME[c]}</option>)}</select></label>}
+        {canSwitch && <div className="pd-cog"><span className="muted small">Giá</span><div className="pd-seg" role="group" aria-label="Tính giá theo công ty">{(['PN', 'IPC', 'HW'] as Co[]).map((c) => <button key={c} aria-pressed={co === c} title={CO_NAME[c]} onClick={() => { setCo(c); setViewCo(c); }}>{c}</button>)}</div></div>}
       </div>
 
       {(fm || fp || fk) && <div className="pd-chips"><span className="muted small">Đang lọc:</span>
