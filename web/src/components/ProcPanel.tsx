@@ -573,6 +573,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const ql = q.trim().toLowerCase();
   const hit = rows.map((_, i) => i).filter((i) => (!errOnly || bad(rows[i])) && (!ql || cols.some((c) => !c.n && String(rows[i][c.k] ?? '').toLowerCase().includes(ql))));
   const shown = hit.slice(0, L); const nBad = rows.filter(bad).length;
+  const [fixedAll, setFixedAll] = useState(false);
+  useEffect(() => { if (errOnly && nBad === 0) { setErrOnly(false); setLim(0); setFixedAll(true); const t = setTimeout(() => setFixedAll(false), 4000); return () => clearTimeout(t); } }, [errOnly, nBad]);
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
@@ -608,6 +610,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
           const pos = hit.indexOf(nx); if (pos < 0) { setQ(''); setErrOnly(false); } setLim((x) => Math.max(x || step, (pos < 0 ? nx : pos) + 1));
           setTimeout(() => { const el = [...document.querySelectorAll<HTMLElement>('[data-row="' + nx + '"]')].find((x) => x.offsetParent) ?? null; if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('pp-flash'); setTimeout(() => el.classList.remove('pp-flash'), 1200); } }, 60); }}><Icon name="arrow" size={13} /></button>}
         {(ql || errOnly) && <span className="small muted">{hit.length}/{rows.length}</span>}
+        {fixedAll && <span className="small pp-okmsg" role="status"><Icon name="check" size={14} />Đã sửa hết lỗi</span>}
       </div>}
       {mob && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
       {(!mob || asTbl) && <div className="tbl-wrap"><table className="tbl pp-grid">
@@ -634,7 +637,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {hit.length > shown.length && <button type="button" className="link-btn" onClick={() => setLim(hit.length)}>Hiện tất cả</button>}
         {L > step && <button type="button" className="btn sm" onClick={() => { setLim(0); requestAnimationFrame(() => document.querySelector('.pp-tbl')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); }}><span className="pp-upic"><Icon name="back" size={14} /></span>Thu gọn</button>}
       </div>}
-      {hit.length === 0 && rows.length > 0 && <div className="small muted pp-none">Không có tấm khớp.</div>}
+      {hit.length === 0 && rows.length > 0 && <div className="small muted pp-none">Không có tấm khớp. <button type="button" className="btn sm" onClick={() => { setQ(''); setErrOnly(false); setLim(0); }}>Bỏ lọc</button></div>}
     </div>);
 }
 

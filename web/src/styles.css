@@ -2693,3 +2693,4 @@ html[data-theme=dark] .pp-grid td.pp-cbad{background:#3A2222}
 .pp-sum span+span::before{content:'·';margin:0 8px;color:var(--muted);font-weight:400}
 .pp-vwi{color:var(--muted)}.pp-vwi.on{background:var(--muted);border-color:var(--muted);color:#fff}
 .pp-upic{display:inline-flex;transform:rotate(90deg)}
+.pp-okmsg{display:inline-flex;align-items:center;gap:4px;color:#2E7D4F;font-weight:600}.pp-none .btn{margin-left:8px}
