@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { sb, errText } from '../lib/supabase';
 import { useCompanies, type CoOrder } from '../lib/coorders';
 import { reloadCoIdx } from '../lib/myco';
@@ -11,6 +12,8 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
   const cos = useCompanies(); const { can: role } = useAuth(); const adm = role('admin_it') || role('admin_cnc');
   const [co, setCo] = useState<CoOrder | null>(null); const [cands, setCands] = useState<CoOrder[]>([]);
   const [ed, setEd] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { const mq = window.matchMedia('(min-width:761px)'); const f = () => setSlot(mq.matches ? document.getElementById('pp-codeslot') : null); f(); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
   const load = async () => { const { data } = await sb.from('co_orders').select('*').eq('doc_id', docId).maybeSingle(); setCo(data as CoOrder | null); };
   useEffect(() => { load(); }, [docId]);
   const seller = cos?.find((c) => c.buyer === co?.company);
@@ -27,14 +30,20 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
     const r = await sb.from('docs_v').select('tables').eq('id', docId).single(); if (r.data) onTables(r.data.tables ?? {}); toast('Đã chép ' + data + ' dòng'); };
   const ref = cands.find((c) => c.id === co.ref_id);
   return (
-    <div className="cob">
-      <div className="cob-code">
+    <div className={'cob' + (slot && !seller ? ' cob-empty' : '')}>
+      {slot ? createPortal(<div className="cob-code cob-top">
         <span className="cob-lb">Mã đơn {co.company}</span>
         {ed === null ? <><b className="cob-v">{co.code}</b>{co.edited && <span className="chip idle" title={'Mã tự tạo: ' + co.code_auto}>đã sửa</span>}
             {canCode && <button type="button" className="btn sm icon-btn" aria-label="Sửa mã đơn" title="Sửa mã đơn" onClick={() => setEd(co.code)}><Icon name="edit" size={15} /></button>}</>
           : <span className="cob-ed"><input value={ed} autoFocus onChange={(e) => setEd(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === 'Enter') saveCode(); if (e.key === 'Escape') setEd(null); }} aria-label="Mã đơn mới" />
             <button type="button" className="btn sm primary" disabled={busy || !ed.trim()} onClick={saveCode}>Lưu</button><button type="button" className="btn sm" onClick={() => setEd(null)}>Huỷ</button></span>}
-      </div>
+      </div>, slot) : <div className="cob-code">
+        <span className="cob-lb">Mã đơn {co.company}</span>
+        {ed === null ? <><b className="cob-v">{co.code}</b>{co.edited && <span className="chip idle" title={'Mã tự tạo: ' + co.code_auto}>đã sửa</span>}
+            {canCode && <button type="button" className="btn sm icon-btn" aria-label="Sửa mã đơn" title="Sửa mã đơn" onClick={() => setEd(co.code)}><Icon name="edit" size={15} /></button>}</>
+          : <span className="cob-ed"><input value={ed} autoFocus onChange={(e) => setEd(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === 'Enter') saveCode(); if (e.key === 'Escape') setEd(null); }} aria-label="Mã đơn mới" />
+            <button type="button" className="btn sm primary" disabled={busy || !ed.trim()} onClick={saveCode}>Lưu</button><button type="button" className="btn sm" onClick={() => setEd(null)}>Huỷ</button></span>}
+      </div>}
       {seller && <div className="cob-ref">
         <span className="cob-lb">Tham chiếu đơn {seller.code} <span className="muted">(không bắt buộc)</span></span>
         <div className="cob-row">
