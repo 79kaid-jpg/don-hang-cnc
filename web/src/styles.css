@@ -2694,3 +2694,28 @@ html[data-theme=dark] .pp-grid td.pp-cbad{background:#3A2222}
 .pp-vwi{color:var(--muted)}.pp-vwi.on{background:var(--muted);border-color:var(--muted);color:#fff}
 .pp-upic{display:inline-flex;transform:rotate(90deg)}
 .pp-okmsg{display:inline-flex;align-items:center;gap:4px;color:#2E7D4F;font-weight:600}.pp-none .btn{margin-left:8px}
+/* Bảng tấm: cuộn ngang dễ (ghim 2 cột, mép ‹ ›, thanh cuộn dính đáy, kéo tay) */
+.pp-tw{position:relative}
+.pp-grid th:nth-child(2),.pp-grid td:nth-child(2){position:sticky;left:36px;z-index:1;background:inherit}
+.pp-grid tbody td:nth-child(2){background:#fff}.pp-grid tbody tr:nth-child(even) td:nth-child(2){background:#FAF8F3}
+.pp-grid thead th:nth-child(2),.pp-grid thead th:first-child{z-index:3}
+.pp-grid tfoot td:first-child{z-index:3}
+.tbl-wrap.sl .pp-grid td:nth-child(2),.tbl-wrap.sl .pp-grid th:nth-child(2){box-shadow:6px 0 8px -6px rgba(20,28,40,.25)}
+.pp-tw .tbl-wrap.sr{mask-image:linear-gradient(90deg,#000 calc(100% - 28px),rgba(0,0,0,.55))}
+.pp-edge{position:absolute;top:50%;z-index:5;width:34px;height:52px;margin-top:-26px;display:grid;place-items:center;border:1px solid var(--line2);background:var(--surface);color:var(--ink);border-radius:10px;box-shadow:0 2px 8px rgba(20,28,40,.18);cursor:pointer;opacity:.92}
+.pp-edge:hover{opacity:1;border-color:var(--gold)}
+.pp-edge.l{left:300px}.pp-edge.r{right:-6px}.pp-edge.r svg{transform:rotate(180deg)}
+.pp-hbar{position:sticky;bottom:0;z-index:6;height:14px;overflow-x:auto;overflow-y:hidden;background:var(--surface);border-top:1px solid var(--line)}
+.pp-hbar>div{height:1px}
+.pp-hhint{text-align:right;padding:2px 4px 0;font-size:11.5px}
+@media (hover:hover) and (pointer:fine){
+  .pp-tw .tbl-wrap .pp-grid td:not(:has(input,button)),.pp-tw .tbl-wrap .pp-grid th:not(:has(button)){cursor:grab}
+  .pp-tw .tbl-wrap.panning,.pp-tw .tbl-wrap.panning *{cursor:grabbing!important;user-select:none}
+}
+@media (hover:none){.pp-hhint{display:none}}
+@media (max-width:760px){.pp-edge.l{left:4px}.pp-grid th:nth-child(2),.pp-grid td:nth-child(2){position:static}}
+.pp-hbar{bottom:84px}
+.pp-grid thead th:nth-child(2){background:var(--soft)}
+.pp-grid tfoot td:nth-child(2){position:static;box-shadow:none}
+.pp-grid tfoot td{background:var(--soft)}
+.pp-edge.l{left:calc(36px + 26ch + 28px)}

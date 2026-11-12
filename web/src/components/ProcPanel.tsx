@@ -565,6 +565,17 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const fileRef = useRef<HTMLInputElement>(null);
   const [asTbl, setAsTbl] = useState(false); const [mi, setMi] = useState(-1);
   const [q, setQ] = useState(''); const [errOnly, setErrOnly] = useState(false); const errJ = useRef(-1);
+  const wrapRef = useRef<HTMLDivElement>(null); const barRef = useRef<HTMLDivElement>(null); const lockS = useRef(''); const [edge, setEdge] = useState({ l: false, r: false }); const [sw, setSw] = useState(0);
+  const syncEdge = useCallback(() => { const w = wrapRef.current; if (!w) return; const l = w.scrollLeft > 2, r = w.scrollLeft + w.clientWidth < w.scrollWidth - 2;
+    setEdge((e) => (e.l === l && e.r === r ? e : { l, r })); setSw(w.scrollWidth);
+    if (barRef.current && lockS.current !== 'b') { lockS.current = 'w'; barRef.current.scrollLeft = w.scrollLeft; requestAnimationFrame(() => { lockS.current = ''; }); } }, []);
+  useEffect(() => { const w = wrapRef.current; if (!w) return; syncEdge(); const ro = new ResizeObserver(syncEdge); ro.observe(w); if (w.firstElementChild) ro.observe(w.firstElementChild); return () => ro.disconnect(); });
+  const panStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return; const t = e.target as HTMLElement; if (t.closest('input,button,select,textarea,a,[contenteditable]')) return;
+    const w = wrapRef.current; if (!w || w.scrollWidth <= w.clientWidth) return; const x0 = e.clientX, s0 = w.scrollLeft; let moved = false;
+    const mv = (ev: PointerEvent) => { const dx = ev.clientX - x0; if (!moved && Math.abs(dx) < 4) return; moved = true; w.classList.add('panning'); w.scrollLeft = s0 - dx; ev.preventDefault(); };
+    const up = () => { w.classList.remove('panning'); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); };
   const [mob, setMob] = useState(() => window.matchMedia('(max-width:760px)').matches);
   useEffect(() => { const mq = window.matchMedia('(max-width:760px)'); const f = () => setMob(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
   const step = mob ? 10 : 25;
@@ -613,7 +624,10 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {fixedAll && <span className="small pp-okmsg" role="status"><Icon name="check" size={14} />Đã sửa hết lỗi</span>}
       </div>}
       {mob && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
-      {(!mob || asTbl) && <div className="tbl-wrap"><table className="tbl pp-grid">
+      {(!mob || asTbl) && <div className="pp-tw">
+      {edge.l && <button type="button" className="pp-edge l" aria-label="Cuộn sang trái" onClick={() => wrapRef.current?.scrollBy({ left: -wrapRef.current.clientWidth * 0.8, behavior: 'smooth' })}><Icon name="back" size={18} /></button>}
+      {edge.r && <button type="button" className="pp-edge r" aria-label="Cuộn sang phải" onClick={() => wrapRef.current?.scrollBy({ left: wrapRef.current.clientWidth * 0.8, behavior: 'smooth' })}><Icon name="back" size={18} /></button>}
+      <div className={'tbl-wrap' + (edge.l ? ' sl' : '') + (edge.r ? ' sr' : '')} ref={wrapRef} onScroll={syncEdge} onPointerDown={panStart}><table className="tbl pp-grid">
         <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : 't'}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}</th>)}{editable && <th />}</tr></thead>
@@ -630,7 +644,10 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
         {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
-      </table></div>}
+      </table></div>
+      {(edge.l || edge.r) && <div className="pp-hbar" ref={barRef} onScroll={(e) => { if (lockS.current === 'w') return; lockS.current = 'b'; if (wrapRef.current) wrapRef.current.scrollLeft = e.currentTarget.scrollLeft; requestAnimationFrame(() => { lockS.current = ''; }); }}><div style={{ width: sw }} /></div>}
+      {(edge.l || edge.r) && <div className="pp-hhint small muted">Kéo ✋ ở ô không nhập, ⇧ + lăn chuột, hoặc bấm ‹ › để cuộn ngang</div>}
+      </div>}
       {hit.length > step && <div className="pp-pager">
         <span className="small muted">Hiện 1–{shown.length} / {hit.length}</span>
         {hit.length > shown.length && <button type="button" className="btn sm" onClick={() => setLim(L + step)}>Xem thêm {Math.min(step, hit.length - shown.length)}</button>}
