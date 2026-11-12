@@ -2528,3 +2528,30 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .pp-bdd>summary{min-height:40px}
 .pp-desc{margin:0}
 .odh-pn{font-weight:500;color:var(--muted);font-size:.8em;margin-left:8px}
+/* Sửa: thẻ tấm không tràn; thanh nút 1 hàng */
+@media (max-width:760px){
+  .pp-mrow-e{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pp-mrow-e .f{min-width:0}
+  .pp-mrow-e input{width:100%;min-width:0;box-sizing:border-box}
+}
+.pp-actmore{display:none;position:relative}
+.pp-actmore>summary{list-style:none}.pp-actmore>summary::-webkit-details-marker{display:none}
+.pp-actmenu{top:auto;bottom:calc(100% + 6px);left:0;right:auto}
+@media (max-width:1024px){
+  .pp-act{flex-wrap:nowrap;align-items:center;gap:8px}
+  .pp-act .pp-hint{display:none}
+  .pp-act .pp-go{flex:1 1 auto;min-height:48px;justify-content:center}
+  .pp-act .pp-save{flex:none;display:flex;align-items:center;gap:6px}
+}
+@media (max-width:760px){
+  .pp-act{flex-wrap:nowrap;padding:8px 14px}
+  .pp-act .pp-sec{display:none}
+  .pp-actmore{display:block;flex:none}
+  .pp-actmore>summary{width:48px;height:48px}
+  .pp-act .pp-dirty{font-size:0;gap:0}
+  .pp-act .pp-dirty svg,.pp-act .pp-dirty i{font-size:14px}
+  .pp-act .pp-savelb{display:none}
+  .pp-act .pp-savebtn{width:48px;height:48px;padding:0;justify-content:center}
+  .pp-act .pp-go{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+}
+@media (max-width:760px){.pp-act .btn.pp-go{white-space:nowrap;font-size:15px;padding:0 12px}.pp-act .pp-save{border:0;padding:0;margin:0}}

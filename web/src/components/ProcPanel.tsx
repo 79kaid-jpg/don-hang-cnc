@@ -382,9 +382,13 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
             <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
               <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
-            {!first && <button className="btn kb-back" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
-            {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
-            <button className="btn primary" disabled={busy} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
+            {!first && <button className="btn kb-back pp-sec" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
+            {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go pp-sec" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
+            {(!first || d.status === 'duyet' || d.status === 'duyet_them') && <details className="pp-actmore"><summary className="btn icon-btn" aria-label="Thao tác khác"><Icon name="more" size={18} /></summary>
+              <div className="odh-menu pp-actmenu" role="menu">
+                {!first && <button type="button" role="menuitem" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('back'); }}><Icon name="back" size={16} />Trả về</button>}
+                {(d.status === 'duyet' || d.status === 'duyet_them') && <button type="button" role="menuitem" className="danger-h" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('fail'); }}><Icon name="x" size={16} />Thất bại</button>}</div></details>}
+            <button className="btn primary pp-go" disabled={busy} title={(d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' : undefined} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký') + ((d.status === 'duyet' || d.status === 'duyet_them') && proc !== 'QT0' ? (d.company === 'HW' ? ' → chờ ký tay' : ' → chuyển ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
@@ -409,7 +413,7 @@ function SaveState({ editable, dirty, busy, onSave }: { editable: boolean; dirty
   if (!editable) return null;
   return <span className="pp-save">
     <span className={'pp-dirty' + (dirty ? ' on' : '')} role="status">{dirty ? <><i aria-hidden="true" />Chưa lưu</> : <><Icon name="check" size={14} />Đã lưu</>}</span>
-    <button className="btn sm pp-savebtn" disabled={!dirty || busy} onClick={onSave}><Icon name="check" size={14} />Lưu nháp</button></span>;
+    <button className="btn sm pp-savebtn" disabled={!dirty || busy} onClick={onSave} aria-label="Lưu nháp" title="Lưu nháp"><Icon name="check" size={14} /><span className="pp-savelb">Lưu nháp</span></button></span>;
 }
 
 /** Còn thay đổi chưa lưu: hỏi trước khi rời trang (đóng tab, bấm liên kết trong app) */
