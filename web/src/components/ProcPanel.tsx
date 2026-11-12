@@ -548,7 +548,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const fileRef = useRef<HTMLInputElement>(null);
   const [asTbl, setAsTbl] = useState(false); const [mi, setMi] = useState(-1);
   const [q, setQ] = useState(''); const [errOnly, setErrOnly] = useState(false);
-  const step = typeof window !== 'undefined' && window.matchMedia('(max-width:760px)').matches && !asTbl ? 10 : 100;
+  const step = typeof window !== 'undefined' && window.matchMedia('(max-width:760px)').matches ? 10 : 25;
   const [lim, setLim] = useState(0); const L = lim || step;
   const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
   const ql = q.trim().toLowerCase();
@@ -606,6 +606,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
       </table></div>
       {hit.length > shown.length && <button type="button" className="btn sm pp-more" onClick={() => setLim(L + step)}>Xem thêm {Math.min(step, hit.length - shown.length)} <span className="muted">(còn {hit.length - shown.length})</span></button>}
+      {hit.length > shown.length && <button type="button" className="link-btn pp-all" onClick={() => setLim(hit.length)}>Hiện tất cả {hit.length}</button>}
       {hit.length === 0 && rows.length > 0 && <div className="small muted pp-none">Không có tấm khớp.</div>}
     </div>);
 }
