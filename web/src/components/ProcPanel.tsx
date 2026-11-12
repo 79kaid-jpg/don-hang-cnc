@@ -397,12 +397,6 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
           <button className="btn sm" disabled={!note.trim()} onClick={addNote}>Ghi</button></div>}
       </div>
 
-      <div className="pp-signs">
-        {(proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']).map((r) => {
-          const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
-          return <div key={r} className={'pp-sign' + (s ? ' on' : '')}><span className="small muted">{r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</span>{s ? <><b>{who(s.user)}</b><span className="small muted">{dt(s.at)}</span></> : <span className="small muted">chưa ký</span>}</div>;
-        })}
-      </div>
 
       <Journey d={d} proc={proc} people={people} />
       </aside>

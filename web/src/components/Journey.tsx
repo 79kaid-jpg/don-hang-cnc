@@ -16,7 +16,7 @@ const fmtLeft = (h: number) => (Math.abs(h) >= 24 ? Math.round(Math.abs(h) / 24)
 /** Hành trình duyệt: stepper + timeline (bấm để mở) */
 export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[]; idx: number }; assignee?: string | null; assign_note?: string | null }; proc: Proc; people: Record<string, Profile> }) {
   const [cp, setCp] = useState<CP[]>([]); const [lvs, setLvs] = useState<LV[]>([]); const [gs, setGs] = useState<Record<string, string>>({});
-  const [dl, setDl] = useState<{ user_id: string; to_user: string }[]>([]); const [open, setOpen] = useState(false);
+  const [dl, setDl] = useState<{ user_id: string; to_user: string }[]>([]); const [open, setOpen] = useState(false); const [pk, setPk] = useState('');
   const company = proc === 'QT0' ? 'PN' : d.company;
   useEffect(() => {
     sb.from('chain_people').select('role, user_id, group_id, sla_h').eq('proc', proc).eq('company', company).then(({ data }) => setCp((data as CP[]) ?? []));
@@ -63,14 +63,15 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
         <span className="jn-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></span>
       </button>
       <ol className="jn-steps">
-        {steps.map((s) => (
-          <li key={s.key} className={'jn-st ' + s.state + (s.extra ? ' extra' : '') + (s.state === 'now' ? ' ' + tone : '')}>
-            <span className="jn-dot">{s.state === 'done' ? <Icon name="check" size={12} /> : s.extra ? <Icon name="shield" size={11} /> : null}</span>
-            <span className="jn-lb"><b>{s.label}</b><span>{s.state === 'done' && s.sign ? short(people[s.sign.user]?.full_name ?? s.who) : s.who}{s.state === 'done' && s.sign?.by && <i className="by-adm" title={'Admin ' + (people[s.sign.by]?.full_name ?? '') + ' thay mặt'}>↪</i>}</span>
-              {s.state === 'now' && <em>chờ {fmtLeft(el)}</em>}</span>
-          </li>))}
-        <li className={'jn-st end' + (done ? ' done' : ' todo')}><span className="jn-dot"><Icon name={done ? 'check' : 'arrow'} size={11} /></span><span className="jn-lb"><b>{endLabel}</b></span></li>
+        {steps.map((s) => { const nm2 = s.state === 'done' && s.sign ? short(people[s.sign.user]?.full_name ?? s.who) : s.who;
+          return <li key={s.key} className={'jn-st ' + s.state + (s.extra ? ' extra' : '') + (s.state === 'now' ? ' ' + tone : '') + (pk === s.key ? ' pk' : '')}>
+            <button type="button" className="jn-dot" title={s.label + ' · ' + nm2} aria-label={s.label + ', ' + (s.state === 'done' ? 'đã ký' : s.state === 'now' ? 'đang làm' : 'chưa tới') + ', ' + nm2} aria-pressed={pk === s.key} onClick={() => setPk(pk === s.key ? '' : s.key)}>
+              {s.state === 'done' ? <Icon name="check" size={12} /> : s.extra ? <Icon name="shield" size={11} /> : null}</button></li>; })}
+        <li className={'jn-st end' + (done ? ' done' : ' todo')}><span className="jn-dot" title={endLabel} aria-label={endLabel} role="img"><Icon name={done ? 'check' : 'arrow'} size={11} /></span></li>
       </ol>
+      {(() => { const s = steps.find((x) => x.key === pk) ?? (pk ? undefined : steps.find((x) => x.state === 'now')); if (!s) return null;
+        const who = s.state === 'done' && s.sign ? people[s.sign.user]?.full_name ?? s.who : s.who;
+        return <div className="jn-pick" role="status"><b>{s.label}</b> · {who}{s.state === 'done' && s.sign ? <span className="muted"> · {dt(s.sign.at)}</span> : s.state === 'now' ? <span className="muted"> · chờ {fmtLeft(el)}</span> : <span className="muted"> · chưa tới</span>}</div>; })()}
       {open && <ul className="jn-tl">
         {events.length === 0 && <li className="small muted">Chưa có hoạt động.</li>}
         {events.map((e, i) => <li key={i} className={'jn-ev ' + e.k}>
