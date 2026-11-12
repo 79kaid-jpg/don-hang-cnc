@@ -12,6 +12,7 @@ import { QtTag, qtOfDoc, qtOfTab } from '../components/QtTag';
 import { COMPANY, FINAL, STATUS, type Batch, type Company, type Doc, type Proc } from '../lib/proc';
 import { isStuck } from '../lib/holders';
 import { PerfCard } from '../components/Perf';
+import { ProdMini } from '../components/ProdMini';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
 export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
@@ -64,11 +65,6 @@ export default function MyWork() {
     <>
       <div className="mw-hello"><h1>{hello}, {me?.full_name}</h1>
         <span className={'mw-count' + (rows?.length ? ' on' : '')}>{rows ? (rows.length ? rows.length + ' việc đến lượt bạn' : 'Không có việc chờ bạn') : 'Đang tải…'}</span></div>
-      {st && <div className="mw-kpi">
-        <Link to="/so-do?qt=TQ"><i className="ov-ic run"><Icon name="run" size={16} /></i><b>{st.run}</b><span>Đang chạy</span></Link>
-        <Link to="/so-do?qt=TQ" className={st.stuck ? 'bad' : ''}><i className={'ov-ic ' + (st.stuck ? 'stuck' : 'ok')}><Icon name={st.stuck ? 'hourglass' : 'check'} size={16} /></i><b>{st.stuck}</b><span>Kẹt ≥ 2 ngày</span></Link>
-        <Link to="/don" className={st.late ? 'bad' : ''}><i className={'ov-ic ' + (st.late ? 'stuck' : 'ok')}><Icon name="alert" size={16} /></i><b>{st.late}</b><span>Quá hạn giao</span></Link>
-      </div>}
       <InstallHint />
       <ZaloLink compact />
       <section className="card flush" aria-labelledby="h-todo">
@@ -91,6 +87,7 @@ export default function MyWork() {
             </ul>)}
         </div>
       </section>
+      <ProdMini />
       {mine.length > 0 && <details className="card flush mw-done">
         <summary className="card-head"><h2>Đã xử lý gần đây <span className="chip idle">{mine.length}</span></h2></summary>
         <ul className="worklist">{mine.map((r) => (
@@ -100,7 +97,17 @@ export default function MyWork() {
             <span className="mw-time">{ago(r.at)}</span></Link></li>))}</ul>
         <div style={{ padding: '8px 16px 12px' }}><Link className="small" to="/thong-ke">Thống kê →</Link></div>
       </details>}
-      <PerfCard />
+      <details className="card flush mw-eff">
+        <summary className="card-head"><h2>Hiệu quả công việc</h2></summary>
+        <div className="mw-effb">
+  {st && <div className="mw-kpi">
+        <Link to="/so-do?qt=TQ"><i className="ov-ic run"><Icon name="run" size={16} /></i><b>{st.run}</b><span>Đang chạy</span></Link>
+        <Link to="/so-do?qt=TQ" className={st.stuck ? 'bad' : ''}><i className={'ov-ic ' + (st.stuck ? 'stuck' : 'ok')}><Icon name={st.stuck ? 'hourglass' : 'check'} size={16} /></i><b>{st.stuck}</b><span>Kẹt ≥ 2 ngày</span></Link>
+        <Link to="/don" className={st.late ? 'bad' : ''}><i className={'ov-ic ' + (st.late ? 'stuck' : 'ok')}><Icon name="alert" size={16} /></i><b>{st.late}</b><span>Quá hạn giao</span></Link>
+      </div>}
+          <PerfCard />
+        </div>
+      </details>
     </>
   );
 }
