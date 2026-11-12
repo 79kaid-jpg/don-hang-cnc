@@ -2606,3 +2606,4 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 @media (max-width:760px){.pp-vt{display:inline-flex}.pp-th{flex-wrap:wrap;align-items:center}}
 @media (max-width:760px){.pp-th>b{flex:1 1 auto;min-width:0}.pp-th .pp-tools{order:3;flex-basis:100%}.pp-th{row-gap:8px}}
 @media (max-width:760px){.pp-th{flex-direction:row!important;align-items:center!important}}
+@media (max-width:760px){.pp-act>.btn.primary.pp-go{flex:1 1 0!important;order:0!important;min-width:0}.pp-act .pp-save{flex:none!important;padding:0!important;border:0!important}}
