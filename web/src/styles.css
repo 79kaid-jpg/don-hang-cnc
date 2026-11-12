@@ -2724,3 +2724,9 @@ html[data-theme=dark] .pp-grid td.pp-cbad{background:#3A2222}
 .pp-grid tfoot td:first-child{z-index:5}
 .pp-grid tfoot{position:relative;z-index:4}
 .pp-grid tfoot td:nth-child(2){position:sticky!important;left:auto!important;bottom:0}
+/* Bàn tay kéo: không phụ thuộc :has / hover media (máy cảm ứng + chuột vẫn có) */
+@media (min-width:761px){
+  .pp-tw .tbl-wrap .pp-grid td,.pp-tw .tbl-wrap .pp-grid th,.pp-tw .tbl-wrap .pp-grid .calc{cursor:grab}
+  .pp-tw .tbl-wrap .pp-grid input{cursor:text}
+  .pp-tw .tbl-wrap .pp-grid button{cursor:pointer}
+}
