@@ -1,0 +1,4 @@
+-- Hàm tổng hợp sản lượng cho trang Thống kê (security invoker, đọc qua docs_v nên tôn trọng quyền xem).
+-- Trả về: q1[] (đặt + còn lại theo XNĐH), q3[] (đợt giao khách đã ký), hasVal.
+-- Nguồn đầy đủ: lấy bằng select pg_get_functiondef('public.prod_stats(text)'::regprocedure);
+-- (đã áp dụng qua migration "prod_stats" + "prod_stats_title" trên Supabase ngày 13/11/2026)

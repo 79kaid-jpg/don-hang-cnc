@@ -36,46 +36,37 @@ export default function Production() {
   const setF = (k: string, v: string | null) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); setSp(n, { replace: true }); };
   const [hov, setHov] = useState<number | null>(null);
   const [drill, setDrill] = useState<{ t: string; sub?: string; kind: 'trip' | 'rem'; ids: string[] } | null>(null);
-  const [data, setData] = useState<{ p: P[]; o: O[]; b: B[]; d: D[]; co: CO[]; cu: Record<string, string>; plan: Record<string, number> } | null>(null);
+  type ST = { q1: { id: string; order_id: string; title: string; created_at: string; o: number[]; r: number[] }[]; q3: { id: string; order_id: string; title: string; done_at: string; q1: string | null; d: number[] }[]; hasVal: boolean };
+  const [data, setData] = useState<{ p: P[]; o: O[]; cu: Record<string, string>; plan: Record<string, number> } | null>(null);
+  const [st, setSt] = useState<ST | null>(null);
   useEffect(() => { try { localStorage.setItem('prod-u', u); } catch { /* */ } }, [u]);
   useEffect(() => {
-    Promise.all([sb.from('projects').select('id, code, name, end_customer_id, status'), sb.from('orders').select('id, project_id, due_date, customer_id'),
-      sb.from('batches').select('id, order_id, proc, status, title, created_at, done_at, co_order_id').in('proc', ['QT1', 'QT3']),
-      sb.from('docs_v').select('batch_id, company, tables'), sb.from('co_orders').select('id, batch_id, company, code'), sb.from('customers').select('id, name'), sb.from('monthly_plans').select('month, tons')])
-      .then(([p, o, b, d, c, cu, pl]) => setData({ p: (p.data ?? []) as P[], o: (o.data ?? []) as O[], b: (b.data ?? []) as B[], d: (d.data ?? []) as D[], co: (c.data ?? []) as CO[],
+    Promise.all([sb.from('projects').select('id, code, name, end_customer_id, status'), sb.from('orders').select('id, project_id, due_date, customer_id'), sb.from('customers').select('id, name'), sb.from('monthly_plans').select('month, tons')])
+      .then(([p, o, cu, pl]) => setData({ p: (p.data ?? []) as P[], o: (o.data ?? []) as O[],
         cu: Object.fromEntries(((cu.data ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name])), plan: Object.fromEntries(((pl.data ?? []) as { month: string; tons: number }[]).map((x) => [mk(x.month), Number(x.tons)])) }));
   }, []);
+  useEffect(() => { let on = true; sb.rpc('prod_stats', { p_co: co }).then(({ data: d }) => { if (on) setSt((d ?? { q1: [], q3: [], hasVal: false }) as ST); }); return () => { on = false; }; }, [co]);
 
   const M = useMemo(() => {
-    if (!data) return null;
+    if (!data || !st) return null;
     const td = today(), now = mk(td), cur = fm ?? now; const per2: Per = fm ? 'M' : per;
-    const pjOf = (oid: string) => { const o = data.o.find((x) => x.id === oid); return o?.project_id ? data.p.find((p) => p.id === o.project_id) : undefined; };
-    const custOf = (oid: string) => { const o = data.o.find((x) => x.id === oid); return pjOf(oid)?.end_customer_id ?? o?.customer_id ?? ''; };
+    const ord = new Map(data.o.map((o) => [o.id, o])); const pjById = new Map(data.p.map((p) => [p.id, p]));
+    const pjOf = (oid: string) => { const o = ord.get(oid); return o?.project_id ? pjById.get(o.project_id) : undefined; };
+    const custOf = (oid: string) => { const o = ord.get(oid); return pjOf(oid)?.end_customer_id ?? o?.customer_id ?? ''; };
     const okO = (oid: string) => (!fp || pjOf(oid)?.id === fp) && (!fk || custOf(oid) === fk);
-    const docOf = new Map<string, D>(); data.d.forEach((d) => docOf.set(d.batch_id + ':' + d.company, d));
-    const coById = new Map(data.co.map((x) => [x.id, x]));
-    const ord = new Map(data.o.map((o) => [o.id, o]));
-    const q1 = data.b.filter((b) => b.proc === 'QT1' && !['fail', 'huy'].includes(b.status) && okO(b.order_id));
-    const q3 = data.b.filter((b) => b.proc === 'QT3' && b.status === 'hoan_tat' && b.done_at && okO(b.order_id));
-    const rowQ = (r: Row, price: number | null): Q => { const m2 = m2Of(r) ?? 0, tam = num(r.so_tam) ?? 0; return { kg: num(r.kg) ?? kgOf(r) ?? 0, m2, tam, val: price != null ? m2 * price : 0 }; };
-    const priceMap = new Map<string, Map<string, number>>();
-    const priceOf = (q1id: string) => { let m = priceMap.get(q1id); if (!m) { m = new Map(); (docOf.get(q1id + ':' + co)?.tables?.ds ?? []).forEach((r) => { const g = num(r.don_gia); if (g != null) m!.set(String(r.ma_tam ?? ''), g); }); priceMap.set(q1id, m); } return m; };
+    const toQ = (a: number[]): Q => ({ kg: +a[0] || 0, m2: +a[1] || 0, tam: +a[2] || 0, val: +a[3] || 0 });
+    type BB = { id: string; order_id: string; title: string; created_at: string; done_at: string | null };
+    const q1 = st.q1.filter((b) => okO(b.order_id)); const q3 = st.q3.filter((b) => okO(b.order_id));
     // đặt (theo XNĐH)
-    const byMonthOrd = new Map<string, Q>(); const ordByB = new Map<string, Q>(); const ordRows = new Map<string, Row[]>();
-    q1.forEach((b) => { const rs = docOf.get(b.id + ':PN')?.tables?.ds ?? docOf.get(b.id + ':' + co)?.tables?.ds ?? []; ordRows.set(b.id, rs); const pm = priceOf(b.id);
-      const s = rs.reduce<Q>((a, r) => add(a, rowQ(r, pm.get(String(r.ma_tam ?? '')) ?? null)), Z()); ordByB.set(b.id, s); const k = mk(b.created_at); byMonthOrd.set(k, add(byMonthOrd.get(k) ?? Z(), s)); });
+    const byMonthOrd = new Map<string, Q>(); const ordByB = new Map<string, Q>();
+    q1.forEach((b) => { const s = toQ(b.o); ordByB.set(b.id, s); const k = mk(b.created_at); byMonthOrd.set(k, add(byMonthOrd.get(k) ?? Z(), s)); });
     // đã giao (QT3 khách ký)
-    const byMonthDel = new Map<string, Q>(); const delByB = new Map<string, Map<string, number>>(); const delQByB = new Map<string, Q>(); const trips: { b: B; q: Q; onTime: boolean | null }[] = [];
-    q3.forEach((b) => { const d = docOf.get(b.id + ':PN') ?? data.d.find((x) => x.batch_id === b.id); const rs = d?.tables?.tp ?? []; const q1id = b.co_order_id ? coById.get(b.co_order_id)?.batch_id ?? null : null;
-      const pm = q1id ? priceOf(q1id) : new Map<string, number>(); const s = Z();
-      rs.forEach((r) => { add(s, rowQ(r, pm.get(String(r.ma_tam ?? '')) ?? null)); if (q1id) { const mm = delByB.get(q1id) ?? new Map(); const k = String(r.ma_tam ?? ''); mm.set(k, (mm.get(k) ?? 0) + (num(r.so_tam) ?? 0)); delByB.set(q1id, mm); } });
-      if (q1id) delQByB.set(q1id, add(delQByB.get(q1id) ?? Z(), s));
-      const k = mk(b.done_at!); byMonthDel.set(k, add(byMonthDel.get(k) ?? Z(), s)); const due = ord.get(b.order_id)?.due_date; trips.push({ b, q: s, onTime: due ? b.done_at!.slice(0, 10) <= due : null }); });
+    const byMonthDel = new Map<string, Q>(); const delQByB = new Map<string, Q>(); const trips: { b: BB; q: Q; onTime: boolean | null }[] = [];
+    q3.forEach((x) => { const s = toQ(x.d); if (x.q1) delQByB.set(x.q1, add(delQByB.get(x.q1) ?? Z(), { ...s }));
+      const k = mk(x.done_at); byMonthDel.set(k, add(byMonthDel.get(k) ?? Z(), { ...s })); const due = ord.get(x.order_id)?.due_date;
+      trips.push({ b: { id: x.id, order_id: x.order_id, title: x.title, created_at: x.done_at, done_at: x.done_at }, q: s, onTime: due ? x.done_at.slice(0, 10) <= due : null }); });
     // còn lại theo XNĐH
-    const rem = q1.map((b) => { const got = new Map(delByB.get(b.id) ?? []); const pm = priceOf(b.id); const s = Z();
-      (ordRows.get(b.id) ?? []).forEach((r) => { const n = num(r.so_tam) ?? 0; if (!n) return; const k = String(r.ma_tam ?? ''); const g = Math.min(n, got.get(k) ?? 0); got.set(k, (got.get(k) ?? 0) - g); const f = (n - g) / n; if (f <= 0) return;
-        const q = rowQ(r, pm.get(k) ?? null); add(s, { kg: q.kg * f, m2: q.m2 * f, tam: n - g, val: q.val * f }); });
-      const o = ord.get(b.order_id); return { b, o, q: s, due: o?.due_date ?? null }; }).filter((x) => x.q.tam > 0);
+    const rem = q1.map((b) => { const o = ord.get(b.order_id); return { b: { id: b.id, order_id: b.order_id, title: b.title, created_at: b.created_at, done_at: null } as BB, o, q: toQ(b.r), due: o?.due_date ?? null }; }).filter((x) => x.q.tam > 0);
     // kỳ
     const months = Array.from({ length: 12 }, (_, i) => addM(now, i - 11));
     const inPer = (ym: string) => per2 === 'M' ? ym === cur : per2 === 'Q' ? ym.slice(0, 4) === cur.slice(0, 4) && Math.ceil(Number(ym.slice(5)) / 3) === Math.ceil(Number(cur.slice(5)) / 3) : ym.slice(0, 4) === cur.slice(0, 4);
@@ -93,7 +84,6 @@ export default function Production() {
     const aging = [Z(), Z(), Z(), Z()]; const agIds: string[][] = [[], [], [], []]; rem.forEach((x) => { const left = x.due ? dd(x.due, td) : 999; const g = left < 0 ? 3 : left <= 14 ? 2 : left <= 30 ? 1 : 0; add(aging[g], x.q); agIds[g].push(x.b.id); });
     const soon = rem.filter((x) => x.due && dd(x.due, td) <= 14).sort((a, z) => String(a.due).localeCompare(String(z.due))).slice(0, 6);
     // dự án
-    const pjById = new Map(data.p.map((p) => [p.id, p]));
     const proj = new Map<string, { p: P; ord: Q; del: Q; rem: Q; due: string | null; late: boolean; oid: string }>();
     q1.forEach((b) => { const o = ord.get(b.order_id); const p = o?.project_id ? pjById.get(o.project_id) : undefined; if (!p) return;
       const e = proj.get(p.id) ?? { p, ord: Z(), del: Z(), rem: Z(), due: null as string | null, late: false, oid: b.order_id }; add(e.ord, ordByB.get(b.id) ?? Z()); add(e.del, delQByB.get(b.id) ?? Z()); proj.set(p.id, e); });
@@ -104,11 +94,11 @@ export default function Production() {
       custM.set(cid, add(custM.get(cid) ?? Z(), t.q)); });
     const cust = [...custM].map(([id, q]) => ({ id, n: data.cu[id] ?? '—', q })).sort((a, z) => z.q.kg - a.q.kg);
     const custTop = cust.slice(0, 5); if (cust.length > 5) custTop.push({ id: '', n: 'Khác (' + (cust.length - 5) + ')', q: cust.slice(5).reduce((a, c) => add(a, c.q), Z()) });
-    const hasVal = q1.some((b) => priceOf(b.id).size > 0);
+    const hasVal = st.hasVal;
     const tripsBy = new Map(trips.map((t) => [t.b.id, t])); const remBy = new Map(rem.map((x) => [x.b.id, x]));
     const tripsIn = trips.filter((t) => inPer(mk(t.b.done_at!)));
     return { cur, now, del, delPrev, ordP, back, avg3, onTime, onTimePrev, planP, series, aging, agIds, soon, projects, custTop, hasVal, months, tripsBy, remBy, tripsIn, rem, pjOf, per2 };
-  }, [data, co, per, fm, fp, fk]);
+  }, [data, st, per, fm, fp, fk]);
 
   if (!M) return <Skeleton rows={4} h={140} />;
   const pct = (a: number, b: number) => (b ? Math.round((a / b - 1) * 100) : null);
