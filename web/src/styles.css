@@ -2719,3 +2719,8 @@ html[data-theme=dark] .pp-grid td.pp-cbad{background:#3A2222}
 .pp-grid tfoot td:nth-child(2){position:static;box-shadow:none}
 .pp-grid tfoot td{background:var(--soft)}
 .pp-edge.l{left:calc(36px + 26ch + 28px)}
+.pp-tend{height:1px;margin-top:-1px}
+.pp-grid tfoot td{background:var(--soft)!important;z-index:4}
+.pp-grid tfoot td:first-child{z-index:5}
+.pp-grid tfoot{position:relative;z-index:4}
+.pp-grid tfoot td:nth-child(2){position:sticky!important;left:auto!important;bottom:0}
