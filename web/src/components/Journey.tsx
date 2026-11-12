@@ -56,12 +56,9 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
 
   return (
     <div className={'jn' + (open ? ' open' : '')}>
-      <button className="jn-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="jn-title"><Icon name="activity" size={15} />Hành trình duyệt</span>
-        {fail ? <span className="jn-due late">Fail</span> : done ? <span className="jn-due ok"><Icon name="check" size={12} />Đã duyệt</span>
-          : cur && <span className={'jn-due ' + tone}><Icon name={tone === 'late' ? 'alert' : 'clock'} size={12} />{left < 0 ? 'trễ ' + fmtLeft(left) : 'còn ' + fmtLeft(left)}</span>}
-        <span className="jn-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></span>
-      </button>
+      <div className="jn-top">
+      <button type="button" className="jn-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="jn-title"><Icon name="activity" size={15} />Hành trình duyệt</span></button>
       <ol className="jn-steps">
         {steps.map((s) => { const nm2 = s.state === 'done' && s.sign ? short(people[s.sign.user]?.full_name ?? s.who) : s.who;
           return <li key={s.key} className={'jn-st ' + s.state + (s.extra ? ' extra' : '') + (s.state === 'now' ? ' ' + tone : '') + (pk === s.key ? ' pk' : '')}>
@@ -69,6 +66,11 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
               {s.state === 'done' ? <Icon name="check" size={12} /> : s.extra ? <Icon name="shield" size={11} /> : null}</button></li>; })}
         <li className={'jn-st end' + (done ? ' done' : ' todo')}><span className="jn-dot" title={endLabel} aria-label={endLabel} role="img"><Icon name={done ? 'check' : 'arrow'} size={11} /></span></li>
       </ol>
+      <span className="jn-end">
+        {fail ? <span className="jn-due late">Fail</span> : done ? <span className="jn-due ok"><Icon name="check" size={12} />Đã duyệt</span>
+          : cur && <span className={'jn-due ' + tone}><Icon name={tone === 'late' ? 'alert' : 'clock'} size={12} />{left < 0 ? 'trễ ' + fmtLeft(left) : 'còn ' + fmtLeft(left)}</span>}
+        <button type="button" className="jn-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? 'Thu gọn hoạt động' : 'Xem hoạt động'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></button></span>
+      </div>
       {(() => { const s = steps.find((x) => x.key === pk) ?? (pk ? undefined : steps.find((x) => x.state === 'now')); if (!s) return null;
         const who = s.state === 'done' && s.sign ? people[s.sign.user]?.full_name ?? s.who : s.who;
         return <div className="jn-pick" role="status"><b>{s.label}</b> · {who}{s.state === 'done' && s.sign ? <span className="muted"> · {dt(s.sign.at)}</span> : s.state === 'now' ? <span className="muted"> · chờ {fmtLeft(el)}</span> : <span className="muted"> · chưa tới</span>}</div>; })()}

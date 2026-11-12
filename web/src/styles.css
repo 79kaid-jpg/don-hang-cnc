@@ -2555,3 +2555,16 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
   .pp-act .pp-go{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 }
 @media (max-width:760px){.pp-act .btn.pp-go{white-space:nowrap;font-size:15px;padding:0 12px}.pp-act .pp-save{border:0;padding:0;margin:0}}
+/* Hành trình duyệt: chuỗi chấm gọn, canh trái cạnh tiêu đề */
+.jn-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;padding:8px 12px}
+.jn-top .jn-head{width:auto;padding:0;min-height:40px}
+.jn-top .jn-steps{flex:0 1 auto;padding:6px 4px;overflow:visible;gap:0}
+.jn-top .jn-st{flex:0 0 auto;min-width:0;width:auto}
+.jn-top .jn-st:not(:last-child){padding-right:28px}
+.jn-top .jn-st:not(:last-child)::after{top:50%;margin-top:-1px;left:28px;right:4px;width:auto}
+.jn-top .jn-st:not(:last-child)::after{left:26px;right:2px}
+.jn-end{margin-left:auto;display:flex;align-items:center;gap:6px}
+.jn-chev{all:unset;display:grid;place-items:center;width:40px;height:40px;cursor:pointer;color:#94a3b8;border-radius:8px}
+.jn-chev:focus-visible{outline:2px solid var(--ring)}
+.jn-pick{margin:0 12px 12px}
+@media (max-width:760px){.jn-top .jn-steps{order:3;flex-basis:100%}}
