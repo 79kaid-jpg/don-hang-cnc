@@ -2580,3 +2580,13 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .jn-top .jn-st{align-items:flex-start}
 .jn-top .jn-st:not(:last-child)::after{top:20px}
 .jn-top .jn-steps{padding-bottom:20px!important}.jn-wait{top:32px;z-index:2}.jn-top{padding-bottom:0}
+/* Nút lưu gộp */
+.pp-savebtn{position:relative;gap:6px;white-space:nowrap}
+.pp-savebtn:disabled{color:#2E7D4F;opacity:1;background:transparent;border-color:transparent}
+.pp-savebtn.dirty{border-color:var(--gold);color:var(--gold-ink);font-weight:700}
+.pp-dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--wait);border:1.5px solid var(--surface)}
+@media (max-width:760px){
+  .pp-act .pp-savebtn{width:auto;padding:0 12px}
+  .pp-act .pp-savebtn span{display:inline}
+  .pp-act .pp-savelb{display:none}
+}

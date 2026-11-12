@@ -412,8 +412,8 @@ function DocView({ o, b, d, people, onChanged }: { o: Order; b: Batch; d: Doc; p
 function SaveState({ editable, dirty, busy, onSave }: { editable: boolean; dirty: boolean; busy: boolean; onSave: () => void }) {
   if (!editable) return null;
   return <span className="pp-save">
-    <span className={'pp-dirty' + (dirty ? ' on' : '')} role="status">{dirty ? <><i aria-hidden="true" />Chưa lưu</> : <><Icon name="check" size={14} />Đã lưu</>}</span>
-    <button className="btn sm pp-savebtn" disabled={!dirty || busy} onClick={onSave} aria-label="Lưu nháp" title="Lưu nháp"><Icon name="check" size={14} /><span className="pp-savelb">Lưu nháp</span></button></span>;
+    <button type="button" className={'btn sm pp-savebtn' + (dirty ? ' dirty' : '')} disabled={!dirty || busy} onClick={onSave} aria-live="polite" title={dirty ? 'Có thay đổi chưa lưu – bấm để lưu nháp' : 'Đã lưu'}>
+      {dirty ? <><i className="pp-dot" aria-hidden="true" /><Icon name="check" size={14} /><span>Lưu<span className="pp-savelb"> nháp</span></span></> : <><Icon name="check" size={14} /><span>Đã lưu</span></>}</button></span>;
 }
 
 /** Còn thay đổi chưa lưu: hỏi trước khi rời trang (đóng tab, bấm liên kết trong app) */
