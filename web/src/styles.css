@@ -2621,3 +2621,15 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .pp-cosel .odh-menu button[aria-current=true]{background:var(--gold-tint)}
 .pp-cosel .odh-menu button:disabled{opacity:.5;cursor:default}
 .pp-admi{color:var(--wait)}.pp-admi.on{background:var(--wait);color:#fff;border-color:var(--wait)}
+/* Tìm tấm + xem thêm */
+.pp-find{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}
+.pp-q{flex:1 1 220px;max-width:420px;display:flex;align-items:center;gap:6px;height:40px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r-sm);background:var(--surface);color:var(--muted)}
+.pp-q input{all:unset;flex:1;min-width:0;font-size:14px;color:var(--ink)}
+.pp-q:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-tint)}
+.pp-chip{height:36px;padding:0 12px;border-radius:18px;border:1px solid #E5B9B9;background:#FDF1F1;color:var(--red);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.pp-chip.on{background:var(--red);color:#fff;border-color:var(--red)}
+.pp-more{display:flex;margin:8px auto 0;min-height:40px}
+.pp-none{padding:12px 0;text-align:center}
+.pp-bmenu button{flex-direction:row;align-items:center;gap:8px;min-height:44px;padding:0 14px}
+.pp-bmenu button b{font-size:14px}
+.pp-bmenu button svg{margin-left:auto;color:var(--gold)}
