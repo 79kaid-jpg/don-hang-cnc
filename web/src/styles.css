@@ -2599,3 +2599,10 @@ button.jn-dot:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
   .pp-act{justify-content:flex-start}
   .pp-act .btn.pp-go{flex:1 1 0;min-width:0;overflow:hidden}
 }
+.pp-vt{display:none;margin-left:auto;border:1px solid var(--line2);border-radius:var(--r-sm);overflow:hidden;flex:none}
+.pp-vt button{all:unset;display:grid;place-items:center;width:40px;height:36px;cursor:pointer;color:var(--muted)}
+.pp-vt button[aria-pressed=true]{background:var(--ink);color:#fff}
+.pp-vt button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+@media (max-width:760px){.pp-vt{display:inline-flex}.pp-th{flex-wrap:wrap;align-items:center}}
+@media (max-width:760px){.pp-th>b{flex:1 1 auto;min-width:0}.pp-th .pp-tools{order:3;flex-basis:100%}.pp-th{row-gap:8px}}
+@media (max-width:760px){.pp-th{flex-direction:row!important;align-items:center!important}}

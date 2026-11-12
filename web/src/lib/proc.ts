@@ -26,7 +26,7 @@ export const ROLE_OF: Record<string, string> = { tiep_nhan: 'admin', boc_tach: '
 export const ROLE_NAME: Record<string, string> = { admin: 'Admin tiếp nhận', ky_thuat: 'Bóc tách kỹ thuật', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập', hoan_tat: 'Tải bản ký tay' };
 export const FINAL: Record<Proc, string> = { QT0: '', QT1: 'Khách ký xác nhận', QT2: 'Ký bàn giao / nhận vật liệu', QT3: 'Khách ký nhận hàng' };
 export const NEXT_LABEL: Record<string, string> = {
-  tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Xong bóc tách → tạo DS tấm', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Đạt, gửi duyệt', duyet: 'Duyệt', lap: 'Gửi kiểm tra'
+  tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Xong bóc tách', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Đạt', duyet: 'Duyệt', lap: 'Gửi kiểm tra'
 };
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
