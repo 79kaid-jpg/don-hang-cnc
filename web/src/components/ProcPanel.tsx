@@ -22,7 +22,7 @@ import {
 import { Icon } from './Icon';
 import { CoBar, CoLink } from './CoBar';
 import { codeFile, docCode, reloadCoIdx, useCoIdx, useMyCo } from '../lib/myco';
-import { checkExcelFile, compareExcel, type XCheck } from '../lib/excelCheck';
+import { checkExcelFile, type XCheck } from '../lib/excelCheck';
 import { CustomerPicker } from './CustomerPicker';
 import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
@@ -728,9 +728,6 @@ function XStatus({ files, ds, canRecheck }: { files: { name: string; path: strin
   const again = canRecheck && <button type="button" className="btn xs" disabled={busy} onClick={recheck}>{busy ? 'Đang kiểm…' : 'Kiểm tra lại'}</button>;
   if (!r) return <span className="row" style={{ gap: 6 }}><span className="xs-st warn"><Icon name="alert" size={13} />Máy chủ chưa kiểm file này</span>{again}</span>;
   if (!r.ok) return <span className="row" style={{ gap: 6 }}><span className="xs-st bad"><Icon name="x" size={13} />File không hợp lệ: {r.error}</span>{again}</span>;
-  const c = compareExcel({ codes: r.codes, qty: Number(r.qty), rows: r.rows }, ds);
-  if (c.ok) return <span className="xs-st ok"><Icon name="check" size={13} />Khớp {c.fileRows} mã · {c.fileQty} tấm</span>;
-  return <details className="xs-st warn"><summary><Icon name="alert" size={13} />Lệch: file {c.fileRows} mã/{c.fileQty} tấm · danh sách {c.listRows} mã/{c.listQty} tấm</summary>
-    {c.missing.length > 0 && <div className="small">Thiếu trong danh sách: {c.missing.slice(0, 20).join(', ')}{c.missing.length > 20 ? '…' : ''}</div>}
-    {c.extra.length > 0 && <div className="small">Không có trong file: {c.extra.slice(0, 20).join(', ')}{c.extra.length > 20 ? '…' : ''}</div>}</details>;
+  const lc = files[0].check; void ds;
+  return <span className="xs-st info"><Icon name="check" size={13} />File bóc tách hợp lệ{lc?.sheet ? ' · sheet ' + lc.sheet : ''} · {r.rows} dòng · {Number(r.qty).toLocaleString('vi-VN')} tấm{lc?.day?.length ? ' · dày ' + lc.day.join(', ') + 'mm' : ''}</span>;
 }

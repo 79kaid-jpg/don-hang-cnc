@@ -12,7 +12,18 @@ const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g
 const ALIAS: Record<string, string[]> = {
   ma: ['matam', 'ma', 'mahieu', 'matamthanhpham', 'code', 'partno', 'kyhieu'], vl: ['vatlieu', 'vattu', 'material', 'chatlieu'],
   day: ['day', 'daymm', 'dodaymm', 'doday', 'thickness', 't'], sl: ['sotam', 'soluong', 'sl', 'sltam', 'qty', 'quantity', 'soluongtam'] };
-const hit = (c: unknown, k: string) => { const n = norm(c); return !!n && ALIAS[k].some((a) => n === a || (a.length > 3 && n.startsWith(a))); };
+const hit = (cell: unknown, k: string) => { const n = norm(cell); return !!n && n.length < 40 && ALIAS[k].some((a) => n === a || (a.length > 3 && n.includes(a))); };
+/** Tìm bảng bóc tách: tiêu đề 1–3 dòng (ghép), cần Mã tấm + Dày + Số lượng; Vật liệu không bắt buộc. Ưu tiên sheet BOCTACHBANVE. */
+function findTable(sheets: { name: string; rows: unknown[][] }[]): { sheet: string; rows: unknown[][]; ci: number; si: number; di: number } | null {
+  const ord = [...sheets].sort((a, b) => Number(/boc ?tach/i.test(norm(b.name))) - Number(/boc ?tach/i.test(norm(a.name))));
+  for (const s of ord) { const a = s.rows;
+    for (let i = 0; i < Math.min(a.length, 40); i++) for (let k = 1; k <= 3 && i + k <= a.length; k++) {
+      const col = (key: string) => { const w = Math.max(...a.slice(i, i + k).map((r) => r.length)); for (let j = 0; j < w; j++) if (a.slice(i, i + k).some((r) => hit(r[j], key))) return j; return -1; };
+      const ci = col('ma'), di = col('day'), si = col('sl');
+      if (ci >= 0 && di >= 0 && si >= 0) return { sheet: s.name, rows: a.slice(i + k), ci, si, di };
+    } }
+  return null;
+}
 const num = (v: unknown) => { const n = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 
 Deno.serve(async (req) => {
@@ -33,13 +44,11 @@ Deno.serve(async (req) => {
     const { data: blob, error } = await svc.storage.from('files').download(path);
     if (error || !blob) res = { ok: false, error: 'Không tải được file' };
     else try {
-      const wb = X.read(new Uint8Array(await blob.arrayBuffer()), { type: 'array' }); let aoa: unknown[][] = [];
-      for (const sn of wb.SheetNames) { const a = X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' });
-        const hi = a.findIndex((r) => ['ma', 'vl', 'day', 'sl'].every((k) => r.some((c) => hit(c, k)))); if (hi >= 0) { aoa = a.slice(hi); break; } }
-      if (!aoa.length) res = { ok: false, error: 'Không có dòng tiêu đề Mã tấm, Vật liệu, Dày, Số tấm' };
-      else { const h = aoa[0]; const ci = h.findIndex((c) => hit(c, 'ma')), si = h.findIndex((c) => hit(c, 'sl'));
-        const data = aoa.slice(1).filter((r) => String(r[ci] ?? '').trim() && num(r[si]) > 0);
-        res = data.length ? { ok: true, codes: data.map((r) => String(r[ci]).trim().toUpperCase()), qty: data.reduce((a, r) => a + num(r[si]), 0), rows: data.length }
+      const wb = X.read(new Uint8Array(await blob.arrayBuffer()), { type: 'array' });
+      const t = findTable(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
+      if (!t) res = { ok: false, error: 'Không thấy bảng có cột Mã tấm, Độ dày, Số lượng' };
+      else { const data = t.rows.filter((r) => String(r[t.ci] ?? '').trim() && num(r[t.si]) > 0);
+        res = data.length ? { ok: true, codes: data.map((r) => String(r[t.ci]).trim().toUpperCase()), qty: data.reduce((a, r) => a + num(r[t.si]), 0), rows: data.length }
           : { ok: false, error: 'Không có dòng tấm nào' }; }
     } catch { res = { ok: false, error: 'File hỏng hoặc không đọc được' }; }
   }

@@ -1,4 +1,4 @@
-import { compareExcel, type XCheck } from './excelCheck';
+import { type XCheck } from './excelCheck';
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
 import { fieldsOf, permOf } from './fields';
@@ -51,8 +51,8 @@ export function evalAuto(rule: string, d: DocData, reqKeys: { h: string[]; f: st
   if (k === 't') return (d.tables?.[a] ?? []).length > 0;
   if (k === 'c') { const [tb, col] = a.split('.'); const rs = d.tables?.[tb] ?? []; return rs.length > 0 && rs.every((r) => filled(r[col])); }
   if (k === 'f') return (d.files ?? []).some((f) => f.kind === a);
-  // x:<loại file> – file Excel đã kiểm và khớp danh sách tấm (ds)
-  if (k === 'x') { const fs = (d.files ?? []).filter((f) => f.kind === a); return fs.length > 0 && fs.every((f) => f.check && compareExcel(f.check, d.tables?.ds ?? []).ok); }
+  // x:<loại file> – file Excel đã kiểm là file bóc tách hợp lệ (không so với danh sách tấm)
+  if (k === 'x') { const fs = (d.files ?? []).filter((f) => f.kind === a); return fs.length > 0 && fs.every((f) => !!f.check && f.check.rows > 0); }
   if (k === 'req') return reqKeys.h.every((x) => filled(d.header?.[x])) && reqKeys.f.every((x) => (d.files ?? []).some((f) => f.kind === x));
   return false;
 }

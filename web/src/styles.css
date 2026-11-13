@@ -2950,3 +2950,4 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 @media (max-width:640px){.ag-grid{grid-template-columns:1fr}.ag-list li{flex-wrap:wrap}}
 .acting.act-do{background:#fff1e0!important;border-color:#f0b46a!important;color:#7a3e00}
 .kb-nocode-t{margin-left:6px;font-size:11px;font-weight:600;color:var(--muted);background:var(--sunk);padding:1px 6px;border-radius:6px;vertical-align:2px;white-space:nowrap}
+.xs-st.info{color:var(--muted)}
