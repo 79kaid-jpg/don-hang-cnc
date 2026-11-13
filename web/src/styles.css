@@ -2915,3 +2915,8 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 .kt kbd{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-bottom-width:2px;border-radius:5px;padding:0 5px;min-width:18px;text-align:center;font:600 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
 .kt .kbd-set{display:inline-flex;gap:3px}
 @keyframes ktIn{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){.kt{animation:none}}
+/* Bảng tài khoản / chuông nổi trên cùng (không bị menu kính cắt) */
+.acc-pop.acc-pop-p,.app.side-hidden:not(.side-peek) .acc-pop.acc-pop-p{position:fixed;top:auto;right:auto;z-index:9000}
+.acc-pop-p .acc-id{display:grid}
+.bell-pop.bell-pop-p{position:fixed;right:auto;bottom:auto;z-index:9000}
+.bell-pop-p .bell-h b{color:var(--ink)}

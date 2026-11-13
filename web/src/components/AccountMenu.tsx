@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { sb, type Profile } from '../lib/supabase';
 import { Appearance } from './Appearance';
@@ -6,12 +7,15 @@ import { Icon } from './Icon';
 
 /** Chân menu trái: một nút tài khoản, bấm mở menu (giao diện, Zalo, hướng dẫn, phím tắt, đăng xuất) */
 export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
-  const [open, setOpen] = useState(false); const box = useRef<HTMLDivElement>(null); const nav = useNavigate();
+  const [open, setOpen] = useState(false); const box = useRef<HTMLDivElement>(null); const pop = useRef<HTMLDivElement>(null); const nav = useNavigate();
+  const [pos, setPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  useLayoutEffect(() => { if (!open) return; const place = () => { const r = box.current?.getBoundingClientRect(); if (!r) return; const w = Math.max(r.width, 272); setPos({ left: Math.min(Math.max(8, r.left), innerWidth - w - 8), bottom: innerHeight - r.top + 6, width: w }); };
+    place(); addEventListener('resize', place); return () => removeEventListener('resize', place); }, [open]);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
   useEffect(() => {
     if (!open) return;
-    const c = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    const c = (e: MouseEvent) => { const t = e.target as Node; if (box.current && !box.current.contains(t) && !pop.current?.contains(t)) setOpen(false); };
     const k = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     addEventListener('mousedown', c); addEventListener('keydown', k);
     return () => { removeEventListener('mousedown', c); removeEventListener('keydown', k); };
@@ -20,7 +24,7 @@ export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
   const noZalo = !me.zalo_chat_id;
   return (
     <div className="acc" ref={box}>
-      {open && <div className="acc-pop" role="menu" aria-label="Tài khoản">
+      {open && pos && createPortal(<div ref={pop} className="acc-pop acc-pop-p" role="menu" aria-label="Tài khoản" style={{ left: pos.left, bottom: pos.bottom, width: pos.width }}>
         <div className="acc-hd"><span className="avatar acc-av" aria-hidden="true">{initial}</span>
           <span className="acc-id"><b>{me.full_name}</b><span className="small muted">{[me.position, me.unit].filter(Boolean).join(' · ')}</span></span></div>
         <div className="acc-sec"><Appearance /></div>
@@ -31,7 +35,7 @@ export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
           <button role="menuitem" onClick={() => { setOpen(false); dispatchEvent(new Event('show-shortcuts')); }}><Icon name="list" size={17} /><span>Phím tắt</span><kbd>?</kbd></button>
         </div>
         <div className="acc-list acc-out"><button role="menuitem" onClick={() => sb.auth.signOut()}><Icon name="logout" size={17} /><span>Đăng xuất</span></button></div>
-      </div>}
+      </div>, document.body)}
       <button className="acc-btn" aria-haspopup="menu" aria-expanded={open} title={me.full_name} onClick={() => setOpen(!open)}>
         <span className="avatar" aria-hidden="true">{initial}{noZalo && <i className="acc-dot" aria-label="chưa liên kết Zalo" />}</span>
         <span className="acc-id"><b>{me.full_name}</b><span className="small muted">{me.unit}</span></span>
