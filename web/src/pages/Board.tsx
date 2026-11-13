@@ -4,7 +4,7 @@ import { itemsOf, progress, useChecks, applyAuto, reqKeysOf, type CheckItem } fr
 import { createPortal } from 'react-dom';
 import { LoginAs } from '../components/LoginAs';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { sb, errText, type Customer, type Order } from '../lib/supabase';
 import { dt } from '../lib/format';
 import { BATCH_WORD, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, STATUS, columnsOf, stepOf, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -35,6 +35,11 @@ export default function Board() {
   const { can: canA, me: meP } = useAuth(); const { co: viewCo } = useMyCo(); const CI = useCoIdx();
   const coCode = (order: string, batch: string) => CI.codeOf(order, viewCo, qt === 'QT1' ? batch : undefined); const adm = canA('admin_it');
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
+  const [sp, setSp] = useSearchParams();
+  type KCo = 'ALL' | 'PN' | 'IPC' | 'HW';
+  const kco: KCo = !adm ? 'ALL' : ((sp.get('co') as KCo | null) ?? (() => { try { return (localStorage.getItem('kb-co') as KCo) || 'ALL'; } catch { return 'ALL' as KCo; } })());
+  const setKco = (c: KCo) => { try { localStorage.setItem('kb-co', c); } catch { /* */ } const n = new URLSearchParams(sp); if (c === 'ALL') n.delete('co'); else n.set('co', c); setSp(n, { replace: true }); setCol(''); };
+  const inCo = (key: string) => kco === 'ALL' || key.startsWith(kco + '.') || (key === 'ky' && kco === 'HW');
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
   const [picking, setPicking] = useState(false);
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
@@ -54,19 +59,19 @@ export default function Board() {
   // Hiện ngay dữ liệu lần trước (trong phiên), rồi cập nhật ngầm
   useEffect(() => { if (kbCache && kbCache.u === meP?.id) apply(kbCache); load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
-  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')),
+  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')).filter((c) => qt === 'QT0' || inCo(c.key)),
     ...(!adm && qt !== 'QT0' ? [{ key: 'xong_minh', title: 'Đang ở bên khác', group: 'Đã duyệt' }] : []), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st = stepOf(b, docs); const o = orders[b.order_id];
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
       // Phần của công ty mình đã duyệt, hồ sơ đang ở công ty khác / chờ khách ký → cột "Đã duyệt · đang ở bên khác"
       return docs.some((x) => x.batch_id === b.id && x.company === myCo && x.status === 'da_duyet') ? COLS.findIndex((c) => c.key === 'xong_minh') : -1; })() };
-  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title + ' ' + CI.text(c.b.order_id)).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm, CI.ready]); // eslint-disable-line
+  }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title + ' ' + CI.text(c.b.order_id)).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm, CI.ready, kco]); // eslint-disable-line
   // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
   const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);
     return Math.max(+new Date(c.doc?.status_at ?? 0), ...ds.map((x) => +new Date(x.status_at ?? 0)), +new Date((c.b as { updated_at?: string }).updated_at ?? 0)); };
   const byCol = (i: number) => { const l = cards.filter((c) => c.i === i); return ['hoan_tat', 'fail'].includes(COLS[i]?.key) ? l.sort((a, z) => tEnd(z) - tEnd(a)) : l; };
-  const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p).length;
+  const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p && (p === 'QT0' || kco === 'ALL' || ['hoan_tat', 'fail'].includes(b.status) || inCo(stepOf(b, docs).key))).length;
   const mineIn = (p: Proc) => (batches ?? []).some((b) => b.proc === p && mine.some((m) => m.batch_id === b.id));
   const auto = useRef(false);
   useEffect(() => { if (auto.current || !batches) return; auto.current = true; if (!mineIn(qt)) { const t = PROCS.find(mineIn) ?? (countIn(qt) ? null : PROCS.find((p) => countIn(p) > 0)); if (t) setQt(t); } }, [batches, mine]); // eslint-disable-line
@@ -186,6 +191,8 @@ export default function Board() {
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm" placeholder="Lọc bảng: mã đơn, dự án, lệnh…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <button className="pill-toggle" aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)} title="Phím F">{onlyMine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
         <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} title="Phím tắt: J K chọn · M chuyển · R trả về" aria-label="Xem phím tắt"><kbd>?</kbd> Phím tắt</button>
+        {adm && <div className="pd-seg kb-coseg" role="group" aria-label="Xem theo công ty">{([['ALL', 'Tất cả'], ['PN', 'PNC'], ['IPC', 'IPC'], ['HW', 'HAN']] as [KCo, string][]).map(([k, t]) =>
+          <button key={k} type="button" aria-pressed={kco === k} onClick={() => setKco(k)} title={k === 'ALL' ? 'Tất cả công ty' : COMPANY[k as keyof typeof COMPANY]}>{t}</button>)}</div>}
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
