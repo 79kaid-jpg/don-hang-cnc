@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { FLOW, STATUS, PROC_NAME, PROC_TABLES, TABLES, type Proc, type Doc } from '../lib/proc';
 import { fieldsOf, useFields } from '../lib/fields';
-import { itemsOf, loadChecks, progress, useChecks, applyAuto, reqKeysOf, AUTO_HINT, LEVEL_NAME, type CheckItem, type CheckTpl, type Level } from '../lib/checks';
+import { itemsOf, loadChecks, progress, useChecks, applyAuto, reqKeysOf, missingReq, jumpField, AUTO_HINT, LEVEL_NAME, type CheckItem, type CheckTpl, type Level } from '../lib/checks';
 import { useAuth } from '../lib/auth';
 import { Ring } from './Ring';
 import { Icon } from './Icon';
@@ -90,6 +90,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
               : x.note ? <span className="small">📝 {x.note}</span> : null)}
             {x.done && x.by && <span className="sc-meta">✓ {x.by === 'auto' ? 'Hệ thống tự kiểm' : people[x.by]?.full_name ?? '…'} · {fdt(x.at)}</span>}
             {x.auto && !x.done && <span className="sc-meta sc-auto">⚡ Tự tích khi {AUTO_HINT(x.auto)} </span>}
+            {x.auto === 'req' && !x.done && (() => { const ms = missingReq(proc, d.company, step, data); return ms.length > 0 && <span className="sc-miss">Còn thiếu: {ms.map((m, j) => <span key={m.key}>{j ? ', ' : ''}<button type="button" className="linklike" onClick={() => jumpField(m.key)}>{m.label}</button></span>)}</span>; })()}
           </div>
           {x.auto && <span className="sc-lv auto" title={'Tự kiểm: ' + AUTO_HINT(x.auto)}>⚡ Tự kiểm</span>}
           <span className={'sc-lv ' + x.level}>{LEVEL_NAME[x.level]}</span>

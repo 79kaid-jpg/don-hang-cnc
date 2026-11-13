@@ -75,3 +75,17 @@ export async function syncAuto(proc: Proc, d: { id: string; company: string; sta
   const { items, changed } = applyAuto(cur, d, reqKeysOf(proc, d.company, d.status), true);
   if (changed) await sb.rpc('doc_check', { p_doc: d.id, p_step: d.status, p_items: items });
 }
+
+/** Ô bắt buộc còn trống ở bước hiện tại (đầu phiếu + file) – để chỉ cho người dùng */
+export function missingReq(proc: Proc, co: string, status: string, d: DocData): { key: string; label: string }[] {
+  const out: { key: string; label: string }[] = [];
+  for (const f of fieldsOf(proc, 'header')) if (permOf(f, co, status, proc) === 'required' && !filled(d.header?.[f.key])) out.push({ key: f.key, label: f.label });
+  for (const f of fieldsOf(proc, 'file')) if (permOf(f, co, status, proc) === 'required' && !(d.files ?? []).some((x) => x.kind === f.key)) out.push({ key: f.key, label: f.label });
+  return out;
+}
+/** Cuộn tới ô và nháy viền đỏ */
+export function jumpField(key: string) {
+  const el = document.querySelector<HTMLElement>('[data-fk="' + key + '"]'); if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('f-flash'); void el.offsetWidth; el.classList.add('f-flash');
+  setTimeout(() => el.querySelector<HTMLElement>('input,select,textarea')?.focus({ preventScroll: true }), 350);
+}
