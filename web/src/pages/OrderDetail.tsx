@@ -34,6 +34,8 @@ export default function OrderDetail() {
   const { co: viewCo } = useMyCo(); const CI = useCoIdx(); const adm0 = useAuth().can('admin_it');
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
   const coAll = CI.allOf(id).sort((a, z) => ['PN', 'IPC', 'HW'].indexOf(a.company) - ['PN', 'IPC', 'HW'].indexOf(z.company)); const coMine = CI.codeOf(id, viewCo);
+  const [selB, setSelB] = useState<{ proc: string; id: string }>({ proc: '', id: '' });
+  useEffect(() => { const h = (e: Event) => setSelB((e as CustomEvent).detail); addEventListener('pp-batch', h); return () => removeEventListener('pp-batch', h); }, []);
   const tab0 = sp.get('tab') ?? 'QT0'; const tab = TABS.some(([k]) => k === tab0) ? tab0 : 'QT0';
   const { can } = useAuth();
   const [o, setO] = useState<Order | null>(null);
@@ -96,7 +98,10 @@ export default function OrderDetail() {
           <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" data-kbd="B"><Icon name="back" size={20} /></Link>
           <div className="odh-t">
             <h1>{o.project || 'Chưa có dự án'}{prj?.name && prj.name !== o.project && <span className="odh-pn">{prj.name}</span>}</h1>
-            <div className="odh-sub">{chain && <span>{chain}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>
+            {(() => { const xc = tab !== 'QT0' && selB.proc === tab ? coAll.find((r) => r.company === viewCo && r.batch_id === selB.id)?.code : undefined;
+              const code = xc ?? o.code; return <div className="odh-code"><button type="button" className="odh-cp" title="Bấm để copy mã" onClick={() => { navigator.clipboard?.writeText(code).then(() => toast('Đã copy ' + code)).catch(() => {}); }}>{code}<Icon name="copy" size={13} /></button>
+                {!xc && <span className="kb-nocode-t">{tab === 'QT0' ? 'chưa có XNĐH' : 'mã nội bộ'}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>; })()}
+            {chain && <div className="odh-sub"><span>{chain}</span></div>}
           </div>
           <Link className="btn sm odh-map" to={'/so-do?don=' + o.id} data-kbd="S" data-kbd-label="Xem trên sơ đồ"><Icon name="flow" size={16} />Sơ đồ</Link>
           <details className="odh-more"><summary className="btn icon-btn" aria-label="Thêm"><Icon name="more" size={20} /></summary>
