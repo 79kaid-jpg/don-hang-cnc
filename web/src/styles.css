@@ -2068,7 +2068,7 @@ html[data-glass=on]:not([data-theme=dark]) table,
 html[data-glass=on]:not([data-theme=dark]) input,
 html[data-glass=on]:not([data-theme=dark]) select,
 html[data-glass=on]:not([data-theme=dark]) textarea{background-color:#fff}
-html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger){background:rgba(255,255,255,.75);border-color:rgba(20,40,70,.14)}
+html[data-glass=on]:not([data-theme=dark]) .btn:not(.primary):not(.danger):not(.danger-fill){background:rgba(255,255,255,.75);border-color:rgba(20,40,70,.14)}
 }}
 @media print{html[data-glass=on] body{background:#fff!important}}
 
