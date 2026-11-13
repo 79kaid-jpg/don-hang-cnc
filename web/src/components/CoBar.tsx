@@ -8,7 +8,7 @@ import { Icon } from './Icon';
 import { toast, confirmDialog } from './ui';
 
 /** Đầu XNĐH: mã đơn của công ty (nổi bật, sửa khi được phép) + tham chiếu đơn công ty trước (không bắt buộc) */
-export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; onTables: (t: Record<string, unknown>) => void }) {
+export function CoBar({ docId, can, locked, onTables }: { docId: string; can: boolean; locked?: boolean; onTables: (t: Record<string, unknown>) => void }) {
   const cos = useCompanies(); const { can: role } = useAuth(); const adm = role('admin_it') || role('admin_cnc');
   const [co, setCo] = useState<CoOrder | null>(null); const [cands, setCands] = useState<CoOrder[]>([]);
   const [ed, setEd] = useState<string | null>(null); const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export function CoBar({ docId, can, onTables }: { docId: string; can: boolean; o
     let q = sb.from('co_orders').select('*').eq('company', seller.code).order('created_at', { ascending: false }).limit(50);
     if (co.project_id) q = q.eq('project_id', co.project_id); q.then(({ data }) => setCands((data as CoOrder[]) ?? [])); }, [co?.id, seller?.code]);
   if (!co) return null;
-  const me = cos?.find((c) => c.code === co.company); const canCode = (me?.allow_edit && (can || adm)) || role('admin_it'); const canRef = can || adm;
+  const me = cos?.find((c) => c.code === co.company); const canCode = !locked && ((me?.allow_edit && (can || adm)) || role('admin_it')); const canRef = !locked && (can || adm);
   const saveCode = async () => { if (ed === null) return; setBusy(true); const { data, error } = await sb.rpc('co_set_code', { p_doc: docId, p_code: ed }); setBusy(false);
     if (error) return toast(errText(error)); setEd(null); toast('Đã đổi mã: ' + data); load(); reloadCoIdx(); };
   const setRef = async (id: string) => { const { error } = await sb.rpc('co_set_ref', { p_doc: docId, p_ref: id || null }); if (error) return toast(errText(error)); load(); };

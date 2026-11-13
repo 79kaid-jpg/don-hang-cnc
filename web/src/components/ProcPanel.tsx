@@ -387,7 +387,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           {adm && editable && d.status !== 'da_duyet' && <button className="btn xs icon-only" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" aria-label="Nạp dữ liệu mẫu" onClick={fillDemo}><Icon name="bolt" size={13} /></button>}
         </div>
       </div>
-      {d.status === 'da_duyet' && proc !== 'QT0' && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
+      {d.status === 'da_duyet' && proc !== 'QT0' && (proc !== 'QT1' || d.company === 'HW') && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {admEdit && admInfo && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
       {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
       {(() => { const tk = tablesOf(proc)[0]?.key; const rs = (tk && (t as Record<string, Row[]>)[tk]) || []; if (!tk || rs.length === 0) return null; const cs = colsOf(proc, tk);
@@ -401,7 +401,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}
       {proc === 'QT3' && d.company === 'HW' && <div className="f qt3-end"><span>Khách nhận hàng <span className="muted small">(Hanwa đổi được; mặc định là khách cuối của dự án)</span></span>
         <CustomerPicker value={h.end_customer_id || o.customer_id || ''} list={custs} canCreate={false} onChange={(c) => { if (!(can || adm)) return; setH({ ...h, end_customer_id: c?.id ?? '' }); setDirty(true); }} /></div>}
-      {proc === 'QT1' && <CoBar docId={d.id} can={can} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
+      {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
