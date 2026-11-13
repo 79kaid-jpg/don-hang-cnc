@@ -2977,3 +2977,4 @@ div.nb-row{display:flex;align-items:center;gap:10px}
 
 /* Bàn phím điện thoại mở: ẩn thanh nút nổi */
 body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
+.pp-next{align-items:center;justify-content:space-between}.pp-next-t{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px}@media (max-width:760px){.pp-next .pp-go{flex:1}.pp-next-t{width:100%}}

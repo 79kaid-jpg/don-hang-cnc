@@ -154,7 +154,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
     const l = (data ?? []) as { i: number; ma_tam: string; vat_lieu: string; day: string; so_tam: number; con_lai: number }[]; setRr(l); setTake(Object.fromEntries(l.filter((x) => x.con_lai > 0).map((x) => [x.i, String(x.con_lai)]))); }), 300); return () => clearTimeout(t); }, [refMode, ref, myCoNB]);
   const takeN = (i: number) => Number(String(take[i] ?? '').replace(',', '.')) || 0;
   const takeBad = (rr ?? []).some((x) => takeN(x.i) > x.con_lai || takeN(x.i) < 0); const takeSum = (rr ?? []).reduce((a, x) => a + takeN(x.i), 0);
-  useEffect(() => { if (!refMode) return; sb.rpc('ref_candidates', { p_order: o.id, p_co: myCoNB }).then(({ data }) => { const l = (data ?? []) as { code: string; title: string; used: string | null }[]; setRefs(l); if (l.length === 1) setRef(l[0].code); }); }, [refMode, o.id, myCoNB]);
+  useEffect(() => { if (!refMode) return; sb.rpc('ref_candidates', { p_order: o.id, p_co: myCoNB }).then(({ data }) => { const l = (data ?? []) as { code: string; title: string; used: string | null }[]; setRefs(l); const want = new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? ''; const hit = l.find((x) => x.code.trim().toUpperCase() === want.trim().toUpperCase()); if (hit) setRef(hit.code); else if (l.length === 1) setRef(l[0].code); }); }, [refMode, o.id, myCoNB]);
   useEffect(() => { if (refMode) return;
     if (proc === 'QT1') (async () => {
       const { data: bs } = await sb.from('batches').select('id, proc, status, done_at, title').eq('order_id', o.id);
@@ -171,7 +171,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       setUsed(u); setPick(new Set(r0.map((_, i) => i).filter((i) => !u[i])));
     })();
     if (proc === 'QT2' || proc === 'QT3') sb.from('co_orders').select('id, code').eq('order_id', o.id).eq('company', 'PN').order('created_at').then(({ data }) => {
-      const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); if (l.length === 1) setCoId(l[0].id); });
+      const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); const want = (new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? '').trim().toUpperCase(); const hit = l.find((x) => x.code.trim().toUpperCase() === want); if (hit) setCoId(hit.id); else if (l.length === 1) setCoId(l[0].id); });
   }, [o.id, proc]);
   const weld = (r: Row) => Number(String(r.duong_han ?? '').replace(',', '.')) > 0;
   const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
@@ -476,6 +476,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             <button className="btn primary pp-go" disabled={busy} title={(d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' + (proc !== 'QT0' ? (d.company === 'HW' ? ' · tiếp theo: khách ký tay' : ' · tiếp theo: ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '') : undefined} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
+      {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
@@ -788,4 +789,27 @@ function XStatus({ files, ds, canRecheck }: { files: { name: string; path: strin
   if (!r.ok) return <span className="row" style={{ gap: 6 }}><span className="xs-st bad"><Icon name="x" size={13} />File không hợp lệ: {r.error}</span>{again}</span>;
   const lc = files[0].check; void ds;
   return <span className="xs-st info"><Icon name="check" size={13} />File bóc tách hợp lệ{lc?.sheet ? ' · sheet ' + lc.sheet : ''} · {r.rows} dòng · {Number(r.qty).toLocaleString('vi-VN')} tấm{lc?.day?.length ? ' · dày ' + lc.day.join(', ') + 'mm' : ''}</span>;
+}
+
+/** Đơn đã duyệt → nút tạo hồ sơ QT kế tiếp (mở sẵn form, chọn sẵn mã tham chiếu) */
+function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
+  const { co: my } = useMyCo(); const [, setSp] = useSearchParams(); const [ok, setOk] = useState(false);
+  const prevOf: Record<string, string> = { IPC: 'PN', HW: 'IPC' };
+  const code = docCode(o, b, d.company);
+  // QT1 của công ty trước → IPC/HW lập XNĐH của mình; còn lại → quy trình kế tiếp
+  const t = b.proc === 'QT1' && my && prevOf[my] === d.company ? { proc: 'QT1', co: my, label: 'Lập XNĐH ' + my + ' từ đơn này' }
+    : b.proc === 'QT0' ? { proc: 'QT1', co: 'PN', label: 'Tạo XNĐH (QT1)' }
+    : b.proc === 'QT1' && d.company === 'PN' ? { proc: 'QT2', co: 'PN', label: 'Tạo lệnh sản xuất (QT2)' }
+    : b.proc === 'QT2' && d.company === 'PN' ? { proc: 'QT3', co: 'PN', label: 'Tạo đợt giao (QT3)' } : null;
+  useEffect(() => { setOk(false); if (!t) return; let live = true;
+    (async () => { const r = await sb.rpc('can_start', { p_proc: t.proc, p_co: t.co }); if (!live || !r.data) return;
+      if (t.proc === 'QT1' && t.co !== 'PN') { const c = await sb.rpc('ref_candidates', { p_order: o.id, p_co: t.co }); if (live) setOk(((c.data ?? []) as { code: string }[]).some((x) => x.code.trim().toUpperCase() === code.trim().toUpperCase())); }
+      else setOk(true); })();
+    return () => { live = false; }; }, [d.id, t?.proc, t?.co, code]); // eslint-disable-line react-hooks/exhaustive-deps
+  const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); n.delete('b'); n.delete('co'); return n; });
+  useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (e.key.toLowerCase() !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
+    window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true); }); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!t || !ok) return null;
+  return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />Đã duyệt · bước tiếp theo</span>
+    <button className="btn primary pp-go" onClick={go} data-kbd="N"><Icon name="plus" size={16} />{t.label}</button></div>;
 }
