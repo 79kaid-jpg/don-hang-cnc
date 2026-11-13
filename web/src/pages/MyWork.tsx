@@ -40,7 +40,7 @@ type A = Approval & { orders: Pick<Order, 'code' | 'project'> };
 type M = { doc_id: string | null; batch_id: string; order_id: string; proc: Proc; company: Company; status: string; title: string; code: string; project: string; since: string; kind: string };
 export default function MyWork() {
   const { me } = useAuth(); const { co: myCo } = useMyCo(); const CI = useCoIdx();
-  const coc = (o: string, p: string, b?: string) => CI.codeOf(o, myCo, p === 'QT1' ? b : undefined) ?? 'Chưa có mã';
+  const coc = (o: string, p: string, b?: string, oc?: string) => CI.codeOf(o, myCo, p === 'QT1' ? b : undefined) ?? (oc ? oc + ' · chưa có XNĐH' : 'Chưa có XNĐH');
   const [rows, setRows] = useState<M[] | null>(null); const [fq, setFq] = useState('');
   const [st, setSt] = useState<{ run: number; late: number; stuck: number } | null>(null);
   const [mine, setMine] = useState<{ id: string; order_id: string; proc: Proc; code: string; title: string; action: string; at: string }[]>([]);
@@ -80,7 +80,7 @@ export default function MyWork() {
               {shown.map((r) => (
                 <li key={(r.doc_id ?? '') + r.batch_id}><Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
                   <QtTag qt={r.proc} />
-                  <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id)}</b><span className="small muted">{r.project} · {r.title}</span></span>
+                  <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id, r.code)}</b><span className="small muted">{r.project} · {r.title}</span></span>
                   <span className="small">{r.kind === 'final' ? FINAL[r.proc] : (r.proc !== 'QT0' ? COMPANY[r.company] + ' · ' : '') + STATUS[r.status]}<span className="muted"> · {age(r.since)}</span></span>
                   <Icon name="arrow" size={18} />
                 </Link></li>))}
@@ -92,7 +92,7 @@ export default function MyWork() {
         <summary className="card-head"><h2>Đã xử lý gần đây <span className="chip idle">{mine.length}</span></h2></summary>
         <ul className="worklist">{mine.map((r) => (
           <li key={r.id}><Link to={'/don/' + r.order_id + '?tab=' + r.proc} className="mw-rec">
-            <QtTag qt={r.proc} /><span className="mw-rec-t"><b>{coc(r.order_id, r.proc)}</b><span className="muted"> · {r.title}</span></span>
+            <QtTag qt={r.proc} /><span className="mw-rec-t"><b>{coc(r.order_id, r.proc, undefined, r.code)}</b><span className="muted"> · {r.title}</span></span>
             <span className={'mw-act a-' + r.action}>{({ ky: 'Đã ký', tra_ve: 'Trả về', fail: 'Từ chối' } as Record<string, string>)[r.action] ?? r.action}</span>
             <span className="mw-time">{ago(r.at)}</span></Link></li>))}</ul>
         <div style={{ padding: '8px 16px 12px' }}><Link className="small" to="/thong-ke">Thống kê →</Link></div>

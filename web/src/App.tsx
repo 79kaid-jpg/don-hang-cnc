@@ -33,7 +33,7 @@ const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
 const Simulate = lazy(() => import('./pages/Simulate'));
 
 function Shell() {
-  const { session, me, can, acting, real, stopActing } = useAuth();
+  const { session, me, can, acting, real, stopActing, actUntil } = useAuth();
   const nav = useNavigate();
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -133,9 +133,9 @@ function Shell() {
 
       <main className="main" id="main">
         {acting && (
-          <div className="acting" role="status">
+          <div className={'acting' + (actUntil ? ' act-do' : '')} role="status">
             <span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span>
-            <span className="act-t">Đang vào vai <b>{me.full_name}</b></span>
+            <span className="act-t">{actUntil ? 'Đang làm thay' : 'Đang xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <span className="small"> · chỉ xem đơn thật</span>}</span>
             <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
             <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}

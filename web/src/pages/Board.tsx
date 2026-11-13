@@ -237,7 +237,7 @@ export default function Board() {
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
-                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <span className="kb-nocode">Chưa có mã</span>}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
+                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
                             const n = Math.ceil((new Date(dd + 'T23:59:59').getTime() - Date.now()) / 864e5); const done = ['hoan_tat', 'fail'].includes(it.b.status);
                             const cls = done ? '' : n < 0 ? ' late' : n <= 3 ? ' soon' : '';
                             return <span className={'kb-due' + cls} title={'Hạn giao ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />Giao {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}

@@ -85,7 +85,7 @@ export default function Orders() {
           {list.map(({ o, due, hs, stuck, steps }) => (
             <li key={o.id}><div role="link" tabIndex={0} className={'oc ' + (due?.cls ?? '') + (stuck ? ' stuck' : '')} onClick={() => nav('/don/' + o.id)} onKeyDown={(e) => e.key === 'Enter' && nav('/don/' + o.id)}>
               <div className="oc-a">
-                <Link to={'/don/' + o.id} className="oc-code" onClick={(e) => e.stopPropagation()}>{CI.codeOf(o.id, myCo) ?? <span className="kb-nocode">Chưa có mã</span>}</Link>{adm && <span className="small muted">{o.code}</span>}
+                <Link to={'/don/' + o.id} className="oc-code" onClick={(e) => e.stopPropagation()}>{CI.codeOf(o.id, myCo) ?? <>{o.code}<span className="kb-nocode-t">chưa có XNĐH</span></>}</Link>{adm && <span className="small muted">{o.code}</span>}
                 {due && <span className={'chip ' + ({ late: 'bad', soon: 'warn', done: 'done', off: 'idle' } as Record<string, string>)[due.cls]}><Icon name={due.ic} size={13} />{due.t}</span>}
                 <span className="oc-due small muted"><Icon name="clock" size={13} />{date(o.due_date)}</span>
               </div>

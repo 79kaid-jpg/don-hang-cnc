@@ -2942,3 +2942,11 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 @media (max-width:760px){.kb-shut,.kb-strip{display:none!important}}
 @media (prefers-reduced-motion:reduce){.kb-board,.kb-col.door>*,.kb-strip{transition:none!important}}
 .kb-head .row h2{margin-right:auto}
+/* Uỷ quyền làm thay */
+.ag{display:flex;flex-direction:column;gap:14px}.ag-form{display:flex;flex-direction:column;gap:12px}
+.ag-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ag-wide{grid-column:1/-1}
+.ag-list{list-style:none;margin:0;padding:0}.ag-list li{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line)}
+.ag-main{flex:1;min-width:0}.ag-sub{display:block;margin-top:2px}
+@media (max-width:640px){.ag-grid{grid-template-columns:1fr}.ag-list li{flex-wrap:wrap}}
+.acting.act-do{background:#fff1e0!important;border-color:#f0b46a!important;color:#7a3e00}
+.kb-nocode-t{margin-left:6px;font-size:11px;font-weight:600;color:var(--muted);background:var(--sunk);padding:1px 6px;border-radius:6px;vertical-align:2px;white-space:nowrap}
