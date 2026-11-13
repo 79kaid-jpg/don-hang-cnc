@@ -41,7 +41,7 @@ sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESH
  *  t:<bảng>        bảng có ít nhất 1 dòng
  *  c:<bảng>.<cột>  mọi dòng của bảng đã nhập cột này
  *  f:<loại file>   đã tải file loại này
- *  x:<loại file>   file Excel bóc tách hợp lệ và khớp danh sách tấm
+ *  x:<loại file>   file Excel bóc tách hợp lệ
  *  req             mọi trường bắt buộc của bước đã nhập (ô thông tin + file) */
 type DocData = { header?: Record<string, string>; tables?: Record<string, Record<string, unknown>[]>; files?: { kind: string; check?: XCheck }[] };
 const filled = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -65,7 +65,7 @@ export function applyAuto(items: CheckItem[], d: DocData, reqKeys?: { h: string[
     return x; });
   return { items: out, changed };
 }
-export const AUTO_HINT = (rule: string) => rule === 'req' ? 'đủ trường bắt buộc' : rule.startsWith('x:') ? 'file Excel bóc tách khớp danh sách tấm' : rule.startsWith('h:') ? 'ô thông tin đã nhập' : rule.startsWith('t:') ? 'bảng có dữ liệu' : rule.startsWith('c:') ? 'cột đã nhập đủ' : rule.startsWith('f:') ? 'đã tải file' : '';
+export const AUTO_HINT = (rule: string) => rule === 'req' ? 'đủ trường bắt buộc' : rule.startsWith('x:') ? 'file Excel bóc tách hợp lệ' : rule.startsWith('h:') ? 'ô thông tin đã nhập' : rule.startsWith('t:') ? 'bảng có dữ liệu' : rule.startsWith('c:') ? 'cột đã nhập đủ' : rule.startsWith('f:') ? 'đã tải file' : '';
 export const reqKeysOf = (proc: Proc, co: string, status: string) => ({
   h: fieldsOf(proc, 'header').filter((f) => permOf(f, co, status, proc) === 'required').map((f) => f.key),
   f: fieldsOf(proc, 'file').filter((f) => permOf(f, co, status, proc) === 'required').map((f) => f.key) });

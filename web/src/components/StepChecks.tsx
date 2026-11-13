@@ -160,6 +160,6 @@ function AutoPick({ proc, value, disabled, onChange }: { proc: Proc; value: stri
     <optgroup label="⚡ Bảng có dữ liệu">{tbs.map((t) => <option key={t.k} value={'t:' + t.k}>{t.t}</option>)}</optgroup>
     <optgroup label="⚡ Cột đã nhập đủ mọi dòng">{tbs.flatMap((t) => t.cols.filter((c) => !c.calc).map((c) => <option key={t.k + c.k} value={'c:' + t.k + '.' + c.k}>{t.t} · {c.t}</option>))}</optgroup>
     <optgroup label="⚡ Đã tải file">{fs.map((f) => <option key={f.key} value={'f:' + f.key}>{f.label}</option>)}</optgroup>
-    {fs.some((f) => f.key === 'excel') && <optgroup label="⚡ Excel khớp danh sách tấm"><option value="x:excel">Excel bóc tách khớp danh sách tấm</option></optgroup>}
+    {fs.some((f) => f.key === 'excel') && <optgroup label="⚡ Excel bóc tách hợp lệ"><option value="x:excel">Excel bóc tách khớp danh sách tấm</option></optgroup>}
   </select>;
 }
