@@ -15,18 +15,18 @@ export const modalOpen = () => !!document.querySelector('.modal-bg, .kp-bg');
 export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
   { group: 'Chung', items: [
     [['Ctrl', 'K'], 'Tìm & mở đơn nhanh (gõ mã, dự án, khách)'], [['/'], 'Tìm & mở đơn nhanh'],
-    [['?'], 'Xem bảng phím tắt này'], [['N'], 'Tạo đơn mới'], [['['], 'Ẩn / hiện menu trái'], [['Esc'], 'Đóng hộp thoại']] },
+    [['?'], 'Xem bảng phím tắt này'], [['N'], 'Tạo đơn mới'], [['['], 'Ẩn / hiện menu trái'], [['Esc'], 'Đóng hộp thoại, menu ⋯'], [['Ctrl', 'S'], 'Lưu phiếu / quy trình đang sửa']] },
   { group: 'Đi tới (bấm G rồi bấm chữ)', items: [
-    [['G', 'V'], 'Việc của tôi'], [['G', 'B'], 'Bảng Kanban'], [['G', 'S'], 'Sơ đồ đơn hàng'], [['G', 'D'], 'Danh sách đơn'],
+    [['G', 'V'], 'Việc của tôi'], [['G', 'B'], 'Bảng Kanban'], [['G', 'S'], 'Sơ đồ đơn hàng'], [['G', 'D'], 'Danh sách đơn'], [['G', 'T'], 'Thống kê'],
     [['G', 'Q'], 'Quản trị'], [['G', 'H'], 'Hướng dẫn'], [['G', 'Z'], 'Thông báo Zalo']] },
   { group: 'Bảng Kanban', items: [
     [['1'], 'QT0'], [['2'], 'QT1'], [['3'], 'QT2'], [['4'], 'QT3'],
     [['J', '↓'], 'Thẻ đơn tiếp theo'], [['K', '↑'], 'Thẻ đơn trước'], [['H', '←'], 'Sang cột trái'], [['L', '→'], 'Sang cột phải'],
     [['Enter'], 'Mở đơn đang chọn'], [['M'], 'Ký nhanh hồ sơ đang chọn (sang bước sau)'], [['R'], 'Trả hồ sơ đang chọn về bước trước'],
-    [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"']] },
+    [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"'], [['C'], 'Đổi công ty: Tất cả → PNC → IPC → HAN (admin)']] },
   { group: 'Chi tiết đơn', items: [
-    [['1 … 6'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
-    [['B'], 'Quay lại bảng Kanban']] }
+    [['1 … 7'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Chứng từ, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
+    [['B'], 'Quay lại bảng Kanban'], [[']'], 'Đóng / mở cột phải của phiếu'], [['Ctrl', 'S'], 'Lưu phiếu']] }
 ];
 
 export const Kbd = ({ k }: { k: string[] }) => <span className="kbd-set">{k.map((x, i) => <kbd key={i}>{x}</kbd>)}</span>;
@@ -55,7 +55,7 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
       const key = e.key.toLowerCase();
       if (Date.now() - gAt.current < 1200) {
         gAt.current = 0;
-        const to: Record<string, string> = { v: '/', b: '/bang', s: '/so-do', d: '/don', q: '/quan-tri', h: '/cai-app', z: '/zalo' };
+        const to: Record<string, string> = { v: '/', b: '/bang', s: '/so-do', d: '/don', t: '/thong-ke', q: '/quan-tri', h: '/cai-app', z: '/zalo' };
         if (to[key]) { e.preventDefault(); nav(to[key]); }
         return;
       }
@@ -75,7 +75,7 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
         <div className="kp-box" role="dialog" aria-modal="true" aria-labelledby="kp-t" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Escape' && setHelp(false)} tabIndex={-1} ref={(el) => el?.focus()}>
           <div className="mv-head"><h2 id="kp-t" style={{ margin: 0 }}>Phím tắt</h2><button className="btn sm icon-btn" onClick={() => setHelp(false)} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
           <ShortcutTable />
-          <p className="small muted" style={{ margin: 0 }}>Phím tắt không chạy khi bạn đang gõ trong ô nhập. Trên Mac dùng ⌘ thay cho Ctrl.</p>
+          <p className="small muted" style={{ margin: 0 }}>Rê chuột lên nút để xem phím tắt của nút đó. Phím tắt không chạy khi bạn đang gõ trong ô nhập (trừ Ctrl+S). Trên Mac dùng ⌘ thay cho Ctrl.</p>
         </div>
       </div>)}
   </>);
@@ -92,7 +92,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   }, []);
   const pages = useMemo(() => [
     { t: 'Việc của tôi', to: '/', k: 'G V' }, { t: 'Bảng Kanban', to: '/bang', k: 'G B' }, { t: 'Sơ đồ đơn hàng', to: '/so-do', k: 'G S' },
-    { t: 'Danh sách đơn', to: '/don', k: 'G D' }, ...(can('kinh_doanh') || can('admin_cnc') ? [{ t: 'Tạo đơn mới', to: '/don/moi', k: 'N' }] : []),
+    { t: 'Danh sách đơn', to: '/don', k: 'G D' }, { t: 'Thống kê', to: '/thong-ke', k: 'G T' }, ...(can('kinh_doanh') || can('admin_cnc') ? [{ t: 'Tạo đơn mới', to: '/don/moi', k: 'N' }] : []),
     ...(can('admin_it') ? [{ t: 'Quản trị', to: '/quan-tri', k: 'G Q' }] : []), { t: 'Hướng dẫn', to: '/cai-app', k: 'G H' }, { t: 'Thông báo Zalo', to: '/zalo', k: 'G Z' }], [can]);
   const toks = norm(q).split(/\s+/).filter(Boolean);
   const hit = (s: string) => toks.every((t) => norm(s).includes(t));

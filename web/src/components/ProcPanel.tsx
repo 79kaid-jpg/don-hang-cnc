@@ -285,6 +285,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
   };
   useUnsavedGuard(dirty);
+  useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (editable && dirty && !busy) save(); } }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
@@ -414,7 +415,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
-        <button type="button" className="pp-sidebtn" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình (phím ])'} aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><Icon name={shut ? 'back' : 'arrow'} size={14} /></button>
+        <button type="button" className="pp-sidebtn" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình'} data-kbd="]" aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><Icon name={shut ? 'back' : 'arrow'} size={14} /></button>
         <div className="pp-shutter" onClick={() => setShut(false)} aria-hidden={!shut}>
           {(role || lvName) && !['da_duyet', 'fail'].includes(d.status) && <Assignees mini proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} />}
           <span className="pp-sh-i" title="Ghi chú"><Icon name="chat" size={15} />{(d.notes ?? []).length || ''}</span>
@@ -438,7 +439,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 function SaveState({ editable, dirty, busy, onSave }: { editable: boolean; dirty: boolean; busy: boolean; onSave: () => void }) {
   if (!editable) return null;
   return <span className="pp-save">
-    <button type="button" className={'btn sm pp-savebtn' + (dirty ? ' dirty' : '')} disabled={!dirty || busy} onClick={onSave} aria-live="polite" title={dirty ? 'Có thay đổi chưa lưu – bấm để lưu nháp' : 'Đã lưu'}>
+    <button type="button" className={'btn sm pp-savebtn' + (dirty ? ' dirty' : '')} disabled={!dirty || busy} onClick={onSave} aria-live="polite" data-kbd="Ctrl S" data-kbd-label={dirty ? 'Lưu nháp' : 'Đã lưu'}>
       {dirty ? <><i className="pp-dot" aria-hidden="true" /><Icon name="check" size={14} /><span>Lưu<span className="pp-savelb"> nháp</span></span></> : <><Icon name="check" size={14} /><span>Đã lưu</span></>}</button></span>;
 }
 

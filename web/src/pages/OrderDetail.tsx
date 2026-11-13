@@ -93,12 +93,12 @@ export default function OrderDetail() {
     <>
       <header className="odh">
         <div className="odh-r">
-          <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" title="Về bảng đơn hàng"><Icon name="back" size={20} /></Link>
+          <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" data-kbd="B"><Icon name="back" size={20} /></Link>
           <div className="odh-t">
             <h1>{o.project || 'Chưa có dự án'}{prj?.name && prj.name !== o.project && <span className="odh-pn">{prj.name}</span>}</h1>
             <div className="odh-sub">{chain && <span>{chain}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>
           </div>
-          <Link className="btn sm odh-map" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Sơ đồ</Link>
+          <Link className="btn sm odh-map" to={'/so-do?don=' + o.id} data-kbd="S" data-kbd-label="Xem trên sơ đồ"><Icon name="flow" size={16} />Sơ đồ</Link>
           <details className="odh-more"><summary className="btn icon-btn" aria-label="Thêm"><Icon name="more" size={20} /></summary>
             <div className="odh-menu" role="menu">
               <Link role="menuitem" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link>
@@ -109,7 +109,7 @@ export default function OrderDetail() {
         </div>
         <nav className="odt" role="tablist" aria-label="Quy trình">
           {TABS.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null;
-            return <button key={k} role="tab" aria-selected={tab === k} className={'odt-b' + (tab === k ? ' on' : '') + (s ? '' : ' odt-x')} onClick={() => setSp({ tab: k })} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
+            return <button key={k} role="tab" aria-selected={tab === k} className={'odt-b' + (tab === k ? ' on' : '') + (s ? '' : ' odt-x')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
               {s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}<span className="odt-k">{k === 'F0' ? 'Tiếp nhận' : k === 'CT' ? 'Chứng từ' : k === 'LS' ? 'Lịch sử' : k}</span>{s && <span className="odt-n">{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
           <details className="odt-more"><summary className={'odt-b' + (['F0', 'CT', 'LS'].includes(tab) ? ' on' : '')} aria-label="Tab khác"><Icon name="more" size={18} /></summary>
             <div className="odh-menu" role="menu">{TABS.filter(([k]) => !PROCS.includes(k as Proc)).map(([k, t]) => <button key={k} role="menuitem" type="button" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setSp({ tab: k }); }}>{t.split(' ').slice(1).join(' ')}</button>)}</div></details>

@@ -20,6 +20,7 @@ import { ZaloLink } from './components/ZaloLink';
 import { Bell } from './components/Bell';
 import { AccountMenu } from './components/AccountMenu';
 import { ShortcutHost } from './components/Shortcuts';
+import { KbdTip } from './components/KbdTip';
 const WfHome = lazy(() => import('./wf/WfHome'));
 const WfEditor = lazy(() => import('./wf/WfEditor'));
 const WfRun = lazy(() => import('./wf/WfRun'));
@@ -74,14 +75,14 @@ function Shell() {
 
   // Điều hướng chính: tối đa 4 mục, dùng chung cho thanh bên (máy tính) và thanh dưới (điện thoại)
   const items = [
-    { to: '/', end: true, icon: 'inbox', label: 'Việc của tôi', short: 'Việc', badge: pending },
-    { to: '/bang', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
-    { to: '/so-do', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
-    { to: '/don', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
-    { to: '/thong-ke', icon: 'chart', label: 'Thống kê', short: 'Thống kê' },
+    { to: '/', kbd: 'G V', end: true, icon: 'inbox', label: 'Việc của tôi', short: 'Việc', badge: pending },
+    { to: '/bang', kbd: 'G B', icon: 'kanban', label: 'Bảng Kanban', short: 'Bảng' },
+    { to: '/so-do', kbd: 'G S', icon: 'flow', label: 'Sơ đồ đơn hàng', short: 'Sơ đồ', side: true },
+    { to: '/don', kbd: 'G D', icon: 'list', label: 'Danh sách đơn', short: 'Đơn hàng' },
+    { to: '/thong-ke', kbd: 'G T', icon: 'chart', label: 'Thống kê', short: 'Thống kê' },
     ...(can('thiet_ke_qt') || wfN > 0 ? [{ to: '/quy-trinh-moi', icon: 'flow', label: 'Tạo quy trình', short: 'Quy trình', side: true }] : []),
     ...(can('admin_it') ? [{ to: '/mo-phong', icon: 'run', label: 'Mô phỏng quy trình', short: 'Mô phỏng', side: true }] : []),
-    ...(can('admin_it') ? [{ to: '/quan-tri', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
+    ...(can('admin_it') ? [{ to: '/quan-tri', kbd: 'G Q', icon: 'settings', label: 'Quản trị', short: 'Quản trị' }] : [])
   ];
   const badge = (n?: number) => (n ? <span className="nav-badge" aria-label={n + ' phiếu chờ duyệt'}>{n}</span> : null);
   const initial = (me.full_name || '?').trim().charAt(0).toUpperCase();
@@ -89,18 +90,18 @@ function Shell() {
   return (
     <div className={'app' + (busy ? ' is-busy' : '') + (hidden ? ' side-hidden' : '') + (peek ? ' side-peek' : '')}>
       {peek && <div className="side-scrim" onClick={() => setPeek(false)} aria-hidden="true" />}
- <ShortcutHost onToggleSide={() => toggleSide(!hidden)} />
+ <ShortcutHost onToggleSide={() => toggleSide(!hidden)} /><KbdTip />
       {busy && <div className="busy" role="progressbar" aria-label="Đang xử lý" />}
       <aside className="side" aria-label="Điều hướng">
         <div className="brand"><img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>PMS</div><div className="small muted">CNC → IPC → Hanwa</div></div>
           <Bell variant="side" />
-          <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} title={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
+          <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} data-kbd="[" onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
         <button className="side-search" title="Tìm đơn nhanh (Ctrl K)" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
           <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((i) => (
-            <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" title={i.label} onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
+            <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" data-kbd={(i as { kbd?: string }).kbd} onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
         </nav>
         <AccountMenu me={me} initial={initial} />
       </aside>

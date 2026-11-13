@@ -90,6 +90,7 @@ export default function Board() {
       const key = e.key.toLowerCase();
       if (['1', '2', '3', '4'].includes(key)) { e.preventDefault(); pick(PROCS[Number(key) - 1]); return; }
       if (key === 'f') { e.preventDefault(); setOnlyMine((v) => !v); return; }
+      if (key === 'c' && adm) { e.preventDefault(); const L: KCo[] = ['ALL', 'PN', 'IPC', 'HW']; setKco(L[(L.indexOf(kco) + 1) % 4]); return; }
       const cols = COLS.map((_, i) => byCol(i));
       const mv = (dc: number, dr: number) => { e.preventDefault(); setSel((s0) => {
         if (!s0) { const c = cols.findIndex((l) => l.length); return c < 0 ? null : { c, r: 0 }; } let c = s0.c, r = s0.r;
@@ -189,14 +190,14 @@ export default function Board() {
       </div>
       <div className="row">
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm" placeholder="Lọc bảng: mã đơn, dự án, lệnh…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
-        <button className="pill-toggle" aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)} title="Phím F">{onlyMine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
-        <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} title="Phím tắt: J K chọn · M chuyển · R trả về" aria-label="Xem phím tắt"><kbd>?</kbd> Phím tắt</button>
+        <button className="pill-toggle" aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)} data-kbd="F">{onlyMine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
+        <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} aria-label="Xem phím tắt" data-kbd-label="Tất cả phím tắt" data-kbd="?"><kbd>?</kbd> Phím tắt</button>
         {adm && <div className="pd-seg kb-coseg" role="group" aria-label="Xem theo công ty">{([['ALL', 'Tất cả'], ['PN', 'PNC'], ['IPC', 'IPC'], ['HW', 'HAN']] as [KCo, string][]).map(([k, t]) =>
-          <button key={k} type="button" aria-pressed={kco === k} onClick={() => setKco(k)} title={k === 'ALL' ? 'Tất cả công ty' : COMPANY[k as keyof typeof COMPANY]}>{t}</button>)}</div>}
+          <button key={k} type="button" aria-pressed={kco === k} onClick={() => setKco(k)} data-kbd="C" data-kbd-label={(k === 'ALL' ? 'Tất cả công ty' : COMPANY[k as keyof typeof COMPANY]) + ' · bấm C để đổi'}>{t}</button>)}</div>}
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
-          {PROCS.map((p) => <button key={p} role="tab" aria-selected={qt === p} className={(qt === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => pick(p)}>
+          {PROCS.map((p) => <button key={p} role="tab" aria-selected={qt === p} className={(qt === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => pick(p)} data-kbd={String(PROCS.indexOf(p) + 1)} data-kbd-label={p + ' · ' + PROC_NAME[p]}>
             <b>{p}</b><span>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span><span className="kb-count">{batches ? countIn(p) : '–'}</span></button>)}
         </div>
         <div className="qt-panel" key={qt}>
