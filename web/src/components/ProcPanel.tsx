@@ -44,6 +44,8 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   const [bid, setBid] = useState(() => psp.get('b') ?? ''); const [co, setCo] = useState<Company | ''>(() => (psp.get('co') as Company | null) ?? '');
   const [info, setInfo] = useState(false);
   const [creating, setCreating] = useState(autoNew);
+  const [psp2, setPsp2] = useSearchParams();
+  useEffect(() => { if (psp2.get('new') !== '1' || psp2.get('tab') !== proc) return; setCreating(true); const n = new URLSearchParams(psp2); n.delete('new'); setPsp2(n, { replace: true }); }, [psp2.get('new')]); // eslint-disable-line react-hooks/exhaustive-deps
   const load = useCallback(async () => {
     reloadCoIdx();
     const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
@@ -171,7 +173,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       setUsed(u); setPick(new Set(r0.map((_, i) => i).filter((i) => !u[i])));
     })();
     if (proc === 'QT2' || proc === 'QT3') sb.from('co_orders').select('id, code').eq('order_id', o.id).eq('company', 'PN').order('created_at').then(({ data }) => {
-      const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); const want = (new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? '').trim().toUpperCase(); const hit = l.find((x) => x.code.trim().toUpperCase() === want); if (hit) setCoId(hit.id); else if (l.length === 1) setCoId(l[0].id); });
+      const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); const want = (new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? '').trim().toUpperCase(); const rid = new URLSearchParams(location.hash.split('?')[1] ?? '').get('refid'); const hit = l.find((x) => x.id === rid) ?? l.find((x) => x.code.trim().toUpperCase() === want); if (hit) setCoId(hit.id); else if (l.length === 1) setCoId(l[0].id); });
   }, [o.id, proc]);
   const weld = (r: Row) => Number(String(r.duong_han ?? '').replace(',', '.')) > 0;
   const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
@@ -806,7 +808,7 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
       if (t.proc === 'QT1' && t.co !== 'PN') { const c = await sb.rpc('ref_candidates', { p_order: o.id, p_co: t.co }); if (live) setOk(((c.data ?? []) as { code: string }[]).some((x) => x.code.trim().toUpperCase() === code.trim().toUpperCase())); }
       else setOk(true); })();
     return () => { live = false; }; }, [d.id, t?.proc, t?.co, code]); // eslint-disable-line react-hooks/exhaustive-deps
-  const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); n.delete('b'); n.delete('co'); return n; });
+  const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); const cid = (b as { co_order_id?: string | null }).co_order_id; if (cid) n.set('refid', cid); else n.delete('refid'); n.delete('b'); n.delete('co'); return n; });
   useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (e.key.toLowerCase() !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
     window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true); }); // eslint-disable-line react-hooks/exhaustive-deps
   if (!t || !ok) return null;
