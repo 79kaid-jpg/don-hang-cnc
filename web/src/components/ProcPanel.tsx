@@ -290,6 +290,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const canDelF = (x: { by?: string; step?: string }) => fAdm || (!!x.by && x.by === meId && x.step === d.status);
   const closed = d.status === 'da_duyet' || d.status === 'fail'; // phiếu đã chốt: chỉ xem (kể cả admin)
   const canEd = (f: FDef) => !closed && ((adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required')));
+  // Người phát lệnh = người làm bước (tự điền nếu trống, vẫn sửa được)
+  const meName = useAuth().me?.full_name;
+  useEffect(() => { if (closed || !can || !meName || String(h.nguoi_phat_lenh ?? '').trim()) return;
+    if (!fieldsOf(proc, 'header').some((f) => f.key === 'nguoi_phat_lenh' && canEd(f))) return;
+    setH((x) => ({ ...x, nguoi_phat_lenh: meName })); setDirty(true); }, [d.id, can, meName, closed]); // eslint-disable-line react-hooks/exhaustive-deps
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)

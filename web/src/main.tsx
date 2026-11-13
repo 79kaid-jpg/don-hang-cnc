@@ -21,3 +21,10 @@ try {
 } catch { /* bỏ qua */ }
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>);
+
+// Điện thoại: đang gõ (bàn phím mở) thì ẩn thanh nút nổi để không che ô nhập
+if (matchMedia('(pointer:coarse)').matches) {
+  const typing = (t: EventTarget | null) => t instanceof HTMLElement && (/^(TEXTAREA|SELECT)$/.test(t.tagName) || (t.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file|range|color)$/.test((t as HTMLInputElement).type)) || t.isContentEditable);
+  document.addEventListener('focusin', (e) => { if (typing(e.target)) { document.body.classList.add('kb-open'); setTimeout(() => (e.target as HTMLElement).scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 300); } });
+  document.addEventListener('focusout', () => setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kb-open'); }, 80));
+}

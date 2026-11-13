@@ -2974,3 +2974,6 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 @media (hover:none),(pointer:coarse){.pp-edge{display:none!important}}
 .nb-row .nb-q{width:72px;flex:none;text-align:right;height:38px;font-variant-numeric:tabular-nums}.nb-row .nb-q.bad{border-color:#b3261e;background:#fff5f5}
 div.nb-row{display:flex;align-items:center;gap:10px}
+
+/* Bàn phím điện thoại mở: ẩn thanh nút nổi */
+body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
