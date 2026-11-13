@@ -273,7 +273,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const adm = useAuth().can('admin_it'); const fAdm = useAuth().can('admin_it') || useAuth().can('admin_cnc'); const meId = useAuth().me?.id;
   /** Gỡ / thay file: admin toàn quyền; người khác chỉ file mình tải, trong đúng bước đã tải */
   const canDelF = (x: { by?: string; step?: string }) => fAdm || (!!x.by && x.by === meId && x.step === d.status);
-  const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
+  const closed = d.status === 'da_duyet' || d.status === 'fail'; // phiếu đã chốt: chỉ xem (kể cả admin)
+  const canEd = (f: FDef) => !closed && ((adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required')));
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
@@ -286,9 +287,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
-    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: !adm && !(p === 'edit' || p === 'required'), req: p === 'required' }]; });
+    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
     const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required';
-    return { key, title: TABLES[def].t, treq, cols, ed: adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan')) }; });
+    return { key, title: TABLES[def].t, treq, cols, ed: !closed && (adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan'))) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
   // Admin: nạp nhanh dữ liệu mẫu vào ô trống (đầu phiếu) và bảng trống (3 dòng ví dụ)
