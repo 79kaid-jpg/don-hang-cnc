@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { cached, peek } from '../lib/qcache';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { sb, type Profile } from '../lib/supabase';
@@ -12,10 +13,12 @@ const live = (r: DocRecord) => !r.note.startsWith('(đã huỷ');
 const fdt = (s: string) => new Date(s).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** Ở bước Duyệt: hiện bản PDF trình duyệt ngay trong phiếu */
+export const reviewQ = (docId: string, status: string) => cached('rv:' + docId + ':' + status, () => sb.from('doc_records').select('*').eq('doc_id', docId).eq('kind', 'trinh_duyet').order('at', { ascending: false }).then(async ({ data }) => {
+  const x = ((data as DocRecord[]) ?? []).find(live) ?? null; return { r: x, url: x ? await recordUrl(x.path) : '' }; }), 120000);
 export function ReviewPdf({ docId, status }: { docId: string; status: string }) {
-  const [r, setR] = useState<DocRecord | null>(null); const [url, setUrl] = useState('');
-  useEffect(() => { sb.from('doc_records').select('*').eq('doc_id', docId).eq('kind', 'trinh_duyet').order('at', { ascending: false }).then(async ({ data }) => {
-    const x = ((data as DocRecord[]) ?? []).find(live) ?? null; setR(x); setUrl(x ? await recordUrl(x.path) : ''); }); }, [docId, status]);
+  const pk = peek<{ r: DocRecord | null; url: string }>('rv:' + docId + ':' + status, 120000);
+  const [r, setR] = useState<DocRecord | null>(pk?.r ?? null); const [url, setUrl] = useState(pk?.url ?? '');
+  useEffect(() => { if (!['duyet', 'duyet_them'].includes(status)) return; reviewQ(docId, status).then((v) => { setR(v.r); setUrl(v.url); }); }, [docId, status]);
   if (!['duyet', 'duyet_them'].includes(status)) return null;
   return (
     <div className="rv rv-mini">

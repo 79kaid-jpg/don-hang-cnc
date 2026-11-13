@@ -1,4 +1,4 @@
-import { cached } from '../lib/qcache';
+import { cached, peek } from '../lib/qcache';
 import { useEffect, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { toast } from './ui';
@@ -17,17 +17,21 @@ const fmtLeft = (h: number) => (Math.abs(h) >= 24 ? Math.round(Math.abs(h) / 24)
 
 /** Hành trình duyệt: stepper + timeline (bấm để mở) */
 export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[]; idx: number }; assignee?: string | null; assign_note?: string | null }; proc: Proc; people: Record<string, Profile> }) {
-  const [cp, setCp] = useState<CP[]>([]); const [lvs, setLvs] = useState<LV[]>([]); const [gs, setGs] = useState<Record<string, string>>({});
+  const company0 = proc === 'QT0' ? 'PN' : d.company;
+  const [cp, setCp] = useState<CP[]>(() => (peek<{ data: CP[] | null }>('cp:' + proc + ':' + company0)?.data) ?? []);
+  const [lvs, setLvs] = useState<LV[]>(() => (d.apv?.queue?.length ? [] : peek<{ data: LV[] | null }>('lv:' + proc + ':' + company0)?.data) ?? []);
+  const [gs, setGs] = useState<Record<string, string>>(() => Object.fromEntries((peek<{ data: { id: string; name: string }[] | null }>('wg')?.data ?? []).map((g) => [g.id, g.name])));
   const [dl, setDl] = useState<{ user_id: string; to_user: string }[]>([]); const [open, setOpen] = useState(false); const [pk, setPk] = useState('');
   const company = proc === 'QT0' ? 'PN' : d.company;
   useEffect(() => {
     cached('cp:' + proc + ':' + company, () => sb.from('chain_people').select('role, user_id, group_id, sla_h').eq('proc', proc).eq('company', company)).then(({ data }) => setCp((data as CP[]) ?? []));
-    const q = sb.from('approval_levels').select('id, name, user_id, group_id, sla_h, ord');
-    (d.apv?.queue?.length ? q.in('id', d.apv.queue) : q.eq('proc', proc).eq('company', company).eq('active', true)).order('ord')
+    const qk = d.apv?.queue?.length ? 'lvq:' + d.apv.queue.join() : 'lv:' + proc + ':' + company;
+    cached(qk, () => { const q = sb.from('approval_levels').select('id, name, user_id, group_id, sla_h, ord');
+      return (d.apv?.queue?.length ? q.in('id', d.apv.queue) : q.eq('proc', proc).eq('company', company).eq('active', true)).order('ord'); })
       .then(({ data }) => { const l = (data as LV[]) ?? []; setLvs(d.apv?.queue?.length ? d.apv.queue.map((id) => l.find((x) => x.id === id)!).filter(Boolean) : l); });
     cached('wg', () => sb.from('work_groups').select('id, name, member_ids')).then(({ data }) => setGs(Object.fromEntries(((data as { id: string; name: string }[]) ?? []).map((g) => [g.id, g.name]))));
     const today = new Date().toISOString().slice(0, 10);
-    sb.from('delegations').select('user_id, to_user, from_date, to_date').lte('from_date', today).gte('to_date', today).then(({ data }) => setDl((data as { user_id: string; to_user: string }[]) ?? []));
+    cached('dl:' + today, () => sb.from('delegations').select('user_id, to_user, from_date, to_date').lte('from_date', today).gte('to_date', today)).then(({ data }) => setDl((data as { user_id: string; to_user: string }[]) ?? []));
   }, [d.id, d.status, proc, company]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nm = (u: string | null, g: string | null) => {

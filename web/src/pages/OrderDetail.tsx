@@ -60,6 +60,12 @@ export default function OrderDetail() {
     if (b.length) { const { data } = await sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at').in('batch_id', b.map((x) => x.id)); setDs((data as Doc[]) ?? []); } else setDs([]);
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { // menu ⋯ / Thêm: tự đóng khi bấm ra ngoài, chọn mục, hoặc Esc
+    const shut = (keep?: Element | null) => document.querySelectorAll<HTMLDetailsElement>('details.odh-more[open], details.odt-more[open]').forEach((x) => { if (x !== keep) x.open = false; });
+    const down = (e: PointerEvent) => { const t = e.target as Element; const dt = t.closest('details.odh-more, details.odt-more'); if (dt && t.closest('[role=menuitem]')) { setTimeout(() => shut(), 0); return; } shut(dt); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') shut(); };
+    addEventListener('pointerdown', down, true); addEventListener('keydown', key); return () => { removeEventListener('pointerdown', down, true); removeEventListener('keydown', key); };
+  }, []);
 
   const run = async (fn: string, args: Record<string, unknown>, msg: string) => {
     setErr(''); setOk('');

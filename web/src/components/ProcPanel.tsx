@@ -1,6 +1,8 @@
 import { GuideBox } from './GuideBox';
 import { FixMsg } from './FixMsg';
 import { goFix } from '../lib/gotoFix';
+import { cached, peek } from '../lib/qcache';
+export const canActQ = (id: string, st: string) => cached('ca:' + id + ':' + st, () => sb.rpc('can_act', { p_doc: id }).then((r) => !!r.data), 60000);
 import { viewHtml, viewUrl } from '../lib/viewer';
 import { Assignees } from './Assignees';
 import { useGuides, guideFor, guideByKey } from '../lib/guides';
@@ -23,7 +25,7 @@ import { checkExcelFile, compareExcel, type XCheck } from '../lib/excelCheck';
 import { CustomerPicker } from './CustomerPicker';
 import { Journey } from './Journey';
 import { advanceDoc } from '../lib/records';
-import { ReviewPdf } from './Records';
+import { ReviewPdf, reviewQ } from './Records';
 import { parties } from '../lib/xlsxTpl';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
@@ -44,7 +46,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
     reloadCoIdx();
     const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
     const bs = (b as Batch[]) ?? []; setBatches(bs);
-    if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); setDocs((d as Doc[]) ?? []); } else setDocs([]);
+    if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); const dd = (d as Doc[]) ?? []; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
   const B = batches?.find((x) => x.id === bid) ?? batches?.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches?.at(-1);
@@ -222,12 +224,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, []);
   const waitH = Math.max(0, (Date.now() - new Date(d.status_at).getTime()) / 36e5);
   const proc = b.proc;
-  const [can, setCan] = useState(false);
+  const [can, setCan] = useState(() => !!peek<boolean>('ca:' + d.id + ':' + d.status, 60000));
   const [h, setH] = useState<Record<string, string>>(d.header ?? {}); const [t, setT] = useState<Record<string, Row[]>>(d.tables ?? {}); const [files, setFiles] = useState(d.files ?? []);
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [dirty, setDirty] = useState(false);
   const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
   const { acting } = useAuth(); const lockAct = acting && !/^\s*\[(MẪU|MAU|TEST)\]/i.test(o.project ?? '');
-  useEffect(() => { sb.rpc('can_act', { p_doc: d.id }).then(({ data }) => setCan(!!data && !lockAct)); }, [d.id, d.status, lockAct]);
+  useEffect(() => { canActQ(d.id, d.status).then((v) => setCan(v && !lockAct)); }, [d.id, d.status, lockAct]);
   const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -246,7 +248,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   useEffect(() => { if (hasCarrier) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc, hasCarrier]); // eslint-disable-line react-hooks/exhaustive-deps
   const plates = carriers.find((c) => c.id === h.dvvc)?.vehicles ?? [];
   useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'dk_giao')) return;
-    sb.from('customers').select('*').then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
+    cached('custs', () => sb.from('customers').select('*'), 60000).then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
@@ -321,7 +323,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
 
   return (
-    <section className={'card pp-doc' + (shut ? ' shut' : '')}>
+    <section className={'card pp-doc pp-doc-in' + (shut ? ' shut' : '')}>
       <div className="pp-main">
       <div className="pp-doc-head">
         <div className="pp-dh"><div className="pp-dh1">{proc === 'QT0' || docs.length < 2 ? <b className="pp-dco">{proc === 'QT0' ? b.title : COMPANY[d.company]}</b>

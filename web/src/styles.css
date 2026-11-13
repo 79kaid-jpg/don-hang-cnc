@@ -2906,3 +2906,6 @@ html[data-theme=dark] .pm-k{background:rgba(255,255,255,.06)}html[data-theme=dar
 @media (max-width:760px){.kb-coseg{margin-left:0;width:100%;display:grid!important;grid-template-columns:repeat(4,1fr)}}
 html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col{background-image:var(--fc-mesh)!important;background-size:7px 7px!important}
 html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-over{background-image:none!important}
+/* Đổi XNĐH: nội dung mờ dần, không giật */
+.pp-doc-in{animation:ppIn .14s ease-out}@keyframes ppIn{from{opacity:.55}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.pp-doc-in{animation:none}}
