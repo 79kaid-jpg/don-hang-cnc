@@ -21,7 +21,7 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { CoBar, CoLink } from './CoBar';
-import { reloadCoIdx, useCoIdx, useMyCo } from '../lib/myco';
+import { codeFile, docCode, reloadCoIdx, useCoIdx, useMyCo } from '../lib/myco';
 import { checkExcelFile, compareExcel, type XCheck } from '../lib/excelCheck';
 import { CustomerPicker } from './CustomerPicker';
 import { Journey } from './Journey';
@@ -397,7 +397,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
       {tblDefs.map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
-          onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${o.code}-${proc}-${key}`} />))}
+          onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
@@ -692,7 +692,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');
   const title = { QT0: 'DANH SÁCH TẤM – BÓC TÁCH BẢN VẼ', QT1: 'XÁC NHẬN ĐƠN HÀNG', QT2: 'LỆNH GIA CÔNG KIÊM BÀN GIAO VẬT LIỆU', QT3: 'PHIẾU XUẤT KHO KIÊM BIÊN BẢN GIAO HÀNG' }[b.proc];
-  const meta = [['Mã đơn hàng', o.code], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
+  const meta = [['Mã đơn hàng', docCode(o, b, d.company)], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
   const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
     return `<h3>${esc(T.t)}</h3><table><tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
       <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
@@ -700,7 +700,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');
   const hand = b.proc === 'QT1' ? ['Khách hàng xác nhận (ký, đóng dấu)'] : b.proc === 'QT2' ? ['Người bàn giao vật liệu', 'Người nhận vật liệu'] : b.proc === 'QT3' ? ['Thủ kho / người giao', 'Tài xế', 'Khách hàng nhận hàng'] : [];
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(o.code)} ${b.proc} ${esc(COMPANY[d.company])}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(docCode(o, b, d.company))} ${b.proc} ${esc(COMPANY[d.company])}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"><style>
     @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm}body{font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}

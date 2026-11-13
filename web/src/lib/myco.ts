@@ -31,3 +31,12 @@ export function useCoIdx() {
   const match = (q: string) => (rows ?? []).filter((r) => r.code.toLowerCase().includes(q.toLowerCase()) && r.order_id).map((r) => r.order_id as string);
   return { ready: !!rows, codeOf, match, allOf, text: (order: string) => (rows ?? []).filter((r) => r.order_id === order).map((r) => r.code).join(' ') };
 }
+
+/** Mã XNĐH của phiếu (công ty đang làm → công ty khác của XNĐH → mã nội bộ). Dùng cho tên file, tiêu đề in. */
+export function docCode(o: { id: string; code: string }, b: { id: string }, company: string): string {
+  if (!rows && !inflight) reloadCoIdx();
+  const m = (rows ?? []).filter((r) => r.batch_id === b.id);
+  return (m.find((r) => r.company === company) ?? m[m.length - 1])?.code ?? o.code;
+}
+/** Tên file an toàn từ mã (đổi / thành -) */
+export const codeFile = (c: string) => c.replace(/\//g, '-');

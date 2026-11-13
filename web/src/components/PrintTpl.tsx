@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { docCode, codeFile } from '../lib/myco';
 import { createPortal } from 'react-dom';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
@@ -59,11 +60,11 @@ function Preview({ html, title, landscape = true, onXlsx, onTpl, onClose }: { ht
 export function PrintTplButton({ o, b, d, people, big, fallback }: { o: Order; b: Batch; d: Doc; people: Record<string, Profile>; big?: boolean; fallback?: () => void }) {
   const t = useTpl(b.proc, d.company); const [pv, setPv] = useState<{ html: string; landscape?: boolean; wb: Awaited<ReturnType<typeof render>>['wb'] } | null>(null); const [busy, setBusy] = useState(false);
   if (!t) return fallback ? <button className="btn xs" onClick={fallback} title="In / lưu PDF (bản in mặc định – chưa có mẫu Excel)"><Icon name="print" size={13} />In</button> : null;
-  const name = safe(`${t.name}_${o.code}_${d.company}`) + '.xlsx';
+  const name = safe(`${t.name}_${codeFile(docCode(o, b, d.company))}`) + '.xlsx';
   const go = async () => { setBusy(true); try { setPv(await render(t, o, b, d, people)); } catch (e) { toast(errText(e as Error)); } setBusy(false); };
   return <>
     <button className={big ? 'btn sm primary pt-big' : 'btn xs'} disabled={busy} onClick={go} title={big ? undefined : 'In theo mẫu Excel / lưu PDF'}><Icon name={big ? 'file' : 'print'} size={big ? 15 : 13} />{busy ? 'Đang tạo…' : big ? 'In mẫu cho khách ký' : 'In'}</button>
-    {pv && <Preview html={pv.html} landscape={pv.landscape} title={t.name + ' · ' + o.code} onXlsx={() => downloadWb(pv.wb, name)} onClose={() => setPv(null)} />}
+    {pv && <Preview html={pv.html} landscape={pv.landscape} title={t.name + ' · ' + docCode(o, b, d.company)} onXlsx={() => downloadWb(pv.wb, name)} onClose={() => setPv(null)} />}
   </>;
 }
 

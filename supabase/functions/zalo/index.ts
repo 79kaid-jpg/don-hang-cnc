@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     if (url.searchParams.get('k') !== s.WEBHOOK_KEY) return json({ error: 'forbidden' }, 403);
     const u = await req.json().catch(() => ({}));
     const upd = u.result ?? u; const m = upd.message;
+    await db.from('zalo_raw').insert({ payload: u }); // tạm ghi để kiểm tra quote
     const chat = m?.chat?.id ? String(m.chat.id) : null;
     if (!chat) return json({ ok: true });
     const text = String(m.text ?? '').trim();
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
       const { data: p } = await db.from('profiles').select('full_name').eq('id', c.user_id).single();
       await send(chat, `Đã liên kết Zalo với tài khoản ${p?.full_name}. Từ giờ bạn sẽ nhận thông báo khi đến lượt duyệt phiếu.`);
     } else {
-      const { data: ack } = await db.rpc('zalo_reply', { p_chat: chat, p_text: text });
+      const { data: ack } = await db.rpc('zalo_reply', { p_chat: chat, p_text: text, p_raw: m });
       if (ack) { await send(chat, ack); return json({ ok: true }); }
       await send(chat, 'Xin chào! Đây là bot thông báo của app PMS.\nĐể nhận thông báo duyệt: mở app → Liên kết Zalo → gửi mã 6 số cho bot này.\n' + APP);
     }
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
     const { doc_id } = await req.json();
     const { data: d } = await db.from('docs').select('*, batches(id, proc, title, status, order_id, orders(code, project))').eq('id', doc_id).single();
     if (!d) return json({ ok: false });
+    const { data: dcode } = await db.rpc('doc_code', { p_doc: doc_id });
     const b = d.batches; const proc = b.proc as string;
     const ROLE: Record<string, string> = proc === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
     const STL: Record<string, string> = { tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập' };
@@ -155,7 +157,7 @@ Deno.serve(async (req) => {
     if (!ids.size) return json({ ok: true, skipped: 'không có người nhận' });
     const back = last?.action === 'tra_ve';
     const link = `${APP}?z=1#/don/${b.order_id}?tab=${proc}`;
-    const head = `${b.orders.code} · ${b.orders.project}\n${proc} · ${b.title}${proc === 'QT0' ? '' : ' · ' + CO[d.company]}`;
+    const head = `${dcode ?? b.orders.code} · ${b.orders.project}\n${proc} · ${b.title}${proc === 'QT0' ? '' : ' · ' + CO[d.company]}`;
     const text = what ? `✍ ${head}\n${what}\n${link}` : back ? `↩️ Bị trả về – ${STL[d.status]}\n${head}\nLý do: ${last?.note ?? ''}\n${link}` : `📌 Đến lượt bạn: ${STL[d.status]}${proc === 'QT0' ? '' : ' (' + CO[company] + ')'}\n${head}\n${link}`;
     let pdf = '';
     if (!what && !back && (d.status === 'duyet' || d.status === 'duyet_them')) {
@@ -163,7 +165,8 @@ Deno.serve(async (req) => {
       if (rc) { const { data: su } = await db.storage.from('files').createSignedUrl(rc.path, 7 * 86400); if (su?.signedUrl) pdf = '\n📄 Bản trình duyệt (PDF): ' + su.signedUrl; }
     }
     const { data: ps } = await db.from('profiles').select('id, zalo_chat_id').in('id', [...ids]);
-    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { await send(p.zalo_chat_id, text + pdf); n++; }
+    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { const r = await send(p.zalo_chat_id, text + pdf + '\n\nTrả lời: quote tin này để ghi vào ' + (dcode ?? 'đơn') + '.'); const mid = r?.result?.message_id ?? r?.message_id;
+      if (mid) await db.rpc('zalo_out_add', { p_chat: p.zalo_chat_id, p_doc: doc_id, p_msg: String(mid) }); n++; }
     return json({ ok: true, sent: n, to: ids.size });
   }
   return json({ error: 'unknown op' }, 400);

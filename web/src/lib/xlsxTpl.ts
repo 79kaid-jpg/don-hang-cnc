@@ -1,4 +1,5 @@
 import { viewHtml } from './viewer';
+import { docCode } from './myco';
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
 import type { Customer, Order, Profile } from './supabase';
@@ -53,7 +54,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   const sg = (r: string) => [...(d.signs ?? [])].reverse().find((x) => x.role === r && x.action === 'ky');
   const lastAt = sg('duyet')?.at ?? d.status_at; const dt = new Date(lastAt);
   const vars: Record<string, string | number> = {
-    ma_don: o.code, du_an: o.project, khach_hang: cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')] ?? '', ma_kh: kh?.code ?? '', ma_so_thue: kh?.tax_code ?? '', dia_chi: kh?.address ?? '', nguoi_lien_he: kh?.contact ?? '', dien_thoai: kh?.phone ?? '', email_kh: kh?.email ?? '', kh1: cust[o.kh1_id ?? ''] ?? '', kh2: cust[o.kh2_id ?? ''] ?? '',
+    ma_don: docCode(o, b, d.company), ma_noi_bo: o.code, du_an: o.project, khach_hang: cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')] ?? '', ma_kh: kh?.code ?? '', ma_so_thue: kh?.tax_code ?? '', dia_chi: kh?.address ?? '', nguoi_lien_he: kh?.contact ?? '', dien_thoai: kh?.phone ?? '', email_kh: kh?.email ?? '', kh1: cust[o.kh1_id ?? ''] ?? '', kh2: cust[o.kh2_id ?? ''] ?? '',
     lien_he: o.contact ?? '', mo_ta: o.description ?? '', han_giao: fd(o.due_date ?? undefined), lo: b.title, cong_ty: { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' }[d.company] ?? d.company,
     ngay: String(dt.getDate()).padStart(2, '0'), thang: String(dt.getMonth() + 1).padStart(2, '0'), nam: dt.getFullYear(), ngay_in: fd(new Date().toISOString()), ngay_duyet_full: fd(lastAt),
     ghi_chu: (d.notes ?? []).map((n) => n.text).join('; '),
