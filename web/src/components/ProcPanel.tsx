@@ -240,7 +240,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const pm = (f: FDef) => permOf(f, d.company, d.status, proc);
   const guides = useGuides(); const [fsp, setFsp] = useSearchParams();
   useEffect(() => { const fx = fsp.get('fix'); if (!fx || (fsp.get('b') && fsp.get('b') !== b.id)) return; const t = setTimeout(() => { setErr(fx); goFix(fx); const n = new URLSearchParams(fsp); n.delete('fix'); n.delete('b'); n.delete('co'); setFsp(n, { replace: true }); }, 900); return () => clearTimeout(t); }, [d.id, fsp.get('fix')]); // eslint-disable-line react-hooks/exhaustive-deps
-  const adm = useAuth().can('admin_it');
+  const adm = useAuth().can('admin_it'); const fAdm = useAuth().can('admin_it') || useAuth().can('admin_cnc'); const meId = useAuth().me?.id;
+  /** Gỡ / thay file: admin toàn quyền; người khác chỉ file mình tải, trong đúng bước đã tải */
+  const canDelF = (x: { by?: string; step?: string }) => fAdm || (!!x.by && x.by === meId && x.step === d.status);
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
@@ -310,14 +312,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   };
   const [xv, setXv] = useState(0);
   const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string, replace = false) => {
-    const old = replace ? files.filter((x) => x.kind === kind) : [];
+    const old = replace ? files.filter((x) => x.kind === kind && canDelF(x as { by?: string; step?: string })) : [];
     const nf = files.filter((x) => !old.includes(x));
     for (const file of Array.from(e.target.files ?? [])) {
       let check: XCheck | undefined;
       if (kind === 'excel') { const r = await checkExcelFile(file); if (!r.ok) { setErr(r.error); e.target.value = ''; return; } check = r.c; }
       const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
-      nf.push({ kind, name: file.name, path, at: new Date().toISOString(), ...(check ? { check } : {}) });
+      nf.push({ kind, name: file.name, path, at: new Date().toISOString(), by: meId, step: d.status, ...(check ? { check } : {}) } as (typeof files)[number]);
     }
     e.target.value = '';
     const saved = await persist(nf, replace ? 'Đã thay file' : 'Đã tải file');
@@ -388,11 +390,13 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} className="pp-fk"><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
             <span className="row" style={{ gap: 6 }}>{(() => { const ed = canEd({ key: k, label: lab, ...f } as FDef); const mine = files.filter((x) => x.kind === k); return <>
-              {mine.map((x) => <span key={x.path} className="row" style={{ gap: 2 }}><FileLink f={x} />
-                {ed && <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>}</span>)}
+              {mine.map((x) => { const xx = x as { by?: string; step?: string }; const del = ed && canDelF(xx); return <span key={x.path} className="pp-file"><span className="row" style={{ gap: 2 }}><FileLink f={x} />
+                {del ? <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>
+                  : ed && <span className="pp-flock" title="Chỉ người tải file (trong bước đã tải) hoặc admin được gỡ"><Icon name="shield" size={13} /></span>}</span>
+                {xx.by && <span className="pp-fby">Tải bởi {who(xx.by)}{xx.step ? ' · ' + (STATUS[xx.step] ?? xx.step) : ''}</span>}</span>; })}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
               {k === 'excel' && mine.length > 0 && <XStatus key={xv} files={mine as never} ds={(t.ds ?? []) as never} canRecheck={ed} />}
-              {ed && mine.length > 0 && <label className="btn xs" title="Thay toàn bộ file hiện có bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
+              {ed && mine.some((x) => canDelF(x as { by?: string; step?: string })) && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
               {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
       </div>
 
