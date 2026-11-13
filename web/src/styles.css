@@ -2977,4 +2977,4 @@ div.nb-row{display:flex;align-items:center;gap:10px}
 
 /* Bàn phím điện thoại mở: ẩn thanh nút nổi */
 body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
-.pp-next{align-items:center;justify-content:space-between}.pp-next-t{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px}@media (max-width:760px){.pp-next .pp-go{flex:1}.pp-next-t{width:100%}}
+.pp-next{align-items:center;justify-content:space-between}.pp-next-t{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px}@media (max-width:760px){.pp-act.pp-next{flex-wrap:wrap;gap:8px}.pp-next .pp-go{flex:1 1 100%;max-width:none;width:100%;justify-content:center;white-space:nowrap}.pp-next-t{flex:1 1 100%;font-size:13px}}
