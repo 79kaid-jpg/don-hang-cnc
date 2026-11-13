@@ -23,7 +23,7 @@ export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
     [['1'], 'QT0'], [['2'], 'QT1'], [['3'], 'QT2'], [['4'], 'QT3'],
     [['J', '↓'], 'Thẻ đơn tiếp theo'], [['K', '↑'], 'Thẻ đơn trước'], [['H', '←'], 'Sang cột trái'], [['L', '→'], 'Sang cột phải'],
     [['Enter'], 'Mở đơn đang chọn'], [['M'], 'Ký nhanh hồ sơ đang chọn (sang bước sau)'], [['R'], 'Trả hồ sơ đang chọn về bước trước'],
-    [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"'], [['C'], 'Đổi công ty: Tất cả → PNC → IPC → HAN (admin)']] },
+    [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"'], [['C'], 'Đổi công ty: Tất cả → PNC → IPC → HAN (admin)'], [['X'], 'Khép / mở cột đang chọn']] },
   { group: 'Chi tiết đơn', items: [
     [['1 … 7'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Chứng từ, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
     [['B'], 'Quay lại bảng Kanban'], [[']'], 'Đóng / mở cột phải của phiếu'], [['Ctrl', 'S'], 'Lưu phiếu'],

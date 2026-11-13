@@ -83,6 +83,10 @@ export default function Board() {
   const canNext = (c: Card) => !!c.doc && c.key !== 'ky';
   // Phím tắt
   const [sel, setSel] = useState<{ c: number; r: number } | null>(null);
+  const [shutV, setShutV] = useState(0);
+  const shutSet = (() => { void shutV; try { const v = localStorage.getItem('kb-shut:' + qt); return new Set<string>(v ? JSON.parse(v) : ['hoan_tat', 'fail']); } catch { return new Set<string>(['hoan_tat', 'fail']); } })();
+  const toggleShut = (key: string) => { const n = new Set(shutSet); if (n.has(key)) n.delete(key); else n.add(key); try { localStorage.setItem('kb-shut:' + qt, JSON.stringify([...n])); } catch { /* */ } setShutV((v) => v + 1); };
+  const isShut = (key: string, i: number) => shutSet.has(key) && !byCol(i).some((it) => it.mine);
   const selCard = sel ? byCol(sel.c)[sel.r] : undefined;
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -91,7 +95,8 @@ export default function Board() {
       if (['1', '2', '3', '4'].includes(key)) { e.preventDefault(); pick(PROCS[Number(key) - 1]); return; }
       if (key === 'f') { e.preventDefault(); setOnlyMine((v) => !v); return; }
       if (key === 'c' && adm) { e.preventDefault(); const L: KCo[] = ['ALL', 'PN', 'IPC', 'HW']; setKco(L[(L.indexOf(kco) + 1) % 4]); return; }
-      const cols = COLS.map((_, i) => byCol(i));
+      if (key === 'x') { e.preventDefault(); const c = sel ? COLS[sel.c] : COLS.find((x) => x.key === curCol); if (c) { toggleShut(c.key); setSel(null); } return; }
+      const cols = COLS.map((c, i) => (isShut(c.key, i) ? [] : byCol(i)));
       const mv = (dc: number, dr: number) => { e.preventDefault(); setSel((s0) => {
         if (!s0) { const c = cols.findIndex((l) => l.length); return c < 0 ? null : { c, r: 0 }; } let c = s0.c, r = s0.r;
         if (dc) { let n = c + dc; while (n >= 0 && n < cols.length && !cols[n].length) n += dc; if (n >= 0 && n < cols.length) { c = n; r = Math.min(r, cols[n].length - 1); } }
@@ -214,12 +219,16 @@ export default function Board() {
           <div className="kb-wrap">
           {edge.l && <button className="kb-arrow l" aria-label="Cột bên trái" onClick={() => panBy(-1)}><Icon name="back" size={18} /></button>}
           {edge.r && <button className="kb-arrow r" aria-label="Cột bên phải" onClick={() => panBy(1)}><Icon name="arrow" size={18} /></button>}
-          <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
+          <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} style={{ ['--kb-cols' as string]: COLS.map((c, i) => (isShut(c.key, i) ? '48px' : 'minmax(260px,1fr)')).join(' ') }} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
             {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
+              const sh = isShut(c.key, i);
               return (
-                <section key={c.key} data-col={i} className={'kb-col' + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'xong_minh' ? ' kb-elsewhere' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
+                <section key={c.key} data-col={i} className={'kb-col door' + (sh ? ' closed' : '') + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'xong_minh' ? ' kb-elsewhere' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
                   <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : c.key === 'xong_minh' ? 'Đã duyệt phần ' + (COMPANY[myCo as keyof typeof COMPANY] ?? myCo) : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
-                    <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span></div></header>
+                    <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span>
+                      <button type="button" className="kb-shut" aria-label={'Khép cột ' + c.title} data-kbd="X" data-kbd-label={'Khép cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}><Icon name="back" size={15} /></button></div></header>
+                  <button type="button" className="kb-strip" tabIndex={sh ? 0 : -1} aria-hidden={!sh} aria-label={'Mở cột ' + c.title + ', ' + list.length + ' hồ sơ'} data-kbd="X" data-kbd-label={'Mở cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}>
+                    <span className="kb-strip-n">{list.length}</span><span className="kb-strip-t">{c.title}</span></button>
                   <div className="kb-list">
                     {(tgt || eat === i) && <div className={'kb-slot open' + (isBack ? ' back' : '') + (eat === i ? ' eat' : '')} aria-hidden="true"><span className="kb-slot-mouth" />
                       <span className="kb-slot-txt"><Icon name={isBack ? 'back' : 'inbox'} size={16} />{isBack ? 'Thả để trả về' : 'Thả để ký, chuyển sang'} {c.title}</span></div>}
