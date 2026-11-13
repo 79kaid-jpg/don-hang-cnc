@@ -8,3 +8,6 @@ export function cached<T>(key: string, fn: () => PromiseLike<T>, ttlMs = 30000):
 export const dropCache = (prefix = '') => { for (const k of [...m.keys()]) if (k.startsWith(prefix)) m.delete(k); };
 /** Lấy ngay giá trị đã có (đồng bộ) để hiển thị tức thì, không chờ mạng */
 export function peek<T>(key: string, ttlMs = 30000): T | undefined { const h = m.get(key); return h?.ok && Date.now() - h.at < ttlMs ? (h.v as T) : undefined; }
+
+/** Người dùng hiệu lực – gắn vào khoá cache quyền (đổi vai không dùng nhầm quyền cũ) */
+export let cacheUser = ''; export const setCaUser = (u: string) => { cacheUser = u; };

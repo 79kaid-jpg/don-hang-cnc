@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { sb, type Profile } from './supabase';
+import { setCaUser } from './qcache';
 
 /** me = người dùng hiệu lực (người được đóng vai nếu IT đang "đăng nhập với tư cách"); real = người thật đang đăng nhập */
 type Ctx = { session: Session | null; me: Profile | null; real: Profile | null; acting: boolean; actUntil: string | null; grants: { target_id: string | null; to_at: string }[];
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   const can = (r: string) => !!me && me.active && (me.roles.includes(r) || me.roles.includes('admin_it'));
   const acting = !!real && !!me && real.id !== me.id;
+  setCaUser((me?.id ?? '') + (actUntil ? '+' : ''));
   const actAs = async (id: string) => {
     const { error } = await sb.rpc('start_impersonation', { p_user: id });
     if (error) return error.message;
