@@ -32,6 +32,10 @@ export function DocSteps({ proc, d, live }: { proc: Proc; d: DocCk; live?: Parti
     <li key={s} className={fin || k < ci ? 'done' : k === ci ? 'cur' : ''}><StepDot n={k + 1} done={fin || k < ci} p={prog[s]} />{STATUS[s]}</li>)}</ol>;
 }
 
+/** Checklist tự kiểm chưa lưu theo phiếu – gọi flushChecks(docId) trước khi gửi bước */
+const pendingCk: Record<string, { run: () => Promise<unknown> }> = {};
+export async function flushChecks(docId: string) { const p = pendingCk[docId]; if (p) { await p.run(); delete pendingCk[docId]; } }
+
 /** Checklist của bước hiện tại – tích, ghi chú, thêm mục riêng cho hồ sơ */
 export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc: Proc; d: DocCk; people: Record<string, Profile>; canEdit: boolean; onChanged?: () => void; live?: { header?: Record<string, string>; tables?: Record<string, Record<string, unknown>[]>; files?: { kind: string }[] } }) {
   const tpl = useChecks(); const { me } = useAuth();
@@ -41,13 +45,17 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
   useEffect(() => { const go = () => { setAll(true); setFlash(true); requestAnimationFrame(() => box.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })); setTimeout(() => setFlash(false), 2400); };
     addEventListener('pms-goto-check', go); return () => removeEventListener('pms-goto-check', go); }, []);
   const base = useRef<CheckItem[] | null>(null);
-  useEffect(() => { base.current = null; }, [d.checklist, step]);
+  const saved = useRef(''); // trạng thái tích đã lưu (để biết còn thay đổi chưa lưu)
+  const sig = (xs: CheckItem[]) => JSON.stringify(xs.map((x) => [x.id, !!x.done]));
+  useEffect(() => { base.current = null; saved.current = sig(itemsOf(tpl, proc, step, d.checklist)); }, [d.checklist, step, tpl]); // eslint-disable-line react-hooks/exhaustive-deps
   const data = live ?? d;
   useEffect(() => { const r = applyAuto(base.current ?? itemsOf(tpl, proc, step, d.checklist), data, reqKeysOf(proc, d.company, step)); setItems(r.items);
-    // Tự tích / bỏ tích theo dữ liệu đang nhập (lưu checklist sau 0,8 giây)
-    if (!r.changed || !canEdit || !FLOW[proc].includes(step)) return;
-    base.current = r.items;
-    const tm = setTimeout(() => { sb.rpc('doc_check', { p_doc: d.id, p_step: step, p_items: r.items }); }, 800);
+    if (r.changed) base.current = r.items;
+    // Tự tích / bỏ tích theo dữ liệu: lưu khi khác bản đã lưu (0,6 giây); gửi bước sẽ chờ lưu xong
+    if (!canEdit || !FLOW[proc].includes(step) || sig(r.items) === saved.current) { delete pendingCk[d.id]; return; }
+    const its = r.items; const run = () => { const p = Promise.resolve(sb.rpc('doc_check', { p_doc: d.id, p_step: step, p_items: its })).then(({ error }) => { if (!error) saved.current = sig(its); }); pendingCk[d.id] = { run: () => p }; return p; };
+    pendingCk[d.id] = { run };
+    const tm = setTimeout(run, 600);
     return () => clearTimeout(tm);
   }, [tpl, proc, step, d.checklist, data.header, data.tables, data.files]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!FLOW[proc].includes(step) || !items.length && !canEdit) return null;
@@ -56,7 +64,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
     setItems(next); setBusy(true);
     const { error } = await sb.rpc('doc_check', { p_doc: d.id, p_step: step, p_items: next }); setBusy(false);
     if (error) { toast(errText(error)); setItems(base.current ?? itemsOf(tpl, proc, step, d.checklist)); return; }
-    base.current = next; onChanged?.();
+    base.current = next; saved.current = sig(next); onChanged?.();
   };
   const set = (i: number, patch: Partial<CheckItem>) => push(items.map((x, k) => k === i ? { ...x, ...patch } : x));
   const tick = (i: number) => { const x = items[i]; const on = !x.done;

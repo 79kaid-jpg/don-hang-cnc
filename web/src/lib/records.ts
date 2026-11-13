@@ -1,3 +1,4 @@
+import { flushChecks } from '../components/StepChecks';
 import { sb, type Order, type Profile } from './supabase';
 import type { Batch, Doc } from './proc';
 
@@ -106,10 +107,12 @@ export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['ki
  *  - Duyệt / Duyệt thêm → "Đã duyệt" (mỗi cấp một bản; cấp cuối = Thành công)
  *  - Thất bại → "Thất bại" */
 export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: string[]; idx: number } | null }, action: 'next' | 'back' | 'fail', note: string): Promise<{ next: string; warn?: string }> {
+  if (action === 'next') await flushChecks(d.id);
   const { FLOW } = await import('./proc');
   const fl = FLOW[b.proc as keyof typeof FLOW]; const i = fl.indexOf(d.status);
   let rec: DocRecord | null = null; let warn: string | undefined;
-  const lvName = async () => { if (d.status !== 'duyet_them' || !d.apv) return null; const id = d.apv.queue[d.apv.idx]; const { data } = await sb.from('approval_levels').select('name').eq('id', id).maybeSingle(); return (data as { name: string } | null)?.name ?? null; };
+  const lvName = async () => {
+  if (d.status !== 'duyet_them' || !d.apv) return null; const id = d.apv.queue[d.apv.idx]; const { data } = await sb.from('approval_levels').select('name').eq('id', id).maybeSingle(); return (data as { name: string } | null)?.name ?? null; };
   try {
     if (action === 'next' && fl[i + 1] === 'duyet') rec = await saveRecord(o, b, d, 'trinh_duyet', note);
     else if (action === 'next' && (d.status === 'duyet' || d.status === 'duyet_them')) rec = await saveRecord(o, b, d, 'duyet', note, d.status === 'duyet_them' ? await lvName() : 'Duyệt');
