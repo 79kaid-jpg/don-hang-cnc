@@ -2966,3 +2966,4 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 .sc-miss .linklike{all:unset;cursor:pointer;text-decoration:underline;font-weight:600;color:#b3261e}
 .sc-miss .linklike:focus-visible{outline:2px solid #b3261e;border-radius:3px}
 @media (prefers-reduced-motion:reduce){.f-flash{animation:none}}
+.nb-ref{display:flex;flex-direction:column;gap:8px}

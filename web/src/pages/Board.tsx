@@ -60,12 +60,15 @@ export default function Board() {
   useEffect(() => { if (kbCache && kbCache.u === meP?.id) apply(kbCache); load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
   const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')).filter((c) => qt === 'QT0' || inCo(c.key)),
-    ...(!adm && qt !== 'QT0' ? [{ key: 'xong_minh', title: 'Đang ở bên khác', group: 'Đã duyệt' }] : []), { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
+    { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
-    const st = stepOf(b, docs); const o = orders[b.order_id];
+    const st0 = stepOf(b, docs); const o = orders[b.order_id];
+    // Mỗi công ty tự lo đơn: phiếu của công ty mình đã duyệt → Hoàn thành; thất bại → Thất bại
+    const ownCo = qt === 'QT0' ? null : !adm ? myCo : kco !== 'ALL' ? kco : null;
+    const own = ownCo ? docs.find((x) => x.batch_id === b.id && x.company === ownCo) : undefined;
+    const st = own?.status === 'da_duyet' ? { ...st0, key: 'hoan_tat', doc: own } : own?.status === 'fail' ? { ...st0, key: 'fail', doc: own } : st0;
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
-      // Phần của công ty mình đã duyệt, hồ sơ đang ở công ty khác / chờ khách ký → cột "Đã duyệt · đang ở bên khác"
-      return docs.some((x) => x.batch_id === b.id && x.company === myCo && x.status === 'da_duyet') ? COLS.findIndex((c) => c.key === 'xong_minh') : -1; })() };
+      return -1; })() };
   }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title + ' ' + CI.text(c.b.order_id)).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm, CI.ready, kco]); // eslint-disable-line
   // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
   const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);

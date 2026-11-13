@@ -145,7 +145,12 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   // Tách đơn: chọn tấm từ QT0 · QT2/QT3: chọn đơn PN
   const [rows0, setRows0] = useState<Row[] | null>(null); const [used, setUsed] = useState<Record<number, string>>({}); const [pick, setPick] = useState<Set<number>>(new Set());
   const [pnOrders, setPnOrders] = useState<{ id: string; code: string }[]>([]); const [coId, setCoId] = useState('');
-  useEffect(() => {
+  // IPC / HW: lập XNĐH bằng tham chiếu mã đơn đã duyệt của công ty trước
+  const { co: myCoNB } = useMyCo(); const refMode = proc === 'QT1' && (myCoNB === 'IPC' || myCoNB === 'HW');
+  const prevCo = myCoNB === 'HW' ? 'IPC' : 'PN';
+  const [refs, setRefs] = useState<{ code: string; title: string; used: string | null }[] | null>(null); const [ref, setRef] = useState('');
+  useEffect(() => { if (!refMode) return; sb.rpc('ref_candidates', { p_order: o.id, p_co: myCoNB }).then(({ data }) => { const l = (data ?? []) as { code: string; title: string; used: string | null }[]; setRefs(l); if (l.length === 1) setRef(l[0].code); }); }, [refMode, o.id, myCoNB]);
+  useEffect(() => { if (refMode) return;
     if (proc === 'QT1') (async () => {
       const { data: bs } = await sb.from('batches').select('id, proc, status, done_at, title').eq('order_id', o.id);
       const b0 = ((bs ?? []) as Batch[]).filter((x) => x.proc === 'QT0' && x.status === 'hoan_tat').sort((a, z) => (z.done_at ?? '').localeCompare(a.done_at ?? ''))[0];
@@ -167,13 +172,21 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
   const go = async () => {
     setErr('');
+    if (refMode) { const { data, error } = await sb.rpc('doc_from_ref', { p_code: ref.trim(), p_co: myCoNB }); if (error) return setErr(errText(error)); toast('Đã lập XNĐH ' + myCoNB + ' từ ' + ref); reloadCoIdx(); onDone(String(data ?? '')); return; }
     const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
   return (
     createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.project ?? ''}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
-      <label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
+      {refMode && <div className="nb-ref">
+        <label className="f">Tham chiếu đơn {prevCo} đã duyệt *
+          <input list="nb-refs" value={ref} onChange={(e) => setRef(e.target.value)} placeholder={'Chọn hoặc gõ mã đơn ' + prevCo} autoFocus /></label>
+        <datalist id="nb-refs">{(refs ?? []).map((r) => <option key={r.code} value={r.code}>{r.title}{r.used === 'fail' ? ' · lập lại (đơn cũ thất bại)' : ''}</option>)}</datalist>
+        {refs && refs.length === 0 && <p className="small muted" style={{ margin: 0 }}>Chưa có đơn {prevCo} nào đã duyệt mà {myCoNB} chưa lập.</p>}
+        <p className="small muted" style={{ margin: 0 }}>Sẽ copy: danh sách tấm (không kèm giá), điều kiện giao hàng. Bạn tự nhập đơn giá, VAT, điều kiện thanh toán.</p>
+      </div>}
+      {!refMode && <><label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
       {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tách đơn: chỉ tick các tấm thuộc đơn này)</span></span></label>}
       {proc === 'QT1' && use0 && rows0 !== null && (rows0.length === 0 ? <p className="small muted">Chưa có danh sách tấm QT0 đã duyệt.</p> : <div className="nb-pick">
         <div className="nb-pick-h"><b>Chọn tấm cho XNĐH này</b><span className="small muted">{pick.size}/{rows0.length} tấm</span></div>
@@ -191,9 +204,10 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
         <option value="">— Chọn đơn —</option>{pnOrders.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select></label>}
       {proc === 'QT2' && <div className="f">Đủ 5 điều kiện mới được lập lệnh ({n}/5)
         {CHECK5.map((t, i) => <label key={t} className={'ck-item' + (ck['c' + (i + 1)] ? ' on' : '')}><input type="checkbox" checked={!!ck['c' + (i + 1)]} onChange={() => setCk({ ...ck, ['c' + (i + 1)]: !ck['c' + (i + 1)] })} /><span>{t}</span></label>)}</div>}
+      </>}
       {err && <div className="msg err"><Icon name="alert" size={18} /><span>{err}</span></div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Huỷ</button>
-        <button className="btn primary" disabled={(proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)} onClick={go}>{proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
+        <button className="btn primary" disabled={(refMode && !ref.trim()) || (!refMode && ((proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)))} onClick={go}>{refMode ? 'Lập XNĐH từ tham chiếu' : proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
     </div></div>, document.body));
 }
 
