@@ -2,7 +2,7 @@ import { Skeleton } from './components/ui';
 import { useEffect, useState , lazy, Suspense } from 'react';
 import { Appearance } from './components/Appearance';
 import { scrollTop, scrollToY } from './lib/scroll';
-import { NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
 import { Icon } from './components/Icon';
@@ -139,6 +139,7 @@ function Shell() {
             <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
             <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}
+        <ZaloNudge />
         <Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/thong-ke" element={<Stats />} />
@@ -170,3 +171,12 @@ function Shell() {
   );
 }
 export default function App() { return <AuthProvider><Shell /></AuthProvider>; }
+
+/** Nhắc nối Zalo trên mọi trang (trừ Việc của tôi / trang Zalo đã có thẻ riêng); tạm ẩn 1 ngày */
+function ZaloNudge() {
+  const { me, acting } = useAuth(); const loc = useLocation(); const [hid, setHid] = useState(() => { try { return Number(localStorage.getItem('zalo-nudge') ?? 0) > Date.now(); } catch { return false; } });
+  if (!me || acting || me.zalo_chat_id || hid || loc.pathname === '/' || loc.pathname === '/zalo') return null;
+  return <div className="zn" role="status"><span className="zalo-badge" aria-hidden="true">Zalo</span><span className="zn-t">Chưa nối Zalo · bạn sẽ không nhận được nhắc việc</span>
+    <Link className="btn sm primary" to="/zalo">Nối ngay</Link>
+    <button className="btn sm icon-btn" aria-label="Để sau" title="Để sau (ẩn 1 ngày)" onClick={() => { try { localStorage.setItem('zalo-nudge', String(Date.now() + 864e5)); } catch { /* */ } setHid(true); }}><Icon name="x" size={14} /></button></div>;
+}

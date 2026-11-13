@@ -13,6 +13,9 @@ import { COMPANY, FINAL, STATUS, type Batch, type Company, type Doc, type Proc }
 import { isStuck } from '../lib/holders';
 import { PerfCard } from '../components/Perf';
 import { ProdMini } from '../components/ProdMini';
+import { advanceDoc } from '../lib/records';
+import { errText } from '../lib/supabase';
+import { toast } from '../components/ui';
 
 /** Việc đến lượt mỗi vai trò, theo trạng thái đơn */
 export const TODO: Record<string, { roles: string[]; text: string; tab: string }> = {
@@ -56,7 +59,26 @@ export default function MyWork() {
       setMine(sg.map(({ x, g }) => { const bb = bs.find((y) => y.id === x.batch_id); const oo = os.find((y) => y.id === bb?.order_id);
         return { id: x.id + g.at, order_id: bb?.order_id ?? '', proc: (bb?.proc ?? 'QT0') as Proc, code: oo?.code ?? '', title: bb?.title ?? '', action: g.action, at: g.at }; }));
     }); }, [me]);
-  useEffect(() => { if (me) sb.rpc('my_docs').then(({ data }) => setRows((data as M[]) ?? [])); }, [me]);
+  const loadRows = () => sb.rpc('my_docs').then(({ data }) => setRows((data as M[]) ?? []));
+  useEffect(() => { if (me) loadRows(); }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Duyệt nhiều phiếu: chỉ phiếu đang ở bước Duyệt; máy chủ vẫn kiểm checklist / mục bắt buộc từng phiếu
+  const canBulk = (r: M) => !!r.doc_id && r.kind !== 'final' && (r.status === 'duyet' || r.status === 'duyet_them');
+  const [pick, setPick] = useState<Set<string>>(new Set()); const [bulkBusy, setBulkBusy] = useState(false);
+  const bulk = async () => {
+    setBulkBusy(true); const ok: string[] = []; const bad: string[] = [];
+    for (const id of pick) {
+      const r = rows?.find((x) => x.doc_id === id); if (!r) continue;
+      try {
+        const [{ data: o }, { data: b }, { data: d }] = await Promise.all([sb.from('orders').select('*').eq('id', r.order_id).single(), sb.from('batches').select('*').eq('id', r.batch_id).single(), sb.from('docs_v').select('*').eq('id', id).single()]);
+        if (!o || !b || !d) throw new Error('Không tải được phiếu');
+        await advanceDoc(o as Order, b as Batch, d as Doc, 'next', ''); ok.push(r.code);
+      } catch (e) { bad.push(r.code + ': ' + errText(e as Error)); }
+    }
+    setBulkBusy(false); setPick(new Set()); loadRows();
+    toast(ok.length ? 'Đã duyệt ' + ok.length + ' phiếu' : 'Chưa duyệt được phiếu nào');
+    if (bad.length) alertBad(bad);
+  };
+  const [badList, alertBad] = useState<string[]>([]);
   const h = new Date().getHours(); const hello = h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
   const ago = (t: string) => { const m = (Date.now() - new Date(t).getTime()) / 6e4; return m < 60 ? Math.max(1, Math.round(m)) + ' phút' : m < 1440 ? Math.round(m / 60) + ' giờ' : Math.round(m / 1440) + ' ngày'; };
   const shown = (rows ?? []).filter((r) => !fq || r.proc === fq);
@@ -77,8 +99,11 @@ export default function MyWork() {
         <div>
           {!rows ? <Skeleton rows={3} /> : rows.length === 0 ? <div className="mw-empty"><span className="mw-empty-ic"><Icon name="check" size={18} /></span><span><b>Đã xong hết việc</b><span className="small muted">Không có hồ sơ nào đang chờ bạn.</span></span><Link className="btn sm" to="/bang">Kanban</Link></div> : (
             <ul className="worklist">
+              {shown.some(canBulk) && <li className="mw-bulk">
+                <label><input type="checkbox" checked={shown.filter(canBulk).every((r) => pick.has(r.doc_id!))} onChange={(e) => setPick(new Set(e.target.checked ? shown.filter(canBulk).map((r) => r.doc_id!) : []))} /> Chọn tất cả phiếu chờ duyệt</label>
+                {pick.size > 0 && <button className="btn sm primary" disabled={bulkBusy} onClick={bulk}><Icon name="check" size={15} />{bulkBusy ? 'Đang duyệt…' : 'Duyệt ' + pick.size + ' phiếu'}</button>}</li>}
               {shown.map((r) => (
-                <li key={(r.doc_id ?? '') + r.batch_id}><Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
+                <li key={(r.doc_id ?? '') + r.batch_id} className={canBulk(r) ? 'mw-pickable' : undefined}>{canBulk(r) && <input type="checkbox" className="mw-pick" aria-label={'Chọn ' + r.code} checked={pick.has(r.doc_id!)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(r.doc_id!)) n.delete(r.doc_id!); else n.add(r.doc_id!); return n; })} />}<Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
                   <QtTag qt={r.proc} />
                   <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id, r.code)}</b><span className="small muted">{r.project} · {r.title}</span></span>
                   <span className="small">{r.kind === 'final' ? FINAL[r.proc] : (r.proc !== 'QT0' ? COMPANY[r.company] + ' · ' : '') + STATUS[r.status]}<span className="muted"> · {age(r.since)}</span></span>
@@ -87,6 +112,7 @@ export default function MyWork() {
             </ul>)}
         </div>
       </section>
+      {badList.length > 0 && <div className="card mw-bad" role="alert"><b>Chưa duyệt được {badList.length} phiếu – mở từng phiếu để xử lý:</b><ul>{badList.map((x) => <li key={x}>{x}</li>)}</ul><button className="btn sm" onClick={() => alertBad([])}>Đóng</button></div>}
       <ProdMini />
       {mine.length > 0 && <details className="card flush mw-done">
         <summary className="card-head"><h2>Đã xử lý gần đây <span className="chip idle">{mine.length}</span></h2></summary>

@@ -292,11 +292,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const canDelF = (x: { by?: string; step?: string }) => fAdm || (!!x.by && x.by === meId && x.step === d.status);
   const closed = d.status === 'da_duyet' || d.status === 'fail'; // phiếu đã chốt: chỉ xem (kể cả admin)
   const canEd = (f: FDef) => !closed && ((adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required')));
-  // Người phát lệnh = người làm bước (tự điền nếu trống, vẫn sửa được)
+  // Tự điền sẵn khi ô trống (vẫn sửa được): người phát lệnh = người làm bước, VAT 8%, ngày lập = hôm nay
   const meName = useAuth().me?.full_name;
-  useEffect(() => { if (closed || !can || !meName || String(h.nguoi_phat_lenh ?? '').trim()) return;
-    if (!fieldsOf(proc, 'header').some((f) => f.key === 'nguoi_phat_lenh' && canEd(f))) return;
-    setH((x) => ({ ...x, nguoi_phat_lenh: meName })); setDirty(true); }, [d.id, can, meName, closed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (closed || !can) return;
+    const today = new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);
+    const def: Record<string, string | undefined> = { nguoi_phat_lenh: meName, vat: '8', ngay: today };
+    const add: Record<string, string> = {};
+    for (const f of fieldsOf(proc, 'header')) { const v = def[f.key]; if (v && !String(h[f.key] ?? '').trim() && canEd(f)) add[f.key] = v; }
+    if (Object.keys(add).length) { setH((x) => ({ ...add, ...Object.fromEntries(Object.entries(x).filter(([, v]) => String(v ?? '').trim())) })); setDirty(true); } }, [d.id, can, meName, closed]); // eslint-disable-line react-hooks/exhaustive-deps
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
   const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
@@ -383,6 +386,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
+  // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
+  const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
   const role = ROLE_OF[d.status];
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
 
@@ -475,7 +480,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
               <div className="odh-menu pp-actmenu" role="menu">
                 {!first && <button type="button" role="menuitem" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('back'); }}><Icon name="back" size={16} />Trả về</button>}
                 {(d.status === 'duyet' || d.status === 'duyet_them') && <button type="button" role="menuitem" className="danger-h" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('fail'); }}><Icon name="x" size={16} />Thất bại</button>}</div></details>}
-            <button className="btn primary pp-go" disabled={busy} title={(d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' + (proc !== 'QT0' ? (d.company === 'HW' ? ' · tiếp theo: khách ký tay' : ' · tiếp theo: ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '') : undefined} onClick={() => act('next')}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký')}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
+            <button className="btn primary pp-go" disabled={busy} title={(d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' + (proc !== 'QT0' ? (d.company === 'HW' ? ' · tiếp theo: khách ký tay' : ' · tiếp theo: ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '') : undefined} onClick={() => { if (miss.length) { setErr('Còn trống: ' + miss.map((x) => x.label).join(', ')); jumpField(miss[0].key); return; } act('next'); }}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký')}{miss.length > 0 && !busy && <span className="pp-miss" title={'Còn trống: ' + miss.map((x) => x.label).join(', ')}>thiếu {miss.length}</span>}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}
