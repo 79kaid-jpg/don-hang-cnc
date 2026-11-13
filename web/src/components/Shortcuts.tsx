@@ -26,7 +26,9 @@ export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
     [['F'], 'Bật / tắt "Chỉ việc đến lượt tôi"'], [['C'], 'Đổi công ty: Tất cả → PNC → IPC → HAN (admin)']] },
   { group: 'Chi tiết đơn', items: [
     [['1 … 7'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Chứng từ, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
-    [['B'], 'Quay lại bảng Kanban'], [[']'], 'Đóng / mở cột phải của phiếu'], [['Ctrl', 'S'], 'Lưu phiếu']] }
+    [['B'], 'Quay lại bảng Kanban'], [[']'], 'Đóng / mở cột phải của phiếu'], [['Ctrl', 'S'], 'Lưu phiếu'],
+    [['Shift', 'T'], 'Tách đơn mới / mở lệnh, đợt mới'], [['Shift', 'C'], 'Viết ghi chú'], [['Shift', 'H'], 'Mở / thu chi tiết hành trình'],
+    [['Shift', 'D'], 'Mở / thu trao đổi'], [['Shift', 'N'], 'Nhắc việc'], [['Shift', 'G'], 'Giao lại']] }
 ];
 
 export const Kbd = ({ k }: { k: string[] }) => <span className="kbd-set">{k.map((x, i) => <kbd key={i}>{x}</kbd>)}</span>;
@@ -59,6 +61,7 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
         if (to[key]) { e.preventDefault(); nav(to[key]); }
         return;
       }
+      if (e.shiftKey && /^[a-z]$/.test(key)) return;
       if (key === 'g') { gAt.current = Date.now(); return; }
       if (e.key === '/') { e.preventDefault(); setPal(true); }
       else if (e.key === '?') { e.preventDefault(); setHelp(true); }

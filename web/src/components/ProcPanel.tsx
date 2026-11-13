@@ -1,5 +1,6 @@
 import { GuideBox } from './GuideBox';
 import { FixMsg } from './FixMsg';
+import { isTyping, modalOpen } from './Shortcuts';
 import { goFix } from '../lib/gotoFix';
 import { cached, peek } from '../lib/qcache';
 export const canActQ = (id: string, st: string) => cached('ca:' + id + ':' + st, () => sb.rpc('can_act', { p_doc: id }).then((r) => !!r.data), 60000);
@@ -60,7 +61,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
         <div className="pp-hl"><button type="button" className={'pp-qt' + (info ? ' on' : '')} aria-expanded={info} aria-label={PROC_NAME[proc] + ' – xem mô tả'} title={PROC_NAME[proc]} onClick={() => setInfo(!info)}><QtTag qt={proc} /><Icon name="info" size={13} /></button>
           {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" />}
           {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
-        {batches.length ? <button type="button" className="btn sm icon-btn pp-new" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={18} /></button>
+        {batches.length ? <button type="button" className="btn sm icon-btn pp-new" data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={18} /></button>
           : <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
       </div>
       {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
@@ -286,6 +287,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   };
   useUnsavedGuard(dirty);
   useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (editable && dirty && !busy) save(); } }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
+  useEffect(() => { const k = (e: KeyboardEvent) => {
+    if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; const key = e.key.toLowerCase(); if (!'tchdng'.includes(key) || key.length !== 1) return;
+    const go = () => { const el = document.querySelector<HTMLElement>('[data-sk="' + key + '"]'); if (!el) return; if (el.tagName === 'INPUT') { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } else { el.click(); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };
+    e.preventDefault(); if (key !== 't' && shut) { setShut(false); setTimeout(go, 60); } else go(); };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
@@ -425,7 +431,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         <b>Ghi chú nối tiếp</b>
         {d.notes.length === 0 && <span className="small muted">Chưa có ghi chú.</span>}
         {d.notes.map((n, i) => <div key={i} className="pp-note"><span className="small muted">{ROLE_NAME[n.role] ?? n.role} · {who(n.user)} · {dt(n.at)}</span><div>{n.text}</div></div>)}
-        {can && <div className="row"><input style={{ flex: 1 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Thêm ghi chú (yêu cầu đặc biệt, vấn đề kỹ thuật, lưu ý…)" />
+        {can && <div className="row"><input data-sk="c" style={{ flex: 1 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Thêm ghi chú (yêu cầu đặc biệt, vấn đề kỹ thuật, lưu ý…)" />
           <button className="btn sm" disabled={!note.trim()} onClick={addNote}>Ghi</button></div>}
       </div>
 

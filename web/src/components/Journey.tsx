@@ -76,7 +76,7 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
       <span className="jn-end">
         {fail ? <span className="jn-due late">Fail</span> : done ? <span className="jn-due ok"><Icon name="check" size={12} />Đã duyệt</span>
           : cur && <span className={'jn-due ' + tone}><Icon name={tone === 'late' ? 'alert' : 'clock'} size={12} />{left < 0 ? 'trễ ' + fmtLeft(left) : 'còn ' + fmtLeft(left)}</span>}
-        <button type="button" className="jn-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? 'Thu gọn hoạt động' : 'Xem hoạt động'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></button></span>
+        <button type="button" className="jn-chev" data-sk="h" data-kbd="Shift H" data-kbd-label="Chi tiết hành trình" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? 'Thu gọn hoạt động' : 'Xem hoạt động'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></button></span>
       </div>
       {(() => { const s = steps.find((x) => x.key === pk); if (!s) return null;
         const who = s.state === 'done' && s.sign ? people[s.sign.user]?.full_name ?? s.who : s.who;
@@ -116,12 +116,12 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
   if (!ms.length && !open) return null;
   return (
     <div className="tk">
-      <div className="tk-head"><button type="button" className="tk-tog" aria-expanded={exp} onClick={() => setExp(!exp)}><Icon name="chat" size={14} /><b>Trao đổi</b>{ms.length > 0 && <span className="tk-n">{ms.length}</span>}<span className={'tk-car' + (exp ? ' on' : '')}>▾</span></button>
+      <div className="tk-head"><button type="button" className="tk-tog" data-sk="d" data-kbd="Shift D" data-kbd-label="Trao đổi" aria-expanded={exp} onClick={() => setExp(!exp)}><Icon name="chat" size={14} /><b>Trao đổi</b>{ms.length > 0 && <span className="tk-n">{ms.length}</span>}<span className={'tk-car' + (exp ? ' on' : '')}>▾</span></button>
         {!exp && ms.length > 0 && <span className="tk-last small muted" onClick={() => setExp(true)}><b>{nm(ms[ms.length - 1].from_user)}:</b> {ms[ms.length - 1].text}</span>}
         {lastNudge && <span className={'tk-st ' + (lastNudge.replied_at ? 'ok' : waitH >= 4 ? 'late' : 'wait')}>{lastNudge.replied_at ? 'Đã phản hồi' : waitH >= 4 ? 'Chưa phản hồi ' + fmtLeft(waitH) : 'Chờ phản hồi'}</span>}
         {mgr && <span className="tk-acts">
-          <button className={'btn sm' + (mode === 'nudge' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'nudge' ? '' : 'nudge'); setErr(''); }}><Icon name="bell" size={14} />Nhắc việc</button>
-          <button className={'btn sm' + (mode === 'reassign' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'reassign' ? '' : 'reassign'); setErr(''); }}><Icon name="users" size={14} />Giao lại</button>
+          <button data-sk="n" data-kbd="Shift N" className={'btn sm' + (mode === 'nudge' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'nudge' ? '' : 'nudge'); setErr(''); }}><Icon name="bell" size={14} />Nhắc việc</button>
+          <button data-sk="g" data-kbd="Shift G" className={'btn sm' + (mode === 'reassign' ? ' primary' : '')} onClick={() => { setExp(true); setMode(mode === 'reassign' ? '' : 'reassign'); setErr(''); }}><Icon name="users" size={14} />Giao lại</button>
         </span>}
       </div>
       {mode === 'nudge' && <div className="tk-form">
