@@ -469,7 +469,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         <b>Ghi chú nối tiếp</b>
         {d.notes.length === 0 && <span className="small muted">Chưa có ghi chú.</span>}
         {d.notes.map((n, i) => <div key={i} className="pp-note"><span className="small muted">{ROLE_NAME[n.role] ?? n.role} · {who(n.user)} · {dt(n.at)}</span><div>{n.text}</div></div>)}
-        {can && <div className="row"><input data-sk="c" style={{ flex: 1 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Thêm ghi chú (yêu cầu đặc biệt, vấn đề kỹ thuật, lưu ý…)" />
+        {can && !closed && <div className="row"><input data-sk="c" style={{ flex: 1 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Thêm ghi chú (yêu cầu đặc biệt, vấn đề kỹ thuật, lưu ý…)" />
           <button className="btn sm" disabled={!note.trim()} onClick={addNote}>Ghi</button></div>}
       </div>
 
