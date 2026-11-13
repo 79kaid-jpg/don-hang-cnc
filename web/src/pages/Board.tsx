@@ -283,7 +283,7 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
         <span className="chip wait">{action === 'next' ? (st === 'duyet' ? (proc === 'QT0' ? 'Đã duyệt' : c.doc?.company === 'HW' ? FINAL[proc] : (c.doc?.company === 'PN' ? 'IPC' : 'Hanwa') + ' · Lập') : STATUS[FLOW[proc][FLOW[proc].indexOf(st) + 1]]) : STATUS[FLOW[proc][FLOW[proc].indexOf(st) - 1]]}</span></div>
       <p className="small muted" style={{ margin: 0 }}>{c.b.title}. {action === 'next' ? 'Ký xác nhận bước này. Cần sửa số liệu, đính kèm file thì bấm “Mở hồ sơ”.' : 'Hồ sơ quay lại bước trước, người phụ trách được báo kèm lý do.'}</p>
       <label className="f">{action === 'back' ? 'Lý do trả về *' : 'Ghi chú (tuỳ chọn)'}<textarea rows={2} autoFocus value={note} onChange={(e) => setNote(e.target.value)} /></label>
-      <FixMsg err={err} onGo={() => nav('/don/' + c.b.order_id + '?tab=' + proc + '&fix=' + encodeURIComponent(err))} />
+      <FixMsg err={err ? c.b.title + ': ' + err : ''} onGo={() => nav('/don/' + c.b.order_id + '?tab=' + proc + '&b=' + c.b.id + (c.doc ? '&co=' + c.doc.company : '') + '&fix=' + encodeURIComponent(c.b.title + ': ' + err))} />
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <Link className="btn" to={'/don/' + c.b.order_id + '?tab=' + proc}>Mở hồ sơ</Link>
         <button className={action === 'next' ? 'btn primary' : 'btn rt-go'} disabled={busy || (action === 'back' && !note.trim())} onClick={go}>{busy ? 'Đang xử lý…' : action === 'next' ? 'Ký' : 'Trả về'}</button>

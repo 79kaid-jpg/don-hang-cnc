@@ -36,7 +36,8 @@ const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v)
 /** Một quy trình của một đơn: danh sách hồ sơ (lần / lệnh / đợt) → chuỗi công ty → bản đang chọn */
 export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
-  const [bid, setBid] = useState(''); const [co, setCo] = useState<Company | ''>('');
+  const [psp] = useSearchParams();
+  const [bid, setBid] = useState(() => psp.get('b') ?? ''); const [co, setCo] = useState<Company | ''>(() => (psp.get('co') as Company | null) ?? '');
   const [info, setInfo] = useState(false);
   const [creating, setCreating] = useState(autoNew);
   const load = useCallback(async () => {
@@ -234,7 +235,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   useFields();
   const pm = (f: FDef) => permOf(f, d.company, d.status, proc);
   const guides = useGuides(); const [fsp, setFsp] = useSearchParams();
-  useEffect(() => { const fx = fsp.get('fix'); if (!fx) return; const t = setTimeout(() => { setErr(fx); goFix(fx); const n = new URLSearchParams(fsp); n.delete('fix'); setFsp(n, { replace: true }); }, 900); return () => clearTimeout(t); }, [d.id, fsp.get('fix')]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const fx = fsp.get('fix'); if (!fx || (fsp.get('b') && fsp.get('b') !== b.id)) return; const t = setTimeout(() => { setErr(fx); goFix(fx); const n = new URLSearchParams(fsp); n.delete('fix'); n.delete('b'); n.delete('co'); setFsp(n, { replace: true }); }, 900); return () => clearTimeout(t); }, [d.id, fsp.get('fix')]); // eslint-disable-line react-hooks/exhaustive-deps
   const adm = useAuth().can('admin_it');
   const canEd = (f: FDef) => (adm && !f.sys) || (can && (pm(f) === 'edit' || pm(f) === 'required'));
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
