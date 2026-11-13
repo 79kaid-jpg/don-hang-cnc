@@ -2972,3 +2972,5 @@ html[data-glass=facade]:not([data-theme=dark]) .kb-board .kb-col.drop-ok,html[da
 .kb-nosign{color:#8a5a12}
 /* Điện thoại / máy cảm ứng: vuốt ngang bảng, ẩn nút ‹ › */
 @media (hover:none),(pointer:coarse){.pp-edge{display:none!important}}
+.nb-row .nb-q{width:72px;flex:none;text-align:right;height:38px;font-variant-numeric:tabular-nums}.nb-row .nb-q.bad{border-color:#b3261e;background:#fff5f5}
+div.nb-row{display:flex;align-items:center;gap:10px}

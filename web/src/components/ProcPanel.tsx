@@ -149,6 +149,11 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const { co: myCoNB } = useMyCo(); const refMode = proc === 'QT1' && (myCoNB === 'IPC' || myCoNB === 'HW');
   const prevCo = myCoNB === 'HW' ? 'IPC' : 'PN';
   const [refs, setRefs] = useState<{ code: string; title: string; used: string | null }[] | null>(null); const [ref, setRef] = useState('');
+  const [rr, setRr] = useState<{ i: number; ma_tam: string; vat_lieu: string; day: string; so_tam: number; con_lai: number }[] | null>(null); const [take, setTake] = useState<Record<number, string>>({});
+  useEffect(() => { setRr(null); if (!refMode || !ref.trim()) return; const t = setTimeout(() => sb.rpc('ref_rows', { p_code: ref.trim(), p_co: myCoNB }).then(({ data }) => {
+    const l = (data ?? []) as { i: number; ma_tam: string; vat_lieu: string; day: string; so_tam: number; con_lai: number }[]; setRr(l); setTake(Object.fromEntries(l.filter((x) => x.con_lai > 0).map((x) => [x.i, String(x.con_lai)]))); }), 300); return () => clearTimeout(t); }, [refMode, ref, myCoNB]);
+  const takeN = (i: number) => Number(String(take[i] ?? '').replace(',', '.')) || 0;
+  const takeBad = (rr ?? []).some((x) => takeN(x.i) > x.con_lai || takeN(x.i) < 0); const takeSum = (rr ?? []).reduce((a, x) => a + takeN(x.i), 0);
   useEffect(() => { if (!refMode) return; sb.rpc('ref_candidates', { p_order: o.id, p_co: myCoNB }).then(({ data }) => { const l = (data ?? []) as { code: string; title: string; used: string | null }[]; setRefs(l); if (l.length === 1) setRef(l[0].code); }); }, [refMode, o.id, myCoNB]);
   useEffect(() => { if (refMode) return;
     if (proc === 'QT1') (async () => {
@@ -172,7 +177,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
   const go = async () => {
     setErr('');
-    if (refMode) { const { data, error } = await sb.rpc('doc_from_ref', { p_code: ref.trim(), p_co: myCoNB }); if (error) return setErr(errText(error)); toast('Đã lập XNĐH ' + myCoNB + ' từ ' + ref); reloadCoIdx(); onDone(String(data ?? '')); return; }
+    if (refMode) { const { data, error } = await sb.rpc('doc_from_ref', { p_code: ref.trim(), p_co: myCoNB, p_pick: (rr ?? []).filter((x) => takeN(x.i) > 0).map((x) => ({ i: x.i, so_tam: takeN(x.i) })) }); if (error) return setErr(errText(error)); toast('Đã lập XNĐH ' + myCoNB + ' từ ' + ref); reloadCoIdx(); onDone(String(data ?? '')); return; }
     const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
@@ -182,9 +187,19 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       {refMode && <div className="nb-ref">
         <label className="f">Tham chiếu đơn {prevCo} đã duyệt *
           <input list="nb-refs" value={ref} onChange={(e) => setRef(e.target.value)} placeholder={'Chọn hoặc gõ mã đơn ' + prevCo} autoFocus /></label>
-        <datalist id="nb-refs">{(refs ?? []).map((r) => <option key={r.code} value={r.code}>{r.title}{r.used === 'fail' ? ' · lập lại (đơn cũ thất bại)' : ''}</option>)}</datalist>
+        <datalist id="nb-refs">{(refs ?? []).map((r) => <option key={r.code} value={r.code}>{r.title} · còn {r.used} tấm</option>)}</datalist>
         {refs && refs.length === 0 && <p className="small muted" style={{ margin: 0 }}>Chưa có đơn {prevCo} nào đã duyệt mà {myCoNB} chưa lập.</p>}
-        <p className="small muted" style={{ margin: 0 }}>Sẽ copy: danh sách tấm (không kèm giá), điều kiện giao hàng. Bạn tự nhập đơn giá, VAT, điều kiện thanh toán.</p>
+        {rr && rr.length > 0 && <div className="nb-pick">
+          <div className="nb-pick-h"><b>Chọn số tấm cho XNĐH này</b><span className="small muted">{takeSum.toLocaleString('vi-VN')} / {rr.reduce((a, x) => a + x.con_lai, 0).toLocaleString('vi-VN')} tấm còn lại</span></div>
+          <div className="nb-flt"><button type="button" className="chip" onClick={() => setTake(Object.fromEntries(rr.map((x) => [x.i, String(x.con_lai)])))}>Lấy hết phần còn lại</button>
+            <button type="button" className="chip" onClick={() => setTake({})}>Bỏ chọn</button></div>
+          <ul className="nb-rows">{rr.map((x) => { const v = takeN(x.i); const over = v > x.con_lai; return <li key={x.i}><div className={'nb-row' + (v > 0 ? ' on' : '') + (x.con_lai <= 0 ? ' used' : '')}>
+            <span className="nb-t"><b>{x.ma_tam || '#' + (x.i + 1)}</b><span className="small muted">{[x.vat_lieu, x.day && x.day + 'mm'].filter(Boolean).join(' · ')} · còn <b>{x.con_lai}</b>/{x.so_tam}</span></span>
+            <input className={'nb-q' + (over ? ' bad' : '')} inputMode="decimal" aria-label={'Số tấm lấy – ' + x.ma_tam} disabled={x.con_lai <= 0} value={take[x.i] ?? ''} placeholder="0" onChange={(e) => setTake({ ...take, [x.i]: e.target.value })} /></div></li>; })}</ul>
+          {takeBad && <span className="small" style={{ color: 'var(--red)' }}>Có dòng lấy quá số còn lại.</span>}
+        </div>}
+        {rr && rr.length > 0 && rr.every((x) => x.con_lai <= 0) && <p className="small muted" style={{ margin: 0 }}>Đơn này đã dùng hết số tấm.</p>}
+        <p className="small muted" style={{ margin: 0 }}>Sẽ copy: các tấm đã chọn (không kèm giá), điều kiện giao hàng. Bạn tự nhập đơn giá, VAT, điều kiện thanh toán. Có thể lập thêm XNĐH khác từ phần còn lại.</p>
       </div>}
       {!refMode && <><label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
       {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tách đơn: chỉ tick các tấm thuộc đơn này)</span></span></label>}
@@ -207,7 +222,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       </>}
       {err && <div className="msg err"><Icon name="alert" size={18} /><span>{err}</span></div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Huỷ</button>
-        <button className="btn primary" disabled={(refMode && !ref.trim()) || (!refMode && ((proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)))} onClick={go}>{refMode ? 'Lập XNĐH từ tham chiếu' : proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
+        <button className="btn primary" disabled={(refMode && (!ref.trim() || !rr || takeSum <= 0 || takeBad)) || (!refMode && ((proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)))} onClick={go}>{refMode ? 'Lập XNĐH từ tham chiếu' : proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
     </div></div>, document.body));
 }
 
