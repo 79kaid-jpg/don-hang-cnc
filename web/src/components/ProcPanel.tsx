@@ -211,6 +211,20 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
     </div></div>, document.body));
 }
 
+/** PN / IPC: sau khi duyệt, tải bản in đã ký tay để lưu trữ (không chặn bước nào) */
+function SignedBox({ d, o, b, files, onDone }: { d: Doc; o: Order; b: Batch; files: { kind: string; name: string; path: string }[]; onDone: (nf: never) => void }) {
+  const mine = files.filter((x) => x.kind === 'ban_ky'); const [busy, setBusy] = useState(false); const { me } = useAuth();
+  const up = async (e: React.ChangeEvent<HTMLInputElement>) => { const fl = Array.from(e.target.files ?? []); e.target.value = ''; if (!fl.length) return; setBusy(true);
+    try { for (const file of fl) { const path = `${o.id}/${b.id}/${d.company}/ky-${Date.now()}-${safeName(file.name)}`;
+        const r = await sb.storage.from('files').upload(path, file); if (r.error) throw r.error;
+        const { data, error } = await sb.rpc('doc_signed_add', { p_doc: d.id, p_file: { kind: 'ban_ky', name: file.name, path, at: new Date().toISOString(), by: me?.id, step: 'da_duyet' } }); if (error) throw error; onDone(data as never); }
+      toast('Đã lưu bản ký'); } catch (x) { toast(errText(x as Error)); } setBusy(false); };
+  return <div className={'pp-signed' + (mine.length ? ' ok' : '')}><Icon name={mine.length ? 'check' : 'file'} size={16} />
+    <span className="pp-signed-t"><b>Bản ký lưu trữ</b><span className="small muted">{mine.length ? mine.length + ' file' : 'In bản “ĐÃ DUYỆT”, ký tay rồi chụp / scan tải lên'}</span>
+      {mine.map((x) => <FileLink key={x.path} f={x} />)}</span>
+    <label className={'btn sm' + (busy ? ' disabled' : '')}><Icon name="upload" size={14} />{busy ? 'Đang tải…' : mine.length ? 'Thêm' : 'Tải lên'}<input type="file" accept="image/*,application/pdf" capture="environment" multiple hidden disabled={busy} onChange={up} /></label></div>;
+}
+
 function FileLink({ f }: { f: { name: string; path: string } }) {
   const open = async () => { const { data } = await sb.storage.from('files').createSignedUrl(f.path, 600); if (data?.signedUrl) viewUrl(data.signedUrl, f.name); };
   return <button className="link-btn" onClick={open}><Icon name="file" size={14} />{f.name}</button>;
@@ -403,6 +417,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             {f.help && <small className="muted">{f.help}</small>}</label>; })}
       </div>
 
+      {proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SignedBox d={d} o={o} b={b} files={files} onDone={(nf) => { setFiles(nf); onChanged(); }} />}
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>

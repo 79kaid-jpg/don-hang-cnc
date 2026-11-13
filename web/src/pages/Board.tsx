@@ -59,7 +59,7 @@ export default function Board() {
   // Hiện ngay dữ liệu lần trước (trong phiên), rồi cập nhật ngầm
   useEffect(() => { if (kbCache && kbCache.u === meP?.id) apply(kbCache); load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
-  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'PN')).filter((c) => qt === 'QT0' || inCo(c.key)),
+  const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'HW')).filter((c) => qt === 'QT0' || inCo(c.key)),
     { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st0 = stepOf(b, docs); const o = orders[b.order_id];
@@ -252,6 +252,7 @@ export default function Board() {
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
                           return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
+                        {COLS[it.i]?.key === 'hoan_tat' && qt === 'QT1' && it.doc && it.doc.company !== 'HW' && !((it.doc as { files?: { kind: string }[] }).files ?? []).some((f) => f.kind === 'ban_ky') && <div className="kb-where kb-nosign"><Icon name="alert" size={12} />Chưa có bản ký lưu trữ</div>}
                         {COLS[it.i]?.key === 'xong_minh' && <div className="kb-where"><Icon name="arrow" size={12} />{it.key === 'ky' ? 'Chờ khách ký – ' + FINAL[qt].toLowerCase() : 'Đang ở ' + (COMPANY[it.key.split('.')[0] as keyof typeof COMPANY] ?? '') + ' · ' + (STATUS[it.key.split('.')[1]] ?? '')}</div>}
                         {COLS[it.i]?.key !== 'xong_minh' && it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(applyAuto(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist), it.doc as never, reqKeysOf(qt, it.doc.company, it.doc.status)).items);
                           return pr.total ? <div className="kb-ck"><Ring done={pr.done} total={pr.total} size={26} stroke={3} />Checklist {STATUS[it.doc.status] ?? ''}{pr.miss ? ' · thiếu ' + pr.miss : ''}</div> : null; })()}
