@@ -3212,3 +3212,10 @@ tbody td.cg input{background:#fff}
 .pp-fact .btn.icon-only{width:32px;padding:0;justify-content:center}
 .pp-fdel:hover{color:#B91C1C;border-color:#FCA5A5;background:#FEF2F2}
 @media (max-width:760px){.pp-fact{flex:1 1 100%;margin-left:0}.pp-fact .btn{height:44px;min-height:44px;flex:1;justify-content:center}.pp-fact .btn.icon-only{flex:0 0 44px;width:44px}}
+/* Nhóm Báo giá (tím) + ⓘ cách tính ở tiêu đề cột */
+.cg-bg{--cg:#F5F0FB;--cgh:#EDE7F6;--cgb:#7c3aed}
+.col-i{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:3px;border:0;border-radius:50%;background:transparent;color:var(--accent,#3b6ea8);cursor:help;vertical-align:-4px;padding:0}
+.col-i:hover,.col-i[aria-expanded=true]{background:rgba(59,110,168,.12)}
+.col-pop{position:fixed!important;right:auto!important;bottom:auto!important;width:340px;z-index:3000;text-align:left;white-space:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
+@media (max-width:760px){.col-i{width:32px;height:32px}}
+thead th:has(.col-i){white-space:nowrap}

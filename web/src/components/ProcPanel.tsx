@@ -607,7 +607,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
   const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
   const head = cols.find((c) => !c.n) ?? cols[0];
   const GS: Record<string, string> = { 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
-  const lb = (c: Col) => (c.g && GS[c.g] && c.k !== 'ma_tam' && c.k !== 'day' ? c.t + ' ' + GS[c.g] : c.t);
+  const lb = (c: Col) => (c.g && GS[c.g] && c.k !== 'ma_tam' && c.k !== 'day' ? c.t + ' ' + GS[c.g] : c.t) + (c.k === 'kg' ? ' (kg)' : '');
   const right = cols.find((c) => c.k === 'don_gia') ?? cols.find((c) => c.k === 'tt') ?? cols.find((c) => c.k === 'kg');
   const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
   return <div className="pp-mlist">
@@ -791,7 +791,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
             .map((x, xi, arr) => <th key={'g' + x.k} colSpan={x.n} className={(x.g ? 'g' + (GCLS[x.g] ?? '') + (xi > 0 && arr[xi - 1].g === x.g ? '' : ' cg-first') : '') + (x.pin ? ' g-pin' : '')}>{x.pin && arr[1]?.g === x.g ? '' : x.g}</th>)}{editable && <th />}</tr>}
           <tr><th>#</th>{cols.map((c, ci) => <th key={c.k} className={(c.n ? 'n' : 't') + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' th-qty' : '') + (c.g ? ' th-in-g' : '') + cgOf(c, cols, ci)}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
-              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
+              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : undefined}><td className="muted">{i + 1}</td>
             {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
@@ -835,7 +835,7 @@ const SAMPLE: Record<string, (string | number)[]> = {
   ghi_chu: ['', '', ''],
 };
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
-const GCLS: Record<string, string> = { 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
+const GCLS: Record<string, string> = { 'Báo giá': ' cg cg-bg', 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
 const cgOf = (c: { g?: string }, cols: { g?: string }[], i: number) => (c.g ? (GCLS[c.g] ?? ' cg') + (i === 0 || cols[i - 1]?.g !== c.g ? ' cg-first' : '') : '');
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
@@ -901,6 +901,16 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
   if (!t || !ok) return null;
   return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />Đã duyệt · bước tiếp theo</span>
     <button className="btn primary pp-go" onClick={go} data-kbd="N"><Icon name="plus" size={16} />{t.label}</button></div>;
+}
+
+/** ⓘ Cách tính của cột tự tính – rê chuột / chạm; hiện nổi để không bị bảng che */
+function ColTip({ info }: { info: string[] }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null); const ref = useRef<HTMLButtonElement>(null);
+  const show = () => { const r = ref.current?.getBoundingClientRect(); if (r) setPos({ x: Math.min(Math.max(r.left + r.width / 2 - 170, 12), innerWidth - 352), y: r.bottom + 8 }); };
+  useEffect(() => { if (!pos) return; const f = (e: Event) => { if (e.target !== ref.current && !ref.current?.contains(e.target as Node)) setPos(null); }; addEventListener('pointerdown', f); addEventListener('scroll', f, true); return () => { removeEventListener('pointerdown', f); removeEventListener('scroll', f, true); }; }, [pos]);
+  return <><button type="button" ref={ref} className="col-i" aria-label={info[0]} aria-expanded={!!pos} onClick={(e) => { e.stopPropagation(); if (pos) setPos(null); else show(); }}
+    onPointerEnter={(e) => e.pointerType === 'mouse' && show()} onPointerLeave={(e) => e.pointerType === 'mouse' && setPos(null)}><Icon name="info" size={13} /></button>
+    {pos && createPortal(<span className="hao-pop col-pop" role="tooltip" style={{ left: pos.x, top: pos.y }}><b>{info[0]}</b>{info.slice(1).map((x, i) => <span key={i} className={i === info.length - 2 ? 'hao-ex' : ''}>{x}</span>)}</span>, document.body)}</>;
 }
 
 /** ⓘ Cách tính hao hụt – rê chuột (laptop) / chạm (điện thoại) */

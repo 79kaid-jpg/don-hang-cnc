@@ -65,7 +65,7 @@ export const hdrOf = (p: Proc): [string, string, string][] => fieldsOf(p, 'heade
 export function colsOf(p: Proc, tbl: string): Col[] {
   const def = PROC_TABLES[p].find(([k]) => k === tbl)?.[1]; const src = def ? TABLES[def].cols : [];
   return fieldsOf(p, 'col', tbl).map((f) => { const c = src.find((x) => x.k === f.key);
-    return { k: f.key, t: f.label, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u }; });
+    return { k: f.key, t: f.label, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info }; });
 }
 export const tablesOf = (p: Proc) => PROC_TABLES[p].map(([key, def]) => ({ key, title: TABLES[def].t }));
 

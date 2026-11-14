@@ -1,0 +1,3 @@
+-- QT1 Danh sách tấm theo Kích thước hoàn thiện (đã áp dụng qua MCP):
+-- _qt1_row(): QT0→QT1 lấy cột hoàn thiện, m2 = m2_ht, bỏ ghi chú/trải/phôi; batch_create dùng _qt1_row;
+-- proc_fields QT1.ds: thêm rong, dai, mau_son; ẩn vat_lieu, m2_tam; m2 thành ô nhập; dữ liệu cũ m2 = m2_tam × so_tam.

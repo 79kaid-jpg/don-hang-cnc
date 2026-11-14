@@ -31,7 +31,7 @@ export const NEXT_LABEL: Record<string, string> = {
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
 /** Cột bảng: key, tên, kiểu (t chữ, n số), có tính tự động */
-export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string };
+export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string; info?: string[] };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 /** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
@@ -54,9 +54,15 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
-    { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
-    { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
-    { k: 'don_gia', t: 'Đơn giá (đ/m²)', n: true }, { k: 'tt', t: 'Thành tiền (đ)', n: true, calc: ttOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
+    { k: 'ma_tam', t: 'Nội dung mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'rong', t: 'Rộng', n: true, g: 'Kích thước hoàn thiện', u: 'mm' }, { k: 'dai', t: 'Dài', n: true, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'so_tam', t: 'Số lượng', n: true, g: 'Kích thước hoàn thiện', u: 'tấm' }, { k: 'mau_son', t: 'Màu sơn', w: 6, g: 'Kích thước hoàn thiện' },
+    { k: 'm2', t: 'Khối lượng', n: true, d: 4, g: 'Kích thước hoàn thiện', u: 'm²' },
+    { k: 'kg', t: 'Khối lượng', n: true, d: 1, calc: kgOf, g: 'Kích thước hoàn thiện', u: 'kg', info: ['Cách tính khối lượng (kg)', 'kg = m² × độ dày (mm) × tỷ trọng', 'Tỷ trọng: nhôm 2,75 · thép 7,85 (theo Vật liệu; không ghi vật liệu thì tính thép)', 'VD: 1,0615 m² × 1,2 mm × 2,75 = 3,5 kg'] },
+    { k: 'don_gia', t: 'Đơn giá', n: true, g: 'Báo giá', u: 'đ/m²' },
+    { k: 'tt', t: 'Thành tiền', n: true, calc: ttOf, g: 'Báo giá', u: 'đ', info: ['Cách tính thành tiền', 'Thành tiền = Khối lượng (m²) × Đơn giá', 'Làm tròn đến đồng', 'VD: 1,0615 m² × 850.000 = 902.266 đ'] },
+    { k: 'ghi_chu', t: 'Ghi chú', w: 12, g: 'Báo giá' },
+    { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }] },
   nl: { t: 'Bảng 1 – Thông tin xuất hàng (nguyên liệu)', cols: [
     { k: 'tam_phoi', t: 'Tấm phôi / quy cách', w: 14 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
     { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
