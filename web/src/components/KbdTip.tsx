@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 
 /** Nhãn phím tắt khi rê chuột (hoặc Tab tới) phần tử có data-kbd="G B" / "Ctrl S". Chỉ máy có chuột. */
 export function KbdTip() {
-  const [t, setT] = useState<{ x: number; y: number; up: boolean; label: string; keys: string[] } | null>(null);
+  const [t, setT] = useState<{ x: number; y: number; up: boolean; side?: boolean; label: string; keys: string[] } | null>(null);
   const tm = useRef(0); const cur = useRef<Element | null>(null);
   useEffect(() => {
     const show = (el: HTMLElement) => {
       const r = el.getBoundingClientRect(); const keys = (el.dataset.kbd ?? '').split(/\s+/).filter(Boolean);
       const label = el.dataset.kbdLabel ?? el.getAttribute('aria-label') ?? el.textContent?.trim() ?? '';
+      // Phần tử sát mép trái (thanh bên thu gọn): hiện nhãn sang bên phải
+      if (r.right < 110) { setT({ x: r.right + 10, y: r.top + r.height / 2, up: false, side: true, label: label.replace(/\s+/g, ' ').slice(0, 60), keys }); return; }
       const up = r.bottom + 40 > innerHeight;
       setT({ x: Math.min(Math.max(r.left + r.width / 2, 90), innerWidth - 90), y: up ? r.top - 8 : r.bottom + 8, up, label: label.replace(/\s+/g, ' ').slice(0, 40), keys });
     };
@@ -22,6 +24,6 @@ export function KbdTip() {
       removeEventListener('pointerdown', hide, true); removeEventListener('scroll', drop, true); removeEventListener('keydown', hide); };
   }, []);
   if (!t) return null;
-  return <div className={'kt' + (t.up ? ' up' : '')} role="tooltip" style={{ left: t.x, top: t.y }}>
+  return <div className={'kt' + (t.up ? ' up' : '') + (t.side ? ' kt-r' : '')} role="tooltip" style={{ left: t.x, top: t.y }}>
     {t.label && <span>{t.label}</span>}<span className="kbd-set">{t.keys.map((k, i) => <kbd key={i}>{k}</kbd>)}</span></div>;
 }
