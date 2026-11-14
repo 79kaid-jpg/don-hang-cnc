@@ -22,7 +22,7 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
     ? [{ area: 'header', tbl: '', title: 'Thông tin đơn hàng', sub: 'Ô nhập khi tạo đơn và ở tab F0. Khách hàng luôn bắt buộc. Ô có sẵn chỉ đổi được tên, lựa chọn và Ẩn / Bắt buộc' }] : [
     { area: 'header', tbl: '', title: 'Thông tin phiếu', sub: 'Các ô nhập ở đầu phiếu' },
     ...tablesOf(proc as Proc).map((t) => ({ area: 'col' as Area, tbl: t.key, title: 'Cột · ' + t.title, sub: 'Cột của bảng. Cột tự tính chỉ đổi được tên và quyền' })),
-    { area: 'table', tbl: '', title: 'Bảng phải có dữ liệu', sub: 'Bắt buộc = bảng phải có ít nhất 1 dòng có thông tin thì mới ký được ở bước đó' },
+    { area: 'table', tbl: '', title: 'Quyền cả bảng', sub: 'Đứng trên quyền từng cột. Ẩn = ẩn cả bảng · Xem = cả bảng chỉ xem (kể cả cột đang để Sửa) · Sửa = theo quyền từng cột · Bắt buộc = như Sửa và bảng phải có ít nhất 1 dòng mới ký được' },
     { area: 'file', tbl: '', title: 'Tệp đính kèm', sub: 'Mỗi dòng là một loại tệp; Bắt buộc = phải tải ít nhất 1 tệp trước khi ký' }];
   const add = async (area: Area, tbl: string) => {
     const label = area === 'file' ? 'Loại tệp mới' : area === 'col' ? 'Cột mới' : 'Trường mới';
