@@ -604,23 +604,25 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals }: { cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
   const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
   const head = cols.find((c) => !c.n) ?? cols[0];
+  const GS: Record<string, string> = { 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
+  const lb = (c: Col) => (c.g && GS[c.g] && c.k !== 'ma_tam' && c.k !== 'day' ? c.t + ' ' + GS[c.g] : c.t);
   const right = cols.find((c) => c.k === 'don_gia') ?? cols.find((c) => c.k === 'tt') ?? cols.find((c) => c.k === 'kg');
   const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
   return <div className="pp-mlist">
     {rows.length === 0 && <div className="small muted">Chưa có dòng nào.</div>}
     {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <div key={i} data-row={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
       <button type="button" className="pp-mrow-h" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
-        <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? c.t + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
+        <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? lb(c) + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
         {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{/\(([^)]+)\)/.exec(right.t)?.[1] ?? right.t}</span></span>}</button>
       {open === i && <div className="pp-mrow-e">
-        {cols.map((c) => <label key={c.k} className="f"><span>{c.t}{c.req && <b className="req"> *</b>}</span>
+        {cols.map((c) => <label key={c.k} className="f"><span>{lb(c)}{c.req && <b className="req"> *</b>}</span>
           {c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
             : <input value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
         {editable && <button type="button" className="btn sm danger-soft" onClick={() => { onChange(rows.filter((_, j) => j !== i)); setOpen(-1); }}><Icon name="trash" size={14} />Bỏ dòng</button>}
       </div>}
     </div>)}
     {editable && <button type="button" className="btn sm" onClick={() => { onChange([...rows, {}]); setOpen(rows.length); }}><Icon name="plus" size={14} />Thêm dòng</button>}
-    {rows.length > 0 && Object.keys(totals).length > 0 && <div className="pp-mtot small">Tổng {rows.length} dòng · {Object.entries(totals).map(([k, v]) => { const c = cols.find((x) => x.k === k)!; return c.t + ' ' + fmtN(v, c.d ?? 0); }).join(' · ')}</div>}
+    {rows.length > 0 && Object.keys(totals).length > 0 && <div className="pp-mtot small">Tổng {rows.length} dòng · {Object.entries(totals).filter(([, v]) => v).map(([k, v]) => { const c = cols.find((x) => x.k === k)!; return lb(c) + ' ' + fmtN(v, c.d ?? 0); }).join(' · ')}</div>}
   </div>;
 }
 
@@ -643,7 +645,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   // Cột tự giãn theo nội dung dài nhất (tối đa 48 ký tự), không hẹp hơn mặc định
   const wOf = (c: Col) => Math.min(48, Math.max(c.w ?? 7, ...rows.map((r) => String(r[c.k] ?? '').length + 3)));
   const colT = (k: string) => cols.find((c) => c.k === k)?.t ?? '';
-  const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
+  const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
   let skipped = 0;
   const fromAoa = (aoa: string[][]) => {
     const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
@@ -786,7 +788,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
             <Icon name="copy" size={16} /><span><b>Bấm vào đây rồi nhấn Ctrl+V</b> để dán các dòng đã chép từ Excel <span className="muted">(có hoặc không có dòng tiêu đề)</span></span></div></td></tr>}
           {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
-        {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c) => <td key={c.k} className={c.n ? 'n' : ''}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
+        {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c, ci) => <td key={c.k} className={(c.n ? 'n' : '') + cgOf(c, cols, ci + 1)}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
       </table></div>
       <div ref={endRef} className="pp-tend" />
       {(edge.l || edge.r) && <div className="pp-hhint small muted">Kéo ✋ ở ô không nhập, ⇧ + lăn chuột, hoặc bấm ‹ › để cuộn ngang</div>}
@@ -826,7 +828,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const meta = [['Mã đơn hàng', docCode(o, b, d.company)], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
   const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
     return `<h3>${esc(T.t)}</h3><table><tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
-      <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
+      <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
   const roles = b.proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet'];
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + ((s as { by?: string }).by ? ' <small>(' + esc(who((s as { by?: string }).by!)) + ' làm thay)</small>' : '') + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');
