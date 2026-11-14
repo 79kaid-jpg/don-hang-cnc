@@ -289,10 +289,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
   const { acting, actUntil } = useAuth(); const lockAct = acting && !actUntil && !/^\s*\[(MẪU|MAU|TEST)\]/i.test(o.project ?? '');
   // Làm nhiều công ty: chỉ thao tác khi đang chọn đúng công ty của phiếu (chuyển công ty tường minh)
-  const { scope, canSwitch: multiCo } = useScope(); const coLock = multiCo && scope !== d.company;
+  const { scope, canSwitch: multiCo } = useScope(); const myCos = useMyCo().allowed as string[]; const coLock = multiCo && scope !== d.company;
   if ((lockAct || coLock) && can) setCan(false);
   const [canRaw, setCanRaw] = useState(false);
-  useEffect(() => { canActQ(d.id, d.status).then((v) => { setCanRaw(v); setCan(v && !lockAct && !coLock); }); }, [d.id, d.status, lockAct, coLock]);
+  useEffect(() => { canActQ(d.id, d.status + '|' + scope).then((v) => { setCanRaw(v); setCan(v && !lockAct && !coLock); }); }, [d.id, d.status, lockAct, coLock, scope]);
   const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -517,7 +517,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
       <FixMsg err={err} />
-      {coLock && canRaw && !['da_duyet', 'fail'].includes(d.status) && <div className="co-lock" role="status"><span>Phiếu của <b>{COMPANY[d.company as Company]}</b>. Bạn đang làm ở <b>{scope === 'ALL' ? 'Tất cả công ty' : COMPANY[scope as Company]}</b> nên chỉ xem.</span>
+      {coLock && (canRaw || myCos.includes(d.company as Company)) && !['da_duyet', 'fail'].includes(d.status) && <div className="co-lock" role="status"><span>Phiếu của <b>{COMPANY[d.company as Company]}</b>. Bạn đang làm ở <b>{scope === 'ALL' ? 'Tất cả công ty' : COMPANY[scope as Company]}</b> nên chỉ xem.</span>
         <button type="button" className="btn primary" onClick={() => switchCo(d.company as Company)}>Chuyển sang {d.company === 'HW' ? 'Hanwa' : d.company === 'PN' ? 'PNC' : d.company}</button></div>}
       {can && !['da_duyet', 'fail'].includes(d.status) && (
         <div className="pp-act">
