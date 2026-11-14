@@ -3095,3 +3095,13 @@ html[data-scope=PN] body,html[data-scope=IPC] body,html[data-scope=HW] body{back
 .app.side-hidden:not(.side-peek) .scope-side .scope-menu button{white-space:nowrap}
 @keyframes scopePop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.app.side-hidden .scope-side .scope-menu{animation:none}}
+/* Nền nhuộm theo công ty (giữ hoạ tiết facade) */
+html[data-glass=facade]:not([data-theme=dark]) body{transition:background-color .35s ease}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=PN] body{background-color:#D6E4F5}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=IPC] body{background-color:#F5E2C8}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=HW] body{background-color:#D3EBDA}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=PN] .side{background-image:var(--fc-mesh),linear-gradient(180deg,#F3F7FC,#DCE7F5)}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=IPC] .side{background-image:var(--fc-mesh),linear-gradient(180deg,#FDF7EF,#F5E6D1)}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=HW] .side{background-image:var(--fc-mesh),linear-gradient(180deg,#F2F9F4,#D9EEDF)}
+@media (prefers-reduced-motion:reduce){html body{transition:none}}
+html[data-scope=PN] .topbar{background:rgba(226,236,248,.95)}html[data-scope=IPC] .topbar{background:rgba(250,236,218,.95)}html[data-scope=HW] .topbar{background:rgba(224,241,229,.95)}
