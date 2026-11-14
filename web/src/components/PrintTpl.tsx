@@ -50,7 +50,7 @@ function Preview({ html, title, landscape = true, onXlsx, onTpl, onClose }: { ht
       <header><b>{title}</b><span style={{ flex: 1 }} />
         {onTpl && <button className="btn sm" onClick={onTpl} title="File mẫu còn nguyên các biến {…} – dùng file này để chỉnh sửa rồi tải lên lại"><Icon name="download" size={15} />Tải mẫu gốc (có biến) để sửa</button>}
         <button className="btn sm" onClick={onXlsx} title={onTpl ? 'Bản đã điền dữ liệu thử – chỉ để xem, không dùng làm mẫu' : ''}><Icon name="download" size={15} />{onTpl ? 'Excel bản thử' : 'Excel'}</button>
-        <button className="btn sm primary" onClick={() => printHtml(html, title, landscape)}><Icon name="print" size={15} />In / PDF</button>
+        <button className="btn sm primary" onClick={() => { if (matchMedia('(pointer:coarse)').matches) { onClose(); printHtml(html, title, landscape); } else directPrint(html, landscape); }}><Icon name="print" size={15} />In / PDF</button>
         <button className="btn sm icon" aria-label="Đóng" onClick={onClose}><Icon name="x" size={16} /></button></header>
       <div className="pt-paper"><div dangerouslySetInnerHTML={{ __html: html }} /></div>
     </div></div>, document.body);
@@ -136,4 +136,15 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
     </div>
     {pv && <Preview html={pv.html} landscape={pv.landscape} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onTpl={() => dl(pv.t)} onClose={() => setPv(null)} />}
   </div>;
+}
+
+/** Laptop/tablet có chuột: mở thẳng hộp thoại in của trình duyệt (chọn "Lưu PDF" để ra file) */
+function directPrint(html: string, landscape?: boolean) {
+  const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const w = f.contentWindow!; w.document.open();
+  w.document.write(html.replace('</head>', (landscape ? '<style>@page{size:A4 landscape}</style>' : '') + '</head>')); w.document.close();
+  const go = () => { try { w.focus(); w.print(); } finally { setTimeout(() => f.remove(), 60000); } };
+  if (w.document.readyState === 'complete') setTimeout(go, 300); else f.onload = () => setTimeout(go, 300);
 }
