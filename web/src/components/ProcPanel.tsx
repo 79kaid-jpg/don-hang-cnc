@@ -1,4 +1,5 @@
 import { GuideBox } from './GuideBox';
+import { Sheet } from './Sheet';
 import { switchCo } from './ScopeChip';
 import { useScope } from '../lib/myco';
 import { Annotate } from './Annotate';
@@ -508,7 +509,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
-          onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`} />))}
+          onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
+          fromQt0={proc === 'QT1' && key === 'ds' ? async () => { const { data: bs } = await sb.from('batches').select('id').eq('order_id', b.order_id).eq('proc', 'QT0').eq('status', 'hoan_tat').order('done_at', { ascending: false }).limit(1);
+            if (!bs?.length) return []; const { data: ds } = await sb.from('docs_v').select('tables').eq('batch_id', bs[0].id).limit(1);
+            return (((ds?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} vc={numIn(h.phi_vc) ?? 0} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
@@ -637,7 +641,8 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
+function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0 }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]> }) {
+  const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
@@ -758,9 +763,18 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
             : <button type="button" className="pp-sx-btn" aria-label="Tìm trong bảng (Ctrl+F)" title="Tìm trong bảng (Ctrl+F)" onClick={openSearch}><Icon name="search" size={16} /></button>}</span>}
         {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
+        {pick && <Qt0Pick src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
+          const KEEP = new Set(['don_gia', 'tt', 'ghi_chu', '_id']); const key = (r: Row) => String(r.ma_tam ?? '').trim().toLowerCase();
+          const cur = rows.filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
+          const idx = new Map(cur.map((r, i) => [key(r), i])); const next = cur.map((r) => ({ ...r })); let up = 0, add = 0;
+          for (const s0 of sel) { const s1 = Object.fromEntries(Object.entries(s0).filter(([k]) => !KEEP.has(k))) as Row; const j = key(s0) ? idx.get(key(s0)) : undefined;
+            if (j != null) { next[j] = { ...next[j], ...s1 }; up++; } else { next.push(s1); add++; } }
+          if (cur.length && !(await confirmDialog(`Cập nhật ${up} tấm đã có (giữ đơn giá, ghi chú) và thêm ${add} tấm mới?`, 'Lấy từ QT0'))) return;
+          onChange(next); setPick(null); toast(`Đã lấy từ QT0: cập nhật ${up}, thêm ${add} tấm – bấm Lưu để giữ`); }} />}
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
           <button className="btn xs" title="Tải file Excel lên (đọc theo tên cột)" onClick={() => fileRef.current?.click()}><Icon name="upload" size={13} />Tải lên</button>
+          {fromQt0 && <button className="btn xs" title="Lấy danh sách tấm từ QT0 đã duyệt – khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập" onClick={async () => { const r = await fromQt0(); if (!r.length) { toast('Chưa có danh sách tấm QT0 đã duyệt'); return; } setPick(r); }}><Icon name="download" size={13} />Lấy từ QT0</button>}
           <button className="btn xs" title="Dán dữ liệu đã chép từ Excel – hoặc bấm vào một ô rồi Ctrl+V" onClick={() => setOpen(!open)}><Icon name="copy" size={13} />Dán</button>
           <button className="btn xs" title="Tải file mẫu: đúng các cột của bảng, có 3 dòng ví dụ" onClick={tpl}><Icon name="download" size={13} />Mẫu</button>
           {isAdm && <button className="btn xs icon-only" title="Admin: nạp 3 dòng dữ liệu mẫu" aria-label="Nạp dữ liệu mẫu" onClick={addSample}><Icon name="bolt" size={13} /></button>}
@@ -988,4 +1002,19 @@ function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void
   };
   return <div className="pp-clone"><span className="small muted">{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'} · muốn làm lại với thông tin tương tự?</span>
     <button type="button" className="btn" disabled={busy} onClick={go}><Icon name="file" size={15} />{busy ? 'Đang tạo…' : 'Clone thành đơn mới'}</button></div>;
+}
+
+/** Chọn tấm từ QT0 đã duyệt để đưa vào QT1 */
+function Qt0Pick({ src, onClose, onPick }: { src: Row[]; onClose: () => void; onPick: (r: Row[]) => void }) {
+  const [sel, setSel] = useState<Set<number>>(() => new Set(src.map((_, i) => i))); const [q, setQ] = useState('');
+  const ql = q.trim().toLowerCase(); const vis = src.map((r, i) => ({ r, i })).filter(({ r }) => !ql || String(r.ma_tam ?? '').toLowerCase().includes(ql));
+  const tog = (i: number) => setSel((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n; });
+  return <Sheet head={<b>Lấy danh sách tấm từ QT0</b>} sub={`QT0 đã duyệt · ${src.length} tấm · khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập`} label="Lấy từ QT0" onClose={onClose}>
+    <div className="q0p">
+      <div className="row" style={{ gap: 8 }}><input type="search" placeholder="Tìm mã tấm…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Tìm mã tấm" style={{ flex: 1 }} />
+        <button className="btn xs" onClick={() => setSel(new Set(src.map((_, i) => i)))}>Chọn hết</button><button className="btn xs" onClick={() => setSel(new Set())}>Bỏ hết</button></div>
+      <ul className="q0p-l">{vis.map(({ r, i }) => <li key={i}><label><input type="checkbox" checked={sel.has(i)} onChange={() => tog(i)} />
+        <b>{String(r.ma_tam ?? '')}</b><span className="small muted">{[r.day && r.day + 'mm', r.rong && r.dai && r.rong + '×' + r.dai, r.so_tam && r.so_tam + ' tấm', r.loai_gc].filter(Boolean).join(' · ')}</span></label></li>)}</ul>
+      <div className="row" style={{ gap: 8 }}><button className="btn primary" disabled={!sel.size} onClick={() => onPick(src.filter((_, i) => sel.has(i)))}>Lấy {sel.size} tấm</button><button className="btn" onClick={onClose}>Huỷ</button></div>
+    </div></Sheet>;
 }
