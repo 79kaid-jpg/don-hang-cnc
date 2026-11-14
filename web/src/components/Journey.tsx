@@ -85,7 +85,7 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
         {events.length === 0 && <li className="small muted">Chưa có hoạt động.</li>}
         {events.map((e, i) => <li key={i} className={'jn-ev ' + e.k}>
           <span className="jn-ic"><Icon name={e.k === 'ky' ? 'check' : e.k === 'tra_ve' ? 'back' : e.k === 'fail' ? 'alert' : 'file'} size={12} /></span>
-          <div><b>{e.t}</b> · {people[e.who]?.full_name ?? '…'}{e.by && <span className="by-adm" title={'Thao tác bởi ' + (people[e.by]?.full_name ?? 'Admin') + ' (vào vai)'}>↪ {short(people[e.by]?.full_name ?? 'Admin')}</span>}<span className="small muted"> · {dt(e.at)}</span>{e.note && <div className="jn-note">{e.note}</div>}</div>
+          <div><b>{e.t}</b> · {people[e.who]?.full_name ?? '…'}{e.by && <span className="by-adm" title={'Thao tác bởi ' + (people[e.by]?.full_name ?? 'Admin') + ' (vào vai)'}>↪ {short(people[e.by]?.full_name ?? 'Admin')}</span>}<span className="small muted"> · {dt(e.at)}</span>{e.note && <div className="jn-note">{e.note}</div>}{(e.k === 'tra_ve' || e.k === 'fail') && <NoteImgs files={((d.files ?? []) as { kind: string; path: string; at?: string; by?: string }[]).filter((f) => f.kind === 'tra_ve' && f.at && Math.abs(+new Date(f.at) - +new Date(e.at)) < 3e5)} />}</div>
         </li>)}
       </ul>}
       {(cur || d.status !== 'da_duyet') && !fail && <Talk d={d} people={people} open={!!cur} />}
@@ -147,4 +147,12 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
       </form>}
     </div>
   );
+}
+
+/** Ảnh ghi chú kèm lượt trả về / thất bại */
+function NoteImgs({ files }: { files: { path: string }[] }) {
+  const [u, setU] = useState<Record<string, string>>({});
+  useEffect(() => { if (!files.length) return; sb.storage.from('files').createSignedUrls(files.map((f) => f.path), 3600).then(({ data }) => setU(Object.fromEntries((data ?? []).filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])))); }, [files.map((f) => f.path).join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!files.length) return null;
+  return <div className="jn-imgs">{files.map((f, i) => u[f.path] ? <a key={f.path} href={u[f.path]} target="_blank" rel="noreferrer" aria-label={'Mở ảnh ghi chú ' + (i + 1)}><img src={u[f.path]} alt="" loading="lazy" /></a> : <span key={f.path} className="jn-imgs-ph" />)}</div>;
 }

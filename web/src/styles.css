@@ -3064,3 +3064,17 @@ html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::b
 .gh-up{align-self:flex-start;min-height:44px}
 @media (max-width:760px){.gh-tx{grid-template-columns:1fr}.gh-up{align-self:stretch;justify-content:center}.gh-th{width:72px;height:72px}}
 .gh-lock{display:grid!important;place-items:center;color:var(--muted)}
+/* Ảnh ghi chú lý do trả về */
+.an-bg{z-index:900}
+.an-box{display:flex;flex-direction:column;width:min(1100px,calc(100vw - 24px));height:min(860px,calc(100dvh - 24px));background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.an-bar,.an-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}.an-foot{border-top:1px solid var(--line);border-bottom:0}
+.an-tools button{display:inline-flex;align-items:center;gap:6px}.an-sw{width:12px;height:12px;border-radius:3px;display:inline-block}.an-hl{background:#FFE14D}.an-pen{background:#E5341D;border-radius:50%}.an-box .an-box,.an-sw.an-box{border:2px solid #E5341D;background:transparent}
+.an-stage{flex:1;min-height:0;overflow:auto;background:#2a2f36;display:flex;align-items:flex-start;justify-content:center;padding:12px}
+.an-stage canvas{max-width:100%;height:auto;cursor:crosshair;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.an-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;text-align:center;max-width:360px}.an-empty .muted{color:#c9d0d8}
+.an-msg{padding:6px 12px}
+.rt-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.rt-img{position:relative;width:84px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}.rt-img img{width:100%;height:100%;object-fit:cover}
+.rt-img button{position:absolute;top:2px;right:2px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center}
+.jn-imgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.jn-imgs a{display:block;width:72px;height:54px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}.jn-imgs img{width:100%;height:100%;object-fit:cover}
+@media (max-width:760px){.an-box{width:100vw;height:100dvh;border-radius:0}}
+.an-bg{position:fixed;inset:0;display:grid;place-items:center;background:rgba(15,20,28,.55);user-select:none;-webkit-user-select:none}

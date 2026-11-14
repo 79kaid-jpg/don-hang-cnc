@@ -1,4 +1,5 @@
 import { GuideBox } from './GuideBox';
+import { Annotate } from './Annotate';
 import { bocTachRows } from '../lib/excelCheck';
 import { FixMsg } from './FixMsg';
 import { isTyping, keyOf, modalOpen } from './Shortcuts';
@@ -352,6 +353,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const go = () => { const el = document.querySelector<HTMLElement>('[data-sk="' + key + '"]'); if (!el) return; if (el.tagName === 'INPUT') { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } else { el.click(); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };
     e.preventDefault(); if (key !== 't' && shut) { setShut(false); setTimeout(go, 60); } else go(); };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
+  const [rtImgs, setRtImgs] = useState<Blob[]>([]); const [anOpen, setAnOpen] = useState(false);
   const act = async (action: 'next' | 'back' | 'fail', n = '') => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
@@ -473,9 +475,22 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {can && !['da_duyet', 'fail'].includes(d.status) && (
         <div className="pp-act">
           {ask ? (<div className="pp-ask">
-            <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)} /></label>
-            <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={() => setAsk('')}>Huỷ</button>
-              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={() => act(ask, why.trim())}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
+            <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)}
+              onPaste={(e) => { const f = [...e.clipboardData.files].find((x) => x.type.startsWith('image/')); if (f) { e.preventDefault(); setRtImgs((a) => [...a, f]); } }} /></label>
+            {rtImgs.length > 0 && <div className="rt-imgs">{rtImgs.map((b, i) => <span key={i} className="rt-img"><img src={URL.createObjectURL(b)} alt={'Ảnh ghi chú ' + (i + 1)} />
+              <button type="button" aria-label="Bỏ ảnh" onClick={() => setRtImgs((a) => a.filter((_, j) => j !== i))}><Icon name="x" size={12} /></button></span>)}</div>}
+            {anOpen && <Annotate capture={async () => { const el = document.querySelector('.pp-doc') as HTMLElement | null; if (!el) return null; const { toBlob } = await import('html-to-image');
+                return toBlob(el, { pixelRatio: 1, backgroundColor: '#fff', filter: (n) => !(n instanceof HTMLElement && (n.classList.contains('pp-act') || n.classList.contains('an-bg'))) }); }}
+              onDone={(b) => { setRtImgs((a) => [...a, b]); setAnOpen(false); }} onClose={() => setAnOpen(false)} />}
+            <div className="row" style={{ justifyContent: 'flex-end' }}><button type="button" className="btn" style={{ marginRight: 'auto' }} onClick={() => setAnOpen(true)}><Icon name="file" size={15} />Ảnh ghi chú</button>
+              <button className="btn" onClick={() => { setAsk(''); setRtImgs([]); }}>Huỷ</button>
+              <button className="btn rt-go" disabled={!why.trim() || busy} onClick={async () => {
+                let note = why.trim();
+                if (rtImgs.length) { const nf = [...files]; const at = new Date().toISOString();
+                  for (const [i, bl] of rtImgs.entries()) { const path = `${o.id}/${b.id}/${d.company}/tv-${Date.now()}-${i}.png`; const r = await sb.storage.from('files').upload(path, bl, { contentType: 'image/png' }); if (r.error) { setErr(errText(r.error)); return; }
+                    nf.push({ kind: 'tra_ve', name: 'Ảnh ghi chú ' + (i + 1) + '.png', path, at, by: meId, step: d.status } as (typeof files)[number]); }
+                  if (!(await persist(nf, 'Đã gắn ' + rtImgs.length + ' ảnh ghi chú'))) return; note += ' (kèm ' + rtImgs.length + ' ảnh)'; }
+                await act(ask, note); setRtImgs([]); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
             {!first && <button className="btn kb-back pp-sec" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
             {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go pp-sec" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
