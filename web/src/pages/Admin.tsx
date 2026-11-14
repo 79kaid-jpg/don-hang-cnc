@@ -45,6 +45,8 @@ export default function Admin() {
     sb.from('approval_steps').select('*').order('doc_type').order('step_no').then(({ data }) => setSteps((data as Step[]) ?? []));
   };
   useEffect(load, []);
+  const [ucos, setUcos] = useState<Record<string, string[]>>({});
+  useEffect(() => { sb.rpc('all_user_cos').then(({ data }) => setUcos(Object.fromEntries(((data as { id: string; cos: string[] }[]) ?? []).map((r) => [r.id, r.cos])))); }, [tab]);
   const list = useMemo(() => (people ?? []).filter((p) => (p.full_name + ' ' + p.roles.join(' ')).toLowerCase().includes(q.toLowerCase())), [people, q]);
   const open = people?.find((p) => p.id === openId) ?? null;
   const noRole = (people ?? []).filter((p) => p.active && !p.roles.length).length;
@@ -59,8 +61,6 @@ export default function Admin() {
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
   const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
-  const [ucos, setUcos] = useState<Record<string, string[]>>({});
-  useEffect(() => { sb.rpc('all_user_cos').then(({ data }) => setUcos(Object.fromEntries(((data as { id: string; cos: string[] }[]) ?? []).map((r) => [r.id, r.cos])))); }, [tab]);
   const NAV: [string, (typeof TABS)[number][]][] = [['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
     ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['act', 'plan', 'perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
