@@ -61,7 +61,7 @@ export default function Board() {
   useEffect(() => { if (kbCache && kbCache.u === meP?.id) apply(kbCache); load(); }, []);
   // Hai cột kết quả ở cuối (như Base): chỉ hiện hồ sơ kết thúc trong 14 ngày gần nhất
   const COLS = [...columnsOf(qt).filter((c) => adm || qt === 'QT0' || c.key.startsWith(myCo + '.') || (c.key === 'ky' && myCo === 'HW')).filter((c) => qt === 'QT0' || inCo(c.key)),
-    { key: 'hoan_tat', title: 'Hoàn thành', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
+    { key: 'hoan_tat', title: 'Thành công', group: 'Kết quả' }, { key: 'fail', title: 'Thất bại', group: 'Kết quả' }];
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st0 = stepOf(b, docs); const o = orders[b.order_id];
     // Mỗi công ty tự lo đơn: phiếu của công ty mình đã duyệt → Hoàn thành; thất bại → Thất bại
@@ -240,10 +240,10 @@ export default function Board() {
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
-                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const dd = it.o?.due_date; if (!dd) return null;
+                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const btd = qt === 'QT0' ? String((it.doc?.header as Record<string, unknown> | undefined)?.han_boc_tach ?? '') : ''; const dd = btd || it.o?.due_date; if (!dd) return null; const lbl = btd ? 'Bóc tách' : 'Giao';
                             const n = Math.ceil((new Date(dd + 'T23:59:59').getTime() - Date.now()) / 864e5); const done = ['hoan_tat', 'fail'].includes(it.b.status);
                             const cls = done ? '' : n < 0 ? ' late' : n <= 3 ? ' soon' : '';
-                            return <span className={'kb-due' + cls} title={'Hạn giao ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />Giao {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                            return <span className={'kb-due' + cls} title={'Hạn ' + lbl.toLowerCase() + ' ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />{lbl} {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                               {!done && (n < 0 ? ' · trễ ' + -n + 'n' : n <= 3 ? (n === 0 ? ' · hôm nay' : ' · còn ' + n + 'n') : '')}</span>; })()}</span>
                           <span className="kb-pj">{(it.o?.project ?? '').replace(/^\[(TEST|MẪU)\]\s*/i, '') || '—'}</span>
                           <span className="small muted kb-sub"><b className="kb-bt">{it.b.title}</b>{' · '}{[(() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
