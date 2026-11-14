@@ -48,7 +48,9 @@ export function compareExcel(c: XCheck, ds: Record<string, unknown>[]) {
 export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Record<string, string>[] {
   const t = findTable(sheets); if (!t) return [];
   const all = sheets.find((s) => s.name === t.sheet)!.rows; const start = all.length - t.rows.length;
-  const hdr = all.slice(Math.max(0, start - 3), start);
+  // Tiêu đề: 3 dòng trên + các dòng phụ (Column…, đơn vị) trước dòng tấm đầu tiên – "GHI CHÚ" thường nằm ở dòng phụ
+  const f0 = t.rows.findIndex((r) => String(r[t.ci] ?? '').trim() && num(r[t.si]) > 0);
+  const hdr = all.slice(Math.max(0, start - 3), start + Math.max(0, f0));
   const W = Math.max(...hdr.map((r) => r.length), 0);
   const find = (test: (n: string) => boolean, from = 0, to = W) => { for (let j = from; j < Math.min(W, to); j++) if (hdr.some((r) => test(norm(r[j])))) return j; return -1; };
   // Nhóm cột theo mẫu: Kích thước hoàn thiện | Thực tế trải | Phôi | Ghi chú
