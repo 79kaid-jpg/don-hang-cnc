@@ -603,7 +603,7 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 }
 
 /** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
-function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals }: { cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
+function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals, fixed }: { fixed?: Set<number> | null; cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
   const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
   const head = cols.find((c) => !c.n) ?? cols[0];
   const GS: Record<string, string> = { 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
@@ -612,7 +612,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
   const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
   return <div className="pp-mlist">
     {rows.length === 0 && <div className="small muted">Chưa có dòng nào.</div>}
-    {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <div key={i} data-row={i} className={'pp-mrow' + (open === i ? ' on' : '')}>
+    {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <div key={i} data-row={i} className={'pp-mrow' + (open === i ? ' on' : '') + (fixed?.has(i) ? ' pp-mfixed' : '')}>
       <button type="button" className="pp-mrow-h" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
         <span className="pp-mrow-m"><b>{val(r, head) || '(trống) #' + (i + 1)}</b><span className="small muted">{sub.map((c) => { const v = val(r, c); return v ? lb(c) + ' ' + v : ''; }).filter(Boolean).join(' · ')}</span></span>
         {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{/\(([^)]+)\)/.exec(right.t)?.[1] ?? right.t}</span></span>}</button>
@@ -705,7 +705,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   const fileRef = useRef<HTMLInputElement>(null);
   const [asTbl, setAsTbl] = useState(false); const [mi, setMi] = useState(-1);
-  const [q, setQ] = useState(''); const [errOnly, setErrOnly] = useState(false); const errJ = useRef(-1);
+  const [q, setQ] = useState(''); const [errOnly, setErrOnlyS] = useState(false); const errJ = useRef(-1); const [errSnap, setErrSnap] = useState<Set<number> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null); const barRef = useRef<HTMLDivElement>(null); const lockS = useRef(''); const [edge, setEdge] = useState({ l: false, r: false }); const [sw, setSw] = useState(0);
   const syncEdge = useCallback(() => { const w = wrapRef.current; if (!w) return; const l = w.scrollLeft > 2, r = w.scrollLeft + w.clientWidth < w.scrollWidth - 2;
     setEdge((e) => (e.l === l && e.r === r ? e : { l, r })); setSw((x) => (x === w.scrollWidth ? x : w.scrollWidth));
@@ -727,7 +727,9 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const [lim, setLim] = useState(0); const L = lim || step;
   const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
   const ql = q.trim().toLowerCase();
-  const hit = rows.map((_, i) => i).filter((i) => (!errOnly || bad(rows[i])) && (!ql || cols.some((c) => !c.n && String(rows[i][c.k] ?? '').toLowerCase().includes(ql))));
+  // Bấm "Lỗi": giữ cố định danh sách dòng lỗi lúc bấm – sửa xong dòng vẫn ở lại (✓), bấm lại để làm mới
+  const setErrOnly = (v: boolean) => { setErrOnlyS(v); setErrSnap(v ? new Set(rows.map((_, i) => i).filter((i) => bad(rows[i]))) : null); };
+  const hit = rows.map((_, i) => i).filter((i) => (!errOnly || (errSnap ? errSnap.has(i) : bad(rows[i]))) && (!ql || cols.some((c) => !c.n && String(rows[i][c.k] ?? '').toLowerCase().includes(ql))));
   const [sOpen, setSOpen] = useState(false); const sRef = useRef<HTMLInputElement>(null);
   const openSearch = () => { setSOpen(true); setTimeout(() => sRef.current?.focus(), 0); };
   const fkey = 'pp-fold:' + (editable ? 'e' : 'v') + ':' + title;
@@ -736,7 +738,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const folded = fold && rows.length > 0 && !ql && !errOnly;
   const shown = folded ? [] : hit.slice(0, L); const nBad = rows.filter(bad).length;
   const [fixedAll, setFixedAll] = useState(false);
-  useEffect(() => { if (errOnly && nBad === 0) { setErrOnly(false); setLim(0); setFixedAll(true); const t = setTimeout(() => setFixedAll(false), 4000); return () => clearTimeout(t); } }, [errOnly, nBad]);
+  useEffect(() => { if (errOnly && nBad === 0) { setErrOnlyS(false); setErrSnap(null); setLim(0); setFixedAll(true); const t = setTimeout(() => setFixedAll(false), 4000); return () => clearTimeout(t); } }, [errOnly, nBad]);
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
@@ -772,17 +774,17 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
       {(nBad > 0 || fixedAll || errOnly) && <div className="pp-find">
-        {nBad > 0 && <button type="button" className={'pp-chip' + (errOnly ? ' on' : '')} aria-pressed={errOnly} title="Chỉ hiện dòng lỗi" onClick={() => { setErrOnly(!errOnly); setLim(0); }}>Lỗi {nBad}</button>}
+        {nBad > 0 && <button type="button" className={'pp-chip' + (errOnly ? ' on' : '')} aria-pressed={errOnly} title="Chỉ hiện dòng lỗi" onClick={() => { const fixed = errSnap ? [...errSnap].filter((i) => !bad(rows[i])).length : 0; setErrOnly(!errOnly || fixed > 0); setLim(0); }}>Lỗi {nBad}</button>}
         {nBad > 0 && <button type="button" className="pp-chip nx" title="Đến dòng lỗi tiếp theo" aria-label="Đến dòng lỗi tiếp theo" onClick={() => {
           const bads = rows.map((_, i) => i).filter((i) => bad(rows[i])); const cur = errJ.current; const nx = bads.find((i) => i > cur) ?? bads[0]; errJ.current = nx;
           const pos = hit.indexOf(nx); if (pos < 0) { setQ(''); setErrOnly(false); } setLim((x) => Math.max(x || step, (pos < 0 ? nx : pos) + 1));
           setTimeout(() => { const el = [...document.querySelectorAll<HTMLElement>('[data-row="' + nx + '"]')].find((x) => x.offsetParent) ?? null; if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('pp-flash'); setTimeout(() => el.classList.remove('pp-flash'), 1200); } }, 60); }}><Icon name="arrow" size={13} /></button>}
-        {errOnly && <span className="small muted">{hit.length}/{rows.length}</span>}
+        {errOnly && <span className="small muted">{errSnap ? <>Đã sửa <b className="pp-okn">{[...errSnap].filter((i) => !bad(rows[i])).length}/{errSnap.size}</b> · bấm “Lỗi” để làm mới</> : hit.length + '/' + rows.length}</span>}
         {fixedAll && <span className="small pp-okmsg" role="status"><Icon name="check" size={14} />Đã sửa hết lỗi</span>}
       </div>}
       {mob && folded && <button type="button" className="pp-ftiles" onClick={() => setFold(false)} aria-label={'Mở ' + rows.length + ' dòng'}>{Object.entries(totals).filter(([, v]) => v).map(([k, v]) => { const c = cols.find((x) => x.k === k)!;
         return <span key={k} className={'pp-ftile' + cgOf(c, cols, cols.indexOf(c))}><b>{fmtN(v, c.d ?? 0)}</b><small>{c.t}{c.g ? ' ' + (c.g.includes('trải') ? 'trải' : c.g.includes('phôi') ? 'phôi' : 'HT') : ''}</small></span>; })}<span className="pp-fmore">{rows.length} dòng · bấm để xem</span></button>}
-      {mob && !folded && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
+      {mob && !folded && <MList fixed={errSnap ? new Set([...errSnap].filter((i) => !bad(rows[i]))) : null} cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
       {(!mob || asTbl) && <div className="pp-tw">
       {edge.l && <button type="button" className="pp-edge l" aria-label="Cuộn sang trái" onClick={() => glide(-1)}><Icon name="back" size={18} /></button>}
       {edge.r && <button type="button" className="pp-edge r" aria-label="Cuộn sang phải" onClick={() => glide(1)}><Icon name="back" size={18} /></button>}
@@ -793,7 +795,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
-          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : undefined}><td className="muted">{i + 1}</td>
+          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : undefined}><td className="muted">{i + 1}</td>
             {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột

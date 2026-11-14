@@ -3219,3 +3219,8 @@ tbody td.cg input{background:#fff}
 .col-pop{position:fixed!important;right:auto!important;bottom:auto!important;width:340px;z-index:3000;text-align:left;white-space:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
 @media (max-width:760px){.col-i{width:32px;height:32px}}
 thead th:has(.col-i){white-space:nowrap}
+/* Lọc "Lỗi": dòng đã sửa vẫn ở lại, đánh dấu xanh */
+.pp-grid tr.pp-fixed>td:first-child{box-shadow:inset 3px 0 0 #16A34A;color:#16A34A;font-weight:700}
+.pp-grid tr.pp-fixed>td:first-child::after{content:' ✓'}
+.pp-mrow.pp-mfixed{border-color:#86EFAC;position:relative}.pp-mrow.pp-mfixed::after{content:'✓';position:absolute;top:6px;right:10px;color:#16A34A;font-weight:700}
+.pp-okn{color:#16A34A}
