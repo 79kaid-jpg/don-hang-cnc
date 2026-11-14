@@ -3009,3 +3009,8 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
   .pp-sidebtn.pp-grip:focus:not(:focus-visible){box-shadow:0 2px 6px rgba(20,28,40,.10);border-color:var(--line2)}
   .pp-sh-open:focus{outline:none}.pp-sh-open:focus-visible{outline:2px solid var(--accent,#3b6ea8);outline-offset:2px}
 }
+.hao-tip{position:relative;display:inline-flex;vertical-align:middle;margin-left:4px}
+.hao-i{display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:help}
+.hao-i:hover,.hao-tip.on .hao-i{background:rgba(59,110,168,.10);color:var(--accent,#3b6ea8)}
+.hao-pop{position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;display:flex;flex-direction:column;gap:6px;width:min(340px,calc(100vw - 32px));padding:12px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:0 10px 30px rgba(20,28,40,.18);font-size:13.5px;line-height:1.45;color:var(--ink,#1d2433);font-weight:400;text-align:left;white-space:normal}
+.hao-pop b{font-weight:700}.hao-ex{padding:6px 8px;border-radius:8px;background:#F4F7FB}

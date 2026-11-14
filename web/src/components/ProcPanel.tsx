@@ -542,7 +542,8 @@ function Qt1Total({ rows, vat }: { rows: Row[]; vat: number }) {
 function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
   const kg = TABLES.nl.cols.find((x) => x.k === 'kg')!; const a = sumOf(nl, kg), z = sumOf(tp, kg); const l = a ? 1 - z / a : null;
   return <div className="pp-total"><span>Nguyên liệu: <b>{fmtN(a, 1)}</b> kg</span><span>Thành phẩm: <b>{fmtN(z, 1)}</b> kg</span>
-    <span className={l != null && l > 0.15 ? 'kb-late' : ''}>Hao hụt: <b>{l == null ? '' : (l * 100).toFixed(1) + '%'}</b> (định mức ~15%)</span></div>;
+    <span className={l != null && l > 0.15 ? 'kb-late' : ''}>Hao hụt: <b>{l == null ? '' : (l * 100).toFixed(1) + '%'}</b> (định mức ~15%)</span>
+    <HaoTip a={a} z={z} l={l} m1={sumOf(nl, TABLES.nl.cols.find((x) => x.k === 'm2')!)} m2={sumOf(tp, TABLES.nl.cols.find((x) => x.k === 'm2')!)} /></div>;
 }
 
 /** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
@@ -820,4 +821,22 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
   if (!t || !ok) return null;
   return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />Đã duyệt · bước tiếp theo</span>
     <button className="btn primary pp-go" onClick={go} data-kbd="N"><Icon name="plus" size={16} />{t.label}</button></div>;
+}
+
+/** ⓘ Cách tính hao hụt – rê chuột (laptop) / chạm (điện thoại) */
+function HaoTip({ a, z, l, m1, m2 }: { a: number; z: number; l: number | null; m1: number; m2: number }) {
+  const [open, setOpen] = useState(false); const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener('pointerdown', f); return () => document.removeEventListener('pointerdown', f); }, [open]);
+  const n = (v: number, d = 2) => v.toLocaleString('vi-VN', { maximumFractionDigits: d });
+  return <span className={'hao-tip' + (open ? ' on' : '')} ref={ref} onPointerEnter={(e) => e.pointerType === 'mouse' && setOpen(true)} onPointerLeave={(e) => e.pointerType === 'mouse' && setOpen(false)}>
+    <button type="button" className="hao-i" aria-label="Cách tính hao hụt" aria-expanded={open} onClick={() => setOpen((v) => !v)}><Icon name="info" size={15} /></button>
+    {open && <span className="hao-pop" role="tooltip">
+      <b>Cách tính hao hụt</b>
+      <span>Hao hụt = 1 − KL thành phẩm ÷ KL nguyên liệu</span>
+      <span>KL = m² × dày (mm) × khối lượng riêng<br /><span className="muted">nhôm 2,75 · thép 7,85</span></span>
+      <span className="hao-ex">Lệnh này: 1 − {n(z, 1)} kg ÷ {n(a, 1)} kg = <b>{l == null ? '—' : (l * 100).toFixed(1) + '%'}</b>
+        {m1 > 0 && <><br /><span className="muted">(cùng vật liệu, cùng độ dày ⇒ ≈ 1 − {n(m2)} m² ÷ {n(m1)} m²)</span></>}</span>
+      <span className="muted">Định mức 15%: vượt thì hiện đỏ – chỉ cảnh báo, không chặn gửi.</span>
+    </span>}
+  </span>;
 }

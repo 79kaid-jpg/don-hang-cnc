@@ -34,7 +34,11 @@ export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, 
 export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
-export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * 7.85).toFixed(1) : null; };
+/** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
+export const ALU = 2.75, STEEL = 7.85;
+export const isAlu = (r: Row) => /nh[oô]m|alu|^\s*a\d{3,4}/i.test(String(r.vat_lieu ?? '') + ' ' + String(r.mac_thep ?? '')) || /^\s*a\d{3,4}/i.test(String(r.mac_thep ?? ''));
+export const densOf = (r: Row) => (isAlu(r) ? ALU : STEEL);
+export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
   ds0: { t: 'Danh sách tấm', cols: [
