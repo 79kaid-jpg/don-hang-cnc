@@ -3192,3 +3192,16 @@ tbody td.cg input{background:#fff}
 .pp-fmore{grid-column:1/-1;font-size:13px;color:var(--brand,#3A6EA5);font-weight:600}
 @media (max-width:760px){.pp-fold{height:40px;padding:0 14px}}
 @media (prefers-reduced-motion:reduce){.pp-fold svg{transition:none}}
+/* Tìm trong bảng: kính lúp → bung ô nhập */
+.pp-sx{display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;font-weight:400}
+.pp-sx-btn{width:32px;height:32px;display:inline-grid;place-items:center;border:1px solid transparent;border-radius:999px;background:none;color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+.pp-sx-btn:hover{background:#F2F5F9;color:var(--ink);border-color:var(--line2)}
+.pp-sx-in{display:inline-flex;align-items:center;gap:6px;height:32px;width:260px;padding:0 6px 0 10px;border:1px solid var(--brand,#3A6EA5);border-radius:999px;background:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#3A6EA5) 15%,transparent);color:var(--muted);animation:sxIn .18s cubic-bezier(.2,.8,.2,1)}
+.pp-sx-in input{flex:1;min-width:0;height:28px!important;min-height:28px!important;border:0!important;padding:0!important;font-size:14px!important;background:none;outline:none;box-shadow:none!important}
+.pp-sx-in input::-webkit-search-cancel-button{display:none}
+.pp-sx-n{white-space:nowrap}
+.pp-sx-x{width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:50%;background:#EEF1F4;color:var(--ink);cursor:pointer}
+@keyframes sxIn{from{width:32px;opacity:.4}to{width:260px;opacity:1}}
+@media (max-width:760px){.pp-sx-btn{width:44px;height:44px}.pp-sx.open{flex:1 1 100%;margin:6px 0 0}.pp-sx-in{width:100%;height:44px}.pp-sx-in input{height:40px!important;font-size:16px!important}@keyframes sxIn{from{opacity:.4}to{opacity:1}}}
+@media (prefers-reduced-motion:reduce){.pp-sx-in{animation:none}}
+.pp-th>b{display:inline-flex;align-items:center;flex-wrap:wrap;gap:0 4px}

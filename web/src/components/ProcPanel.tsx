@@ -726,6 +726,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
   const ql = q.trim().toLowerCase();
   const hit = rows.map((_, i) => i).filter((i) => (!errOnly || bad(rows[i])) && (!ql || cols.some((c) => !c.n && String(rows[i][c.k] ?? '').toLowerCase().includes(ql))));
+  const [sOpen, setSOpen] = useState(false); const sRef = useRef<HTMLInputElement>(null);
+  const openSearch = () => { setSOpen(true); setTimeout(() => sRef.current?.focus(), 0); };
   const fkey = 'pp-fold:' + (editable ? 'e' : 'v') + ':' + title;
   const [fold, setFoldS] = useState(() => { try { const v = localStorage.getItem(fkey); return v == null ? !editable : v === '1'; } catch { return !editable; } });
   const setFold = (v: boolean) => { setFoldS(v); try { localStorage.setItem(fkey, v ? '1' : '0'); } catch { /* */ } };
@@ -736,9 +738,15 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
-    <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined}>
-      <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span></b>
-        {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}
+    <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && rows.length) { e.preventDefault(); if (fold) setFold(false); openSearch(); } }}>
+      <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
+        {rows.length > 0 && <span className={'pp-sx' + (sOpen || q ? ' open' : '')}>
+          {sOpen || q ? <label className="pp-sx-in"><Icon name="search" size={15} /><input ref={sRef} type="search" placeholder="Tìm mã tấm…" value={q} aria-label="Tìm tấm"
+              onChange={(e) => { setQ(e.target.value); setLim(0); }} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSOpen(false); } }} onBlur={() => { if (!q.trim()) setSOpen(false); }} />
+              {ql && <span className="small muted pp-sx-n">{hit.length}/{rows.length}</span>}
+              {q && <button type="button" className="pp-sx-x" aria-label="Xoá tìm" onPointerDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setLim(0); sRef.current?.focus(); }}><Icon name="x" size={13} /></button>}</label>
+            : <button type="button" className="pp-sx-btn" aria-label="Tìm trong bảng (Ctrl+F)" title="Tìm trong bảng (Ctrl+F)" onClick={openSearch}><Icon name="search" size={16} /></button>}</span>}
+        {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
@@ -761,14 +769,13 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         <button className="btn sm primary" onClick={() => applyCol(fill.k, fill.v)}>Tất cả</button>
         {rows.some((r) => !String(r[fill.k] ?? '').trim()) && <button className="btn sm" onClick={() => applyCol(fill.k, fill.v, true)}>Chỉ ô trống</button>}
         <button className="btn sm icon-btn" onClick={() => setFill(null)} aria-label="Bỏ qua"><Icon name="x" size={15} /></button></div>}
-      {rows.length > 10 && <div className="pp-find">
-        <label className="pp-q"><Icon name="search" size={15} /><input type="search" placeholder="Tìm mã tấm, vật liệu…" value={q} onChange={(e) => { setQ(e.target.value); setLim(0); }} aria-label="Tìm tấm" /></label>
+      {(nBad > 0 || fixedAll || errOnly) && <div className="pp-find">
         {nBad > 0 && <button type="button" className={'pp-chip' + (errOnly ? ' on' : '')} aria-pressed={errOnly} title="Chỉ hiện dòng lỗi" onClick={() => { setErrOnly(!errOnly); setLim(0); }}>Lỗi {nBad}</button>}
         {nBad > 0 && <button type="button" className="pp-chip nx" title="Đến dòng lỗi tiếp theo" aria-label="Đến dòng lỗi tiếp theo" onClick={() => {
           const bads = rows.map((_, i) => i).filter((i) => bad(rows[i])); const cur = errJ.current; const nx = bads.find((i) => i > cur) ?? bads[0]; errJ.current = nx;
           const pos = hit.indexOf(nx); if (pos < 0) { setQ(''); setErrOnly(false); } setLim((x) => Math.max(x || step, (pos < 0 ? nx : pos) + 1));
           setTimeout(() => { const el = [...document.querySelectorAll<HTMLElement>('[data-row="' + nx + '"]')].find((x) => x.offsetParent) ?? null; if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('pp-flash'); setTimeout(() => el.classList.remove('pp-flash'), 1200); } }, 60); }}><Icon name="arrow" size={13} /></button>}
-        {(ql || errOnly) && <span className="small muted">{hit.length}/{rows.length}</span>}
+        {errOnly && <span className="small muted">{hit.length}/{rows.length}</span>}
         {fixedAll && <span className="small pp-okmsg" role="status"><Icon name="check" size={14} />Đã sửa hết lỗi</span>}
       </div>}
       {mob && folded && <button type="button" className="pp-ftiles" onClick={() => setFold(false)} aria-label={'Mở ' + rows.length + ' dòng'}>{Object.entries(totals).filter(([, v]) => v).map(([k, v]) => { const c = cols.find((x) => x.k === k)!;
