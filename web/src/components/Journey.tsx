@@ -1,3 +1,4 @@
+import { RtThumbs, rtFilesAt } from './RtThumbs';
 import { cached, peek } from '../lib/qcache';
 import { useEffect, useState } from 'react';
 import { sb, errText, type Profile } from '../lib/supabase';
@@ -140,7 +141,7 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
       {exp && ms.length > 0 && <ul className="tk-list" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>{ms.map((m) => { const [lb, ic] = KIND[m.kind] ?? [m.kind, 'file'];
         return <li key={m.id} className={'tk-m ' + m.kind}><span className="tk-ic"><Icon name={ic} size={12} /></span>
           <div><div className="tk-meta"><b>{nm(m.from_user)}</b> · {lb}{m.kind === 'reassign' && m.meta?.to_name ? ' → ' + m.meta.to_name : ''}{m.via === 'zalo' ? <span className="tk-via">Zalo</span> : null}<span className="small muted"> · {dt(m.at)}</span></div>
-            <div className="tk-txt">{m.text}</div></div></li>; })}</ul>}
+            <div className="tk-txt">{m.text}</div>{/kèm \d+ ảnh/.test(m.text) && <RtThumbs files={rtFilesAt(d, m.at)} size={56} />}</div></li>; })}</ul>}
       {open && exp && <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (await run('reply_msg', { p_doc: d.id, p_text: rep }, 'Đã gửi')) setRep(''); }}>
         <input placeholder="Trả lời / ghi chú…" value={rep} onChange={(e) => setRep(e.target.value)} maxLength={500} />
         <button className="btn sm primary icon-btn" disabled={busy || !rep.trim()} aria-label="Gửi"><Icon name="arrow" size={16} /></button>
