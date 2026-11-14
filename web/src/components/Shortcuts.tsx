@@ -25,7 +25,7 @@ export const modalOpen = () => !!document.querySelector('.modal-bg, .kp-bg');
 export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
   { group: 'Chung', items: [
     [['Ctrl', 'K'], 'Tìm & mở đơn nhanh (gõ mã, dự án, khách)'], [['/'], 'Tìm & mở đơn nhanh'],
-    [['?'], 'Xem bảng phím tắt này'], [['N'], 'Tạo đơn mới'], [['['], 'Ẩn / hiện menu trái'], [['Esc'], 'Đóng hộp thoại, menu ⋯'], [['Ctrl', 'S'], 'Lưu phiếu / quy trình đang sửa']] },
+    [['?'], 'Xem bảng phím tắt này'], [['N'], 'Bắt đầu QT0 (chọn mã dự án)'], [['['], 'Ẩn / hiện menu trái'], [['Esc'], 'Đóng hộp thoại, menu ⋯'], [['Ctrl', 'S'], 'Lưu phiếu / quy trình đang sửa']] },
   { group: 'Đi tới (bấm G rồi bấm chữ)', items: [
     [['G', 'V'], 'Việc của tôi'], [['G', 'B'], 'Bảng Kanban'], [['G', 'S'], 'Sơ đồ đơn hàng'], [['G', 'D'], 'Danh sách đơn'], [['G', 'T'], 'Thống kê'],
     [['G', 'Q'], 'Quản trị'], [['G', 'H'], 'Hướng dẫn'], [['G', 'Z'], 'Thông báo Zalo']] },

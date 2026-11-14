@@ -5,10 +5,10 @@ import { ProjectPicker } from './ProjectPicker';
 
 type V = Record<string, string | null | undefined>;
 /** Các ô F0 · Thông tin đơn hàng theo Quản trị → Trường dữ liệu (ô có sẵn lưu trên đơn, ô thêm mới lưu trong orders.extra) */
-export function OrderFields({ vals, extra, onVal, onExtra, disabled, people }: {
-  vals: V; extra: Record<string, string>; onVal: (k: string, v: string) => void; onExtra: (k: string, v: string) => void; disabled?: boolean; people: Profile[] }) {
+export function OrderFields({ vals, extra, onVal, onExtra, disabled, people, skip }: {
+  vals: V; extra: Record<string, string>; onVal: (k: string, v: string) => void; onExtra: (k: string, v: string) => void; disabled?: boolean; people: Profile[]; skip?: string[] }) {
   useFields();
-  return <>{fieldsOf('F0', 'header').filter((f) => f0Perm(f) !== 'hide').map((f) => {
+  return <>{fieldsOf('F0', 'header').filter((f) => f0Perm(f) !== 'hide' && !(skip ?? []).includes(f.key)).map((f) => {
     const v = (f.sys ? vals[f.key] : extra[f.key]) ?? ''; const on = (x0: string) => { const x = f.type === 'number' ? numTyping(x0) : x0; return f.sys ? onVal(f.key, x) : onExtra(f.key, x); }; const req = f0Perm(f) === 'required';
     const lab = <span>{f.label}{req && <b className="req" aria-label="bắt buộc"> *</b>}</span>;
     const wide = f.type === 'textarea';

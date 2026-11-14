@@ -3110,3 +3110,8 @@ html[data-scope=PN] .topbar{background:rgba(226,236,248,.95)}html[data-scope=IPC
 .scope-ab{display:none}
 .app.side-hidden:not(.side-peek) .scope-side .scope-btn{flex-direction:column;justify-content:center;gap:4px;padding:7px 2px 5px;min-height:48px;border-color:color-mix(in srgb,var(--sc) 45%,var(--line2));background:color-mix(in srgb,var(--sc) 7%,#fff)}
 .app.side-hidden:not(.side-peek) .scope-side .scope-ab{display:block;font-size:10.5px;font-weight:700;line-height:1;letter-spacing:.02em;color:var(--sc);white-space:nowrap}
+/* Kanban: nút Tạo mới ở cột đầu */
+.kb-new{display:flex;justify-content:center;width:100%;margin-top:8px;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:999px;border:1px dashed color-mix(in srgb,var(--brand,#3A6EA5) 55%,transparent);background:color-mix(in srgb,var(--brand,#3A6EA5) 8%,#fff);color:var(--brand,#3A6EA5);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
+.kb-new:hover{background:color-mix(in srgb,var(--brand,#3A6EA5) 16%,#fff);border-style:solid}
+.kb-new:focus-visible{outline:2px solid var(--brand,#3A6EA5);outline-offset:2px}
+@media (max-width:900px){.kb-new{height:36px;padding:0 12px}}

@@ -17,6 +17,8 @@ import { useAuth } from '../lib/auth';
 import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
+import { Sheet } from '../components/Sheet';
+import { ProjectPicker } from '../components/ProjectPicker';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
  *  QT1–QT3: cột = Lập / Kiểm tra / Duyệt của từng công ty PN → IPC → Hanwa, cột cuối là bước ký tay. */
@@ -42,7 +44,8 @@ export default function Board() {
   const setKco = (c: KCo) => { setScope(c); setCol(''); };
   const inCo = (key: string) => kco === 'ALL' || key.startsWith(kco + '.') || (key === 'ky' && kco === 'HW');
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(false); const [mkPj, setMkPj] = useState(false);
+  const startNew = () => { if (qt === 'QT0') nav('/don/moi'); else setPicking(true); };
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
@@ -192,8 +195,9 @@ export default function Board() {
         <div><h1>Bảng Kanban</h1><p className="muted">Mỗi thẻ là một hồ sơ ({qt === 'QT0' ? 'lần bóc tách' : qt === 'QT1' ? 'XNĐH' : qt === 'QT2' ? 'lệnh gia công' : 'đợt giao'}). {qt === 'QT0' ? 'Chỉ Phương Nam CNC.' : 'Đi lần lượt Phương Nam CNC → IPC → Hanwa, cuối cùng ký tay.'}</p></div>
         <div className="row">
           <Link className="btn sm hide-m" to="/so-do"><Icon name="flow" size={18} />Sơ đồ</Link>
-          {qt === 'QT0' ? <Link className="btn sm primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn</span></Link>
+          {qt === 'QT0' ? <button className="btn sm primary fab-m" onClick={() => setMkPj(true)} aria-label="Tạo dự án"><Icon name="plus" size={20} /><span className="fab-t">Tạo dự án</span></button>
             : <button className="btn sm primary fab-m" onClick={() => setPicking(true)} aria-label={'Lập ' + BATCH_WORD[qt]}><Icon name="plus" size={20} /><span className="fab-t">Lập {BATCH_WORD[qt]}</span></button>}
+          {mkPj && <NewProject onClose={() => setMkPj(false)} onStart={(id) => nav('/don/moi?project=' + id)} />}
           {picking && qt !== 'QT0' && <OrderPick qt={qt} orders={orders} batches={batches ?? []} onClose={() => setPicking(false)} onPick={(id) => nav('/don/' + id + '?tab=' + qt + '&new=1')} />}
         </div>
       </div>
@@ -229,7 +233,8 @@ export default function Board() {
                 <section key={c.key} data-col={i} className={'kb-col door' + (sh ? ' closed' : '') + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'xong_minh' ? ' kb-elsewhere' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
                   <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : c.key === 'xong_minh' ? 'Đã duyệt phần ' + (COMPANY[myCo as keyof typeof COMPANY] ?? myCo) : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
                     <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span>
-                      <button type="button" className="kb-shut" aria-label={'Khép cột ' + c.title} data-kbd="X" data-kbd-label={'Khép cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}><Icon name="back" size={15} /></button></div></header>
+                      <button type="button" className="kb-shut" aria-label={'Khép cột ' + c.title} data-kbd="X" data-kbd-label={'Khép cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}><Icon name="back" size={15} /></button></div>
+                    {i === 0 && <button type="button" className="kb-new" aria-label={qt === 'QT0' ? 'Tạo mới QT0: chọn mã dự án' : 'Tạo mới: lập ' + BATCH_WORD[qt]} data-kbd-label={qt === 'QT0' ? 'Tạo mới · chọn mã dự án' : 'Tạo mới · lập ' + BATCH_WORD[qt]} data-kbd={qt === 'QT0' ? 'N' : undefined} onClick={startNew} onPointerDown={(e) => e.stopPropagation()}><Icon name="plus" size={15} />Tạo mới</button>}</header>
                   <button type="button" className="kb-strip" tabIndex={sh ? 0 : -1} aria-hidden={!sh} aria-label={'Mở cột ' + c.title + ', ' + list.length + ' hồ sơ'} data-kbd="X" data-kbd-label={'Mở cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}>
                     <span className="kb-strip-n">{list.length}</span><span className="kb-strip-t">{c.title}</span></button>
                   <div className="kb-list">
@@ -317,11 +322,22 @@ function OrderPick({ qt, orders, batches, onClose, onPick }: { qt: Proc; orders:
     createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Lập {BATCH_WORD[qt]} – chọn đơn hàng</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
       <input autoFocus placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <p className="small muted" style={{ margin: 0 }}>Đơn đã hoàn thành {prev} được xếp lên trước. Đơn mới chưa có thì bấm “Tạo đơn” ở tab QT0.</p>
+      <p className="small muted" style={{ margin: 0 }}>Đơn đã hoàn thành {prev} được xếp lên trước. Đơn mới chưa có thì bấm “Tạo mới” ở cột đầu tab QT0.</p>
       <ul className="op-list">{list.slice(0, 60).map((o) => { const ok = ready(o.id); const k = n(o.id);
         return <li key={o.id}><button className={'op-it' + (ok ? '' : ' off')} onClick={() => onPick(o.id)}>
           <b>{o.code}</b><span className="op-p">{o.project}</span>
           <span className={'op-tag' + (ok ? ' ok' : '')}>{ok ? (k ? 'đã có ' + k + ' ' + BATCH_WORD[qt] : 'sẵn sàng') : 'chưa xong ' + prev}</span></button></li>; })}
         {list.length === 0 && <li className="small muted">Không tìm thấy đơn.</li>}</ul>
     </div></div>, document.body));
+}
+
+/** Tạo mã dự án nhanh từ Kanban, rồi bắt đầu QT0 với dự án đó */
+function NewProject({ onClose, onStart }: { onClose: () => void; onStart: (id: string) => void }) {
+  const [pid, setPid] = useState(''); const [pname, setPname] = useState('');
+  return <Sheet head={<b>Tạo dự án</b>} sub="Gõ tên dự án mới rồi bấm “Tạo dự án mới”, hoặc chọn dự án đã có." label="Tạo dự án" onClose={onClose}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="f"><span>Mã dự án</span><ProjectPicker value={pid} name={pname} customerId="" onChange={(p) => { setPid(p?.id ?? ''); setPname(p?.name ?? ''); }} /></div>
+      <div className="row"><button className="btn primary" disabled={!pid} onClick={() => onStart(pid)}><Icon name="plus" size={18} />Bắt đầu QT0 với dự án này</button>
+        <button className="btn" onClick={onClose}>Để sau</button></div>
+    </div></Sheet>;
 }
