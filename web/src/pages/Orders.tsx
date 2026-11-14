@@ -3,12 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb, type Customer, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx, useScope, type Scope } from '../lib/myco';
 import { date } from '../lib/format';
 import { Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { procSummary, PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
-import { isTyping, keyOf, modalOpen } from '../components/Shortcuts';
 import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3']; const PAGE = 30;
@@ -18,13 +17,7 @@ export default function Orders() {
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(() => new URLSearchParams(location.hash.split('?')[1] ?? '').get('q') ?? ''); const [qq, setQq] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
   const [kq, setKq] = useState<'' | 'ok' | 'fail'>('');
-  // Lọc theo công ty (giống Kanban): admin mặc định Tất cả, người khác mặc định công ty mình
-  type OCo = 'ALL' | 'PN' | 'IPC' | 'HW';
-  const { own: ownCo } = useMyCo();
-  const [oco, setOcoS] = useState<OCo>(() => { try { const v = localStorage.getItem('ol-co') as OCo | null; if (v) return v; } catch { /* */ } return adm ? 'ALL' : ((ownCo as OCo | null) ?? 'ALL'); });
-  const setOco = (c: OCo) => { setOcoS(c); try { localStorage.setItem('ol-co', c); } catch { /* */ } };
-  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e) || modalOpen() || keyOf(e) !== 'c') return; e.preventDefault(); const L: OCo[] = ['ALL', 'PN', 'IPC', 'HW']; setOcoS((v) => { const n = L[(L.indexOf(v) + 1) % 4]; try { localStorage.setItem('ol-co', n); } catch { /* */ } return n; }); };
-    addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
+  type OCo = Scope; const { scope: oco } = useScope();
   const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   const [more, setMore] = useState(false); const [busy, setBusy] = useState(false); const [srv, setSrv] = useState({ late: 0, soon: 0 });
   const holder = useHolders(); const gen = useRef(0); const sent = useRef<HTMLDivElement>(null);
@@ -86,11 +79,7 @@ export default function Orders() {
         {([['late', 'Quá hạn', 'alert'], ['soon', 'Sắp đến hạn', 'clock'], ['stuck', 'Kẹt ≥ 2 ngày', 'hourglass']] as const).map(([k, t, ic]) => (
           <button key={k} className={'pill-toggle f-' + k + (f === k ? ' on' : '')} aria-pressed={f === k} onClick={() => setF(f === k ? '' : k)}><Icon name={ic} size={15} />{t} <span className="kb-count">{cnt[k]}</span></button>))}
         <button className={'pill-toggle' + (done ? ' on' : '')} aria-pressed={done} onClick={() => setDone(!done)}>{done && <Icon name="check" size={16} />}Gồm đơn đã xong / huỷ</button>
-        <div className="pd-seg ol-coseg hide-m" role="group" aria-label="Xem theo công ty">{([['ALL', 'Tất cả'], ['PN', 'PNC'], ['IPC', 'IPC'], ['HW', 'HAN']] as [OCo, string][]).map(([k, t]) =>
-          <button key={k} type="button" aria-pressed={oco === k} onClick={() => setOco(k)} data-kbd="C" data-kbd-label={(k === 'ALL' ? 'Tất cả công ty' : k === 'PN' ? 'Phương Nam CNC' : k === 'IPC' ? 'IPC' : 'Hanwa') + ' · bấm C để đổi'}>{t}</button>)}</div>
-        <label className="small muted row show-m" style={{ gap: 6 }}>Công ty
-          <select aria-label="Lọc theo công ty" value={oco} onChange={(e) => setOco(e.target.value as OCo)}><option value="ALL">Tất cả</option><option value="PN">PNC</option><option value="IPC">IPC</option><option value="HW">HAN</option></select></label>
-        <label className="small muted row" style={{ gap: 6 }}>Kết quả
+<label className="small muted row" style={{ gap: 6 }}>Kết quả
           <select aria-label="Lọc theo kết quả" value={kq} onChange={(e) => setKq(e.target.value as typeof kq)}>
             <option value="">Tất cả</option><option value="ok">Hoàn thành</option><option value="fail">Có lượt thất bại</option></select></label>
       </div>

@@ -6,6 +6,7 @@ import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNa
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
 import { Icon } from './components/Icon';
+import { ScopeChip } from './components/ScopeChip';
 import { ConfirmHost, Toaster } from './components/ui';
 import Login from './pages/Login';
 import MyWork from './pages/MyWork';
@@ -97,6 +98,7 @@ function Shell() {
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700 }}>PMS</div><div className="small muted">CNC → IPC → Hanwa</div></div>
           <Bell variant="side" />
           <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} data-kbd="[" onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
+        <ScopeChip variant="side" />
         <button className="side-search" title="Tìm đơn nhanh (Ctrl K)" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
           <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -109,6 +111,7 @@ function Shell() {
       <header className="topbar">
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
         <b className="tb-title">PMS</b>
+        <ScopeChip variant="top" />
         <button className="tb-btn" aria-label="Tìm đơn" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}><Icon name="search" size={21} /></button>
         <Bell variant="top" />
         <button className="tb-av" aria-label={'Tài khoản ' + me.full_name} aria-expanded={sheet} onClick={() => setSheet(true)}>{initial}</button>

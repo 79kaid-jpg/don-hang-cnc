@@ -40,3 +40,14 @@ export function docCode(o: { id: string; code: string }, b: { id: string }, comp
 }
 /** Tên file an toàn từ mã (đổi / thành -) */
 export const codeFile = (c: string) => c.replace(/\//g, '-');
+
+/** Phạm vi xem dùng chung toàn app: Tất cả hoặc 1 công ty (admin / người không thuộc công ty nào mới đổi được) */
+export type Scope = 'ALL' | Co;
+const getScope = (): Scope | null => { try { return localStorage.getItem('scope-co') as Scope | null; } catch { return null; } };
+export const setScope = (c: Scope) => { try { localStorage.setItem('scope-co', c); } catch { /* */ } if (c !== 'ALL') setViewCo(c); else subs.forEach((f) => f()); };
+export function useScope(): { scope: Scope; canSwitch: boolean; own: Co | null } {
+  const { own, canSwitch } = useMyCo();
+  return { scope: canSwitch ? getScope() ?? 'ALL' : own ?? 'ALL', canSwitch, own };
+}
+export const SCOPE_LABEL: Record<Scope, string> = { ALL: 'Tất cả', PN: 'PNC', IPC: 'IPC', HW: 'HAN' };
+export const SCOPES: Scope[] = ['ALL', 'PN', 'IPC', 'HW'];

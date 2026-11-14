@@ -10,6 +10,7 @@ const P: Record<string, string> = {
   crown: 'M3 7l4 5 5-7 5 7 4-5-2 12H5L3 7zM5 19h14',
   up: 'M7 17L17 7M9 7h8v8',
   down: 'M7 7l10 10M17 9v8H9',
+  caret: 'M6 9l6 6 6-6',
   star: 'M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z',
   gift: 'M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5',
   chart: 'M3 3v18h18M7 16v-4M11 16V8M15 16v-6M19 16V5',

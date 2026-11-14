@@ -14,7 +14,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 
@@ -38,8 +38,8 @@ export default function Board() {
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
   const [sp, setSp] = useSearchParams();
   type KCo = 'ALL' | 'PN' | 'IPC' | 'HW';
-  const kco: KCo = !adm ? 'ALL' : ((sp.get('co') as KCo | null) ?? (() => { try { return (localStorage.getItem('kb-co') as KCo) || 'ALL'; } catch { return 'ALL' as KCo; } })());
-  const setKco = (c: KCo) => { try { localStorage.setItem('kb-co', c); } catch { /* */ } const n = new URLSearchParams(sp); if (c === 'ALL') n.delete('co'); else n.set('co', c); setSp(n, { replace: true }); setCol(''); };
+  const { scope } = useScope(); const kco: KCo = scope as KCo;
+  const setKco = (c: KCo) => { setScope(c); setCol(''); };
   const inCo = (key: string) => kco === 'ALL' || key.startsWith(kco + '.') || (key === 'ky' && kco === 'HW');
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
   const [picking, setPicking] = useState(false);
@@ -65,7 +65,7 @@ export default function Board() {
   const cards: Card[] = useMemo(() => (batches ?? []).filter((b) => b.proc === qt).map((b) => {
     const st0 = stepOf(b, docs); const o = orders[b.order_id];
     // Mỗi công ty tự lo đơn: phiếu của công ty mình đã duyệt → Hoàn thành; thất bại → Thất bại
-    const ownCo = qt === 'QT0' ? null : !adm ? myCo : kco !== 'ALL' ? kco : null;
+    const ownCo = qt === 'QT0' ? null : kco !== 'ALL' ? kco : !adm ? myCo : null;
     const own = ownCo ? docs.find((x) => x.batch_id === b.id && x.company === ownCo) : undefined;
     const st = own?.status === 'da_duyet' ? { ...st0, key: 'hoan_tat', doc: own } : own?.status === 'fail' ? { ...st0, key: 'fail', doc: own } : st0;
     return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
@@ -75,7 +75,7 @@ export default function Board() {
   const tEnd = (c: Card) => { const ds = ((Array.isArray(docs) ? docs : Object.values(docs ?? {})) as { batch_id?: string; status_at?: string }[]).filter((x) => x.batch_id === c.b.id);
     return Math.max(+new Date(c.doc?.status_at ?? 0), ...ds.map((x) => +new Date(x.status_at ?? 0)), +new Date((c.b as { updated_at?: string }).updated_at ?? 0)); };
   const byCol = (i: number) => { const l = cards.filter((c) => c.i === i); return ['hoan_tat', 'fail'].includes(COLS[i]?.key) ? l.sort((a, z) => tEnd(z) - tEnd(a)) : l; };
-  const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p && (p === 'QT0' || kco === 'ALL' || ['hoan_tat', 'fail'].includes(b.status) || inCo(stepOf(b, docs).key))).length;
+  const countIn = (p: Proc) => (batches ?? []).filter((b) => b.proc === p && (p === 'QT0' || kco === 'ALL' || (docs ?? []).some((d) => d.batch_id === b.id && d.company === kco))).length;
   const mineIn = (p: Proc) => (batches ?? []).some((b) => b.proc === p && mine.some((m) => m.batch_id === b.id));
   const auto = useRef(false);
   useEffect(() => { if (auto.current || !batches) return; auto.current = true; if (!mineIn(qt)) { const t = PROCS.find(mineIn) ?? (countIn(qt) ? null : PROCS.find((p) => countIn(p) > 0)); if (t) setQt(t); } }, [batches, mine]); // eslint-disable-line
@@ -83,8 +83,9 @@ export default function Board() {
 
   // Hộp chuyển / trả về
   const [dlg, setDlg] = useState<{ c: Card; action: 'next' | 'back' } | null>(null);
-  const canBack = (c: Card) => !!c.doc && FLOW[qt].indexOf(c.doc.status) > 0;
-  const canNext = (c: Card) => !!c.doc && c.key !== 'ky';
+  const closedC = (c: Card) => ['hoan_tat', 'fail'].includes(c.key) || ['da_duyet', 'fail'].includes(c.doc?.status ?? '') || ['hoan_tat', 'fail'].includes(c.b.status);
+  const canBack = (c: Card) => !!c.doc && !closedC(c) && FLOW[qt].indexOf(c.doc.status) > 0;
+  const canNext = (c: Card) => !!c.doc && !closedC(c) && c.key !== 'ky';
   // Phím tắt
   const [sel, setSel] = useState<{ c: number; r: number } | null>(null);
   const [shutV, setShutV] = useState(0);
@@ -98,7 +99,6 @@ export default function Board() {
       const key = keyOf(e);
       if (['1', '2', '3', '4'].includes(key)) { e.preventDefault(); pick(PROCS[Number(key) - 1]); return; }
       if (key === 'f') { e.preventDefault(); setOnlyMine((v) => !v); return; }
-      if (key === 'c' && adm) { e.preventDefault(); const L: KCo[] = ['ALL', 'PN', 'IPC', 'HW']; setKco(L[(L.indexOf(kco) + 1) % 4]); return; }
       if (key === 'x') { e.preventDefault(); const c = sel ? COLS[sel.c] : COLS.find((x) => x.key === curCol); if (c) { toggleShut(c.key); setSel(null); } return; }
       const cols = COLS.map((c, i) => (isShut(c.key, i) ? [] : byCol(i)));
       const mv = (dc: number, dr: number) => { e.preventDefault(); setSel((s0) => {
@@ -201,8 +201,7 @@ export default function Board() {
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm" placeholder="Lọc bảng: mã đơn, dự án, lệnh…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <button className="pill-toggle" aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)} data-kbd="F">{onlyMine && <Icon name="check" size={16} />}Chỉ việc đến lượt tôi</button>
         <button className="kbd-hint" onClick={() => dispatchEvent(new Event('show-shortcuts'))} aria-label="Xem phím tắt" data-kbd-label="Tất cả phím tắt" data-kbd="?"><kbd>?</kbd> Phím tắt</button>
-        {adm && <div className="pd-seg kb-coseg" role="group" aria-label="Xem theo công ty">{([['ALL', 'Tất cả'], ['PN', 'PNC'], ['IPC', 'IPC'], ['HW', 'HAN']] as [KCo, string][]).map(([k, t]) =>
-          <button key={k} type="button" aria-pressed={kco === k} onClick={() => setKco(k)} data-kbd="C" data-kbd-label={(k === 'ALL' ? 'Tất cả công ty' : COMPANY[k as keyof typeof COMPANY]) + ' · bấm C để đổi'}>{t}</button>)}</div>}
+
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
@@ -253,7 +252,7 @@ export default function Board() {
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
                           return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             {st === 'ok' ? '✓' : st === 'bad' ? '✕' : st === 'cur' ? '●' : '○'} {co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
-                        {COLS[it.i]?.key === 'hoan_tat' && qt === 'QT1' && it.doc && it.doc.company !== 'HW' && !((it.doc as { files?: { kind: string }[] }).files ?? []).some((f) => f.kind === 'ban_ky') && <div className="kb-where kb-nosign"><Icon name="alert" size={12} />Chưa có bản ký lưu trữ</div>}
+                        {COLS[it.i]?.key === 'hoan_tat' && qt === 'QT1' && it.doc && it.doc.company !== 'HW' && !((it.doc as { files?: { kind: string }[] }).files ?? []).some((f) => f.kind === 'ban_ky') && <div className="kb-where kb-nosign" data-co={it.doc.company}><Icon name="alert" size={12} />{(it.doc.company === 'PN' ? 'PN' : it.doc.company)} · chưa có bản ký lưu trữ</div>}
                         {COLS[it.i]?.key === 'xong_minh' && <div className="kb-where"><Icon name="arrow" size={12} />{it.key === 'ky' ? 'Chờ khách ký – ' + FINAL[qt].toLowerCase() : 'Đang ở ' + (COMPANY[it.key.split('.')[0] as keyof typeof COMPANY] ?? '') + ' · ' + (STATUS[it.key.split('.')[1]] ?? '')}</div>}
                         {COLS[it.i]?.key !== 'xong_minh' && it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(applyAuto(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist), it.doc as never, reqKeysOf(qt, it.doc.company, it.doc.status)).items);
                           return pr.total ? <div className="kb-ck"><Ring done={pr.done} total={pr.total} size={26} stroke={3} />Checklist {STATUS[it.doc.status] ?? ''}{pr.miss ? ' · thiếu ' + pr.miss : ''}</div> : null; })()}

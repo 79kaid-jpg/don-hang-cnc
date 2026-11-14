@@ -3027,3 +3027,22 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
   .pp-shutter{background:transparent!important;background-image:none!important;box-shadow:none!important;border-left:1px solid var(--line);border-radius:0}
   .pp-shutter:hover{filter:none;background:rgba(59,110,168,.04)!important}
 }
+/* Chip phạm vi công ty dùng chung */
+.scope{position:relative;--sc:#5b6472}
+.sc-PN{--sc:#2f6db5}.sc-IPC{--sc:#c2700f}.sc-HW{--sc:#2f8a4b}.sc-ALL{--sc:#5b6472}
+.scope-btn{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface,#fff);font:inherit;font-weight:600;font-size:14px;color:var(--ink);cursor:pointer;text-align:left}
+.scope-btn:hover{border-color:var(--sc)}
+.scope-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scope-dot{width:10px;height:10px;border-radius:50%;background:var(--sc);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--sc) 18%,transparent)}
+.scope-menu{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:80;display:flex;flex-direction:column;padding:6px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:0 12px 30px rgba(20,28,40,.18)}
+.scope-menu button{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 10px;border:0;border-radius:8px;background:none;font:inherit;font-size:14px;text-align:left;cursor:pointer;color:var(--ink)}
+.scope-menu button:hover,.scope-menu button[aria-selected=true]{background:#F2F5F9}
+.scope-menu button svg{margin-left:auto;color:var(--sc)}
+.scope-side{margin:0 0 4px}
+.scope-top{margin-left:6px}
+.scope-top .scope-btn{min-height:34px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;font-size:13px}
+.scope-top .scope-menu{position:fixed;left:12px;right:12px;top:auto;bottom:calc(var(--nav-h,64px) + 12px + env(safe-area-inset-bottom,0px))}
+/* Vạch màu công ty trên đầu trang khi đang lọc 1 công ty */
+html[data-scope=PN] body::before,html[data-scope=IPC] body::before,html[data-scope=HW] body::before{content:'';position:fixed;left:0;right:0;top:0;height:3px;z-index:200;pointer-events:none}
+html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::before{background:#c2700f}html[data-scope=HW] body::before{background:#2f8a4b}
+.app.side-hidden:not(.side-peek) .scope-side .scope-t,.app.side-hidden:not(.side-peek) .scope-side svg{display:none}
