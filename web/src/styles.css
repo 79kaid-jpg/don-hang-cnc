@@ -3014,3 +3014,11 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
 .hao-i:hover,.hao-tip.on .hao-i{background:rgba(59,110,168,.10);color:var(--accent,#3b6ea8)}
 .hao-pop{position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;display:flex;flex-direction:column;gap:6px;width:min(340px,calc(100vw - 32px));padding:12px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:0 10px 30px rgba(20,28,40,.18);font-size:13.5px;line-height:1.45;color:var(--ink,#1d2433);font-weight:400;text-align:left;white-space:normal}
 .hao-pop b{font-weight:700}.hao-ex{padding:6px 8px;border-radius:8px;background:#F4F7FB}
+
+/* Thẻ đơn: trạng thái + dòng phụ tách 2 dòng, cắt bằng … */
+.oc-prog .seg em{display:flex;flex-direction:column;min-width:0;overflow:hidden;line-height:1.35}
+.oc-prog .seg em small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.oc-prog .seg em small::before{content:none}
+.show-m{display:none!important}
+@media (max-width:760px){.show-m{display:flex!important}}
+.oc-prog .seg{overflow:hidden}.oc-prog .seg em{width:100%}.oc-prog .seg em small{width:100%}

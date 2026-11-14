@@ -8,6 +8,7 @@ import { date } from '../lib/format';
 import { Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { procSummary, PROC_NAME, type Batch, type Doc, type Proc } from '../lib/proc';
+import { isTyping, keyOf, modalOpen } from '../components/Shortcuts';
 import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 
 const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3']; const PAGE = 30;
@@ -17,6 +18,13 @@ export default function Orders() {
   const [rows, setRows] = useState<Order[] | null>(null); const [cust, setCust] = useState<Record<string, Customer>>({});
   const [q, setQ] = useState(() => new URLSearchParams(location.hash.split('?')[1] ?? '').get('q') ?? ''); const [qq, setQq] = useState(''); const [done, setDone] = useState(false); const [f, setF] = useState<'' | 'late' | 'soon' | 'stuck'>('');
   const [kq, setKq] = useState<'' | 'ok' | 'fail'>('');
+  // Lọc theo công ty (giống Kanban): admin mặc định Tất cả, người khác mặc định công ty mình
+  type OCo = 'ALL' | 'PN' | 'IPC' | 'HW';
+  const { own: ownCo } = useMyCo();
+  const [oco, setOcoS] = useState<OCo>(() => { try { const v = localStorage.getItem('ol-co') as OCo | null; if (v) return v; } catch { /* */ } return adm ? 'ALL' : ((ownCo as OCo | null) ?? 'ALL'); });
+  const setOco = (c: OCo) => { setOcoS(c); try { localStorage.setItem('ol-co', c); } catch { /* */ } };
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e) || modalOpen() || keyOf(e) !== 'c') return; e.preventDefault(); const L: OCo[] = ['ALL', 'PN', 'IPC', 'HW']; setOcoS((v) => { const n = L[(L.indexOf(v) + 1) % 4]; try { localStorage.setItem('ol-co', n); } catch { /* */ } return n; }); };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
   const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
   const [more, setMore] = useState(false); const [busy, setBusy] = useState(false); const [srv, setSrv] = useState({ late: 0, soon: 0 });
   const holder = useHolders(); const gen = useRef(0); const sent = useRef<HTMLDivElement>(null);
@@ -46,9 +54,11 @@ export default function Orders() {
   }, [qq, done, kq, f]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const el = sent.current; if (!el || !more) return; const io = new IntersectionObserver((e) => { if (e[0].isIntersecting && !busy) load(false); }, { rootMargin: '400px' }); io.observe(el); return () => io.disconnect(); }); // eslint-disable-line react-hooks/exhaustive-deps
   const info = (o: Order) => {
-    const l = bs.filter((b) => b.order_id === o.id);
+    // Theo công ty: chỉ tính hồ sơ của công ty đó (QT0 thuộc PN)
+    const dsC = oco === 'ALL' ? ds : ds.filter((d) => d.company === oco);
+    const l = bs.filter((b) => b.order_id === o.id && (oco === 'ALL' || (b.proc === 'QT0' ? oco === 'PN' : dsC.some((d) => d.batch_id === b.id))));
     const done = o.status === 'hoan_tat' || (l.some((b) => b.proc === 'QT3' && b.status === 'hoan_tat') && !l.some((b) => b.status === 'dang_lam' || b.status === 'cho_ky'));
-    const hs = l.map((b) => holder(b, ds)).filter(Boolean) as NonNullable<ReturnType<typeof holder>>[];
+    const hs = l.map((b) => holder(b, dsC)).filter(Boolean) as NonNullable<ReturnType<typeof holder>>[];
     const stuck = hs.some((h) => isStuck(h.since));
     let due: { cls: string; t: string; ic: string } | null = null;
     if (o.status === 'huy') due = { cls: 'off', t: 'Đã huỷ', ic: 'x' };
@@ -56,9 +66,9 @@ export default function Orders() {
     else if (o.due_date) { const d = Math.ceil((new Date(o.due_date + 'T23:59:59').getTime() - Date.now()) / 864e5);
       if (d < 0) due = { cls: 'late', t: 'Quá hạn ' + -d + ' ngày', ic: 'alert' }; else if (d <= 3) due = { cls: 'soon', t: d === 0 ? 'Hạn hôm nay' : 'Còn ' + d + ' ngày', ic: 'clock' }; }
     const fail = l.some((b) => b.status === 'fail');
-    return { l, done, fail, hs, stuck, due, steps: PROCS.map((p) => ({ p, ...procSummary(p, l, ds) })) };
+    return { l, done, fail, hs, stuck, due, steps: PROCS.map((p) => ({ p, ...procSummary(p, l, dsC) })), has: l.length > 0 };
   };
-  const all = useMemo(() => (rows ?? []).map((o) => ({ o, ...info(o) })), [rows, bs, ds, holder]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => (rows ?? []).map((o) => ({ o, ...info(o) })).filter((x) => oco === 'ALL' || x.has), [rows, bs, ds, holder, oco]); // eslint-disable-line react-hooks/exhaustive-deps
   const base = all.filter((x) => (kq === 'ok' ? x.done : kq === 'fail' ? x.fail : true) && (done || kq ? true : !['hoan_tat', 'huy'].includes(x.o.status) && !x.done) );
   const cnt = { late: srv.late, soon: srv.soon, stuck: base.filter((x) => x.stuck).length };
   const list = base.filter((x) => !f || (f === 'stuck' ? x.stuck : x.due?.cls === f));
@@ -76,6 +86,10 @@ export default function Orders() {
         {([['late', 'Quá hạn', 'alert'], ['soon', 'Sắp đến hạn', 'clock'], ['stuck', 'Kẹt ≥ 2 ngày', 'hourglass']] as const).map(([k, t, ic]) => (
           <button key={k} className={'pill-toggle f-' + k + (f === k ? ' on' : '')} aria-pressed={f === k} onClick={() => setF(f === k ? '' : k)}><Icon name={ic} size={15} />{t} <span className="kb-count">{cnt[k]}</span></button>))}
         <button className={'pill-toggle' + (done ? ' on' : '')} aria-pressed={done} onClick={() => setDone(!done)}>{done && <Icon name="check" size={16} />}Gồm đơn đã xong / huỷ</button>
+        <div className="pd-seg ol-coseg hide-m" role="group" aria-label="Xem theo công ty">{([['ALL', 'Tất cả'], ['PN', 'PNC'], ['IPC', 'IPC'], ['HW', 'HAN']] as [OCo, string][]).map(([k, t]) =>
+          <button key={k} type="button" aria-pressed={oco === k} onClick={() => setOco(k)} data-kbd="C" data-kbd-label={(k === 'ALL' ? 'Tất cả công ty' : k === 'PN' ? 'Phương Nam CNC' : k === 'IPC' ? 'IPC' : 'Hanwa') + ' · bấm C để đổi'}>{t}</button>)}</div>
+        <label className="small muted row show-m" style={{ gap: 6 }}>Công ty
+          <select aria-label="Lọc theo công ty" value={oco} onChange={(e) => setOco(e.target.value as OCo)}><option value="ALL">Tất cả</option><option value="PN">PNC</option><option value="IPC">IPC</option><option value="HW">HAN</option></select></label>
         <label className="small muted row" style={{ gap: 6 }}>Kết quả
           <select aria-label="Lọc theo kết quả" value={kq} onChange={(e) => setKq(e.target.value as typeof kq)}>
             <option value="">Tất cả</option><option value="ok">Hoàn thành</option><option value="fail">Có lượt thất bại</option></select></label>
@@ -91,7 +105,7 @@ export default function Orders() {
               </div>
               <div className="oc-proj">{o.project}<span className="small muted"> · {cust[(o.customer_id ?? o.kh2_id ?? o.kh1_id ?? '')]?.name ?? 'Chưa có khách hàng'}</span></div>
               <div className="oc-prog" aria-label="Tiến độ 4 quy trình">
-                {steps.map((s) => <span key={s.p} className={'seg ' + s.cls} title={s.p + ' ' + PROC_NAME[s.p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}><b>{s.p}</b><i /><em>{s.t}{s.d ? <small> · {s.d}</small> : null}</em></span>)}
+                {steps.map((s) => <span key={s.p} className={'seg ' + s.cls} title={s.p + ' ' + PROC_NAME[s.p] + ': ' + s.t + (s.d ? ' · ' + s.d : '')}><b>{s.p}</b><i /><em>{s.t}{s.d ? <small>{s.d}</small> : null}</em></span>)}
               </div>
               <div className="oc-who">{hs.length ? hs.map((h, i) => <span key={i} className={'wait-who' + (isStuck(h.since) ? ' stuck' : '')}><LoginAs uid={h.uid} name={h.who} className="avatar xs">{initialOf(h.who)}</LoginAs>
                 <span><LoginAs uid={h.uid} name={h.who}><b>{h.who}</b></LoginAs><span className="small muted">{h.what}{h.since ? ' · chờ ' + waited(h.since) : ''}</span></span></span>) : <span className="small muted">{due?.cls === 'done' ? 'Đã xong cả 4 quy trình' : 'Không ai đang giữ'}</span>}</div>
