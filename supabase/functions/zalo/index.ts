@@ -133,10 +133,12 @@ Deno.serve(async (req) => {
     const { doc_id } = await req.json();
     const { data: d } = await db.from('docs').select('*, batches(id, proc, title, status, order_id, orders(code, project))').eq('id', doc_id).single();
     if (!d) return json({ ok: false });
+    // Đơn mẫu (dự án [MẪU]) không gửi Zalo
+    if (/^\s*\[(MẪU|MAU)\]/i.test(d.batches?.orders?.project ?? '')) return json({ ok: true, skipped: 'đơn mẫu' });
     const { data: dcode } = await db.rpc('doc_code', { p_doc: doc_id });
     const b = d.batches; const proc = b.proc as string;
-    const ROLE: Record<string, string> = proc === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet' };
-    const STL: Record<string, string> = { tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập' };
+    const ROLE: Record<string, string> = proc === 'QT0' ? { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet' } : { lap: 'lap', kiem_tra: 'kiem_tra', duyet: 'duyet', anh_giao: 'thu_kho' };
+    const STL: Record<string, string> = { tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập', anh_giao: 'Tải ảnh giao hàng' };
     const CO: Record<string, string> = { PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' };
     const FIN: Record<string, string> = { QT1: 'khách ký xác nhận', QT2: 'ký bàn giao / nhận vật liệu', QT3: 'khách ký nhận hàng' };
     let company = d.company, role = ROLE[d.status], what = '';
