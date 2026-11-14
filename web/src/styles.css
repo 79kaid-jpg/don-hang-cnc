@@ -3174,3 +3174,9 @@ tbody td.cg{background:color-mix(in srgb,var(--cg) 55%,transparent)}
 thead th.cg.th-qty{background:var(--cgh)!important}
 tbody td.cg.td-qty{background:var(--cg)}
 tbody td.cg input{background:#fff}
+/* Bảng nhóm cột: 2 dòng tiêu đề dính trên khi cuộn dọc, ô Mã tấm dính trái tách khỏi nhóm */
+.pp-grid thead tr.th-grp th{height:30px;padding-top:4px;padding-bottom:4px;box-sizing:border-box;top:0}
+.pp-grid thead tr.th-grp + tr th{top:30px}
+.pp-grid thead tr.th-grp th:first-child,.pp-grid thead tr.th-grp th.g-pin{z-index:4}
+.pp-grid thead tr.th-grp + tr th:first-child,.pp-grid thead tr.th-grp + tr th:nth-child(2){z-index:4}
+.pp-grid thead tr.th-grp th.g-pin{position:sticky;left:36px}
