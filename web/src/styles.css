@@ -3045,7 +3045,7 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
 /* Vạch màu công ty trên đầu trang khi đang lọc 1 công ty */
 html[data-scope=PN] body::before,html[data-scope=IPC] body::before,html[data-scope=HW] body::before{content:'';position:fixed;left:0;right:0;top:0;height:3px;z-index:200;pointer-events:none}
 html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::before{background:#c2700f}html[data-scope=HW] body::before{background:#2f8a4b}
-.app.side-hidden:not(.side-peek) .scope-side .scope-t,.app.side-hidden:not(.side-peek) .scope-side svg{display:none}
+.app.side-hidden:not(.side-peek) .scope-side .scope-t,.app.side-hidden:not(.side-peek) .scope-side .scope-btn svg{display:none}
 .adm2-cos{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.adm2-co{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:#EEF3FA;color:#2f6db5}.adm2-co.co-IPC{background:#FDF2E3;color:#a35e0c}.adm2-co.co-HW{background:#E9F5EC;color:#2f8a4b}
 /* QT3 · Ảnh giao hàng */
 .gh{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:14px}
@@ -3090,3 +3090,8 @@ html[data-scope=PN] body,html[data-scope=IPC] body,html[data-scope=HW] body{back
 .db-fold>summary h2::after{content:' ▾';color:var(--muted);font-size:.8em}.db-fold[open]>summary h2::after{content:' ▴'}
 #c-urgent{margin-bottom:var(--sp4)}
 @media (max-width:760px){.db-kpi{grid-template-columns:1fr 1fr!important}}
+/* Thanh bên thu gọn: menu công ty bật sang phải, rộng theo chữ, 1 dòng */
+.app.side-hidden:not(.side-peek) .scope-side .scope-menu{position:fixed;left:var(--sx);right:auto;top:var(--sy);width:max-content;min-width:220px;max-width:300px;animation:scopePop .16s cubic-bezier(.2,.8,.2,1)}
+.app.side-hidden:not(.side-peek) .scope-side .scope-menu button{white-space:nowrap}
+@keyframes scopePop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.app.side-hidden .scope-side .scope-menu{animation:none}}

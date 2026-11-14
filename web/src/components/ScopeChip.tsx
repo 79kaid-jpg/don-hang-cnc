@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useScope, setScope, SCOPE_LABEL, CO_NAME, type Scope } from '../lib/myco';
 import { Icon } from './Icon';
@@ -19,16 +20,16 @@ export type { Co };
 const full = (s: Scope) => (s === 'ALL' ? 'Tất cả công ty' : CO_NAME[s]);
 /** Chip chọn công ty dùng chung toàn app (admin / tổng giám đốc) */
 export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
-  const { scope, canSwitch, options, own } = useScope(); const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener('pointerdown', f); return () => document.removeEventListener('pointerdown', f); }, [open]);
+  const { scope, canSwitch, options, own } = useScope(); const [open, setOpen] = useState(false); const [pos, setPos] = useState<{ top: number; left: number } | null>(null); const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); }; document.addEventListener('pointerdown', f); document.addEventListener('keydown', k); return () => { document.removeEventListener('pointerdown', f); document.removeEventListener('keydown', k); }; }, [open]);
   // Báo máy chủ công ty đang làm (máy chủ chặn thao tác sai công ty)
   useEffect(() => { if (canSwitch) sb.rpc('set_active_co', { p_co: scope }); }, [scope, canSwitch]);
   useEffect(() => { document.documentElement.dataset.scope = canSwitch ? scope : (own ?? ''); }, [scope, canSwitch, own]);
   if (!canSwitch) return null;
   return <div className={'scope scope-' + variant + ' sc-' + scope} ref={ref}>
-    <button type="button" className="scope-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} data-kbd="C" data-kbd-label={'Đang xem: ' + full(scope) + ' · bấm C để đổi'}>
+    <button type="button" className="scope-btn" aria-haspopup="listbox" aria-expanded={open} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ top: r.top, left: r.right + 10 }); setOpen(!open); }} data-kbd="C" data-kbd-label={'Đang xem: ' + full(scope) + ' · bấm C để đổi'}>
       <span className="scope-dot" aria-hidden="true" /><span className="scope-t">{scope === 'ALL' ? (variant === 'side' ? 'Tất cả công ty' : 'Tất cả') : (variant === 'side' ? 'Đang làm: ' : '') + NM[scope]}</span><Icon name="caret" size={14} /></button>
-    {open && <div className={'scope-menu' + (variant === 'top' ? ' sheetish' : '')} role="listbox" aria-label="Xem dữ liệu công ty">
+    {open && <div className={'scope-menu' + (variant === 'top' ? ' sheetish' : '')} role="listbox" aria-label="Xem dữ liệu công ty" style={variant === 'side' && pos ? ({ '--sx': pos.left + 'px', '--sy': pos.top + 'px' } as React.CSSProperties) : undefined}>
       {options.map((c) => <button key={c} type="button" role="option" aria-selected={scope === c} className={'sc-' + c} onClick={() => { setOpen(false); switchCo(c, scope); }}>
         <span className="scope-dot" aria-hidden="true" />{scope === c ? full(c) : (c === 'ALL' ? 'Xem tất cả công ty' : 'Chuyển sang ' + NM[c])}{scope === c && <Icon name="check" size={15} />}</button>)}
     </div>}
