@@ -1,3 +1,4 @@
+import { keyOf } from '../components/Shortcuts';
 import { STATUS } from '../lib/proc';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
@@ -78,7 +79,7 @@ export default function OrderDetail() {
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (!o || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
-      const key = e.key.toLowerCase(); const n = Number(key);
+      const key = keyOf(e); const n = Number(key);
       if (n >= 1 && n <= TABS.length) { e.preventDefault(); setSp({ tab: TABS[n - 1][0] }); }
       else if (key === 's') { e.preventDefault(); navOD('/so-do?don=' + o.id); }
       else if (key === 'b') { e.preventDefault(); navOD('/bang'); }

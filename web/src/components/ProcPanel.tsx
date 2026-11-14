@@ -1,6 +1,6 @@
 import { GuideBox } from './GuideBox';
 import { FixMsg } from './FixMsg';
-import { isTyping, modalOpen } from './Shortcuts';
+import { isTyping, keyOf, modalOpen } from './Shortcuts';
 import { missingReq, jumpField } from '../lib/checks';
 import { goFix } from '../lib/gotoFix';
 import { cached, cacheUser, peek } from '../lib/qcache';
@@ -268,7 +268,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const [admInfo, setAdmInfo] = useState(false); const [viewInfo, setViewInfo] = useState(false);
   const [shut, setShutS] = useState(() => { try { return localStorage.getItem('pp-side-shut') === '1'; } catch { return false; } });
   const setShut = (v: boolean) => { setShutS(v); try { localStorage.setItem('pp-side-shut', v ? '1' : '0'); } catch { /* */ } };
-  useEffect(() => { const k = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.key === ']' && !/INPUT|TEXTAREA|SELECT/.test(t.tagName) && !t.isContentEditable) setShutS((v) => { try { localStorage.setItem('pp-side-shut', v ? '0' : '1'); } catch { /* */ } return !v; }); };
+  useEffect(() => { const k = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (keyOf(e) === ']' && !/INPUT|TEXTAREA|SELECT/.test(t.tagName) && !t.isContentEditable) setShutS((v) => { try { localStorage.setItem('pp-side-shut', v ? '0' : '1'); } catch { /* */ } return !v; }); };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, []);
   const waitH = Math.max(0, (Date.now() - new Date(d.status_at).getTime()) / 36e5);
   const proc = b.proc;
@@ -347,7 +347,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   useUnsavedGuard(dirty);
   useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (editable && dirty && !busy) save(); } }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
   useEffect(() => { const k = (e: KeyboardEvent) => {
-    if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; const key = e.key.toLowerCase(); if (!'tchdng'.includes(key) || key.length !== 1) return;
+    if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; const key = keyOf(e); if (!'tchdng'.includes(key) || key.length !== 1) return;
     const go = () => { const el = document.querySelector<HTMLElement>('[data-sk="' + key + '"]'); if (!el) return; if (el.tagName === 'INPUT') { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } else { el.click(); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };
     e.preventDefault(); if (key !== 't' && shut) { setShut(false); setTimeout(go, 60); } else go(); };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
@@ -814,7 +814,7 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
       else setOk(true); })();
     return () => { live = false; }; }, [d.id, t?.proc, t?.co, code]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); const cid = (b as { co_order_id?: string | null }).co_order_id; if (cid) n.set('refid', cid); else n.delete('refid'); n.delete('b'); n.delete('co'); return n; });
-  useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (e.key.toLowerCase() !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
+  useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (keyOf(e) !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
     window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true); }); // eslint-disable-line react-hooks/exhaustive-deps
   if (!t || !ok) return null;
   return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />Đã duyệt · bước tiếp theo</span>

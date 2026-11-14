@@ -1,3 +1,4 @@
+import { keyOf } from '../components/Shortcuts';
 import { useFields } from '../lib/fields';
 import { Ring } from '../components/Ring';
 import { itemsOf, progress, useChecks, applyAuto, reqKeysOf, type CheckItem } from '../lib/checks';
@@ -94,7 +95,7 @@ export default function Board() {
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
-      const key = e.key.toLowerCase();
+      const key = keyOf(e);
       if (['1', '2', '3', '4'].includes(key)) { e.preventDefault(); pick(PROCS[Number(key) - 1]); return; }
       if (key === 'f') { e.preventDefault(); setOnlyMine((v) => !v); return; }
       if (key === 'c' && adm) { e.preventDefault(); const L: KCo[] = ['ALL', 'PN', 'IPC', 'HW']; setKco(L[(L.indexOf(kco) + 1) % 4]); return; }

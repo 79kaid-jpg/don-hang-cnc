@@ -10,6 +10,14 @@ export const isTyping = (e: KeyboardEvent) => {
   const t = e.target as HTMLElement | null;
   return !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 };
+/** Phím theo vị trí vật lý (không bị bộ gõ tiếng Việt đổi [ → ư, ] → ơ…) */
+export const keyOf = (e: KeyboardEvent): string => {
+  const c = e.code ?? '';
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+  if (/^Digit\d$/.test(c)) return e.shiftKey ? e.key : c.slice(5);
+  const m: Record<string, string> = { BracketLeft: '[', BracketRight: ']', Slash: e.shiftKey ? '?' : '/' };
+  return m[c] ?? (e.key ?? '').toLowerCase();
+};
 export const modalOpen = () => !!document.querySelector('.modal-bg, .kp-bg');
 
 export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
@@ -52,9 +60,9 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
   useEffect(() => {
     const open = () => setHelp(true); addEventListener('show-shortcuts', open);
     const k = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setHelp(false); setPal((v) => !v); return; }
+      if ((e.ctrlKey || e.metaKey) && keyOf(e) === 'k') { e.preventDefault(); setHelp(false); setPal((v) => !v); return; }
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return;
-      const key = e.key.toLowerCase();
+      const key = keyOf(e);
       if (Date.now() - gAt.current < 1200) {
         gAt.current = 0;
         const to: Record<string, string> = { v: '/', b: '/bang', s: '/so-do', d: '/don', t: '/thong-ke', q: '/quan-tri', h: '/cai-app', z: '/zalo' };
@@ -63,10 +71,10 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
       }
       if (e.shiftKey && /^[a-z]$/.test(key)) return;
       if (key === 'g') { gAt.current = Date.now(); return; }
-      if (e.key === '/') { e.preventDefault(); setPal(true); }
-      else if (e.key === '?') { e.preventDefault(); setHelp(true); }
+      if (key === '/') { e.preventDefault(); setPal(true); }
+      else if (key === '?') { e.preventDefault(); setHelp(true); }
       else if (key === 'n' && (can('kinh_doanh') || can('admin_cnc'))) { e.preventDefault(); nav('/don/moi'); }
-      else if (e.key === '[') { e.preventDefault(); onToggleSide(); }
+      else if (key === '[') { e.preventDefault(); onToggleSide(); }
     };
     addEventListener('keydown', k);
     return () => { removeEventListener('keydown', k); removeEventListener('show-shortcuts', open); };
