@@ -726,7 +726,11 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
   const ql = q.trim().toLowerCase();
   const hit = rows.map((_, i) => i).filter((i) => (!errOnly || bad(rows[i])) && (!ql || cols.some((c) => !c.n && String(rows[i][c.k] ?? '').toLowerCase().includes(ql))));
-  const shown = hit.slice(0, L); const nBad = rows.filter(bad).length;
+  const fkey = 'pp-fold:' + (editable ? 'e' : 'v') + ':' + title;
+  const [fold, setFoldS] = useState(() => { try { const v = localStorage.getItem(fkey); return v == null ? !editable : v === '1'; } catch { return !editable; } });
+  const setFold = (v: boolean) => { setFoldS(v); try { localStorage.setItem(fkey, v ? '1' : '0'); } catch { /* */ } };
+  const folded = fold && rows.length > 0 && !ql && !errOnly;
+  const shown = folded ? [] : hit.slice(0, L); const nBad = rows.filter(bad).length;
   const [fixedAll, setFixedAll] = useState(false);
   useEffect(() => { if (errOnly && nBad === 0) { setErrOnly(false); setLim(0); setFixedAll(true); const t = setTimeout(() => setFixedAll(false), 4000); return () => clearTimeout(t); } }, [errOnly, nBad]);
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
@@ -734,6 +738,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   return (
     <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined}>
       <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span></b>
+        {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
@@ -766,7 +771,9 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
         {(ql || errOnly) && <span className="small muted">{hit.length}/{rows.length}</span>}
         {fixedAll && <span className="small pp-okmsg" role="status"><Icon name="check" size={14} />Đã sửa hết lỗi</span>}
       </div>}
-      {mob && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
+      {mob && folded && <button type="button" className="pp-ftiles" onClick={() => setFold(false)} aria-label={'Mở ' + rows.length + ' dòng'}>{Object.entries(totals).filter(([, v]) => v).map(([k, v]) => { const c = cols.find((x) => x.k === k)!;
+        return <span key={k} className={'pp-ftile' + cgOf(c, cols, cols.indexOf(c))}><b>{fmtN(v, c.d ?? 0)}</b><small>{c.t}{c.g ? ' ' + (c.g.includes('trải') ? 'trải' : c.g.includes('phôi') ? 'phôi' : 'HT') : ''}</small></span>; })}<span className="pp-fmore">{rows.length} dòng · bấm để xem</span></button>}
+      {mob && !folded && <MList cols={cols} rows={rows} shown={shown} editable={editable} open={mi} setOpen={setMi} set={set} onChange={onChange} totals={totals} />}
       {(!mob || asTbl) && <div className="pp-tw">
       {edge.l && <button type="button" className="pp-edge l" aria-label="Cuộn sang trái" onClick={() => glide(-1)}><Icon name="back" size={18} /></button>}
       {edge.r && <button type="button" className="pp-edge r" aria-label="Cuộn sang phải" onClick={() => glide(1)}><Icon name="back" size={18} /></button>}
@@ -786,14 +793,14 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
           {editable && rows.length === 0 && <tr><td colSpan={cols.length + 2}><div className="pp-dropzone" tabIndex={0} role="textbox" aria-label="Dán dữ liệu từ Excel">
             <Icon name="copy" size={16} /><span><b>Bấm vào đây rồi nhấn Ctrl+V</b> để dán các dòng đã chép từ Excel <span className="muted">(có hoặc không có dòng tiêu đề)</span></span></div></td></tr>}
-          {editable && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
+          {editable && !folded && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
         </tbody>
-        {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span></td>{cols.slice(1).map((c, ci) => <td key={c.k} className={(c.n ? 'n' : '') + cgOf(c, cols, ci + 1)}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
+        {rows.length > 0 && <tfoot><tr><td colSpan={2} className="pp-tot-lb">Tổng <span>{rows.length} dòng</span>{folded && <button type="button" className="link-btn pp-fx" onClick={() => setFold(false)}>bấm để xem</button>}</td>{cols.slice(1).map((c, ci) => <td key={c.k} className={(c.n ? 'n' : '') + cgOf(c, cols, ci + 1)}>{c.k in totals ? <b>{fmtN(totals[c.k], c.d ?? 0)}</b> : null}</td>)}{editable && <td />}</tr></tfoot>}
       </table></div>
       <div ref={endRef} className="pp-tend" />
       {(edge.l || edge.r) && <div className="pp-hhint small muted">Kéo ✋ ở ô không nhập, ⇧ + lăn chuột, hoặc bấm ‹ › để cuộn ngang</div>}
       </div>}
-      {hit.length > step && <div className="pp-pager">
+      {!folded && hit.length > step && <div className="pp-pager">
         <span className="small muted">Hiện 1–{shown.length} / {hit.length}</span>
         {hit.length > shown.length && <button type="button" className="btn sm" onClick={() => setLim(L + step)}>Xem thêm {Math.min(step, hit.length - shown.length)}</button>}
         {hit.length > shown.length && <button type="button" className="link-btn" onClick={() => setLim(hit.length)}>Hiện tất cả</button>}
