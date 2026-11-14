@@ -1,0 +1,1 @@
+-- QT1: thêm noi_giao, phi_vc (đầu phiếu), rong, dai, mau_son (DS tấm) – áp dụng qua MCP

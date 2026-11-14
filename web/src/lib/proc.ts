@@ -54,7 +54,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
-    { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
+    { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'rong', t: 'Rộng (mm)', n: true }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'mau_son', t: 'Màu sơn', w: 6 },
     { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'don_gia', t: 'Đơn giá (đ/m²)', n: true }, { k: 'tt', t: 'Thành tiền (đ)', n: true, calc: ttOf }, { k: 'loai_gc', t: 'Loại gia công', w: 9 }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
   nl: { t: 'Bảng 1 – Thông tin xuất hàng (nguyên liệu)', cols: [
@@ -71,7 +71,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
 export const PROC_TABLES: Record<Proc, [string, string][]> = { QT0: [['ds', 'ds0']], QT1: [['ds', 'ds1']], QT2: [['nl', 'nl'], ['tp', 'tp2']], QT3: [['tp', 'tp3']] };
 export const HEADER: Record<Proc, [string, string, string?][]> = {
   QT0: [['ngay_nhan', 'Ngày nhận bản vẽ', 'date'], ['kenh', 'Kênh nhận (email / Zalo)'], ['hao_hut', 'Hao hụt dự kiến (%)', 'num']],
-  QT1: [['so_xn', 'Số XNĐH'], ['ngay', 'Ngày lập', 'date'], ['dk_giao', 'Điều kiện giao hàng'], ['dk_tt', 'Điều kiện thanh toán'], ['vat', 'Thuế GTGT (%)', 'num']],
+  QT1: [['so_xn', 'Số XNĐH'], ['ngay', 'Ngày lập', 'date'], ['dk_giao', 'Điều kiện giao hàng'], ['noi_giao', 'Nơi giao hàng'], ['dk_tt', 'Điều kiện thanh toán'], ['vat', 'Thuế GTGT (%)', 'num'], ['phi_vc', 'Phí vận chuyển (đ)', 'num']],
   QT2: [['so_lenh', 'Số lệnh gia công'], ['so_hd', 'Số hợp đồng'], ['kho_xuat', 'Kho xuất'], ['kho_nhan', 'Kho nhận'], ['dang_gc', 'Dạng gia công']],
   QT3: [['so_phieu', 'Số phiếu'], ['ngay_giao', 'Ngày giao', 'date'], ['dia_diem', 'Địa điểm giao'], ['xe', 'Xe / biển số'], ['tai_xe', 'Tài xế']]
 };

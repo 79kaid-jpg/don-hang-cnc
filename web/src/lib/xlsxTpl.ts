@@ -80,11 +80,15 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     for (const c of T.cols) if (c.n) vars['tong_' + key + '_' + c.k] = Math.round(sumOf(rows, c) * 100) / 100;
   }
   if (b.proc === 'QT1') { const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(d.tables?.ds ?? [], c); const v = numIn(d.header?.vat) ?? 8;
-    vars.tong_tien = Math.round(sm); vars.tien_vat = Math.round(sm * v / 100); vars.tong_tt = Math.round(sm + sm * v / 100); vars.tong_tt_chu = soChu(sm + sm * v / 100); }
+    const vc = numIn(d.header?.phi_vc) ?? 0; vars.phi_vc = vc ? Math.round(vc) : '';
+    vars.tong_tien = Math.round(sm); vars.tien_vat = Math.round(sm * v / 100); vars.tong_tt = Math.round(sm + sm * v / 100 + vc); vars.tong_tt_chu = soChu(sm + sm * v / 100 + vc); }
   // Tên hàng chung của phiếu = loại gia công gặp nhiều nhất trong bảng; dòng thiếu thì dùng tên chung
   if (vars.ten_hang == null || vars.ten_hang === '') { const cnt = new Map<string, number>(); for (const r of tables.ds ?? []) { const t = String(r.ten_hang ?? ''); if (t) cnt.set(t, (cnt.get(t) ?? 0) + 1); }
     vars.ten_hang = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Gia công tấm'; }
   for (const r of tables.ds ?? []) if (!r.ten_hang) r.ten_hang = vars.ten_hang;
+  // Tên biến cũ trong mẫu: ma_mau = màu sơn, ky_hieu_tam = mã tấm; Nơi giao hàng
+  for (const r of tables.ds ?? []) { if (r.ma_mau == null || r.ma_mau === '') r.ma_mau = r.mau_son ?? ''; if (r.ky_hieu_tam == null || r.ky_hieu_tam === '') r.ky_hieu_tam = r.ma_tam ?? ''; }
+  if (vars.noi_giao == null) vars.noi_giao = '';
   void ROLE_OF; return { vars, tables };
 }
 

@@ -325,7 +325,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   useEffect(() => { if (!hFields.some((f) => f.key === 'dk_giao')) return;
     cached('dkg', () => sb.from('docs').select('header').not('header->>dk_giao', 'is', null).order('created_at', { ascending: false }).limit(200), 300000)
       .then(({ data }) => setDkgs([...new Set(((data as { header: Record<string, string> }[]) ?? []).map((x) => String(x.header?.dk_giao ?? '').trim()).filter(Boolean))].slice(0, 20))); }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem')) return;
+  useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'noi_giao')) return;
     cached('custs', () => sb.from('customers').select('*'), 60000).then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
@@ -476,14 +476,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
               : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
-              : <input type={f.type === 'date' ? 'date' : 'text'} list={f.key === 'dk_giao' ? 'dkg-' + d.id : f.key === 'dia_diem' && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
+              : <input type={f.type === 'date' ? 'date' : 'text'} list={f.key === 'dk_giao' ? 'dkg-' + d.id : (f.key === 'dia_diem' || f.key === 'noi_giao') && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
                 onChange={(e) => { const x = f.type === 'number' ? numTyping(e.target.value) : e.target.value; const pv = f.key === 'xe' ? plates.find((p) => p.plate === x) : undefined;
                   if (pv?.driver && !h.tai_xe) { setH({ ...h, xe: x, tai_xe: pv.driver }); setDirty(true); } else on(x); }} />}
             {f.key === 'xe' && plates.length > 0 && <datalist id={'xe-' + d.id}>{plates.map((p) => <option key={p.plate} value={p.plate}>{p.driver}</option>)}</datalist>}
             {f.key === 'tai_xe' && plates.length > 0 && <datalist id={'tx-' + d.id}>{[...new Set(plates.map((p) => p.driver).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
             {f.type === 'number' && !isNumOk(v) && <small className="f-err">Phải là số, VD: 12 hoặc 12,5</small>}
             {f.key === 'dk_giao' && <datalist id={'dkg-' + d.id}>{[...new Set([...DKG, ...dkgs])].map((x) => <option key={x} value={x} />)}</datalist>}
-            {f.key === 'dia_diem' && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
+            {(f.key === 'dia_diem' || f.key === 'noi_giao') && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
             {f.help && <small className="muted">{f.help}</small>}</label>; })}
       </div>
 
@@ -509,7 +509,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`} />))}
-      {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}
+      {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} vc={numIn(h.phi_vc) ?? 0} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
       <FixMsg err={err} />
@@ -597,9 +597,9 @@ function useUnsavedGuard(dirty: boolean) {
   }, [dirty]);
 }
 
-function Qt1Total({ rows, vat }: { rows: Row[]; vat: number }) {
+function Qt1Total({ rows, vat, vc = 0 }: { rows: Row[]; vat: number; vc?: number }) {
   const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const s = sumOf(rows, c);
-  return <div className="pp-total"><span>Cộng: <b>{fmtN(s)}</b> đ</span><span>Thuế GTGT {vat}%: <b>{fmtN(Math.round(s * vat / 100))}</b> đ</span><span>Tổng thanh toán: <b>{fmtN(s + Math.round(s * vat / 100))}</b> đ</span></div>;
+  return <div className="pp-total"><span>Cộng: <b>{fmtN(s)}</b> đ</span><span>Thuế GTGT {vat}%: <b>{fmtN(Math.round(s * vat / 100))}</b> đ</span>{vc > 0 && <span>Phí VC: <b>{fmtN(vc)}</b> đ</span>}<span>Tổng thanh toán: <b>{fmtN(s + Math.round(s * vat / 100) + vc)}</b> đ</span></div>;
 }
 function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
   const kg = TABLES.nl.cols.find((x) => x.k === 'kg')!; const a = sumOf(nl, kg), z = sumOf(tp, kg); const l = a ? 1 - z / a : null;
