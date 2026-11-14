@@ -496,11 +496,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
             <span className="row pp-fk-r">{(() => { const ed = canEd({ key: k, label: lab, ...f } as FDef); const mine = files.filter((x) => x.kind === k); const dels = mine.filter((x) => ed && canDelF(x as { by?: string; step?: string })); const one = dels.length === 1 ? dels[0] : null; return <>
               {mine.map((x) => { const xx = x as { by?: string; step?: string }; const del = ed && canDelF(xx) && !one; return <span key={x.path} className="pp-file"><span className="row" style={{ gap: 2 }}><FileLink f={x} />
+                {k === 'excel' && x === mine[0] && <XStatus key={xv} files={mine as never} ds={(t.ds ?? []) as never} canRecheck={ed} />}
                 {del ? <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>
                   : ed && !canDelF(xx) && <span className="pp-flock" title="Chỉ người tải file (trong bước đã tải) hoặc admin được gỡ"><Icon name="shield" size={13} /></span>}</span>
-                {xx.by && <span className="pp-fby">Tải bởi {who(xx.by)}{xx.step ? ' · ' + (STATUS[xx.step] ?? xx.step) : ''}</span>}</span>; })}
+                {xx.by && <span className="pp-fby" title={xx.step ? 'Tải ở bước ' + (STATUS[xx.step] ?? xx.step) : undefined}>Tải bởi {who(xx.by)}</span>}</span>; })}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
-              {k === 'excel' && mine.length > 0 && <XStatus key={xv} files={mine as never} ds={(t.ds ?? []) as never} canRecheck={ed} />}
               {ed && <span className="pp-fact">
                 {dels.length > 0 && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
                 <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>
@@ -896,13 +896,27 @@ function XStatus({ files, ds, canRecheck }: { files: { name: string; path: strin
   const load = () => sb.from('excel_checks').select('*').in('path', files.map((f) => f.path)).then(({ data }) => setSrv(Object.fromEntries(((data ?? []) as { path: string; ok: boolean; error: string | null; codes: string[]; qty: number; rows: number }[]).map((r) => [r.path, r]))));
   useEffect(() => { load(); }, [files.map((f) => f.path).join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const recheck = async () => { setBusy(true); for (const f of files) await sb.functions.invoke('excel-check', { body: { path: f.path } }); await load(); setBusy(false); };
-  if (!srv) return <span className="xs-st"><Icon name="clock" size={13} />Đang kiểm…</span>;
+  if (!srv) return <XDot tone="wait" lines={['Đang kiểm tra file…']} />;
   const f = files[0]; const r = srv[f.path];
-  const again = canRecheck && <button type="button" className="btn xs" disabled={busy} onClick={recheck}>{busy ? 'Đang kiểm…' : 'Kiểm tra lại'}</button>;
-  if (!r) return <span className="row" style={{ gap: 6 }}><span className="xs-st warn"><Icon name="alert" size={13} />Máy chủ chưa kiểm file này</span>{again}</span>;
-  if (!r.ok) return <span className="row" style={{ gap: 6 }}><span className="xs-st bad"><Icon name="x" size={13} />File không hợp lệ: {r.error}</span>{again}</span>;
+  const again = canRecheck ? recheck : undefined;
+  if (!r) return <XDot tone="warn" lines={['Máy chủ chưa kiểm file này']} again={again} busy={busy} />;
+  if (!r.ok) return <XDot tone="bad" lines={['File không hợp lệ', String(r.error ?? '')]} again={again} busy={busy} />;
   const lc = files[0].check; void ds;
-  return <span className="xs-st info"><Icon name="check" size={13} />File bóc tách hợp lệ{lc?.sheet ? ' · sheet ' + lc.sheet : ''} · {r.rows} dòng · {Number(r.qty).toLocaleString('vi-VN')} tấm{lc?.day?.length ? ' · dày ' + lc.day.join(', ') + 'mm' : ''}</span>;
+  return <XDot tone="ok" lines={['File bóc tách hợp lệ', ...(lc?.sheet ? ['Sheet: ' + lc.sheet] : []), r.rows + ' dòng · ' + Number(r.qty).toLocaleString('vi-VN') + ' tấm', ...(lc?.day?.length ? ['Độ dày: ' + lc.day.join(', ') + ' mm'] : [])]} again={again} busy={busy} />;
+}
+
+/** Biểu tượng trạng thái file: xanh hợp lệ / đỏ lỗi; rê chuột / chạm để xem chi tiết */
+function XDot({ tone, lines, again, busy }: { tone: 'ok' | 'bad' | 'warn' | 'wait'; lines: string[]; again?: () => void; busy?: boolean }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null); const ref = useRef<HTMLButtonElement>(null); const pop = useRef<HTMLSpanElement>(null); const tm = useRef(0);
+  const show = () => { clearTimeout(tm.current); const r = ref.current?.getBoundingClientRect(); if (r) setPos({ x: Math.min(Math.max(r.left - 20, 12), innerWidth - 312), y: r.bottom + 8 }); };
+  const hide = () => { tm.current = window.setTimeout(() => setPos(null), 150); };
+  useEffect(() => { if (!pos) return; const f = (e: Event) => { const t = e.target as Node; if (!ref.current?.contains(t) && !pop.current?.contains(t)) setPos(null); }; addEventListener('pointerdown', f); return () => removeEventListener('pointerdown', f); }, [pos]);
+  const ic = tone === 'ok' ? 'check' : tone === 'bad' ? 'x' : tone === 'wait' ? 'clock' : 'alert';
+  return <><button type="button" ref={ref} className={'xdot ' + tone} aria-label={lines.join('. ')} aria-expanded={!!pos} onClick={() => (pos ? setPos(null) : show())}
+    onPointerEnter={(e) => e.pointerType === 'mouse' && show()} onPointerLeave={(e) => e.pointerType === 'mouse' && hide()}><Icon name={ic} size={12} /></button>
+    {pos && createPortal(<span ref={pop} className={'xdot-pop ' + tone} role="tooltip" style={{ left: pos.x, top: pos.y }} onPointerEnter={() => clearTimeout(tm.current)} onPointerLeave={hide}>
+      <b>{lines[0]}</b>{lines.slice(1).filter(Boolean).map((l, i) => <span key={i}>{l}</span>)}
+      {again && <button type="button" className="btn xs" disabled={busy} onClick={again}>{busy ? 'Đang kiểm…' : 'Kiểm tra lại'}</button>}</span>, document.body)}</>;
 }
 
 /** Đơn đã duyệt → nút tạo hồ sơ QT kế tiếp (mở sẵn form, chọn sẵn mã tham chiếu) */

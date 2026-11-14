@@ -3232,3 +3232,11 @@ thead th:has(.col-i){white-space:nowrap}
 .q0p-l label:hover{background:#F6F8FB}.q0p-l b{min-width:0;flex:none;font-weight:600}
 .q0p-l .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cg-ot{--cg:#F3F1F8;--cgh:#E6E2EF;--cgb:#6B6487}
+/* Trạng thái file: chấm biểu tượng + ô chi tiết */
+.xdot{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:4px;border-radius:50%;border:0;padding:0;color:#fff;cursor:help;flex:none;vertical-align:middle}
+.xdot.ok{background:#16A34A}.xdot.bad{background:#DC2626}.xdot.warn{background:#D97706}.xdot.wait{background:#94A3B8}
+.xdot:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.xdot-pop{position:fixed;z-index:3000;width:300px;display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid var(--line2);border-left:4px solid #16A34A;box-shadow:0 10px 28px rgba(16,24,40,.18);font-size:13px;line-height:1.45;color:var(--ink)}
+.xdot-pop.bad{border-left-color:#DC2626}.xdot-pop.warn{border-left-color:#D97706}.xdot-pop.wait{border-left-color:#94A3B8}
+.xdot-pop .btn{align-self:flex-start;margin-top:6px}
+@media (max-width:760px){.xdot{width:28px;height:28px}.xdot::before{content:'';position:absolute;inset:-8px}.xdot{position:relative}}
