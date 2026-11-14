@@ -1,4 +1,4 @@
-import { useScope, setScope, SCOPES } from '../lib/myco';
+import { useScope, setScope } from '../lib/myco';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sb, type Order } from '../lib/supabase';
@@ -55,7 +55,7 @@ const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/
 
 /** Gắn ở Shell: phím tắt chung + bảng lệnh + bảng phím tắt */
 export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
-  const nav = useNavigate(); const { can } = useAuth(); const { scope, canSwitch: canScope } = useScope();
+  const nav = useNavigate(); const { can } = useAuth(); const { scope, canSwitch: canScope, options: scOpts } = useScope();
   const [pal, setPal] = useState(false); const [help, setHelp] = useState(false);
   const gAt = useRef(0);
   useEffect(() => {
@@ -74,13 +74,13 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
       if (key === 'g') { gAt.current = Date.now(); return; }
       if (key === '/') { e.preventDefault(); setPal(true); }
       else if (key === '?') { e.preventDefault(); setHelp(true); }
-      else if (key === 'c' && canScope) { e.preventDefault(); setScope(SCOPES[(SCOPES.indexOf(scope) + 1) % 4]); }
+      else if (key === 'c' && canScope) { e.preventDefault(); setScope(scOpts[(scOpts.indexOf(scope) + 1) % scOpts.length]); }
       else if (key === 'n' && (can('kinh_doanh') || can('admin_cnc'))) { e.preventDefault(); nav('/don/moi'); }
       else if (key === '[') { e.preventDefault(); onToggleSide(); }
     };
     addEventListener('keydown', k);
     return () => { removeEventListener('keydown', k); removeEventListener('show-shortcuts', open); };
-  }, [nav, can, onToggleSide, scope, canScope]);
+  }, [nav, can, onToggleSide, scope, canScope, scOpts]);
   return (<>
     {pal && <Palette onClose={() => setPal(false)} />}
     {help && (

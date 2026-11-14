@@ -7,6 +7,8 @@ import { Icon } from './Icon';
 import { confirmDialog, toast } from './ui';
 
 /** Quản trị: ai lập / kiểm tra / duyệt cho từng quy trình × công ty (chỉ Admin IT sửa) */
+const UNIT_OF: Record<string, string> = { PN: 'CNC', IPC: 'IPC', HW: 'HANWA' };
+const CO_OF: Record<string, string> = { CNC: 'PNC', PN: 'PNC', IPC: 'IPC', HANWA: 'HAN', HW: 'HAN', IT: 'IT' };
 type CP = { proc: string; company: string; role: string; user_id: string | null; group_id: string | null };
 const ROWS: Record<Proc, string[]> = { QT0: ['admin', 'ky_thuat', 'kiem_tra', 'duyet'], QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet'] };
 export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
@@ -41,7 +43,8 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
     return <select value={v} disabled={!canEdit} onChange={(e) => set(p, c, r, e.target.value)} className={!v ? 'need' : ''} aria-label={p + ' ' + c + ' ' + r}>
       <option value="">— chưa giao —</option>
       <optgroup label="Nhóm">{groups.filter((g) => g.active).map((g) => <option key={g.id} value={'g:' + g.id}>Nhóm {g.name}</option>)}</optgroup>
-      <optgroup label={'Người · ' + ({ PN: 'Phương Nam CNC', IPC: 'IPC', HW: 'Hanwa' } as Record<string, string>)[c]}>{people.filter((u) => u.unit === ({ PN: 'CNC', IPC: 'IPC', HW: 'HANWA' } as Record<string, string>)[c]).map((u) => <option key={u.id} value={'p:' + u.id}>{u.full_name}</option>)}</optgroup></select>; };
+      <optgroup label={'Người · ' + COMPANY[c as 'PN']}>{people.filter((u) => u.unit === UNIT_OF[c]).map((u) => <option key={u.id} value={'p:' + u.id}>{u.full_name}</option>)}</optgroup>
+      <optgroup label="Kiêm nhiệm · công ty khác">{people.filter((u) => u.unit !== UNIT_OF[c]).map((u) => <option key={u.id} value={'p:' + u.id}>{u.full_name} · {CO_OF[(u.unit ?? '').toUpperCase()] ?? u.unit ?? '—'}</option>)}</optgroup></select>; };
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được sửa.</span></div>}

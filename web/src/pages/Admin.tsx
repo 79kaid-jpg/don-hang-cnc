@@ -59,6 +59,8 @@ export default function Admin() {
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
   const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
+  const [ucos, setUcos] = useState<Record<string, string[]>>({});
+  useEffect(() => { sb.rpc('all_user_cos').then(({ data }) => setUcos(Object.fromEntries(((data as { id: string; cos: string[] }[]) ?? []).map((r) => [r.id, r.cos])))); }, [tab]);
   const NAV: [string, (typeof TABS)[number][]][] = [['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
     ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['act', 'plan', 'perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
@@ -108,7 +110,7 @@ export default function Admin() {
                 <button className="adm2-open" onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
                   <span className={'adm2-av u-' + p.unit}>{ini(p.full_name)}</span>
                   <span className="adm2-who"><b>{p.full_name || '(chưa đặt tên)'}</b>
-                    <span className="small muted">{UNIT_NAME[p.unit] ?? p.unit}{p.position ? ' · ' + p.position : ''}{!p.active && <span className="chip bad sm">Đã khoá</span>}</span></span>
+                    <span className="small muted">{UNIT_NAME[p.unit] ?? p.unit}{p.position ? ' · ' + p.position : ''}{(ucos[p.id] ?? []).length > 1 && <span className="adm2-cos" title="Kiêm nhiệm nhiều công ty (theo bảng Phụ trách quy trình)">{(ucos[p.id] ?? []).map((c) => <span key={c} className={'adm2-co co-' + c}>{({ PN: 'PNC', IPC: 'IPC', HW: 'HAN' } as Record<string, string>)[c] ?? c}</span>)}</span>}{!p.active && <span className="chip bad sm">Đã khoá</span>}</span></span>
                   <span className="adm2-tags">{tags.length ? <>{tags.slice(0, 3).map((t) => <span key={t} className="adm2-tag">{t}</span>)}{tags.length > 3 && <span className="adm2-tag more">+{tags.length - 3}</span>}</>
                     : <span className="adm2-tag bad">Chưa có vai trò</span>}
                     {gs.slice(0, 2).map((g) => <span key={g.id} className="adm2-tag grp"><Icon name="users" size={11} />{g.name}</span>)}</span>

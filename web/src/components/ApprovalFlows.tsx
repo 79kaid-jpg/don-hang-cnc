@@ -62,6 +62,7 @@ export function ApprovalFlows({ canEdit }: { canEdit: boolean }) {
     <select value={u ? 'u:' + u : g ? 'g:' + g : ''} disabled={!canEdit} onChange={(e) => { const v = e.target.value; on(v.startsWith('u:') ? v.slice(2) : null, v.startsWith('g:') ? v.slice(2) : null); }}>
       <option value="">– Chọn –</option>
       <optgroup label={unit ? 'Người · ' + COMPANY[company as 'PN'] : 'Người'}>{people.filter((p) => !unit || p.unit === unit).map((p) => <option key={p.id} value={'u:' + p.id}>{p.full_name}</option>)}</optgroup>
+      {unit && <optgroup label="Kiêm nhiệm · công ty khác">{people.filter((p) => p.unit !== unit).map((p) => <option key={p.id} value={'u:' + p.id}>{p.full_name} · {p.unit ?? '—'}</option>)}</optgroup>}
       <optgroup label="Nhóm">{groups.map((x) => <option key={x.id} value={'g:' + x.id}>{x.name}</option>)}</optgroup></select>;
   const today = new Date().toISOString().slice(0, 10);
 

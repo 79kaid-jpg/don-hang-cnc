@@ -10,11 +10,26 @@ const subs = new Set<() => void>();
 export const setViewCo = (c: Co | null) => { try { if (c) localStorage.setItem('view-co', c); else localStorage.removeItem('view-co'); } catch { /* */ } subs.forEach((f) => f()); };
 
 /** Công ty của người đang xem (theo Đơn vị). Admin/IT chọn được công ty để xem (lưu trên máy). */
-export function useMyCo(): { co: Co; own: Co | null; canSwitch: boolean } {
+export function useMyCo(): { co: Co; own: Co | null; canSwitch: boolean; allowed: Co[]; all: boolean } {
   const { me, can } = useAuth(); const [, tick] = useState(0);
   useEffect(() => { const f = () => tick((x) => x + 1); subs.add(f); return () => { subs.delete(f); }; }, []);
-  const own = UNIT[(me?.unit ?? '').toUpperCase()] ?? null; const canSwitch = can('admin_it') || !own;
-  return { co: (canSwitch ? get() : null) ?? own ?? 'PN', own, canSwitch };
+  const own = UNIT[(me?.unit ?? '').toUpperCase()] ?? null;
+  const cos = useMyCos(me?.id);
+  const all = can('admin_it') || !own;            // admin / tổng giám đốc: mọi công ty
+  const canSwitch = all || cos.length > 1;          // kiêm nhiệm ≥ 2 công ty: đổi trong các công ty của mình
+  const allowed: Co[] = all ? ['PN', 'IPC', 'HW'] : (cos.length ? cos : own ? [own] : []);
+  const g = get(); const co = (canSwitch && g && allowed.includes(g) ? g : null) ?? own ?? allowed[0] ?? 'PN';
+  return { co, own, canSwitch, allowed, all };
+}
+
+/** Công ty người dùng tham gia (Đơn vị + các bước được giao ở công ty khác) */
+let cosCache: { id: string; v: Co[] } | null = null; const cosSubs = new Set<() => void>();
+function useMyCos(id?: string): Co[] {
+  const [, tick] = useState(0);
+  useEffect(() => { const f = () => tick((x) => x + 1); cosSubs.add(f);
+    if (id && cosCache?.id !== id) { cosCache = { id, v: [] }; sb.rpc('my_cos').then(({ data }) => { cosCache = { id, v: ((data as Co[]) ?? []) }; cosSubs.forEach((x) => x()); }); }
+    return () => { cosSubs.delete(f); }; }, [id]);
+  return id && cosCache?.id === id ? cosCache.v : [];
 }
 
 type Row = { id: string; company: Co; code: string; order_id: string | null; batch_id: string | null; project_id: string | null };
@@ -45,9 +60,11 @@ export const codeFile = (c: string) => c.replace(/\//g, '-');
 export type Scope = 'ALL' | Co;
 const getScope = (): Scope | null => { try { return localStorage.getItem('scope-co') as Scope | null; } catch { return null; } };
 export const setScope = (c: Scope) => { try { localStorage.setItem('scope-co', c); } catch { /* */ } if (c !== 'ALL') setViewCo(c); else subs.forEach((f) => f()); };
-export function useScope(): { scope: Scope; canSwitch: boolean; own: Co | null } {
-  const { own, canSwitch } = useMyCo();
-  return { scope: canSwitch ? getScope() ?? 'ALL' : own ?? 'ALL', canSwitch, own };
+export function useScope(): { scope: Scope; canSwitch: boolean; own: Co | null; options: Scope[] } {
+  const { own, canSwitch, allowed, all } = useMyCo();
+  const options: Scope[] = all ? ['ALL', 'PN', 'IPC', 'HW'] : allowed;
+  const g = getScope(); const scope: Scope = canSwitch && g && options.includes(g) ? g : (all ? 'ALL' : own ?? allowed[0] ?? 'ALL');
+  return { scope, canSwitch, own, options };
 }
 export const SCOPE_LABEL: Record<Scope, string> = { ALL: 'Tất cả', PN: 'PNC', IPC: 'IPC', HW: 'HAN' };
 export const SCOPES: Scope[] = ['ALL', 'PN', 'IPC', 'HW'];

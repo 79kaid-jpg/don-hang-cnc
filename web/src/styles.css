@@ -3046,3 +3046,4 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
 html[data-scope=PN] body::before,html[data-scope=IPC] body::before,html[data-scope=HW] body::before{content:'';position:fixed;left:0;right:0;top:0;height:3px;z-index:200;pointer-events:none}
 html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::before{background:#c2700f}html[data-scope=HW] body::before{background:#2f8a4b}
 .app.side-hidden:not(.side-peek) .scope-side .scope-t,.app.side-hidden:not(.side-peek) .scope-side svg{display:none}
+.adm2-cos{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.adm2-co{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:#EEF3FA;color:#2f6db5}.adm2-co.co-IPC{background:#FDF2E3;color:#a35e0c}.adm2-co.co-HW{background:#E9F5EC;color:#2f8a4b}
