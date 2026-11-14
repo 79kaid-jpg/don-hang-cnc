@@ -1,0 +1,2 @@
+-- 14/11: tách policy FOR ALL trùng với policy đọc thành insert/update/delete (split_all_policies);
+-- dash_data(p_scope, p_days): dữ liệu thống kê lọc sẵn trên máy chủ. Đã áp dụng qua MCP.

@@ -42,11 +42,12 @@ export default function Dashboard() {
   useEffect(() => { try { const y = +(sessionStorage.getItem('db-y') ?? 0); if (y && back) setTimeout(() => scrollToY(y), 400);
     const f = () => sessionStorage.setItem('db-y', String(scrollTop())); addEventListener('scroll', f, { passive: true, capture: true }); return () => removeEventListener('scroll', f, { capture: true }); } catch { return; } }, []);
   const holder = useHolders();
-  useEffect(() => {
-    sb.from('orders').select('*').neq('status', 'huy').then(({ data }) => setOs((data as Order[]) ?? []));
-    sb.from('batches').select('*').neq('status', 'huy').then(({ data }) => setBs((data as Batch[]) ?? []));
-    sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at, signs').then(({ data }) => setDs((data as D[]) ?? []));
-  }, []);
+  const { scope: scopeQ } = useScope();
+  // Máy chủ lọc sẵn theo công ty + khoảng thời gian (chỉ lượt đang chạy / xong trong kỳ, chữ ký rút gọn)
+  useEffect(() => { let live = true;
+    sb.rpc('dash_data', { p_scope: scopeQ, p_days: days }).then(({ data }) => { if (!live || !data) return; const x = data as { orders: Order[]; batches: Batch[]; docs: D[] };
+      setBs(x.batches ?? []); setDs(x.docs ?? []); setOs(x.orders ?? []); });
+    return () => { live = false; }; }, [scopeQ, days]);
 
   const { scope } = useScope();
   const M = useMemo(() => {
