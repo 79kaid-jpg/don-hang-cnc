@@ -17,7 +17,7 @@ export function useGuides(): Guide[] {
   useEffect(() => { const f = () => setV(cache ?? []); subs.add(f); loadGuides().then(f); return () => { subs.delete(f); }; }, []);
   return v;
 }
-sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'INITIAL_SESSION') loadGuides(true); });
+sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'INITIAL_SESSION') setTimeout(() => loadGuides(true), 0); });
 
 /** Hướng dẫn cho bước: ưu tiên bản riêng của công ty (QT1.IPC.lap), không có thì bản chung (QT1.*.lap) */
 export function guideFor(all: Guide[], proc: string, company: string | null | undefined, step: string): Guide | undefined {

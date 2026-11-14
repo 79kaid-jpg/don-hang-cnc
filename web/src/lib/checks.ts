@@ -34,7 +34,7 @@ export function itemsOf(tpl: CheckTpl[], proc: string, step: string, saved?: Rec
 }
 export const progress = (it: CheckItem[]) => ({ done: it.filter((x) => x.done).length, total: it.length, miss: it.filter((x) => x.level === 'req' && !x.done).length });
 // Tải lại sau khi đăng nhập / đổi người (lần tải trước khi có phiên trả về rỗng do RLS)
-sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED' || e === 'INITIAL_SESSION') loadChecks(true); });
+sb.auth.onAuthStateChange((e) => { if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED' || e === 'INITIAL_SESSION') setTimeout(() => loadChecks(true), 0); });
 
 /** Tự kiểm tra: quy tắc dạng
  *  h:<trường>      ô thông tin đã nhập

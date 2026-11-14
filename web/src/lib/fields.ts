@@ -75,4 +75,4 @@ export const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').re
 export const f0Perm = (f: FDef): Perm => (f.perms?.['*']?.['*'] as Perm) ?? 'edit';
 
 // Tải lại cấu hình khi đăng nhập / đổi phiên
-sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED') { if (!store) loadFields(); } });
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED') { if (!store) setTimeout(() => { loadFields(); }, 0); } });
