@@ -3047,3 +3047,20 @@ html[data-scope=PN] body::before,html[data-scope=IPC] body::before,html[data-sco
 html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::before{background:#c2700f}html[data-scope=HW] body::before{background:#2f8a4b}
 .app.side-hidden:not(.side-peek) .scope-side .scope-t,.app.side-hidden:not(.side-peek) .scope-side svg{display:none}
 .adm2-cos{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.adm2-co{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:#EEF3FA;color:#2f6db5}.adm2-co.co-IPC{background:#FDF2E3;color:#a35e0c}.adm2-co.co-HW{background:#E9F5EC;color:#2f8a4b}
+/* QT3 · Ảnh giao hàng */
+.gh{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:14px}
+.gh-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.gh-hd .chip.ok{background:#E8F5EC;color:#2f8a4b}
+.gh-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.gh-it{display:flex;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.gh-it.need{border-color:#F3C1BB;background:#FFFAF9}.gh-it.ok{border-color:#BFE3CB}
+.gh-n{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#EEF1F5;font-weight:700;font-size:13px}
+.gh-it.ok .gh-n{background:#2f8a4b;color:#fff}
+.gh-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.gh-tx{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gh-tx label{display:flex;flex-direction:column;gap:2px}.gh-tx small{grid-column:1/-1}
+.gh-thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.gh-th{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:#EEF1F5}
+.gh-th img{width:100%;height:100%;object-fit:cover;display:block}.gh-ph{display:block;width:100%;height:100%}
+.gh-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;cursor:pointer}
+.gh-up{align-self:flex-start;min-height:44px}
+@media (max-width:760px){.gh-tx{grid-template-columns:1fr}.gh-up{align-self:stretch;justify-content:center}.gh-th{width:72px;height:72px}}
+.gh-lock{display:grid!important;place-items:center;color:var(--muted)}

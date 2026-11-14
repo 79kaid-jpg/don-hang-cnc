@@ -24,7 +24,7 @@ export async function checkExcelFile(file: File): Promise<{ ok: true; c: XCheck 
 }
 
 /** Tìm bảng bóc tách: tiêu đề 1–3 dòng (ghép), cần Mã tấm + Dày + Số lượng; Vật liệu không bắt buộc. Ưu tiên sheet BOCTACHBANVE. */
-function findTable(sheets: { name: string; rows: unknown[][] }[]): { sheet: string; rows: unknown[][]; ci: number; si: number; di: number } | null {
+export function findTable(sheets: { name: string; rows: unknown[][] }[]): { sheet: string; rows: unknown[][]; ci: number; si: number; di: number } | null {
   const ord = [...sheets].sort((a, b) => Number(/boc ?tach/i.test(norm(b.name))) - Number(/boc ?tach/i.test(norm(a.name))));
   for (const s of ord) { const a = s.rows;
     for (let i = 0; i < Math.min(a.length, 40); i++) for (let k = 1; k <= 3 && i + k <= a.length; k++) {
@@ -42,4 +42,19 @@ export function compareExcel(c: XCheck, ds: Record<string, unknown>[]) {
   const missing = [...fc].filter((x) => !lc.has(x)); const extra = [...lc].filter((x) => !fc.has(x));
   const qty = ds.reduce((a, r) => a + num(r.so_tam), 0);
   return { ok: !missing.length && !extra.length && Math.abs(qty - c.qty) < 1e-6, missing, extra, fileQty: c.qty, listQty: qty, fileRows: c.rows, listRows: ds.length };
+}
+
+/** Đọc dòng tấm từ file bóc tách (sheet BOCTACHBANVE, tiêu đề 1–3 dòng): mã tấm, dày, rộng, dài, số lượng, m² hoàn thiện, màu */
+export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Record<string, string>[] {
+  const t = findTable(sheets); if (!t) return [];
+  const all = sheets.find((s) => s.name === t.sheet)!.rows; const start = all.length - t.rows.length;
+  const hdr = all.slice(Math.max(0, start - 3), start);
+  const col = (re: RegExp, from = 0, to = 999) => { const w = Math.max(...hdr.map((r) => r.length)); for (let j = from; j < Math.min(w, to); j++) if (hdr.some((r) => re.test(norm(r[j])))) return j; return -1; };
+  const ri = col(/^rong/, t.di, t.si + 1), li = col(/^dai$/, t.di, t.si + 1), mi = col(/khoiluong|^m2$|dientich/, t.si), vi = col(/vatlieu|vattu|material/), ci = col(/mau/, t.si);
+  const out: Record<string, string>[] = [];
+  for (const r of t.rows) { const ma = String(r[t.ci] ?? '').trim(); if (!ma) { if (out.length) break; continue; } if (num(r[t.si]) <= 0) continue;
+    const v = (j: number) => (j >= 0 ? String(r[j] ?? '').trim() : '');
+    const m2 = mi >= 0 && num(r[mi]) > 0 ? String(+num(r[mi]).toFixed(4)) : '';
+    out.push({ ma_tam: ma, day: v(t.di), so_tam: v(t.si), rong: v(ri), dai: v(li), m2, vat_lieu: v(vi), ma_mau: v(ci) }); }
+  return out;
 }

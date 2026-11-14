@@ -10,7 +10,7 @@ import { confirmDialog, toast } from './ui';
 const UNIT_OF: Record<string, string> = { PN: 'CNC', IPC: 'IPC', HW: 'HANWA' };
 const CO_OF: Record<string, string> = { CNC: 'PNC', PN: 'PNC', IPC: 'IPC', HANWA: 'HAN', HW: 'HAN', IT: 'IT' };
 type CP = { proc: string; company: string; role: string; user_id: string | null; group_id: string | null };
-const ROWS: Record<Proc, string[]> = { QT0: ['admin', 'ky_thuat', 'kiem_tra', 'duyet'], QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet'] };
+const ROWS: Record<Proc, string[]> = { QT0: ['admin', 'ky_thuat', 'kiem_tra', 'duyet'], QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet', 'thu_kho'] };
 export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
   const [rows, setRows] = useState<CP[]>([]); const [people, setPeople] = useState<Profile[]>([]); const [groups] = useGroups(); const [err, setErr] = useState('');
   const load = useCallback(() => { sb.from('chain_people').select('*').then(({ data }) => setRows((data as CP[]) ?? [])); }, []);

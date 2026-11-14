@@ -1,0 +1,2 @@
+-- Đợt 2 (14/11): QT3 thêm bước "Tải ảnh giao hàng" (thủ kho, nhóm Mai Trâm / Ngọc Trâm) sau Duyệt; bắt buộc 5 loại ảnh + CCCD/SĐT tài xế
+-- (đã áp dụng qua MCP: _flow, _role_of, doc_advance (kiểm ảnh, trả về anh_giao → duyet, duyệt thêm → anh_giao), chain_people thu_kho, proc_fields tx_cccd/tx_sdt)

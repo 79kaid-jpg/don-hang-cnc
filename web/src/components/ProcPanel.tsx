@@ -1,4 +1,5 @@
 import { GuideBox } from './GuideBox';
+import { bocTachRows } from '../lib/excelCheck';
 import { FixMsg } from './FixMsg';
 import { isTyping, keyOf, modalOpen } from './Shortcuts';
 import { missingReq, jumpField } from '../lib/checks';
@@ -17,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import {
-  BATCH_WORD, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
+  BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row
 } from '../lib/proc';
 import { Icon } from './Icon';
@@ -301,7 +302,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     for (const f of fieldsOf(proc, 'header')) { const v = def[f.key]; if (v && !String(h[f.key] ?? '').trim() && canEd(f)) add[f.key] = v; }
     if (Object.keys(add).length) { setH((x) => ({ ...add, ...Object.fromEntries(Object.entries(x).filter(([, v]) => String(v ?? '').trim())) })); setDirty(true); } }, [d.id, can, meName, closed]); // eslint-disable-line react-hooks/exhaustive-deps
   const hid = new Set(d.hidden ?? []); // trường bị ẩn theo phân quyền (máy chủ đã xoá giá trị)
-  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn'));
+  const hFields = fieldsOf(proc, 'header').filter((f) => pm(f) !== 'hide' && !hid.has('h:' + f.key) && !(proc === 'QT1' && f.key === 'so_xn') && !(proc === 'QT3' && (f.key === 'tx_cccd' || f.key === 'tx_sdt')));
   // Gợi ý địa chỉ giao: địa chỉ của bên nhận (PN→IPC, IPC→Hanwa, Hanwa→khách cuối)
   const [ship, setShip] = useState<string[]>([]); const [carriers, setCarriers] = useState<Customer[]>([]); const [custs, setCusts] = useState<Customer[]>([]);
   const hasCarrier = hFields.some((f) => f.type === 'carrier');
@@ -446,6 +447,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
       {proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SignedBox d={d} o={o} b={b} files={files} onDone={(nf) => { setFiles(nf); onChanged(); }} />}
+      {proc === 'QT3' && (d.status === 'anh_giao' || files.some((x) => x.kind.startsWith('gh_'))) && <GiaoAnh d={d} can={can && d.status === 'anh_giao'} files={files} h={h}
+        onField={(k, v) => { setH((x) => ({ ...x, [k]: v })); setDirty(true); }} upload={upload} remove={removeFile} />}
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
@@ -633,7 +636,12 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
   const doFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return; const X = await import('xlsx');
     const wb = X.read(await f.arrayBuffer()); const aoa = X.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '', raw: false });
-    const add = fromAoa(aoa); onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); e.target.value = '';
+    let add = fromAoa(aoa); let how = '';
+    // Không khớp tiêu đề bảng → thử đọc như file bóc tách (sheet BOCTACHBANVE)
+    if (!add.length) { const keys = new Set(cols.map((c) => c.k)); const br = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
+      add = br.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => keys.has(k) && v !== '')) as Row); how = ' (đọc theo mẫu bóc tách)'; }
+    if (!add.length) { setMsg('Không đọc được dòng nào từ ' + f.name + ': cần tiêu đề giống bảng, hoặc file bóc tách có cột Mã tấm, Độ dày, Số lượng.'); e.target.value = ''; return; }
+    onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name + how + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); e.target.value = '';
   };
   // File mẫu: đúng các cột của bảng (cột tự tính để trống, ghi chú "tự tính"), 3 dòng ví dụ
   const tpl = async () => { const X = await import('xlsx'); const hd = cols.map((c) => c.calc ? c.t + ' (tự tính)' : c.t);
@@ -839,4 +847,36 @@ function HaoTip({ a, z, l, m1, m2 }: { a: number; z: number; l: number | null; m
       <span className="muted">Định mức 15%: vượt thì hiện đỏ – chỉ cảnh báo, không chặn gửi.</span>
     </span>}
   </span>;
+}
+
+/** QT3 · Thủ kho tải ảnh giao hàng: 5 mục, mỗi mục cần ≥ 1 ảnh; điện thoại/tablet mở camera */
+function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: boolean; files: { kind: string; name: string; path: string }[]; h: Record<string, unknown>;
+  onField: (k: string, v: string) => void; upload: (e: React.ChangeEvent<HTMLInputElement>, kind: string) => void; remove: (path: string, name: string) => void }) {
+  const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
+  const { can: hasRole } = useAuth(); const seeCccd = can || hasRole('admin_it') || hasRole('admin_cnc') || hasRole('kho_qc');
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => { let live = true; const ps = files.filter((f) => f.kind.startsWith('gh_') && (seeCccd || f.kind !== 'gh_cccd')).map((f) => f.path).filter((p) => !urls[p]);
+    if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
+    return () => { live = false; }; }, [files]); // eslint-disable-line react-hooks/exhaustive-deps
+  const done = GH_ITEMS.filter(([k]) => files.some((f) => f.kind === k)).length + 0;
+  const txOk = String(h.tx_cccd ?? '').trim() && String(h.tx_sdt ?? '').trim();
+  return <section className="gh card" aria-label="Ảnh giao hàng">
+    <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (done === 5 && txOk ? 'ok' : '')}>{done}/5 mục</span>
+      <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}</span></div>
+    <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const ok = mine.length > 0 && (k !== 'gh_cccd' || txOk);
+      return <li key={k} className={'gh-it' + (ok ? ' ok' : '') + (can && !ok ? ' need' : '')} data-fk={k}>
+        <span className="gh-n" aria-hidden="true">{ok ? <Icon name="check" size={14} /> : i + 1}</span>
+        <div className="gh-body"><b>{lab}</b>
+          {k === 'gh_cccd' && <div className="gh-tx">
+            <label><span className="small muted">Số CCCD</span><input inputMode="numeric" autoComplete="off" value={seeCccd ? String(h.tx_cccd ?? '') : (h.tx_cccd ? '••••••••' : '')} disabled={!can} onChange={(e) => onField('tx_cccd', e.target.value)} /></label>
+            <label><span className="small muted">Số điện thoại</span><input type="tel" inputMode="tel" autoComplete="off" value={String(h.tx_sdt ?? '')} disabled={!can} onChange={(e) => onField('tx_sdt', e.target.value)} /></label>
+            <small className="muted">Ảnh CCCD chỉ người trong quy trình giao hàng và admin xem, không in, không gửi Zalo.</small></div>}
+          {mine.length > 0 && <div className="gh-thumbs">{mine.map((f) => <span key={f.path} className="gh-th">
+            {k === 'gh_cccd' && !seeCccd ? <span className="gh-ph gh-lock" title="Ảnh CCCD chỉ thủ kho và admin xem"><Icon name="eyeoff" size={18} /></span> : urls[f.path] ? <a href={urls[f.path]} target="_blank" rel="noreferrer"><img src={urls[f.path]} alt={lab} loading="lazy" /></a> : <span className="gh-ph" />}
+            {can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>)}</div>}
+          {can && <label className={'btn sm ' + (mine.length ? '' : 'primary') + ' gh-up'}>
+            <Icon name={touch ? 'file' : 'upload'} size={15} />{touch ? (mine.length ? 'Chụp thêm' : 'Chụp ảnh') : (mine.length ? 'Thêm ảnh' : 'Tải ảnh lên')}
+            <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden onChange={(e) => upload(e, k)} /></label>}
+        </div></li>; })}</ol>
+  </section>;
 }

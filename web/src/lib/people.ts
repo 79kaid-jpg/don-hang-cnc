@@ -8,7 +8,7 @@ let cache: { cp: CP[]; ppl: Record<string, string>; gs: Record<string, string[]>
 const load = () => inflight ??= Promise.all([sb.from('chain_people').select('proc, company, role, user_id, group_id'), sb.from('profiles').select('id, full_name'), sb.from('work_groups').select('id, member_ids')])
   .then(([a, b, c]) => { cache = { cp: (a.data as CP[]) ?? [], ppl: Object.fromEntries(((b.data ?? []) as { id: string; full_name: string }[]).map((x) => [x.id, x.full_name])),
     gs: Object.fromEntries(((c.data ?? []) as { id: string; member_ids: string[] }[]).map((g) => [g.id, g.member_ids])) }; });
-const RN: Record<string, string> = { admin: 'Admin', ky_thuat: 'Kỹ thuật', lap: 'Lập', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', hoan_tat: 'Hoàn tất' };
+const RN: Record<string, string> = { admin: 'Admin', ky_thuat: 'Kỹ thuật', lap: 'Lập', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', hoan_tat: 'Hoàn tất', thu_kho: 'Thủ kho' };
 const CO: Record<string, string> = { PN: 'PN', IPC: 'IPC', HW: 'Hanwa' };
 
 export function useWho() {

@@ -16,17 +16,17 @@ export const BATCH_WORD: Record<Proc, string> = { QT0: 'lần bóc tách', QT1: 
 
 export const FLOW: Record<Proc, string[]> = {
   QT0: ['tiep_nhan', 'boc_tach', 'tao_ds', 'kiem_tra', 'duyet'],
-  QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet']
+  QT1: ['lap', 'kiem_tra', 'duyet'], QT2: ['lap', 'kiem_tra', 'duyet'], QT3: ['lap', 'kiem_tra', 'duyet', 'anh_giao']
 };
 export const STATUS: Record<string, string> = {
   tiep_nhan: 'Admin tiếp nhận', boc_tach: 'Bóc tách kỹ thuật', tao_ds: 'Tạo danh sách tấm', kiem_tra: 'Kiểm tra', duyet: 'Duyệt',
-  lap: 'Lập', da_duyet: 'Đã duyệt', fail: 'Fail', duyet_them: 'Duyệt thêm'
+  lap: 'Lập', anh_giao: 'Tải ảnh giao hàng', da_duyet: 'Đã duyệt', fail: 'Fail', duyet_them: 'Duyệt thêm'
 };
-export const ROLE_OF: Record<string, string> = { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet', lap: 'lap' };
-export const ROLE_NAME: Record<string, string> = { admin: 'Admin tiếp nhận', ky_thuat: 'Bóc tách kỹ thuật', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập', hoan_tat: 'Tải bản ký tay' };
+export const ROLE_OF: Record<string, string> = { tiep_nhan: 'admin', boc_tach: 'ky_thuat', tao_ds: 'admin', kiem_tra: 'kiem_tra', duyet: 'duyet', lap: 'lap', anh_giao: 'thu_kho' };
+export const ROLE_NAME: Record<string, string> = { admin: 'Admin tiếp nhận', ky_thuat: 'Bóc tách kỹ thuật', kiem_tra: 'Kiểm tra', duyet: 'Duyệt', lap: 'Lập', hoan_tat: 'Tải bản ký tay', thu_kho: 'Thủ kho · ảnh giao hàng' };
 export const FINAL: Record<Proc, string> = { QT0: '', QT1: 'Khách ký xác nhận', QT2: 'Ký bàn giao / nhận vật liệu', QT3: 'Khách ký nhận hàng' };
 export const NEXT_LABEL: Record<string, string> = {
-  tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Xong bóc tách', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Đạt', duyet: 'Duyệt', lap: 'Gửi kiểm tra'
+  tiep_nhan: 'Chuyển bóc tách', boc_tach: 'Xong bóc tách', tao_ds: 'Gửi kiểm tra', kiem_tra: 'Đạt', duyet: 'Duyệt', lap: 'Gửi kiểm tra', anh_giao: 'Xong ảnh giao hàng'
 };
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
@@ -110,3 +110,6 @@ export function procSummary(p: Proc, bs: Batch[], ds: Doc[]): { t: string; d: st
 }
 
 const docs0 = (b: Batch, ds: Doc[]) => ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort().pop() ?? b.created_at;
+
+/** QT3 · Tải ảnh giao hàng: 5 mục bắt buộc có ảnh */
+export const GH_ITEMS: [string, string][] = [['gh_cccd', 'CCCD & số điện thoại tài xế'], ['gh_truoc', 'Ảnh trước khi lên hàng'], ['gh_sau', 'Ảnh sau khi load hàng xong'], ['gh_xe', 'Ảnh nguyên chiếc xe'], ['gh_bbgh', 'Ảnh BBGH đã ký']];
