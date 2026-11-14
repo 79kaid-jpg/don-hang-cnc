@@ -2997,3 +2997,15 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
 }
 @media (min-width:1440px) and (pointer:coarse){.pp-sidebtn.pp-grip{width:24px;height:64px}}
 @media (prefers-reduced-motion:reduce){.pp-sidebtn.pp-grip,.pp-shutter{transition:none}}
+
+/* Cột đã đóng: ẩn tay nắm, nút mở là pill đầu tiên */
+@media (min-width:1440px){
+  .pp-doc.shut .pp-sidebtn.pp-grip{display:none}
+  .pp-doc.shut .pp-shutter{padding-top:14px}
+  .pp-sh-open{display:grid;place-items:center;width:34px;height:30px;border:0;border-radius:17px;background:var(--accent,#3b6ea8);color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(20,28,40,.25);transition:transform .15s,box-shadow .15s}
+  .pp-sh-open:hover{transform:translateX(-2px);box-shadow:0 2px 8px rgba(59,110,168,.4)}
+  .pp-shutter:hover{filter:brightness(1.04)}
+  .pp-sidebtn.pp-grip:focus{outline:none}
+  .pp-sidebtn.pp-grip:focus:not(:focus-visible){box-shadow:0 2px 6px rgba(20,28,40,.10);border-color:var(--line2)}
+  .pp-sh-open:focus{outline:none}.pp-sh-open:focus-visible{outline:2px solid var(--accent,#3b6ea8);outline-offset:2px}
+}
