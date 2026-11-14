@@ -320,7 +320,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const hasCarrier = hFields.some((f) => f.type === 'carrier');
   useEffect(() => { if (hasCarrier) sb.from('customers').select('*').in('kind', ['van_chuyen', 'noi_bo']).eq('active', true).order('name').then(({ data }) => setCarriers((data as Customer[]) ?? [])); }, [proc, hasCarrier]); // eslint-disable-line react-hooks/exhaustive-deps
   const plates = carriers.find((c) => c.id === h.dvvc)?.vehicles ?? [];
-  useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem' || f.key === 'dk_giao')) return;
+  // Điều kiện giao hàng: gợi ý riêng (mẫu hay dùng + giá trị đã nhập ở phiếu trước)
+  const [dkgs, setDkgs] = useState<string[]>([]);
+  useEffect(() => { if (!hFields.some((f) => f.key === 'dk_giao')) return;
+    cached('dkg', () => sb.from('docs').select('header').not('header->>dk_giao', 'is', null).order('created_at', { ascending: false }).limit(200), 300000)
+      .then(({ data }) => setDkgs([...new Set(((data as { header: Record<string, string> }[]) ?? []).map((x) => String(x.header?.dk_giao ?? '').trim()).filter(Boolean))].slice(0, 20))); }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!hFields.some((f) => f.key === 'dia_diem')) return;
     cached('custs', () => sb.from('customers').select('*'), 60000).then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
@@ -471,13 +476,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
               : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
-              : <input type={f.type === 'date' ? 'date' : 'text'} list={(f.key === 'dia_diem' || f.key === 'dk_giao') && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
+              : <input type={f.type === 'date' ? 'date' : 'text'} list={f.key === 'dk_giao' ? 'dkg-' + d.id : f.key === 'dia_diem' && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
                 onChange={(e) => { const x = f.type === 'number' ? numTyping(e.target.value) : e.target.value; const pv = f.key === 'xe' ? plates.find((p) => p.plate === x) : undefined;
                   if (pv?.driver && !h.tai_xe) { setH({ ...h, xe: x, tai_xe: pv.driver }); setDirty(true); } else on(x); }} />}
             {f.key === 'xe' && plates.length > 0 && <datalist id={'xe-' + d.id}>{plates.map((p) => <option key={p.plate} value={p.plate}>{p.driver}</option>)}</datalist>}
             {f.key === 'tai_xe' && plates.length > 0 && <datalist id={'tx-' + d.id}>{[...new Set(plates.map((p) => p.driver).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
             {f.type === 'number' && !isNumOk(v) && <small className="f-err">Phải là số, VD: 12 hoặc 12,5</small>}
-            {(f.key === 'dia_diem' || f.key === 'dk_giao') && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
+            {f.key === 'dk_giao' && <datalist id={'dkg-' + d.id}>{[...new Set([...DKG, ...dkgs])].map((x) => <option key={x} value={x} />)}</datalist>}
+            {f.key === 'dia_diem' && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
             {f.help && <small className="muted">{f.help}</small>}</label>; })}
       </div>
 
@@ -837,6 +843,7 @@ const SAMPLE: Record<string, (string | number)[]> = {
   ghi_chu: ['', '', ''],
 };
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
+const DKG = ['Giao tại kho bên mua', 'Giao tại xưởng bên bán', 'Bên mua tự vận chuyển'];
 const GCLS: Record<string, string> = { 'Báo giá': ' cg cg-bg', 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
 const cgOf = (c: { g?: string }, cols: { g?: string }[], i: number) => (c.g ? (GCLS[c.g] ?? ' cg') + (i === 0 || cols[i - 1]?.g !== c.g ? ' cg-first' : '') : '');
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
@@ -845,7 +852,8 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const title = { QT0: 'DANH SÁCH TẤM – BÓC TÁCH BẢN VẼ', QT1: 'XÁC NHẬN ĐƠN HÀNG', QT2: 'LỆNH GIA CÔNG KIÊM BÀN GIAO VẬT LIỆU', QT3: 'PHIẾU XUẤT KHO KIÊM BIÊN BẢN GIAO HÀNG' }[b.proc];
   const meta = [['Mã đơn hàng', docCode(o, b, d.company)], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
   const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
-    return `<h3>${esc(T.t)}</h3><table><tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
+    const grp = T.cols.some((c) => c.g) ? '<tr class="g"><th></th>' + T.cols.reduce<{ g: string; n: number }[]>((a, c, i) => { const g = c.g ?? ''; const l = a[a.length - 1]; if (i > 0 && l && l.g === g && g) l.n++; else a.push({ g, n: 1 }); return a; }, []).map((x) => `<th colspan="${x.n}">${esc(x.g)}</th>`).join('') + '</tr>' : '';
+    return `<h3>${esc(T.t)}</h3><table>${grp}<tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}${c.u ? '<br><small>' + esc(c.u) + '</small>' : ''}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
       <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
   const roles = b.proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet'];
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
@@ -855,7 +863,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
     @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm}body{font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}
-    .notes{margin-top:8px;font-size:10.5px}</style></head><body>
+    .notes{margin-top:8px;font-size:10.5px}tr.g th{background:#ddd;text-transform:uppercase;font-size:10px;letter-spacing:.03em;text-align:center}th small{font-weight:400;font-style:italic;color:#555}</style></head><body>
     <div class="co">${esc(COMPANY[d.company])}</div><h1>${title}</h1>
     <table class="meta">${meta.map((m, i) => (i % 2 === 0 ? '<tr>' : '') + `<td><b>${esc(m[0])}:</b> ${esc(m[1])}</td>` + (i % 2 ? '</tr>' : '')).join('')}</table>
     ${tbl}

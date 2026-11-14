@@ -42,7 +42,7 @@ export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m !=
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
   ds0: { t: 'Danh sách tấm', cols: [
-    { k: 'ma_tam', t: 'Nội dung mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'ma_tam', t: 'Mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'rong', t: 'Rộng', n: true, g: 'Kích thước hoàn thiện', u: 'mm' }, { k: 'dai', t: 'Dài', n: true, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'so_tam', t: 'Số lượng', n: true, g: 'Kích thước hoàn thiện', u: 'tấm' }, { k: 'mau_son', t: 'Màu sơn', w: 6, g: 'Kích thước hoàn thiện' },
     { k: 'm2_ht', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước hoàn thiện', u: 'm²' },
@@ -54,7 +54,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
-    { k: 'ma_tam', t: 'Nội dung mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'ma_tam', t: 'Mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'rong', t: 'Rộng', n: true, g: 'Kích thước hoàn thiện', u: 'mm' }, { k: 'dai', t: 'Dài', n: true, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'so_tam', t: 'Số lượng', n: true, g: 'Kích thước hoàn thiện', u: 'tấm' }, { k: 'mau_son', t: 'Màu sơn', w: 6, g: 'Kích thước hoàn thiện' },
     { k: 'm2', t: 'Khối lượng', n: true, d: 4, g: 'Kích thước hoàn thiện', u: 'm²' },
