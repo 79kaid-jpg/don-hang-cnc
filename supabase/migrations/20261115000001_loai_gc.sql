@@ -1,0 +1,1 @@
+-- Loại gia công (loai_gc) cho DS tấm QT0/QT1; bật lại Vật liệu QT0 – áp dụng qua MCP

@@ -61,13 +61,21 @@ export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Reco
   const c = { rong: inG(RONG, t.di, end0), dai: inG(DAI, t.di, end0), m2_ht: inG(KL, t.si, end0), mau: inG(/mau/, t.si, end0),
     trai_rong: inG(RONG, g1, end1), trai_dai: inG(DAI, g1, end1), m2: inG(KL, g1, end1),
     phoi_rong: inG(RONG, g2, end2), phoi_dai: inG(DAI, g2, end2), phoi_sl: inG(SL, g2, end2), phoi_m2: inG(KL, g2, end2), vat_lieu: find((n) => /vatlieu|vattu|material/.test(n)) };
+  // Sheet GIA CONG: loại gia công theo mã tấm; vật liệu từ tiêu đề (VD "YÊU CẦU PHÔI NHÔM")
+  const gcm = new Map<string, string>(); let mat = '';
+  for (const sh of sheets) { const R = sh.rows; const txt = R.slice(0, 8).map((r) => r.map(norm).join(' ')).join(' ');
+    if (!mat) mat = /phoinhom|dodaynhom|nhom/.test(txt) ? 'Nhôm' : /phoithep|dodaythep|inox/.test(txt) ? (txt.includes('inox') ? 'Inox' : 'Thép') : '';
+    for (let i = 0; i < Math.min(R.length, 12); i++) { const r = R[i]; const cm = r.findIndex((v) => norm(v) === 'matam'); if (cm < 0) continue;
+      const cl = (() => { for (let k = i; k < Math.min(R.length, i + 4); k++) { const j = R[k].findIndex((v, jj) => jj > cm && /loaigiacong|nhomsanpham/.test(norm(v))); if (j >= 0) return j; } return cm + 1; })();
+      for (const rr of R.slice(i + 1)) { const m = String(rr[cm] ?? '').trim(), l = String(rr[cl] ?? '').trim(); if (m && l && !/^\d+([.,]\d+)?$/.test(l) && !gcm.has(m)) gcm.set(m, l); }
+      break; } }
   const out: Record<string, string>[] = [];
   const fx = (v: unknown, d: number) => { const n = num(v); return n > 0 ? String(+n.toFixed(d)) : ''; };
   for (const r of t.rows) { const ma = String(r[t.ci] ?? '').trim(); if (!ma) { if (out.length) break; continue; } if (num(r[t.si]) <= 0) continue;
     const v = (j: number) => (j >= 0 ? String(r[j] ?? '').trim() : '');
     const row: Record<string, string> = { ma_tam: ma, day: v(t.di), rong: v(c.rong), dai: v(c.dai), so_tam: v(t.si), mau_son: v(c.mau), m2_ht: c.m2_ht >= 0 ? fx(r[c.m2_ht], 4) : '',
       trai_rong: v(c.trai_rong), trai_dai: v(c.trai_dai), m2: c.m2 >= 0 ? fx(r[c.m2], 4) : '',
-      phoi_rong: v(c.phoi_rong), phoi_dai: v(c.phoi_dai), phoi_sl: v(c.phoi_sl), phoi_m2: c.phoi_m2 >= 0 ? fx(r[c.phoi_m2], 4) : '', ghi_chu: v(gc), vat_lieu: v(c.vat_lieu), ma_mau: v(c.mau) };
+      phoi_rong: v(c.phoi_rong), phoi_dai: v(c.phoi_dai), phoi_sl: v(c.phoi_sl), phoi_m2: c.phoi_m2 >= 0 ? fx(r[c.phoi_m2], 4) : '', ghi_chu: v(gc), vat_lieu: v(c.vat_lieu) || mat, ma_mau: v(c.mau), loai_gc: gcm.get(ma) ?? '' };
     // File không có nhóm Thực tế trải: dùng m² hoàn thiện làm khối lượng
     if (!row.m2 && row.m2_ht) row.m2 = row.m2_ht;
     out.push(row); }

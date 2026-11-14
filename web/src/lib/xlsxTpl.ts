@@ -62,7 +62,6 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     kh_ten: K?.name ?? '', kh_ma: K?.code ?? '', kh_dia_chi: K?.address ?? '', kh_mst: K?.tax_code ?? '', kh_lien_he: [K?.contact, K?.phone].filter(Boolean).join(' · '), kh_dien_thoai: K?.phone ?? '', kh_email: K?.email ?? '', kh_dai_dien: K?.contact ?? '', kh_chuc_vu: K?.position ?? '',
     ben_ban_dai_dien: S?.contact ?? '', ben_ban_chuc_vu: S?.position ?? '',
     ...(() => { const V = custs.find((c) => c.id === d.header?.dvvc); return { vc_ten: V?.name ?? '', vc_dia_chi: V?.address ?? '', vc_dien_thoai: V?.phone ?? '', vc_dai_dien: V?.contact ?? '', vc_chuc_vu: V?.position ?? '', vc_mst: V?.tax_code ?? '' }; })(),
-    ten_hang: 'GC đột, chấn',
     ngay_thang_nam: `TP.HCM, ngày ${String(dt.getDate()).padStart(2, '0')} tháng ${String(dt.getMonth() + 1).padStart(2, '0')} năm ${dt.getFullYear()}`
   };
   for (const [k, , t] of hdrOf(b.proc as Proc)) { const v = d.header?.[k] ?? ''; vars[k] = t === 'date' && /^\d{4}-\d{2}-\d{2}/.test(v) ? fd(v) : v; }
@@ -76,11 +75,16 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
       for (const [k2, v2] of Object.entries(r)) if (v2 != null && typeof v2 !== 'object') o2[k2] = v2 as string | number;
       for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : String(v); }
+      if (o2.ten_hang == null || o2.ten_hang === '') o2.ten_hang = r.loai_gc ? 'GC ' + String(r.loai_gc).trim().toLowerCase() : '';
       return o2; });
     for (const c of T.cols) if (c.n) vars['tong_' + key + '_' + c.k] = Math.round(sumOf(rows, c) * 100) / 100;
   }
   if (b.proc === 'QT1') { const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(d.tables?.ds ?? [], c); const v = numIn(d.header?.vat) ?? 8;
     vars.tong_tien = Math.round(sm); vars.tien_vat = Math.round(sm * v / 100); vars.tong_tt = Math.round(sm + sm * v / 100); vars.tong_tt_chu = soChu(sm + sm * v / 100); }
+  // Tên hàng chung của phiếu = loại gia công gặp nhiều nhất trong bảng; dòng thiếu thì dùng tên chung
+  if (vars.ten_hang == null || vars.ten_hang === '') { const cnt = new Map<string, number>(); for (const r of tables.ds ?? []) { const t = String(r.ten_hang ?? ''); if (t) cnt.set(t, (cnt.get(t) ?? 0) + 1); }
+    vars.ten_hang = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Gia công tấm'; }
+  for (const r of tables.ds ?? []) if (!r.ten_hang) r.ten_hang = vars.ten_hang;
   void ROLE_OF; return { vars, tables };
 }
 
@@ -164,7 +168,8 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
           if (!items.length) { c.value = ''; return; }
           const only = s.match(/^\s*(?:\{#[a-z0-9_]+\})?\s*\{([a-z0-9_]+)\.([a-z0-9_]+)\}\s*$/i);
           if (only && typeof it[only[2]] === 'number') { c.value = it[only[2]] as number; return; }
-          c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(data.vars[name] ?? '')));
+          c.value = s.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[name.split('.')[1]] ?? '') : String(it[name] != null && it[name] !== '' ? it[name] : data.vars[name] ?? '')));
+          // biến không tiền tố trong dòng lặp (VD {ten_hang}) ưu tiên giá trị của dòng
           // chữ dài hơn độ rộng cột → tự xuống dòng, dòng cao lên tương ứng
           const txt = String(c.value ?? ''); const wch = colWidthChars(ws, L.row + i, Number(c.col));
           if (txt.length > wch) { c.alignment = { ...(c.alignment ?? {}), wrapText: true, vertical: c.alignment?.vertical ?? 'middle' }; lines = Math.max(lines, Math.ceil(txt.length / wch)); } });
