@@ -5,6 +5,7 @@ import { dt, ROLES } from '../lib/format';
 import { STEP_LABEL } from './Checklist';
 import { QtTag } from './QtTag';
 import { Icon } from './Icon';
+import { confirmDialog, toast } from './ui';
 
 /** Người thực hiện + người giám sát + thời hạn của bước (giống giai đoạn BASE Workflow) */
 export type OStep = Assign & { order_id: string; step: string; claimed_at: string | null; started_at: string; due_at: string | null; done_at: string | null; done_by: string | null };
@@ -189,6 +190,10 @@ export function GroupsAdmin({ canEdit }: { canEdit: boolean }) {
   const [groups, reload] = useGroups(); const [people, setPeople] = useState<Profile[]>([]);
   const [name, setName] = useState(''); const [err, setErr] = useState(''); const [open, setOpen] = useState('');
   useEffect(() => { sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? [])); }, []);
+  const delGroup = async (g: Group) => {
+    if (!(await confirmDialog(`Xoá hẳn nhóm "${g.name}"? Không khôi phục được.`, 'Xoá nhóm', true))) return;
+    setErr(''); const { data, error } = await sb.rpc('del_group', { p_id: g.id });
+    if (error) setErr(errText(error)); else if (data) toast(data as string); else { toast('Đã xoá nhóm ' + g.name); setOpen(''); reload(); } };
   const upd = async (id: string, patch: Partial<Group>) => { setErr(''); const { error } = await sb.from('work_groups').update(patch).eq('id', id); if (error) setErr(errText(error)); else reload(); };
   const add = async () => { if (!name.trim()) return; setErr('');
     const { data, error } = await sb.from('work_groups').insert({ name: name.trim() }).select().single();
@@ -222,7 +227,8 @@ export function GroupsAdmin({ canEdit }: { canEdit: boolean }) {
                       </label>); })}
                   </div>
                 </div>
-                {canEdit && <div><button className="btn sm" onClick={() => upd(g.id, { active: !g.active })}>{g.active ? 'Ẩn nhóm' : 'Hiện lại nhóm'}</button></div>}
+                {canEdit && <div className="row" style={{ gap: 8 }}><button className="btn sm" onClick={() => upd(g.id, { active: !g.active })}>{g.active ? 'Ẩn nhóm' : 'Hiện lại nhóm'}</button>
+                  <button className="btn sm danger" onClick={() => delGroup(g)}><Icon name="trash" size={14} />Xoá nhóm</button></div>}
               </div>)}
           </li>))}
       </ul>

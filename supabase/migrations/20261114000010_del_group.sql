@@ -1,0 +1,1 @@
+-- Xoá nhóm (chỉ Admin IT, chỉ khi nhóm chưa dùng ở đâu); hàm áp dụng qua MCP
