@@ -28,7 +28,7 @@ export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
   if (!canSwitch) return null;
   return <div className={'scope scope-' + variant + ' sc-' + scope} ref={ref}>
     <button type="button" className="scope-btn" aria-haspopup="listbox" aria-expanded={open} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ top: r.top, left: r.right + 10 }); setOpen(!open); }} data-kbd="C" data-kbd-label={'Đang xem: ' + full(scope) + ' · bấm C để đổi'}>
-      <span className="scope-dot" aria-hidden="true" /><span className="scope-t">{scope === 'ALL' ? (variant === 'side' ? 'Tất cả công ty' : 'Tất cả') : (variant === 'side' ? 'Đang làm: ' : '') + NM[scope]}</span><Icon name="caret" size={14} /></button>
+      <span className="scope-dot" aria-hidden="true" /><span className="scope-ab" aria-hidden="true">{scope === 'ALL' ? 'Tất cả' : scope === 'PN' ? 'PNC' : scope === 'HW' ? 'HW' : scope}</span><span className="scope-t">{scope === 'ALL' ? (variant === 'side' ? 'Tất cả công ty' : 'Tất cả') : (variant === 'side' ? 'Đang làm: ' : '') + NM[scope]}</span><Icon name="caret" size={14} /></button>
     {open && <div className={'scope-menu' + (variant === 'top' ? ' sheetish' : '')} role="listbox" aria-label="Xem dữ liệu công ty" style={variant === 'side' && pos ? ({ '--sx': pos.left + 'px', '--sy': pos.top + 'px' } as React.CSSProperties) : undefined}>
       {options.map((c) => <button key={c} type="button" role="option" aria-selected={scope === c} className={'sc-' + c} onClick={() => { setOpen(false); switchCo(c, scope); }}>
         <span className="scope-dot" aria-hidden="true" />{scope === c ? full(c) : (c === 'ALL' ? 'Xem tất cả công ty' : 'Chuyển sang ' + NM[c])}{scope === c && <Icon name="check" size={15} />}</button>)}
