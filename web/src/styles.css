@@ -3078,3 +3078,11 @@ html[data-scope=PN] body::before{background:#2f6db5}html[data-scope=IPC] body::b
 .jn-imgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.jn-imgs a{display:block;width:72px;height:54px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}.jn-imgs img{width:100%;height:100%;object-fit:cover}
 @media (max-width:760px){.an-box{width:100vw;height:100dvh;border-radius:0}}
 .an-bg{position:fixed;inset:0;display:grid;place-items:center;background:rgba(15,20,28,.55);user-select:none;-webkit-user-select:none}
+.pp-clone{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border:1px dashed var(--line2);border-radius:12px}
+@media (max-width:760px){.pp-clone .btn{width:100%;justify-content:center}}
+
+/* Màu nền theo công ty đang làm */
+html[data-scope=PN]{--bg:#EAF1FB}html[data-scope=IPC]{--bg:#FBF0E2}html[data-scope=HW]{--bg:#E8F4EC}
+html[data-scope=PN] body,html[data-scope=IPC] body,html[data-scope=HW] body{background-color:var(--bg)}
+.co-lock{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border-radius:12px;background:#FFF8E6;border:1px solid #F2D38A}
+@media (max-width:760px){.co-lock .btn{width:100%;justify-content:center}}

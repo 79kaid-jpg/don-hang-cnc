@@ -1,4 +1,5 @@
-import { useScope, setScope } from '../lib/myco';
+import { useScope } from '../lib/myco';
+import { switchCo } from './ScopeChip';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sb, type Order } from '../lib/supabase';
@@ -74,7 +75,7 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
       if (key === 'g') { gAt.current = Date.now(); return; }
       if (key === '/') { e.preventDefault(); setPal(true); }
       else if (key === '?') { e.preventDefault(); setHelp(true); }
-      else if (key === 'c' && canScope) { e.preventDefault(); setScope(scOpts[(scOpts.indexOf(scope) + 1) % scOpts.length]); }
+      else if (key === 'c' && canScope) { e.preventDefault(); switchCo(scOpts[(scOpts.indexOf(scope) + 1) % scOpts.length], scope); }
       else if (key === 'n' && (can('kinh_doanh') || can('admin_cnc'))) { e.preventDefault(); nav('/don/moi'); }
       else if (key === '[') { e.preventDefault(); onToggleSide(); }
     };

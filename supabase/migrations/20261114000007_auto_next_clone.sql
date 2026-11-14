@@ -1,0 +1,2 @@
+-- Đợt 4 (14/11): tự tạo phiếu công ty kế tiếp (_auto_next, _notify_auto), bỏ tách lô (drop docs_ref_over), Clone (doc_clone)
+-- Đã áp dụng qua MCP – xem nội dung đầy đủ trong lịch sử migration "auto_next_clone" trên Supabase.

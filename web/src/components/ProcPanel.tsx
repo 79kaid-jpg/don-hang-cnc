@@ -1,4 +1,6 @@
 import { GuideBox } from './GuideBox';
+import { switchCo } from './ScopeChip';
+import { useScope } from '../lib/myco';
 import { Annotate } from './Annotate';
 import { bocTachRows } from '../lib/excelCheck';
 import { FixMsg } from './FixMsg';
@@ -150,7 +152,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const [rows0, setRows0] = useState<Row[] | null>(null); const [used, setUsed] = useState<Record<number, string>>({}); const [pick, setPick] = useState<Set<number>>(new Set());
   const [pnOrders, setPnOrders] = useState<{ id: string; code: string }[]>([]); const [coId, setCoId] = useState('');
   // IPC / HW: lập XNĐH bằng tham chiếu mã đơn đã duyệt của công ty trước
-  const { co: myCoNB } = useMyCo(); const refMode = proc === 'QT1' && (myCoNB === 'IPC' || myCoNB === 'HW');
+  const { co: myCoNB } = useMyCo(); const refMode = false as boolean; const autoCo = proc !== 'QT0' && (myCoNB === 'IPC' || myCoNB === 'HW');
   const prevCo = myCoNB === 'HW' ? 'IPC' : 'PN';
   const [refs, setRefs] = useState<{ code: string; title: string; used: string | null }[] | null>(null); const [ref, setRef] = useState('');
   const [rr, setRr] = useState<{ i: number; ma_tam: string; vat_lieu: string; day: string; so_tam: number; con_lai: number }[] | null>(null); const [take, setTake] = useState<Record<number, string>>({});
@@ -185,6 +187,11 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
     const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
+  if (autoCo) return createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className="mv-head"><h2 style={{ margin: 0 }}>Phiếu {myCoNB === 'HW' ? 'Hanwa' : 'IPC'} được tạo tự động</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
+      <p>Khi {myCoNB === 'HW' ? 'IPC' : 'Phương Nam'} duyệt xong {PROC_NAME[proc]}, app tự tạo phiếu cho {myCoNB === 'HW' ? 'Hanwa' : 'IPC'} với cùng thông tin (không có giá) và báo Zalo cho người Lập.</p>
+      <p className="small muted">Cần làm lại một phiếu đã Thành công / Thất bại? Mở phiếu đó và bấm <b>Clone thành đơn mới</b>.</p>
+      <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn primary" onClick={onClose}>Đã hiểu</button></div></div></div>, document.body);
   return (
     createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.project ?? ''}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
@@ -279,8 +286,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [dirty, setDirty] = useState(false);
   const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
   const { acting, actUntil } = useAuth(); const lockAct = acting && !actUntil && !/^\s*\[(MẪU|MAU|TEST)\]/i.test(o.project ?? '');
-  if (lockAct && can) setCan(false);
-  useEffect(() => { canActQ(d.id, d.status).then((v) => setCan(v && !lockAct)); }, [d.id, d.status, lockAct]);
+  // Làm nhiều công ty: chỉ thao tác khi đang chọn đúng công ty của phiếu (chuyển công ty tường minh)
+  const { scope, canSwitch: multiCo } = useScope(); const coLock = multiCo && scope !== d.company;
+  if ((lockAct || coLock) && can) setCan(false);
+  const [canRaw, setCanRaw] = useState(false);
+  useEffect(() => { canActQ(d.id, d.status).then((v) => { setCanRaw(v); setCan(v && !lockAct && !coLock); }); }, [d.id, d.status, lockAct, coLock]);
   const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -472,6 +482,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
       <FixMsg err={err} />
+      {coLock && canRaw && !['da_duyet', 'fail'].includes(d.status) && <div className="co-lock" role="status"><span>Phiếu của <b>{COMPANY[d.company as Company]}</b>. Bạn đang làm ở <b>{scope === 'ALL' ? 'Tất cả công ty' : COMPANY[scope as Company]}</b> nên chỉ xem.</span>
+        <button type="button" className="btn primary" onClick={() => switchCo(d.company as Company)}>Chuyển sang {d.company === 'HW' ? 'Hanwa' : d.company === 'PN' ? 'PNC' : d.company}</button></div>}
       {can && !['da_duyet', 'fail'].includes(d.status) && (
         <div className="pp-act">
           {ask ? (<div className="pp-ask">
@@ -502,6 +514,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}
+      {(d.status === 'da_duyet' || d.status === 'fail') && <CloneBar b={b} d={d} onChanged={onChanged} />}
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
@@ -829,14 +842,13 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
   const prevOf: Record<string, string> = { IPC: 'PN', HW: 'IPC' };
   const code = docCode(o, b, d.company);
   // QT1 của công ty trước → IPC/HW lập XNĐH của mình; còn lại → quy trình kế tiếp
-  const t = b.proc === 'QT1' && my && prevOf[my] === d.company ? { proc: 'QT1', co: my, label: 'Lập XNĐH ' + my + ' từ đơn này' }
-    : b.proc === 'QT0' ? { proc: 'QT1', co: 'PN', label: 'Tạo XNĐH (QT1)' }
+  void prevOf;
+  const t = b.proc === 'QT0' ? { proc: 'QT1', co: 'PN', label: 'Tạo XNĐH (QT1)' }
     : b.proc === 'QT1' && d.company === 'PN' ? { proc: 'QT2', co: 'PN', label: 'Tạo lệnh sản xuất (QT2)' }
     : b.proc === 'QT2' && d.company === 'PN' ? { proc: 'QT3', co: 'PN', label: 'Tạo đợt giao (QT3)' } : null;
   useEffect(() => { setOk(false); if (!t) return; let live = true;
     (async () => { const r = await sb.rpc('can_start', { p_proc: t.proc, p_co: t.co }); if (!live || !r.data) return;
-      if (t.proc === 'QT1' && t.co !== 'PN') { const c = await sb.rpc('ref_candidates', { p_order: o.id, p_co: t.co }); if (live) setOk(((c.data ?? []) as { code: string }[]).some((x) => x.code.trim().toUpperCase() === code.trim().toUpperCase())); }
-      else setOk(true); })();
+      setOk(true); })();
     return () => { live = false; }; }, [d.id, t?.proc, t?.co, code]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); const cid = (b as { co_order_id?: string | null }).co_order_id; if (cid) n.set('refid', cid); else n.delete('refid'); n.delete('b'); n.delete('co'); return n; });
   useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (keyOf(e) !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
@@ -894,4 +906,21 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
             <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden onChange={(e) => upload(e, k)} /></label>}
         </div></li>; })}</ol>
   </section>;
+}
+
+/** Clone phiếu đã Thành công / Thất bại thành đơn mới (Admin / người Lập của công ty đó) */
+function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void }) {
+  const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [, setSp] = useSearchParams();
+  useEffect(() => { let live = true; setOk(false); sb.rpc('can_start', { p_proc: b.proc, p_co: d.company }).then(({ data }) => { if (live) setOk(!!data); }); return () => { live = false; }; }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!ok) return null;
+  const go = async () => {
+    if (!(await confirmDialog('Tạo đơn mới chép toàn bộ thông tin của phiếu này (' + COMPANY[d.company as Company] + ' · ' + b.title + ')? Đơn mới bắt đầu lại từ bước đầu để chỉnh sửa.', 'Clone thành đơn mới'))) return;
+    setBusy(true); const { data, error } = await sb.rpc('doc_clone', { p_doc: d.id }); setBusy(false);
+    if (error) { toast(errText(error)); return; }
+    toast('Đã tạo đơn mới từ ' + b.title);
+    setSp((p) => { const n = new URLSearchParams(p); n.set('tab', b.proc); n.set('b', String(data)); n.set('co', d.company); return n; });
+    onChanged();
+  };
+  return <div className="pp-clone"><span className="small muted">{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'} · muốn làm lại với thông tin tương tự?</span>
+    <button type="button" className="btn" disabled={busy} onClick={go}><Icon name="file" size={15} />{busy ? 'Đang tạo…' : 'Clone thành đơn mới'}</button></div>;
 }
