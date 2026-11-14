@@ -50,8 +50,8 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'm2', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước thực tế trải', u: 'm²' },
     { k: 'phoi_rong', t: 'Rộng', n: true, g: 'Kích thước phôi', u: 'mm' }, { k: 'phoi_dai', t: 'Dài', n: true, g: 'Kích thước phôi', u: 'mm' },
     { k: 'phoi_sl', t: 'Số lượng', n: true, g: 'Kích thước phôi', u: 'tấm' }, { k: 'phoi_m2', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước phôi', u: 'm²' },
-    { k: 'ghi_chu', t: 'Ghi chú', w: 14 }, { k: 'loai_gc', t: 'Loại gia công', w: 9 },
-    { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
+    { k: 'loai_gc', t: 'Loại gia công', w: 9, g: 'Thông tin khác' }, { k: 'vat_lieu', t: 'Vật liệu', w: 8, g: 'Thông tin khác' }, { k: 'ghi_chu', t: 'Ghi chú', w: 14, g: 'Thông tin khác' },
+    { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
     { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
     { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'rong', t: 'Rộng (mm)', n: true }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'mau_son', t: 'Màu sơn', w: 6 },

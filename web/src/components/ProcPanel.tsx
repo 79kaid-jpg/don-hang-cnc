@@ -616,7 +616,7 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals, fixed }: { fixed?: Set<number> | null; cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
   const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
   const head = cols.find((c) => !c.n) ?? cols[0];
-  const GS: Record<string, string> = { 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
+  const GS: Record<string, string> = { 'Thông tin khác': '', 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
   const lb = (c: Col) => (c.g && GS[c.g] && c.k !== 'ma_tam' && c.k !== 'day' ? c.t + ' ' + GS[c.g] : c.t) + (c.k === 'kg' ? ' (kg)' : '');
   const right = cols.find((c) => c.k === 'don_gia') ?? cols.find((c) => c.k === 'tt') ?? cols.find((c) => c.k === 'kg');
   const sub = cols.filter((c) => c !== head && c !== right && ['day', 'so_tam', 'sl', 'm2', 'kg'].includes(c.k)).slice(0, 4);
@@ -858,7 +858,7 @@ const SAMPLE: Record<string, (string | number)[]> = {
 };
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
 const DKG = ['Giao tại kho bên mua', 'Giao tại xưởng bên bán', 'Bên mua tự vận chuyển'];
-const GCLS: Record<string, string> = { 'Báo giá': ' cg cg-bg', 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
+const GCLS: Record<string, string> = { 'Thông tin khác': ' cg cg-ot', 'Báo giá': ' cg cg-bg', 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
 const cgOf = (c: { g?: string }, cols: { g?: string }[], i: number) => (c.g ? (GCLS[c.g] ?? ' cg') + (i === 0 || cols[i - 1]?.g !== c.g ? ' cg-first' : '') : '');
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
