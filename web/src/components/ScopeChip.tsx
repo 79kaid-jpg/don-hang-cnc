@@ -20,18 +20,25 @@ export type { Co };
 const full = (s: Scope) => (s === 'ALL' ? 'Tất cả công ty' : CO_NAME[s]);
 /** Chip chọn công ty dùng chung toàn app (admin / tổng giám đốc) */
 export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
-  const { scope, canSwitch, options, own } = useScope(); const [open, setOpen] = useState(false); const [pos, setPos] = useState<{ top: number; left: number } | null>(null); const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); }; document.addEventListener('pointerdown', f); document.addEventListener('keydown', k); return () => { document.removeEventListener('pointerdown', f); document.removeEventListener('keydown', k); }; }, [open]);
+  const { scope, canSwitch, options, own } = useScope(); const [open, setOpen] = useState(false); const [pos, setPos] = useState<{ top: number; left: number; bottom: number; cx: number } | null>(null); const [ask, setAsk] = useState<Scope | null>(null); const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (ask) setAsk(null); else setOpen(false); } }; document.addEventListener('pointerdown', f); document.addEventListener('keydown', k); return () => { document.removeEventListener('pointerdown', f); document.removeEventListener('keydown', k); }; }, [open, ask]);
+  useEffect(() => { if (!open) setAsk(null); }, [open]);
   // Báo máy chủ công ty đang làm (máy chủ chặn thao tác sai công ty)
   useEffect(() => { if (canSwitch) sb.rpc('set_active_co', { p_co: scope }); }, [scope, canSwitch]);
   useEffect(() => { document.documentElement.dataset.scope = canSwitch ? scope : (own ?? ''); }, [scope, canSwitch, own]);
   if (!canSwitch) return null;
   return <div className={'scope scope-' + variant + ' sc-' + scope} ref={ref}>
-    <button type="button" className="scope-btn" aria-haspopup="listbox" aria-expanded={open} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ top: r.top, left: r.right + 10 }); setOpen(!open); }} data-kbd="C" data-kbd-label={'Đang xem: ' + full(scope) + ' · bấm C để đổi'}>
+    <button type="button" className="scope-btn" aria-haspopup="listbox" aria-expanded={open} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ top: r.top, left: r.right + 10, bottom: r.bottom, cx: r.left + r.width / 2 }); setOpen(!open); }} data-kbd="C" data-kbd-label={'Đang xem: ' + full(scope) + ' · bấm C để đổi'}>
       <span className="scope-dot" aria-hidden="true" /><span className="scope-ab" aria-hidden="true">{scope === 'ALL' ? 'ALL' : scope === 'PN' ? 'PNC' : scope === 'HW' ? 'HW' : scope}</span><span className="scope-t">{scope === 'ALL' ? (variant === 'side' ? 'Tất cả công ty' : 'Tất cả') : (variant === 'side' ? 'Đang làm: ' : '') + NM[scope]}</span><Icon name="caret" size={14} /></button>
-    {open && <div className={'scope-menu' + (variant === 'top' ? ' sheetish' : '')} role="listbox" aria-label="Xem dữ liệu công ty" style={variant === 'side' && pos ? ({ '--sx': pos.left + 'px', '--sy': pos.top + 'px' } as React.CSSProperties) : undefined}>
-      {options.map((c) => <button key={c} type="button" role="option" aria-selected={scope === c} className={'sc-' + c} onClick={() => { setOpen(false); switchCo(c, scope); }}>
-        <span className="scope-dot" aria-hidden="true" />{scope === c ? full(c) : (c === 'ALL' ? 'Xem tất cả công ty' : 'Chuyển sang ' + NM[c])}{scope === c && <Icon name="check" size={15} />}</button>)}
+    {open && <div className={'scope-menu' + (variant === 'top' ? ' sheetish' : '')} role="listbox" aria-label="Xem dữ liệu công ty" style={pos ? ({ '--sx': pos.left + 'px', '--sy': pos.top + 'px', '--sb': pos.bottom + 10 + 'px', '--ax': pos.cx + 'px' } as React.CSSProperties) : undefined}>
+      {options.map((c) => <div key={c} className={'scope-it sc-' + c + (ask === c ? ' asking' : '')}>
+        <button type="button" role="option" aria-selected={scope === c} aria-expanded={ask === c} onClick={() => { if (c === scope) setOpen(false); else setAsk(ask === c ? null : c); }}>
+          <span className="scope-dot" aria-hidden="true" /><span className="scope-nm"><b>{full(c)}</b><small>{scope === c ? 'Đang chọn' : c === 'ALL' ? 'Chỉ xem tổng hợp' : 'Làm việc dưới tên ' + NM[c]}</small></span>{scope === c && <Icon name="check" size={16} />}</button>
+        {ask === c && <div className="scope-ask" role="group" aria-label={'Xác nhận chuyển sang ' + full(c)}>
+          <p>{c === 'ALL' ? 'Xem tổng hợp tất cả công ty. Ở chế độ này chỉ xem; muốn thao tác phải chuyển về đúng công ty.' : 'Mọi trang sẽ hiển thị và thao tác dưới tên ' + NM[c] + '.'}</p>
+          <div className="scope-ask-b"><button type="button" className="go" autoFocus onClick={() => { setScope(c); setOpen(false); }}>{c === 'ALL' ? 'Xem tất cả' : 'Chuyển'}</button>
+            <button type="button" className="no" onClick={() => setAsk(null)}>Huỷ</button></div></div>}
+      </div>)}
     </div>}
   </div>;
 }
