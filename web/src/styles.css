@@ -3022,3 +3022,8 @@ body.kb-open .pp-act,body.kb-open .savebar,body.kb-open .pa-save{display:none}
 .show-m{display:none!important}
 @media (max-width:760px){.show-m{display:flex!important}}
 .oc-prog .seg{overflow:hidden}.oc-prog .seg em{width:100%}.oc-prog .seg em small{width:100%}
+/* Tấm cột đã đóng: nền phẳng như trang, vách mảnh bên trái (bỏ hoa văn đục lỗ) */
+@media (min-width:1440px){
+  .pp-shutter{background:transparent!important;background-image:none!important;box-shadow:none!important;border-left:1px solid var(--line);border-radius:0}
+  .pp-shutter:hover{filter:none;background:rgba(59,110,168,.04)!important}
+}
