@@ -487,7 +487,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
-        <button type="button" className="pp-sidebtn" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình'} data-kbd="]" aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><Icon name={shut ? 'back' : 'arrow'} size={14} /></button>
+        <button type="button" className="pp-sidebtn pp-grip" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình'} data-kbd="]" aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true"><path d={shut ? 'M7 2 2 7l5 5' : 'M3 2l5 5-5 5'} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
         <div className="pp-shutter" onClick={() => setShut(false)} aria-hidden={!shut}>
           {(role || lvName) && !['da_duyet', 'fail'].includes(d.status) && <Assignees mini proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} />}
           <span className="pp-sh-i" title="Ghi chú"><Icon name="chat" size={15} />{(d.notes ?? []).length || ''}</span>
