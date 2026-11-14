@@ -61,7 +61,7 @@ export const PROC_TABLES: Record<Proc, [string, string][]> = { QT0: [['ds', 'ds0
 export const HEADER: Record<Proc, [string, string, string?][]> = {
   QT0: [['ngay_nhan', 'Ngày nhận bản vẽ', 'date'], ['kenh', 'Kênh nhận (email / Zalo)'], ['hao_hut', 'Hao hụt dự kiến (%)', 'num']],
   QT1: [['so_xn', 'Số XNĐH'], ['ngay', 'Ngày lập', 'date'], ['dk_giao', 'Điều kiện giao hàng'], ['dk_tt', 'Điều kiện thanh toán'], ['vat', 'Thuế GTGT (%)', 'num']],
-  QT2: [['so_lenh', 'Số lệnh gia công'], ['so_hd', 'Số hợp đồng'], ['xuong', 'Xưởng gia công'], ['kho_xuat', 'Kho xuất'], ['kho_nhan', 'Kho nhận'], ['dang_gc', 'Dạng gia công']],
+  QT2: [['so_lenh', 'Số lệnh gia công'], ['so_hd', 'Số hợp đồng'], ['kho_xuat', 'Kho xuất'], ['kho_nhan', 'Kho nhận'], ['dang_gc', 'Dạng gia công']],
   QT3: [['so_phieu', 'Số phiếu'], ['ngay_giao', 'Ngày giao', 'date'], ['dia_diem', 'Địa điểm giao'], ['xe', 'Xe / biển số'], ['tai_xe', 'Tài xế']]
 };
 /** Cột nào thuộc riêng mỗi công ty (không chép sang bên sau) */
