@@ -487,15 +487,17 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
-            <span className="row" style={{ gap: 6 }}>{(() => { const ed = canEd({ key: k, label: lab, ...f } as FDef); const mine = files.filter((x) => x.kind === k); return <>
-              {mine.map((x) => { const xx = x as { by?: string; step?: string }; const del = ed && canDelF(xx); return <span key={x.path} className="pp-file"><span className="row" style={{ gap: 2 }}><FileLink f={x} />
+            <span className="row pp-fk-r">{(() => { const ed = canEd({ key: k, label: lab, ...f } as FDef); const mine = files.filter((x) => x.kind === k); const dels = mine.filter((x) => ed && canDelF(x as { by?: string; step?: string })); const one = dels.length === 1 ? dels[0] : null; return <>
+              {mine.map((x) => { const xx = x as { by?: string; step?: string }; const del = ed && canDelF(xx) && !one; return <span key={x.path} className="pp-file"><span className="row" style={{ gap: 2 }}><FileLink f={x} />
                 {del ? <button className="btn xs icon-only" title={'Gỡ ' + x.name} aria-label={'Gỡ ' + x.name} onClick={() => removeFile(x.path, x.name)}><Icon name="trash" size={13} /></button>
-                  : ed && <span className="pp-flock" title="Chỉ người tải file (trong bước đã tải) hoặc admin được gỡ"><Icon name="shield" size={13} /></span>}</span>
+                  : ed && !canDelF(xx) && <span className="pp-flock" title="Chỉ người tải file (trong bước đã tải) hoặc admin được gỡ"><Icon name="shield" size={13} /></span>}</span>
                 {xx.by && <span className="pp-fby">Tải bởi {who(xx.by)}{xx.step ? ' · ' + (STATUS[xx.step] ?? xx.step) : ''}</span>}</span>; })}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
               {k === 'excel' && mine.length > 0 && <XStatus key={xv} files={mine as never} ds={(t.ds ?? []) as never} canRecheck={ed} />}
-              {ed && mine.some((x) => canDelF(x as { by?: string; step?: string })) && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
-              {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
+              {ed && <span className="pp-fact">
+                {dels.length > 0 && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
+                <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>
+                {one && <button type="button" className="btn xs icon-only pp-fdel" title={'Gỡ ' + one.name} aria-label={'Gỡ ' + one.name} onClick={() => removeFile(one.path, one.name)}><Icon name="trash" size={13} /></button>}</span>}</>; })()}</span></div>))}
       </div>
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
