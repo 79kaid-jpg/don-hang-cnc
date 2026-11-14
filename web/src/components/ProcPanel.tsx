@@ -493,7 +493,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
               <button type="button" aria-label="Bỏ ảnh" onClick={() => setRtImgs((a) => a.filter((_, j) => j !== i))}><Icon name="x" size={12} /></button></span>)}</div>}
             {anOpen && <Annotate capture={async () => { const el = document.querySelector('.pp-doc') as HTMLElement | null; if (!el) return null; const { toBlob } = await import('html-to-image');
                 return toBlob(el, { pixelRatio: 1, backgroundColor: '#fff', filter: (n) => !(n instanceof HTMLElement && (n.classList.contains('pp-act') || n.classList.contains('an-bg'))) }); }}
-              onDone={(b) => { setRtImgs((a) => [...a, b]); setAnOpen(false); }} onClose={() => setAnOpen(false)} />}
+              onDone={(b, nt) => { setRtImgs((a) => [...a, b]); if (nt) setWhy((w) => (w.trim() ? w.trim() + '\n' : '') + nt); setAnOpen(false); }} onClose={() => setAnOpen(false)} />}
             <div className="row" style={{ justifyContent: 'flex-end' }}><button type="button" className="btn" style={{ marginRight: 'auto' }} onClick={() => setAnOpen(true)}><Icon name="file" size={15} />Ảnh ghi chú</button>
               <button className="btn" onClick={() => { setAsk(''); setRtImgs([]); }}>Huỷ</button>
               <button className="btn rt-go" disabled={!why.trim() || busy} onClick={async () => {
