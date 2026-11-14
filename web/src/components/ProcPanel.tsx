@@ -325,9 +325,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
     const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
-    const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required';
-    return { key, title: TABLES[def].t, treq, cols, ed: !closed && (adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan'))) }; });
-  const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed);
+    const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required'; const thide = !!tf && pm(tf) === 'hide';
+    return { key, title: TABLES[def].t, treq, thide, cols, ed: !closed && (adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan'))) }; });
+  const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed && !x.thide);
   const totalOf = (): string | undefined => { if (proc !== 'QT1') return undefined; const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(t.ds ?? [], c); const v = numIn(h.vat) ?? 8; return String(Math.round(sm + sm * v / 100)); };
   // Admin: nạp nhanh dữ liệu mẫu vào ô trống (đầu phiếu) và bảng trống (3 dòng ví dụ)
   const fillDemo = () => {
@@ -475,7 +475,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
               {ed && <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>}</>; })()}</span></div>))}
       </div>
 
-      {tblDefs.map(({ key, title, cols, ed, treq }) => (
+      {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} />}

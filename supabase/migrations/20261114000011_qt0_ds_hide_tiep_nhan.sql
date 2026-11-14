@@ -1,0 +1,1 @@
+-- QT0 · Danh sách tấm: bước Tiếp nhận = Ẩn (áp dụng qua MCP: proc_fields.perms PN.tiep_nhan='hide')
