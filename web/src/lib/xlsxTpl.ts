@@ -75,7 +75,9 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
       for (const [k2, v2] of Object.entries(r)) if (v2 != null && typeof v2 !== 'object') o2[k2] = v2 as string | number;
       for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : String(v); }
-      if (o2.ten_hang == null || o2.ten_hang === '') o2.ten_hang = r.loai_gc ? 'GC ' + String(r.loai_gc).trim().toLowerCase() : '';
+      // Tên hàng = Tấm + Màu sơn + Rộng×Dài×Dày + Loại GC (bỏ phần trống)
+      if (o2.ten_hang == null || o2.ten_hang === '') { const t = (x: unknown) => String(x ?? '').trim(); const kt = [t(r.rong), t(r.dai), t(r.day)].filter(Boolean).join('x');
+        o2.ten_hang = ['Tấm', t(r.mau_son), kt, t(r.loai_gc)].filter(Boolean).join(' '); }
       return o2; });
     for (const c of T.cols) if (c.n) vars['tong_' + key + '_' + c.k] = Math.round(sumOf(rows, c) * 100) / 100;
   }
