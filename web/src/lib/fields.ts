@@ -21,7 +21,8 @@ export const stepsOf = (p: Proc) => FLOW[p];
 let store: FDef[] | null = null; let ver = 0; const subs = new Set<() => void>();
 export async function loadFields() {
   const { data } = await sb.from('proc_fields').select('*').order('ord');
-  if (data) { store = data as FDef[]; ver++; subs.forEach((f) => f()); }
+  // Chưa đăng nhập thì không đọc được cấu hình (trả rỗng) → giữ null để tải lại sau khi đăng nhập
+  if (data && data.length) { store = data as FDef[]; ver++; subs.forEach((f) => f()); }
 }
 /** Dùng trong component để vẽ lại khi cấu hình đổi */
 export function useFields() {
@@ -72,3 +73,6 @@ export const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').re
 
 /** F0: Ẩn / Bắt buộc (một giá trị cho cả đơn) */
 export const f0Perm = (f: FDef): Perm => (f.perms?.['*']?.['*'] as Perm) ?? 'edit';
+
+// Tải lại cấu hình khi đăng nhập / đổi phiên
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED') { if (!store) loadFields(); } });
