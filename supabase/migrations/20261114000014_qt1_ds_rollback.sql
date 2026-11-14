@@ -1,0 +1,1 @@
+-- Khôi phục QT1 Danh sách tấm về trước 20261114000013 (batch_create cũ, bỏ _qt1_row, cột QT1 như cũ) – áp dụng qua MCP
