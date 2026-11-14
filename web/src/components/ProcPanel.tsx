@@ -385,9 +385,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const upload = async (e: React.ChangeEvent<HTMLInputElement>, kind: string, replace = false) => {
     const old = replace ? files.filter((x) => x.kind === kind && canDelF(x as { by?: string; step?: string })) : [];
     const nf = files.filter((x) => !old.includes(x));
+    let xf: File | null = null;
     for (const file of Array.from(e.target.files ?? [])) {
       let check: XCheck | undefined;
-      if (kind === 'excel') { const r = await checkExcelFile(file); if (!r.ok) { setErr(r.error); e.target.value = ''; return; } check = r.c; }
+      if (kind === 'excel') { const r = await checkExcelFile(file); if (!r.ok) { setErr(r.error); e.target.value = ''; return; } check = r.c; xf = file; }
       const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
       nf.push({ kind, name: file.name, path, at: new Date().toISOString(), by: meId, step: d.status, ...(check ? { check } : {}) } as (typeof files)[number]);
@@ -397,6 +398,24 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     if (saved && old.length) sb.storage.from('files').remove(old.map((x) => x.path));
     // Máy chủ kiểm lại file Excel bóc tách (kết quả dùng để chặn chuyển bước)
     if (saved && kind === 'excel') { for (const x of nf.filter((y) => y.kind === 'excel' && !files.some((z) => z.path === y.path))) await sb.functions.invoke('excel-check', { body: { path: x.path } }); setXv((v) => v + 1); }
+    // QT0: điền Danh sách tấm từ file bóc tách vừa tải
+    if (saved && xf && proc === 'QT0') await fillFromExcel(xf);
+  };
+  const fillFromExcel = async (file: File) => {
+    const tb = tblDefs.find((x) => x.key === 'ds'); if (!tb || !tb.ed) return;
+    const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
+    const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
+    const add = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })))
+      .map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => keys.has(k) && v !== '')) as Row);
+    if (!add.length) return;
+    const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
+    let next = add;
+    if (cur.length) {
+      if (await confirmDialog(`File có ${add.length} dòng tấm. Thay toàn bộ ${cur.length} dòng đang có trong Danh sách tấm?`, 'Thay toàn bộ')) next = add;
+      else if (await confirmDialog(`Thêm ${add.length} dòng từ file vào cuối danh sách?`, 'Thêm vào cuối')) next = [...cur, ...add];
+      else return; }
+    setT((x) => ({ ...x, ds: next })); setDirty(true);
+    toast('Đã điền ' + add.length + ' dòng từ file vào Danh sách tấm – bấm Lưu để giữ');
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
@@ -750,9 +769,11 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
       {edge.l && <button type="button" className="pp-edge l" aria-label="Cuộn sang trái" onClick={() => glide(-1)}><Icon name="back" size={18} /></button>}
       {edge.r && <button type="button" className="pp-edge r" aria-label="Cuộn sang phải" onClick={() => glide(1)}><Icon name="back" size={18} /></button>}
       <div className={'tbl-wrap' + (edge.l ? ' sl' : '') + (edge.r ? ' sr' : '')} ref={wrapRef} onScroll={syncEdge} onPointerDown={panStart}><table className="tbl pp-grid">
-        <thead><tr><th>#</th>{cols.map((c) => <th key={c.k} className={c.n ? 'n' : 't'}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
+        <thead>{cols.some((c) => c.g) && <tr className="th-grp"><th />{cols.reduce<{ g: string; n: number; k: string }[]>((a, c) => { const g = c.g ?? ''; const l = a[a.length - 1]; if (l && l.g === g && g) l.n++; else a.push({ g, n: 1, k: c.k }); return a; }, [])
+            .map((x) => <th key={'g' + x.k} colSpan={x.n} className={x.g ? 'g' : ''}>{x.g}</th>)}{editable && <th />}</tr>}
+          <tr><th>#</th>{cols.map((c) => <th key={c.k} className={(c.n ? 'n' : 't') + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' th-qty' : '') + (c.g ? ' th-in-g' : '')}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
-              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}</th>)}{editable && <th />}</tr></thead>
+              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : undefined}><td className="muted">{i + 1}</td>
             {cols.map((c) => <td key={c.k} className={(c.n ? 'n' : 't') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>

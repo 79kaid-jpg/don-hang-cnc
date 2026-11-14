@@ -49,12 +49,25 @@ export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Reco
   const t = findTable(sheets); if (!t) return [];
   const all = sheets.find((s) => s.name === t.sheet)!.rows; const start = all.length - t.rows.length;
   const hdr = all.slice(Math.max(0, start - 3), start);
-  const col = (re: RegExp, from = 0, to = 999) => { const w = Math.max(...hdr.map((r) => r.length)); for (let j = from; j < Math.min(w, to); j++) if (hdr.some((r) => re.test(norm(r[j])))) return j; return -1; };
-  const ri = col(/^rong/, t.di, t.si + 1), li = col(/^dai$/, t.di, t.si + 1), mi = col(/khoiluong|^m2$|dientich/, t.si), vi = col(/vatlieu|vattu|material/), ci = col(/mau/, t.si);
+  const W = Math.max(...hdr.map((r) => r.length), 0);
+  const find = (test: (n: string) => boolean, from = 0, to = W) => { for (let j = from; j < Math.min(W, to); j++) if (hdr.some((r) => test(norm(r[j])))) return j; return -1; };
+  // Nhóm cột theo mẫu: Kích thước hoàn thiện | Thực tế trải | Phôi | Ghi chú
+  const g1 = find((n) => n.includes('thucte')), g2 = find((n) => n.includes('phoi') && !n.includes('thucte')), gc = find((n) => n.includes('ghichu'));
+  const end0 = g1 >= 0 ? g1 : g2 >= 0 ? g2 : W, end1 = g2 >= 0 ? g2 : gc >= 0 ? gc : W, end2 = gc >= 0 ? gc : W;
+  const inG = (re: RegExp, a: number, b: number) => (a < 0 ? -1 : find((n) => re.test(n), a, b));
+  const RONG = /^rong/, DAI = /^dai$|^chieudai/, SL = /soluong|^sotam/, KL = /khoiluong|^m2$|dientich/;
+  const c = { rong: inG(RONG, t.di, end0), dai: inG(DAI, t.di, end0), m2_ht: inG(KL, t.si, end0), mau: inG(/mau/, t.si, end0),
+    trai_rong: inG(RONG, g1, end1), trai_dai: inG(DAI, g1, end1), m2: inG(KL, g1, end1),
+    phoi_rong: inG(RONG, g2, end2), phoi_dai: inG(DAI, g2, end2), phoi_sl: inG(SL, g2, end2), phoi_m2: inG(KL, g2, end2), vat_lieu: find((n) => /vatlieu|vattu|material/.test(n)) };
   const out: Record<string, string>[] = [];
+  const fx = (v: unknown, d: number) => { const n = num(v); return n > 0 ? String(+n.toFixed(d)) : ''; };
   for (const r of t.rows) { const ma = String(r[t.ci] ?? '').trim(); if (!ma) { if (out.length) break; continue; } if (num(r[t.si]) <= 0) continue;
     const v = (j: number) => (j >= 0 ? String(r[j] ?? '').trim() : '');
-    const m2 = mi >= 0 && num(r[mi]) > 0 ? String(+num(r[mi]).toFixed(4)) : '';
-    out.push({ ma_tam: ma, day: v(t.di), so_tam: v(t.si), rong: v(ri), dai: v(li), m2, vat_lieu: v(vi), ma_mau: v(ci) }); }
+    const row: Record<string, string> = { ma_tam: ma, day: v(t.di), rong: v(c.rong), dai: v(c.dai), so_tam: v(t.si), mau_son: v(c.mau), m2_ht: c.m2_ht >= 0 ? fx(r[c.m2_ht], 4) : '',
+      trai_rong: v(c.trai_rong), trai_dai: v(c.trai_dai), m2: c.m2 >= 0 ? fx(r[c.m2], 4) : '',
+      phoi_rong: v(c.phoi_rong), phoi_dai: v(c.phoi_dai), phoi_sl: v(c.phoi_sl), phoi_m2: c.phoi_m2 >= 0 ? fx(r[c.phoi_m2], 4) : '', ghi_chu: v(gc), vat_lieu: v(c.vat_lieu), ma_mau: v(c.mau) };
+    // File không có nhóm Thực tế trải: dùng m² hoàn thiện làm khối lượng
+    if (!row.m2 && row.m2_ht) row.m2 = row.m2_ht;
+    out.push(row); }
   return out;
 }

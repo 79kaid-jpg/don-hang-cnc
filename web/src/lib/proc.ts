@@ -31,7 +31,7 @@ export const NEXT_LABEL: Record<string, string> = {
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
 /** Cột bảng: key, tên, kiểu (t chữ, n số), có tính tự động */
-export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number };
+export type Col = { k: string; t: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 /** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
@@ -42,10 +42,17 @@ export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m !=
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
   ds0: { t: 'Danh sách tấm', cols: [
-    { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'dai', t: 'Dài (mm)', n: true },
-    { k: 'rong', t: 'Rộng (mm)', n: true }, { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 },
-    { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
-    { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }, { k: 'ghi_chu', t: 'Ghi chú', w: 14 }] },
+    { k: 'ma_tam', t: 'Nội dung mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'rong', t: 'Rộng', n: true, g: 'Kích thước hoàn thiện', u: 'mm' }, { k: 'dai', t: 'Dài', n: true, g: 'Kích thước hoàn thiện', u: 'mm' },
+    { k: 'so_tam', t: 'Số lượng', n: true, g: 'Kích thước hoàn thiện', u: 'tấm' }, { k: 'mau_son', t: 'Màu sơn', w: 6, g: 'Kích thước hoàn thiện' },
+    { k: 'm2_ht', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước hoàn thiện', u: 'm²' },
+    { k: 'trai_rong', t: 'Rộng', n: true, g: 'Kích thước thực tế trải', u: 'mm' }, { k: 'trai_dai', t: 'Dài', n: true, g: 'Kích thước thực tế trải', u: 'mm' },
+    { k: 'm2', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước thực tế trải', u: 'm²' },
+    { k: 'phoi_rong', t: 'Rộng', n: true, g: 'Kích thước phôi', u: 'mm' }, { k: 'phoi_dai', t: 'Dài', n: true, g: 'Kích thước phôi', u: 'mm' },
+    { k: 'phoi_sl', t: 'Số lượng', n: true, g: 'Kích thước phôi', u: 'tấm' }, { k: 'phoi_m2', t: 'Khối lượng', n: true, d: 2, g: 'Kích thước phôi', u: 'm²' },
+    { k: 'ghi_chu', t: 'Ghi chú', w: 14 },
+    { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'm2_tam', t: 'm² trải phẳng / tấm', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
+    { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
     { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'so_tam', t: 'Số tấm', n: true },
     { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },

@@ -1,0 +1,4 @@
+-- QT0 · Danh sách tấm theo mẫu bóc tách (đã áp dụng qua MCP):
+-- đổi nhãn/thứ tự ma_tam, day, rong, dai, so_tam, m2 (= Khối lượng thực tế trải, sys=false), ghi_chu;
+-- thêm mau_son, m2_ht, trai_rong, trai_dai, phoi_rong, phoi_dai, phoi_sl, phoi_m2;
+-- ẩn vat_lieu, m2_tam, kg, duong_han, chan, m2_dot; dữ liệu cũ: m2 = m2_tam × so_tam nếu trống.

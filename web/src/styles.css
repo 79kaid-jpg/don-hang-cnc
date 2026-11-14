@@ -3157,3 +3157,8 @@ html[data-scope=PN] .topbar{background:rgba(226,236,248,.95)}html[data-scope=IPC
 .rt-ban{margin:8px 0 12px;padding:10px 12px;border-radius:12px;background:#FFF7ED;border:1px solid #FDBA74;border-left:4px solid #EA580C}
 .rt-ban-h{display:flex;align-items:center;gap:6px;color:#9A3412;flex-wrap:wrap}
 .rt-ban-t{margin-top:4px;white-space:pre-line;font-size:14px;line-height:1.5;color:var(--ink)}
+/* Bảng có nhóm cột (Danh sách tấm QT0 theo mẫu bóc tách) */
+tr.th-grp th{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink);text-align:center!important;border-bottom:1px solid var(--line)}
+tr.th-grp th.g{background:#F1F5F9;border-left:2px solid #fff;border-right:2px solid #fff}
+th .th-u{display:block;font-size:11px;font-weight:500;color:#B42318;font-style:italic;margin-top:1px}
+th.th-qty{background:#E8F5EC!important}
