@@ -770,13 +770,13 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname }: { titl
       {edge.r && <button type="button" className="pp-edge r" aria-label="Cuộn sang phải" onClick={() => glide(1)}><Icon name="back" size={18} /></button>}
       <div className={'tbl-wrap' + (edge.l ? ' sl' : '') + (edge.r ? ' sr' : '')} ref={wrapRef} onScroll={syncEdge} onPointerDown={panStart}><table className="tbl pp-grid">
         <thead>{cols.some((c) => c.g) && <tr className="th-grp"><th />{cols.reduce<{ g: string; n: number; k: string }[]>((a, c) => { const g = c.g ?? ''; const l = a[a.length - 1]; if (l && l.g === g && g) l.n++; else a.push({ g, n: 1, k: c.k }); return a; }, [])
-            .map((x) => <th key={'g' + x.k} colSpan={x.n} className={x.g ? 'g' : ''}>{x.g}</th>)}{editable && <th />}</tr>}
-          <tr><th>#</th>{cols.map((c) => <th key={c.k} className={(c.n ? 'n' : 't') + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' th-qty' : '') + (c.g ? ' th-in-g' : '')}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
+            .map((x) => <th key={'g' + x.k} colSpan={x.n} className={x.g ? 'g' + (GCLS[x.g] ?? '') + ' cg-first' : ''}>{x.g}</th>)}{editable && <th />}</tr>}
+          <tr><th>#</th>{cols.map((c, ci) => <th key={c.k} className={(c.n ? 'n' : 't') + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' th-qty' : '') + (c.g ? ' th-in-g' : '') + cgOf(c, cols, ci)}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : undefined}><td className="muted">{i + 1}</td>
-            {cols.map((c) => <td key={c.k} className={(c.n ? 'n' : 't') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
                   const nx = (e.currentTarget.closest('table') as HTMLElement | null)?.querySelector<HTMLInputElement>('[data-cell="' + (i + 1) + ':' + c.k + '"]'); if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
@@ -817,6 +817,8 @@ const SAMPLE: Record<string, (string | number)[]> = {
   ghi_chu: ['', '', ''],
 };
 const sampleRow = (c: Col, i: number) => { const v = SAMPLE[c.k]?.[i]; return v ?? (c.n ? 1 : 'VD ' + (i + 1)); };
+const GCLS: Record<string, string> = { 'Kích thước hoàn thiện': ' cg cg-ht', 'Kích thước thực tế trải': ' cg cg-tr', 'Kích thước phôi': ' cg cg-ph' };
+const cgOf = (c: { g?: string }, cols: { g?: string }[], i: number) => (c.g ? (GCLS[c.g] ?? ' cg') + (i === 0 || cols[i - 1]?.g !== c.g ? ' cg-first' : '') : '');
 export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profile>, auto = false): string {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
   const who = (id?: string) => (id ? people[id]?.full_name ?? '' : '');

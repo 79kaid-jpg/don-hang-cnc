@@ -3162,3 +3162,15 @@ tr.th-grp th{font-size:12px;font-weight:700;text-transform:uppercase;letter-spac
 tr.th-grp th.g{background:#F1F5F9;border-left:2px solid #fff;border-right:2px solid #fff}
 th .th-u{display:block;font-size:11px;font-weight:500;color:#B42318;font-style:italic;margin-top:1px}
 th.th-qty{background:#E8F5EC!important}
+/* Nhóm cột: canh giữa tiêu đề, màu riêng từng nhóm, vạch chia giữa nhóm */
+thead:has(tr.th-grp) th{text-align:center!important;vertical-align:bottom}
+.cg-ht{--cg:#E8F0FB;--cgh:#D6E4F5;--cgb:#2f6db5}
+.cg-tr{--cg:#FDF3E6;--cgh:#F8E1C3;--cgb:#c2700f}
+.cg-ph{--cg:#EAF6EE;--cgh:#D3EBDA;--cgb:#2f8a4b}
+tr.th-grp th.cg{background:var(--cgh)!important;color:var(--cgb);border-top:3px solid var(--cgb)}
+thead th.cg{background:var(--cg)!important}
+tbody td.cg{background:color-mix(in srgb,var(--cg) 55%,transparent)}
+.cg-first{border-left:2px solid var(--cgb)!important}
+thead th.cg.th-qty{background:var(--cgh)!important}
+tbody td.cg.td-qty{background:var(--cg)}
+tbody td.cg input{background:#fff}
