@@ -3086,3 +3086,7 @@ html[data-scope=PN]{--bg:#EAF1FB}html[data-scope=IPC]{--bg:#FBF0E2}html[data-sco
 html[data-scope=PN] body,html[data-scope=IPC] body,html[data-scope=HW] body{background-color:var(--bg)}
 .co-lock{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border-radius:12px;background:#FFF8E6;border:1px solid #F2D38A}
 @media (max-width:760px){.co-lock .btn{width:100%;justify-content:center}}
+.db-fold>summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:2px}.db-fold>summary::-webkit-details-marker{display:none}
+.db-fold>summary h2::after{content:' ▾';color:var(--muted);font-size:.8em}.db-fold[open]>summary h2::after{content:' ▴'}
+#c-urgent{margin-bottom:var(--sp4)}
+@media (max-width:760px){.db-kpi{grid-template-columns:1fr 1fr!important}}

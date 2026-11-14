@@ -1,3 +1,4 @@
+import { useScope } from '../lib/myco';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigationType } from 'react-router-dom';
@@ -34,7 +35,7 @@ export default function Dashboard() {
   const setTab = (t: 'me' | 'boss') => { setTab0(t); try { sessionStorage.setItem('db-tab', t); } catch { /* */ } };
   const [days, setDays0] = useState(() => +(sessionStorage.getItem('db-days') ?? 30) || 30);
   const setDays = (d: number) => { setDays0(d); try { sessionStorage.setItem('db-days', String(d)); } catch { /* */ } };
-  const [os, setOs] = useState<Order[] | null>(null); const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<D[]>([]);
+  const [os, setOs] = useState<Order[] | null>(null); const [bs0, setBs] = useState<Batch[]>([]); const [ds0, setDs] = useState<D[]>([]);
   const back = useNavigationType() === 'POP';
   const [drill, setDrill0] = useState<Drill | null>(() => { try { if (!back) return null; return JSON.parse(sessionStorage.getItem('db-drill') ?? 'null'); } catch { return null; } });
   const setDrill = (d: Drill | null) => { setDrill0(d); try { if (d) sessionStorage.setItem('db-drill', JSON.stringify(d)); else sessionStorage.removeItem('db-drill'); } catch { /* */ } };
@@ -47,8 +48,12 @@ export default function Dashboard() {
     sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at, signs').then(({ data }) => setDs((data as D[]) ?? []));
   }, []);
 
+  const { scope } = useScope();
   const M = useMemo(() => {
     if (!os) return null;
+    // Theo công ty đang chọn (QT0 thuộc PN)
+    const ds = scope === 'ALL' ? ds0 : ds0.filter((d) => d.company === scope);
+    const bs = scope === 'ALL' ? bs0 : bs0.filter((b) => (b.proc === 'QT0' ? scope === 'PN' : ds.some((d) => d.batch_id === b.id)));
     const now = Date.now(); const from = now - days * DAY; const today = new Date().toISOString().slice(0, 10);
     const oOf = (b: Batch) => os.find((o) => o.id === b.order_id);
     const since = (b: Batch) => ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort().pop() ?? b.created_at;
@@ -61,6 +66,13 @@ export default function Dashboard() {
     const lateO = os.filter((o) => o.due_date && o.due_date < today && live.some((b) => b.order_id === o.id));
     const cycle = doneP.map((b) => (+new Date(b.done_at!) - +new Date(b.created_at)) / DAY);
     const avgCycle = cycle.length ? cycle.reduce((a, x) => a + x, 0) / cycle.length : 0;
+    // Tỉ lệ trả về trong kỳ: số lượt trả về / số lượt ký
+    let nTv = 0, nKy = 0; const tvItems: Item[] = [];
+    for (const d of ds) for (const g of (d.signs ?? []) as { action?: string; at?: string }[]) { if (!g.at || +new Date(g.at) < from) continue;
+      if (g.action === 'tra_ve') { nTv++; const b = bs.find((x) => x.id === d.batch_id); if (b && !tvItems.some((t) => t.key === b.id)) tvItems.push(item(b, d.company + ' · bị trả về', true)); }
+      else if (g.action === 'ky') nKy++; }
+    const tvRate = nKy + nTv ? nTv / (nKy + nTv) : 0;
+    const urgent = [...stuck].sort((a, b) => since(a).localeCompare(since(b))).slice(0, 8);
 
     // tồn theo giai đoạn
     const stage: Record<string, { p: Proc; label: string; items: Item[]; stuck: number; o: number }> = {};
@@ -104,8 +116,8 @@ export default function Dashboard() {
       return { label: d.getDate() + '/' + (d.getMonth() + 1), items: mine.filter((m) => m.at.slice(0, 10) === k).map((m) => m.it) }; });
     const myAvg = mine.length ? mine.reduce((a, m) => a + m.hrs, 0) / mine.length : 0;
 
-    return { live, stuck, doneP, lateO, avgCycle, stages, weeks, steps, people, byCo, mine, myQueue, myDays, myAvg, item, since };
-  }, [os, bs, ds, days, me, holder]);
+    return { live, stuck, doneP, lateO, avgCycle, stages, weeks, steps, people, byCo, mine, myQueue, myDays, myAvg, item, since, nTv, tvRate, tvItems, urgent };
+  }, [os, bs0, ds0, days, me, holder, scope]);
 
   const open = (title: string, items: Item[], sub?: string) => items.length && setDrill({ title, sub, items: [...items].sort((a, z) => (a.since ?? '9').localeCompare(z.since ?? '9')) });
   if (!M) return <><div className="page-head"><h1>Thống kê</h1></div><Skeleton rows={4} h={140} /></>;
@@ -155,11 +167,15 @@ export default function Dashboard() {
         </> : <>
           <div className="db-kpi">
             <Kpi ic="run" tone="run" v={M.live.length} t="Hồ sơ đang chạy" onClick={() => open('Hồ sơ đang chạy', M.live.map((b) => M.item(b, 'chờ ' + waited(M.since(b)))))} />
-            <Kpi ic="check" tone="ok" v={M.doneP.length} t={'Hoàn tất ' + days + ' ngày'} onClick={() => open('Hồ sơ hoàn tất', M.doneP.map((b) => M.item(b)))} />
+            <Kpi ic="check" tone="ok" v={M.doneP.length} t={'Thành công ' + days + ' ngày'} onClick={() => open('Hồ sơ thành công', M.doneP.map((b) => M.item(b)))} />
             <Kpi ic="hourglass" tone={M.stuck.length ? 'bad' : 'ok'} v={M.stuck.length} t="Kẹt ≥ 2 ngày" onClick={() => open('Hồ sơ kẹt', M.stuck.map((b) => M.item(b, 'chờ ' + waited(M.since(b)), true)))} />
             <Kpi ic="alert" tone={M.lateO.length ? 'bad' : 'ok'} v={M.lateO.length} t="Đơn quá hạn giao" onClick={() => open('Đơn quá hạn giao', M.lateO.map((o) => ({ key: o.id, order_id: o.id, code: o.code, title: o.project, proc: 'QT3' as Proc, note: 'hạn ' + o.due_date, bad: true })))} />
+            <Kpi ic="back" tone={M.tvRate > 0.2 ? 'bad' : M.tvRate > 0.1 ? 'hot' : 'ok'} v={Math.round(M.tvRate * 100) + '%'} t={'Tỉ lệ trả về · ' + M.nTv + ' lượt'} onClick={() => open('Hồ sơ bị trả về trong ' + days + ' ngày', M.tvItems)} />
             <Kpi ic="clock" tone="hot" v={M.avgCycle ? M.avgCycle.toFixed(1) + ' ngày' : '—'} t="Thời gian TB 1 hồ sơ" />
           </div>
+          <Card id="c-urgent" title="Cần xử lý ngay" sub={M.urgent.length ? 'Hồ sơ kẹt lâu nhất · bấm để mở và nhắc người đang giữ' : undefined}>
+            {M.urgent.length ? <List items={M.urgent.map((b) => M.item(b, 'chờ ' + waited(M.since(b)) + (holder(b, ds0)?.who ? ' · ' + holder(b, ds0)!.who : ''), true))} /> : <p className="muted small">Không có hồ sơ nào kẹt ≥ 2 ngày. 👍</p>}
+          </Card>
           <div className="db-grid">
             <Card id="c-stage" title="Hồ sơ đang nằm ở đâu" sub="Mỗi thanh là một quy trình, mỗi khúc màu là một bước · bấm để mở rộng">
               <StageBars stages={M.stages} open={open} />
@@ -177,10 +193,7 @@ export default function Dashboard() {
             <Card id="c-people" title="Ai đang giữ nhiều việc" sub="Hồ sơ đang chờ từng người / nhóm · đỏ = kẹt">
               <People people={M.people} open={open} />
             </Card>
-            <Card id="c-rank" title="Xếp hạng hiệu quả" sub="Điểm = đúng hạn + tốc độ + chất lượng + khối lượng − phạt quá hạn · bấm để xem chi tiết">
-              <Leaderboard />
-            </Card>
-            <Card id="c-co" title="Tồn theo công ty" sub="QT1–QT3 đang ở bên nào">
+            <Card id="c-co" title="Luồng PN → IPC → Hanwa" sub="Hồ sơ QT1–QT3 đang chạy ở từng công ty">
               <div className="db-donut-row">{(() => { const tot = Math.max(1, M.byCo.reduce((a, x) => a + x.items.length, 0)); let acc = 0;
                 const col = CO_COL; const gap = M.byCo.filter((x) => x.items.length).length > 1 ? 0.8 : 0;
                 return <><svg viewBox="0 0 42 42" className="db-donut" role="img" aria-label="Tồn theo công ty">
@@ -196,6 +209,9 @@ export default function Dashboard() {
                     <button style={{ width: (l.length / t) * 100 + '%', background: QC[p], opacity: .55 }} onClick={() => open(p + ' đang chạy', l.map((b) => M.item(b)))} aria-label={'Đang chạy ' + l.length} /></span>
                   <b>{d.length}/{l.length + d.length}</b></div>; })}</div>
             </Card>
+            <Card id="c-rank" collapsed title="Xếp hạng hiệu quả" sub="Điểm = đúng hạn + tốc độ + chất lượng + khối lượng − phạt quá hạn · bấm để xem chi tiết">
+              <Leaderboard />
+            </Card>
           </div>
         </>}
       </div>
@@ -209,7 +225,8 @@ const fmtH = (h: number) => (h < 1 ? Math.round(h * 60) + ' phút' : h < 48 ? Ma
 function Kpi({ ic, tone, v, t, onClick }: { ic: string; tone: string; v: ReactNode; t: string; onClick?: () => void }) {
   return <button className={'db-k t-' + tone + (tone === 'bad' ? ' bad' : '')} onClick={onClick} disabled={!onClick}><i className={'ov-ic ' + (tone === 'bad' ? 'stuck' : tone)}><Icon name={ic} size={20} /></i><b>{v}</b><span>{t}</span></button>;
 }
-function Card({ id, title, sub, children }: { id: string; title: string; sub?: string; children: ReactNode }) {
+function Card({ id, title, sub, children, collapsed }: { id: string; title: string; sub?: string; children: ReactNode; collapsed?: boolean }) {
+  if (collapsed) return <details className="card db-card db-fold" id={id}><summary><h2>{title}</h2>{sub && <span className="small muted">{sub}</span>}</summary>{children}</details>;
   return <section id={id} className="db-card"><header><div><h2>{title}</h2>{sub && <span className="small muted">{sub}</span>}</div><ShareBtn target={'#' + id} name={id} icon /></header>{children}</section>;
 }
 function List({ items }: { items: Item[] }) {

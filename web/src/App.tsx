@@ -9,11 +9,11 @@ import { Icon } from './components/Icon';
 import { ScopeChip } from './components/ScopeChip';
 import { ConfirmHost, Toaster } from './components/ui';
 import Login from './pages/Login';
-import MyWork from './pages/MyWork';
-import Orders from './pages/Orders';
-import Board from './pages/Board';
-import NewOrder from './pages/NewOrder';
-import OrderDetail from './pages/OrderDetail';
+const MyWork = lazy(() => import('./pages/MyWork'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Board = lazy(() => import('./pages/Board'));
+const NewOrder = lazy(() => import('./pages/NewOrder'));
+const OrderDetail = lazy(() => import('./pages/OrderDetail'));
 const Admin = lazy(() => import('./pages/Admin'));
 const FlowMap = lazy(() => import('./pages/FlowMap'));
 import Install, { UpdateBar } from './pages/Install';
@@ -182,4 +182,11 @@ function ZaloNudge() {
   return <div className="zn" role="status"><span className="zalo-badge" aria-hidden="true">Zalo</span><span className="zn-t">Chưa nối Zalo · bạn sẽ không nhận được nhắc việc</span>
     <Link className="btn sm primary" to="/zalo">Nối ngay</Link>
     <button className="btn sm icon-btn" aria-label="Để sau" title="Để sau (ẩn 1 ngày)" onClick={() => { try { localStorage.setItem('zalo-nudge', String(Date.now() + 864e5)); } catch { /* */ } setHid(true); }}><Icon name="x" size={14} /></button></div>;
+}
+
+// Tải trước các trang chính khi rảnh để chuyển trang vẫn tức thì
+if (typeof window !== 'undefined') {
+  const pre = () => { import('./pages/MyWork'); import('./pages/Orders'); import('./pages/Board'); import('./pages/OrderDetail'); };
+  const ric = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
+  setTimeout(() => (ric ? ric(pre) : pre()), 1500);
 }

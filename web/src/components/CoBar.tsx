@@ -52,7 +52,7 @@ export function CoBar({ docId, can, locked, onTables }: { docId: string; can: bo
           {canRef ? <select value={co.ref_id ?? ''} onChange={(e) => setRef(e.target.value)} aria-label="Đơn tham chiếu">
               <option value="">— Không tham chiếu —</option>{cands.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select>
             : <span>{ref?.code ?? '—'}</span>}
-          {canRef && co.ref_id && <button type="button" className="btn sm" onClick={copy} title="Chép danh sách tấm từ đơn tham chiếu (không chép giá)"><Icon name="copy" size={15} />Chép DS tấm</button>}
+          {false && canRef && co?.ref_id && <button type="button" className="btn sm" onClick={copy} title="Chép danh sách tấm từ đơn tham chiếu (không chép giá)"><Icon name="copy" size={15} />Chép DS tấm</button>}
         </div>
       </div>}
     </div>);

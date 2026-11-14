@@ -1,0 +1,3 @@
+-- 14/11 rà soát: tắt doc_from_ref/co_copy_ref; CCCD chỉ thủ kho xem (docs_v ẩn ảnh gh_cccd); profiles.active_co + set_active_co + _co_ok trong can_act;
+-- act_grants: policy (select auth.uid()), index target_id/created_by; index docs(batch_id), batches(order_id, proc).
+-- Đã áp dụng qua MCP (fix_a_server, perf_b).
