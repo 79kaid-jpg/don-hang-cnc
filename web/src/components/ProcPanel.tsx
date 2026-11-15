@@ -70,6 +70,8 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
     if (bs.length) { const dd = r.docs; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
+  // Đổi công ty: quyền xem phiếu (can_view) tính theo công ty đang làm → tải lại
+  useEffect(() => { const f = () => { load(); }; addEventListener('scope-synced', f); return () => removeEventListener('scope-synced', f); }, [load]);
   const { canSwitch: multiCo0, scope: scope0 } = useScope(); const myCos0 = useMyCo().allowed as string[];
   // Người chỉ thuộc 1 công ty: chỉ thấy hồ sơ có phiếu của công ty mình
   const batchesAll = batchesRaw;
