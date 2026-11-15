@@ -69,13 +69,18 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   for (const k of Object.keys(d.header ?? {})) if (vars[k] == null) vars[k] = d.header[k];
   for (const [k, v] of Object.entries((o as Order & { extra?: Record<string, string> }).extra ?? {})) if (vars[k] == null) vars[k] = v;
   if (vars.han_bao_gia == null) vars.han_bao_gia = fd(o.quote_due ?? undefined);
-  for (const r of ['lap', 'kiem_tra', 'duyet', 'admin', 'ky_thuat']) { const s = sg(r); vars['nguoi_' + r] = nm(s?.user); vars['ngay_' + r] = fd(s?.at); }
+  for (const r of ['lap', 'kiem_tra', 'duyet', 'admin', 'ky_thuat']) { const s = sg(r); vars['nguoi_' + r] = nm(s?.user); vars['ngay_' + r] = fd(s?.at);
+    vars['gio_' + r] = s?.at ? new Date(s.at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''; }
+  if (!vars.kenh) vars.kenh = o.channel ?? '';
+  vars.nguoi_boc_tach = nm((o as Order & { extractor_id?: string | null }).extractor_id ?? undefined);
   const tables: TplData['tables'] = {}; const subs: NonNullable<TplData['subs']> = {};
   for (const [key, def] of PROC_TABLES[b.proc as Proc]) {
     const T = { t: TABLES[def].t, cols: colsOf(b.proc as Proc, key) }; const rows: Row[] = d.tables?.[key] ?? [];
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
       for (const [k2, v2] of Object.entries(r)) if (v2 != null && typeof v2 !== 'object') o2[k2] = v2 as string | number;
       for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : fmtCell(c, v); }
+      // Cột tự tính (VD khối lượng kg) vẫn tính khi đang ẩn trong Quản trị → mẫu in dùng được
+      for (const c of TABLES[def].cols) if (c.calc && (o2[c.k] == null || o2[c.k] === '')) { const v = c.calc(r); if (v != null) o2[c.k] = Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0); }
       // Tên hàng = Tấm + Màu sơn + Rộng×Dài×Dày + Loại GC (bỏ phần trống)
       if (o2.ten_hang == null || o2.ten_hang === '') { const t = (x: unknown) => String(x ?? '').trim(); const kt = [t(r.rong), t(r.dai), t(r.day)].filter(Boolean).join('x');
         o2.ten_hang = ['Tấm', t(r.mau_son), kt, t(r.loai_gc)].filter(Boolean).join(' '); }
@@ -83,6 +88,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     for (const c of T.cols) if (c.ty === 'sub') { subs[key] = subs[key] ?? {}; subs[key][c.k] = rows.map((r) => subRows(r, c.k).map((x, j) => { const o3: Record<string, string | number> = { stt: j + 1 };
       for (const y of c.sub ?? []) { const v = y.calc ? y.calc(x) : y.n ? numIn(x[y.k]) : x[y.k]; o3[y.k] = v == null ? '' : y.n ? Math.round(Number(v) * 10 ** (y.d ?? 0)) / 10 ** (y.d ?? 0) : fmtCell(y, v); } return o3; })); }
     for (const c of T.cols) if (c.n) vars['tong_' + key + '_' + c.k] = Math.round(sumOf(rows, c) * 100) / 100;
+    for (const c of TABLES[def].cols) if (c.calc && vars['tong_' + key + '_' + c.k] == null) { const t = rows.reduce((a, r) => a + (Number(c.calc!(r)) || 0), 0); vars['tong_' + key + '_' + c.k] = Math.round(t * 100) / 100; }
   }
   if (b.proc === 'QT1') { const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(d.tables?.ds ?? [], c); const v = numIn(d.header?.vat) ?? 8;
     const vc = numIn(d.header?.phi_vc) ?? 0; vars.phi_vc = vc ? Math.round(vc) : '';
@@ -168,6 +174,10 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
     const loops: { row: number; key: string }[] = [];
     ws.eachRow((r, n) => r.eachCell((c) => { const m = cellText(c).match(/\{#([a-z0-9_]+)\}/i); if (m) loops.push({ row: n, key: m[1] }); }));
     loops.sort((a, z) => z.row - a.row);
+    // {bang.cot?} trong dòng lặp: cả bảng không có số liệu ở cột này → ẩn cả cột
+    for (const L of loops) ws.getRow(L.row).eachCell((c) => { const s0 = cellText(c); const m = s0.match(/\{([a-z0-9_]+)\.([a-z0-9_]+)\?\}/i); if (!m) return;
+      c.value = s0.replace(/\{([a-z0-9_]+)\.([a-z0-9_]+)\?\}/gi, '{$1.$2}');
+      const items = data.tables[L.key] ?? []; if (!items.some((it) => it[m[2]] != null && it[m[2]] !== '' && it[m[2]] !== 0)) ws.getColumn(Number(c.col)).hidden = true; });
     // dòng trống (không chữ, không viền) trong mẫu – exceljs đôi khi để lại viền rác khi chèn dòng, sẽ dọn lại sau
     const blank: number[] = []; const last = ws.rowCount + 3;
     for (let n = 1; n <= last; n++) { let used = false; ws.getRow(n).eachCell((c) => { const b = c.border ?? {}; if ((c.value != null && cellText(c) !== '') || b.top || b.bottom || b.left || b.right) used = true; }); if (!used) blank.push(n); }
@@ -284,7 +294,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
       const sp = sp0 ? [sp0[0], vcols.filter((x) => x >= c && x < c + sp0[1]).length] as [number, number] : undefined;
       let v = ''; const raw = cell.value as unknown;
       if (raw && typeof raw === 'object' && 'formula' in (raw as object)) { const res = (raw as { result?: unknown }).result; v = res == null ? '' : typeof res === 'number' ? res.toLocaleString('vi-VN') : String(res); }
-      else if (typeof raw === 'number') v = /^0+$/.test(String(cell.numFmt ?? '')) ? String(raw).padStart(String(cell.numFmt).length, '0') : raw.toLocaleString('vi-VN'); else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
+      else if (typeof raw === 'number') { const nf = String(cell.numFmt ?? ''); const dm = nf.match(/\.(0+)(#*)/); v = /^0+$/.test(nf) ? String(raw).padStart(nf.length, '0') : dm ? raw.toLocaleString('vi-VN', { minimumFractionDigits: dm[1].length, maximumFractionDigits: dm[1].length + dm[2].length }) : /\.#/.test(nf) ? raw.toLocaleString('vi-VN', { maximumFractionDigits: (nf.split('.')[1] ?? '').length }) : raw.toLocaleString('vi-VN'); } else if (raw instanceof Date) v = raw.toLocaleDateString('vi-VN'); else v = cellText(cell) || (raw == null ? '' : String(raw));
       const f = cell.font ?? {}; const a = cell.alignment ?? {};
       const b = { ...(cell.border ?? {}) } as Partial<ExcelJS.Borders>;
       if (sp0) { const rc = ws.getCell(r, c + sp0[1] - 1).border ?? {}; const bc = ws.getCell(r + sp0[0] - 1, c).border ?? {};

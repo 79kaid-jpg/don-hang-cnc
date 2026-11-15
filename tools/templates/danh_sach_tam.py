@@ -14,12 +14,15 @@ R = Alignment(horizontal='right', vertical='center'); LW = Alignment(horizontal=
 RT = Alignment(horizontal='right', vertical='top'); CT = Alignment(horizontal='center', vertical='top')
 
 # STT | Mã tấm | Vật liệu | Dày | Dài | Rộng | Số tấm | m²/tấm | Tổng m² | Khối lượng | Đường hàn | Số lần chấn | m² đột | Ghi chú
-COLS = [('STT', 5, 'stt'), ('Mã tấm', 19, 'ma_tam'), ('Vật liệu', 23, 'vat_lieu'), ('Dày\n(mm)', 7, 'day'), ('Dài\n(mm)', 8, 'dai'),
-        ('Rộng\n(mm)', 8, 'rong'), ('Số\ntấm', 6, 'so_tam'), ('m² trải\nphẳng/tấm', 10, 'm2_tam'), ('Tổng\nm²', 8, 'm2'),
-        ('Khối lượng\n(kg)', 11, 'kg'), ('Đường\nhàn (m)', 8, 'duong_han'), ('Số lần\nchấn', 7, 'chan'), ('m²\nđột', 6, 'm2_dot'), ('Ghi chú', 20, 'ghi_chu')]
+# Cột luôn hiện trước, cột tuỳ chọn (ẩn khi cả bảng trống) để cuối – ô gộp đầu trang / ô ký không neo vào cột có thể ẩn
+COLS = [('STT', 5, 'stt'), ('Mã tấm', 18, 'ma_tam'), ('Vật liệu', 22, 'vat_lieu'), ('Dày\n(mm)', 7, 'day'), ('Dài\n(mm)', 8, 'dai'),
+        ('Rộng\n(mm)', 8, 'rong'), ('Số\ntấm', 7, 'so_tam'), ('Tổng\nm²', 9, 'm2'), ('Khối lượng\n(kg)', 11, 'kg'), ('Ghi chú', 24, 'ghi_chu'),
+        ('m² trải\nphẳng/tấm', 10, 'm2_tam'), ('Đường\nhàn (m)', 8, 'duong_han'), ('Số lần\nchấn', 7, 'chan'), ('m²\nđột', 7, 'm2_dot')]
 NUM = {'day': '0.#', 'dai': '#,##0', 'rong': '#,##0', 'so_tam': '#,##0', 'm2_tam': '#,##0.00', 'm2': '#,##0.00', 'kg': '#,##0.0',
        'duong_han': '#,##0.0', 'chan': '#,##0', 'm2_dot': '#,##0.00'}
 N = len(COLS); LAST = chr(64 + N)
+OPT = {'m2_tam', 'duong_han', 'chan', 'm2_dot'}
+VIS = 'J'  # cột cuối luôn hiện (Ghi chú)
 
 def build(path):
     wb = Workbook(); ws = wb.active; ws.title = 'Danh sach tam'
@@ -43,9 +46,9 @@ def build(path):
     ws.merge_cells('C1:F1'); put('C1', '{ben_ban_ten}', f(11, True, c=NAVY), L)
     ws.merge_cells('C2:F2'); put('C2', '{ben_ban_dia_chi}', f(8.5, c=GREY), L)
     ws.merge_cells('C3:F3'); put('C3', 'ĐT: {ben_ban_dien_thoai}   ·   MST: {ben_ban_mst}', f(8.5, c=GREY), L)
-    ws.merge_cells(f'K1:{LAST}1'); put('K1', 'Mã đơn: {ma_don}', f(10, True), R)
-    ws.merge_cells(f'K2:{LAST}2'); put('K2', 'Lần bóc tách: {lo}', f(9, c=GREY), R)
-    ws.merge_cells(f'K3:{LAST}3'); put('K3', 'Ngày in: {ngay_in}', f(9, c=GREY), R)
+    ws.merge_cells(f'H1:{LAST}1'); put('H1', 'Mã đơn: {ma_don}', f(10, True), R)
+    ws.merge_cells(f'H2:{LAST}2'); put('H2', 'Lần bóc tách: {lo}', f(9, c=GREY), R)
+    ws.merge_cells(f'H3:{LAST}3'); put('H3', 'Ngày in: {ngay_in}', f(9, c=GREY), R)
     for r in (1, 2, 3): ws.row_dimensions[r].height = 20
     ws.row_dimensions[4].height = 8
 
@@ -56,31 +59,33 @@ def build(path):
     # Thông tin chung (2 cột)
     info = [('Khách hàng:', '{khach_hang}', 'Dự án:', '{du_an}'),
             ('Ngày nhận bản vẽ:', '{ngay_nhan}', 'Kênh nhận:', '{kenh}'),
-            ('Hao hụt dự kiến:', '{hao_hut} %', 'Hạn giao:', '{han_giao}')]
+            ('Hao hụt dự kiến:', '{hao_hut} %', 'Hạn giao:', '{han_giao}'),
+            ('Người bóc tách:', '{nguoi_boc_tach}', 'Mô tả:', '{mo_ta}')]
     for i, (a, av, b, bv) in enumerate(info):
         r = 7 + i
         ws.merge_cells(f'A{r}:B{r}'); put(f'A{r}', a, f(9.5, c=GREY), L)
         ws.merge_cells(f'C{r}:F{r}'); put(f'C{r}', av, f(10, True), L)
-        ws.merge_cells(f'H{r}:I{r}'); put(f'H{r}', b, f(9.5, c=GREY), L)
-        ws.merge_cells(f'J{r}:{LAST}{r}'); put(f'J{r}', bv, f(10, True), L)
+        ws.merge_cells(f'G{r}:H{r}'); put(f'G{r}', b, f(9.5, c=GREY), L)
+        ws.merge_cells(f'I{r}:{LAST}{r}'); put(f'I{r}', bv, f(10, True), L)
         ws.row_dimensions[r].height = 18
-    ws.row_dimensions[10].height = 10
+    ws.row_dimensions[11].height = 10
 
     # Bảng
-    h = 11
+    h = 12
     for i, (t, _w, _k) in enumerate(COLS):
         put(f'{chr(65 + i)}{h}', t, f(9, True), C, HEAD, B)
     ws.row_dimensions[h].height = 32
     d = h + 1
     for i, (_t, _w, k) in enumerate(COLS):
-        v = '{#ds}{ds.stt}' if k == 'stt' else '{ds.' + k + '}'
-        al = CT if k == 'stt' else (RT if k in NUM else LW)
+        # {ds.k?} = ẩn cả cột khi cả bảng không có số liệu (các cột tuỳ chọn)
+        v = '{#ds}{ds.stt}' if k == 'stt' else '{ds.' + k + ('?}' if k in OPT else '}')
+        al = C if k == 'stt' else (R if k in NUM else L)
         put(f'{chr(65 + i)}{d}', v, f(9.5), al, None, B, NUM.get(k))
-    ws.row_dimensions[d].height = 30
+    ws.row_dimensions[d].height = 18
     t = d + 1
     for i in range(N): put(f'{chr(65 + i)}{t}', None, f(9.5, True), R, HEAD, B)
     ws.merge_cells(f'A{t}:F{t}'); put(f'A{t}', 'TỔNG CỘNG', f(9.5, True), C, HEAD, B)
-    for k, col in (('so_tam', 'G'), ('m2', 'I'), ('kg', 'J'), ('duong_han', 'K'), ('chan', 'L'), ('m2_dot', 'M')):
+    for k, col in (('so_tam', 'G'), ('m2', 'H'), ('kg', 'I'), ('m2_tam', 'K'), ('duong_han', 'L'), ('chan', 'M'), ('m2_dot', 'N')):
         put(f'{col}{t}', '{tong_ds_' + k + '}', f(9.5, True), R, HEAD, B, NUM[k])
     ws.row_dimensions[t].height = 22
 
@@ -92,14 +97,14 @@ def build(path):
 
     # Ký xác nhận: 4 ô
     k = g + 3
-    boxes = [('A', 'D', 'Người tạo', 'admin'), ('E', 'H', 'Bóc tách kỹ thuật', 'ky_thuat'),
-             ('I', 'K', 'Kiểm tra', 'kiem_tra'), ('L', LAST, 'Duyệt', 'duyet')]
+    boxes = [('A', 'B', 'Người tạo', 'admin'), ('C', 'C', 'Bóc tách kỹ thuật', 'ky_thuat'),
+             ('D', 'H', 'Kiểm tra', 'kiem_tra'), ('I', LAST, 'Duyệt', 'duyet')]
     for a, z, lb, role in boxes:
         ws.merge_cells(f'{a}{k}:{z}{k}'); put(f'{a}{k}', lb, f(10, True), C, HEAD)
         ws.merge_cells(f'{a}{k + 1}:{z}{k + 1}'); put(f'{a}{k + 1}', '(Ký, ghi rõ họ tên)', f(8.5, i=True, c=GREY), C)
         ws.merge_cells(f'{a}{k + 2}:{z}{k + 4}'); put(f'{a}{k + 2}', '', f(10), C)
         ws.merge_cells(f'{a}{k + 5}:{z}{k + 5}'); put(f'{a}{k + 5}', '{nguoi_' + role + '}', f(10, True), C)
-        ws.merge_cells(f'{a}{k + 6}:{z}{k + 6}'); put(f'{a}{k + 6}', '{ngay_' + role + '}', f(8.5, c=GREY), C)
+        ws.merge_cells(f'{a}{k + 6}:{z}{k + 6}'); put(f'{a}{k + 6}', '{gio_' + role + '} {ngay_' + role + '}', f(8.5, c=GREY), C)
         ca, cz = ord(a), ord(z)
         for rr in range(k, k + 7):
             for cc in range(ca, cz + 1):
