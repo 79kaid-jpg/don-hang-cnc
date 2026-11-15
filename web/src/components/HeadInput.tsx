@@ -53,16 +53,22 @@ export const mapUrl = (v: string) => { const { addr, ll } = parseLoc(v); return 
 /** Tra ngược toạ độ → địa chỉ (Nominatim, tiếng Việt) */
 async function revGeo(ll: string): Promise<string> {
   const [lat, lon] = ll.split(',');
-  try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=vi&zoom=18`); if (!r.ok) return '';
+  const clean = (x: string) => x.replace(/,?\s*\d{5,6}(?=,|$)/g, '').replace(/,\s*(Việt Nam|Vietnam|VNM)$/i, '').trim();
+  // 1) Esri (nhanh, ổn định, không cần khoá)
+  try { const r = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&langCode=vi&location=${lon},${lat}`);
+    const j = await r.json() as { address?: { LongLabel?: string; Match_addr?: string } }; const v = j.address?.LongLabel || j.address?.Match_addr; if (v) return clean(v); } catch (e) { console.warn('[geo] esri', e); }
+  // 2) Nominatim (OpenStreetMap)
+  try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=vi&zoom=18`); if (r.ok) {
     const j = await r.json() as { display_name?: string; address?: Record<string, string> }; const a = j.address ?? {};
     const parts = [[a.house_number, a.road].filter(Boolean).join(' '), a.quarter || a.suburb || a.neighbourhood, a.city_district || a.county || a.town, a.city || a.state].filter(Boolean);
-    return parts.length >= 2 ? [...new Set(parts)].join(', ') : (j.display_name ?? '').replace(/, \d{5,6}, Việt Nam$/, '').replace(/, Việt Nam$/, ''); } catch { return ''; }
+    const v = parts.length >= 2 ? [...new Set(parts)].join(', ') : j.display_name ?? ''; if (v) return clean(v); } } catch (e) { console.warn('[geo] osm', e); }
+  return '';
 }
 let autoAddr = ''; // địa chỉ do app điền gần nhất (để không ghi đè địa chỉ người dùng gõ)
 function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; disabled?: boolean }) {
   const { addr, ll } = parseLoc(v); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [geo, setGeo] = useState(false);
   const join = (a: string, l: string) => (a.trim() + (l ? ' @' + l : '')).trim();
-  const pick = async (nl: string) => { on(join(addr, nl)); if (addr && addr !== autoAddr) return; setGeo(true); const a = await revGeo(nl); setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } };
+  const pick = async (nl: string) => { on(join(addr, nl)); if (addr && addr !== autoAddr) return; setGeo(true); setErr(''); const a = await revGeo(nl); setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } else setErr('Không tìm được địa chỉ cho điểm này – gõ tay vào ô trên'); };
   const typed = (x: string) => { // dán link Google Maps → tách toạ độ
     const m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(x) ?? /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(x) ?? /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/.exec(x);
     if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) { if (addr === x) return; const nl = (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6); if (!addr || addr === autoAddr) { on(join('', nl)); autoAddr = ''; setGeo(true); revGeo(nl).then((a) => { setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } }); } else on(join(addr, nl)); }
