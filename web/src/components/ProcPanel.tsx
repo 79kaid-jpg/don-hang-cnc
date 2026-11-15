@@ -38,7 +38,7 @@ import { RtThumbs, rtFilesAt } from './RtThumbs';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
-import { confirmDialog, toast } from './ui';
+import { confirmDialog, toast, Msg } from './ui';
 import { useAuth } from '../lib/auth';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -154,7 +154,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const [rows0, setRows0] = useState<Row[] | null>(null); const [used, setUsed] = useState<Record<number, string>>({}); const [pick, setPick] = useState<Set<number>>(new Set());
   const [pnOrders, setPnOrders] = useState<{ id: string; code: string }[]>([]); const [coId, setCoId] = useState('');
   // IPC / HW: lập XNĐH bằng tham chiếu mã đơn đã duyệt của công ty trước
-  const { co: myCoNB } = useMyCo(); const refMode = false as boolean; const autoCo = proc !== 'QT0' && (myCoNB === 'IPC' || myCoNB === 'HW');
+  const { co: myCo0 } = useMyCo(); const { scope: scNB } = useScope(); const myCoNB = scNB === 'IPC' || scNB === 'HW' ? scNB : myCo0; const refMode = false as boolean; const autoCo = proc !== 'QT0' && (myCoNB === 'IPC' || myCoNB === 'HW');
   const prevCo = myCoNB === 'HW' ? 'IPC' : 'PN';
   const [refs, setRefs] = useState<{ code: string; title: string; used: string | null }[] | null>(null); const [ref, setRef] = useState('');
   const [rr, setRr] = useState<{ i: number; ma_tam: string; vat_lieu: string; day: string; so_tam: number; con_lai: number }[] | null>(null); const [take, setTake] = useState<Record<number, string>>({});
@@ -189,11 +189,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
     const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
-  if (autoCo) return createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-      <div className="mv-head"><h2 style={{ margin: 0 }}>Phiếu {myCoNB === 'HW' ? 'Hanwa' : 'IPC'} được tạo tự động</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
-      <p>Khi {myCoNB === 'HW' ? 'IPC' : 'Phương Nam'} duyệt xong {PROC_NAME[proc]}, app tự tạo phiếu cho {myCoNB === 'HW' ? 'Hanwa' : 'IPC'} với cùng thông tin (không có giá) và báo Zalo cho người Lập.</p>
-      <p className="small muted">Cần làm lại một phiếu đã Thành công / Thất bại? Mở phiếu đó và bấm <b>Clone thành đơn mới</b>.</p>
-      <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn primary" onClick={onClose}>Đã hiểu</button></div></div></div>, document.body);
+  if (autoCo) return <PrevPick o={o} proc={proc} co={myCoNB as 'IPC' | 'HW'} prev={prevCo} onClose={onClose} onDone={onDone} />;
   return (
     createPortal(<div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <div className="mv-head"><h2 style={{ margin: 0 }}>Mở {BATCH_WORD[proc]} mới · {o.project ?? ''}</h2><button className="btn sm icon-btn" onClick={onClose} aria-label="Đóng"><Icon name="x" size={18} /></button></div>
@@ -510,7 +506,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
-          fromQt0={proc === 'QT1' && key === 'ds' ? async () => { const { data: bs } = await sb.from('batches').select('id').eq('order_id', b.order_id).eq('proc', 'QT0').eq('status', 'hoan_tat').order('done_at', { ascending: false }).limit(1);
+          srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
+          fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
+            return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : proc === 'QT1' && key === 'ds' && d.company === 'PN' ? async () => { const { data: bs } = await sb.from('batches').select('id').eq('order_id', b.order_id).eq('proc', 'QT0').eq('status', 'hoan_tat').order('done_at', { ascending: false }).limit(1);
             if (!bs?.length) return []; const { data: ds } = await sb.from('docs_v').select('tables').eq('batch_id', bs[0].id).limit(1);
             return (((ds?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} vc={numIn(h.phi_vc) ?? 0} />}
@@ -641,7 +639,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0 }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]> }) {
+function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0' }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
   const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
@@ -763,7 +761,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0 
             : <button type="button" className="pp-sx-btn" aria-label="Tìm trong bảng (Ctrl+F)" title="Tìm trong bảng (Ctrl+F)" onClick={openSearch}><Icon name="search" size={16} /></button>}</span>}
         {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
-        {pick && <Qt0Pick src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
+        {pick && <Qt0Pick label={srcLabel} src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
           const KEEP = new Set(['don_gia', 'tt', 'ghi_chu', '_id']); const key = (r: Row) => String(r.ma_tam ?? '').trim().toLowerCase();
           const cur = rows.filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
           const idx = new Map(cur.map((r, i) => [key(r), i])); const next = cur.map((r) => ({ ...r })); let up = 0, add = 0;
@@ -774,7 +772,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0 
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
           <button className="btn xs" title="Tải file Excel lên (đọc theo tên cột)" onClick={() => fileRef.current?.click()}><Icon name="upload" size={13} />Tải lên</button>
-          {fromQt0 && <button className="btn xs" title="Lấy danh sách tấm từ QT0 đã duyệt – khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập" onClick={async () => { const r = await fromQt0(); if (!r.length) { toast('Chưa có danh sách tấm QT0 đã duyệt'); return; } setPick(r); }}><Icon name="download" size={13} />Lấy từ QT0</button>}
+          {fromQt0 && <button className="btn xs" title="Lấy danh sách tấm từ QT0 đã duyệt – khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập" onClick={async () => { const r = await fromQt0(); if (!r.length) { toast('Không có danh sách tấm để lấy'); return; } setPick(r); }}><Icon name="download" size={13} />{srcLabel}</button>}
           <button className="btn xs" title="Dán dữ liệu đã chép từ Excel – hoặc bấm vào một ô rồi Ctrl+V" onClick={() => setOpen(!open)}><Icon name="copy" size={13} />Dán</button>
           <button className="btn xs" title="Tải file mẫu: đúng các cột của bảng, có 3 dòng ví dụ" onClick={tpl}><Icon name="download" size={13} />Mẫu</button>
           {isAdm && <button className="btn xs icon-only" title="Admin: nạp 3 dòng dữ liệu mẫu" aria-label="Nạp dữ liệu mẫu" onClick={addSample}><Icon name="bolt" size={13} /></button>}
@@ -1019,16 +1017,34 @@ function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void
 }
 
 /** Chọn tấm từ QT0 đã duyệt để đưa vào QT1 */
-function Qt0Pick({ src, onClose, onPick }: { src: Row[]; onClose: () => void; onPick: (r: Row[]) => void }) {
+function Qt0Pick({ src, onClose, onPick, label = 'Lấy từ QT0' }: { src: Row[]; onClose: () => void; onPick: (r: Row[]) => void; label?: string }) {
   const [sel, setSel] = useState<Set<number>>(() => new Set(src.map((_, i) => i))); const [q, setQ] = useState('');
   const ql = q.trim().toLowerCase(); const vis = src.map((r, i) => ({ r, i })).filter(({ r }) => !ql || String(r.ma_tam ?? '').toLowerCase().includes(ql));
   const tog = (i: number) => setSel((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n; });
-  return <Sheet head={<b>Lấy danh sách tấm từ QT0</b>} sub={`QT0 đã duyệt · ${src.length} tấm · khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập`} label="Lấy từ QT0" onClose={onClose}>
+  return <Sheet head={<b>{label}</b>} sub={`${src.length} tấm · khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập`} label={label} onClose={onClose}>
     <div className="q0p">
       <div className="row" style={{ gap: 8 }}><input type="search" placeholder="Tìm mã tấm…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Tìm mã tấm" style={{ flex: 1 }} />
         <button className="btn xs" onClick={() => setSel(new Set(src.map((_, i) => i)))}>Chọn hết</button><button className="btn xs" onClick={() => setSel(new Set())}>Bỏ hết</button></div>
       <ul className="q0p-l">{vis.map(({ r, i }) => <li key={i}><label><input type="checkbox" checked={sel.has(i)} onChange={() => tog(i)} />
         <b>{String(r.ma_tam ?? '')}</b><span className="small muted">{[r.day && r.day + 'mm', r.rong && r.dai && r.rong + '×' + r.dai, r.so_tam && r.so_tam + ' tấm', r.loai_gc].filter(Boolean).join(' · ')}</span></label></li>)}</ul>
       <div className="row" style={{ gap: 8 }}><button className="btn primary" disabled={!sel.size} onClick={() => onPick(src.filter((_, i) => sel.has(i)))}>Lấy {sel.size} tấm</button><button className="btn" onClick={onClose}>Huỷ</button></div>
+    </div></Sheet>;
+}
+
+/** IPC / Hanwa: tạo phiếu Lập từ phiếu đã duyệt của công ty trước (khi tự tạo bị lỗi) – mỗi phiếu nguồn chỉ lấy 1 lần */
+function PrevPick({ o, proc, co, prev, onClose, onDone }: { o: Order; proc: Proc; co: 'IPC' | 'HW'; prev: string; onClose: () => void; onDone: (id: string) => void }) {
+  const [l, setL] = useState<{ doc_id: string; code: string; title: string; at: string; used_code: string | null }[] | null>(null); const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
+  useEffect(() => { sb.rpc('prev_candidates', { p_order: o.id, p_proc: proc, p_co: co }).then(({ data, error }) => { if (error) setErr(errText(error)); setL((data ?? []) as never); }); }, [o.id, proc, co]);
+  const nm = (c: string) => (c === 'HW' ? 'Hanwa' : c === 'PN' ? 'Phương Nam' : c);
+  const go = async (id: string) => { setBusy(id); setErr(''); const { data, error } = await sb.rpc('doc_from_prev', { p_src: id }); setBusy('');
+    if (error) setErr(errText(error)); else { toast('Đã tạo phiếu ' + nm(co) + ' từ phiếu ' + nm(prev)); onDone(data as string); } };
+  return <Sheet head={<b>Tạo phiếu {nm(co)} từ phiếu {nm(prev)}</b>} sub={`Bình thường app tự tạo khi ${nm(prev)} duyệt xong. Dùng khi phiếu chưa được tạo tự động. Mỗi phiếu ${nm(prev)} chỉ lấy được 1 lần.`} label={'Tạo phiếu ' + nm(co)} onClose={onClose}>
+    <div className="q0p">
+      {l == null ? <p className="muted">Đang tải…</p> : !l.length ? <p className="muted">Chưa có phiếu {nm(prev)} nào đã duyệt cho {PROC_NAME[proc]} của đơn này.</p>
+        : <ul className="q0p-l">{l.map((x) => <li key={x.doc_id}><div className={'pv-it' + (x.used_code ? ' used' : '')}>
+          <span className="pv-t"><b>{x.code}</b><span className="small muted">{x.title} · duyệt {new Date(x.at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+            {x.used_code && <span className="small pv-used"><Icon name="check" size={12} />Đã lấy → {x.used_code}</span>}</span>
+          {!x.used_code && <button className="btn sm primary" disabled={!!busy} onClick={() => go(x.doc_id)}>{busy === x.doc_id ? 'Đang tạo…' : 'Tạo phiếu'}</button>}</div></li>)}</ul>}
+      <Msg err={err} />
     </div></Sheet>;
 }

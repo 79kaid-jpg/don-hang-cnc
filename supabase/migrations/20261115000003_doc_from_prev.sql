@@ -1,0 +1,1 @@
+-- prev_candidates, doc_from_prev: IPC/HW tạo phiếu từ phiếu công ty trước (1 lần) – áp dụng qua MCP

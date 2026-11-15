@@ -3240,3 +3240,7 @@ thead th:has(.col-i){white-space:nowrap}
 .xdot-pop.bad{border-left-color:#DC2626}.xdot-pop.warn{border-left-color:#D97706}.xdot-pop.wait{border-left-color:#94A3B8}
 .xdot-pop .btn{align-self:flex-start;margin-top:6px}
 @media (max-width:760px){.xdot{width:28px;height:28px}.xdot::before{content:'';position:absolute;inset:-8px}.xdot{position:relative}}
+/* Tạo phiếu IPC/HW từ phiếu công ty trước */
+.pv-it{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:56px}
+.pv-it.used{opacity:.6}.pv-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.pv-used{display:inline-flex;align-items:center;gap:4px;color:#16A34A}
