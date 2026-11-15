@@ -5,6 +5,7 @@ import { scrollTop, scrollToY } from './lib/scroll';
 import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Icon } from './components/Icon';
 import { ScopeChip } from './components/ScopeChip';
 import { ConfirmHost, Toaster } from './components/ui';
@@ -144,7 +145,7 @@ function Shell() {
             <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}
         <ZaloNudge />
-        <Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
+        <ErrorBoundary resetKey={loc.pathname}><Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
           <Route path="/" element={<MyWork />} />
           <Route path="/thong-ke" element={<Stats />} />
           <Route path="/bao-cao-du-an" element={<ProjectReport />} />
@@ -164,7 +165,7 @@ function Shell() {
           <Route path="/huong-dan" element={<RoleGuide />} />
           <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
-        </Routes></Suspense>
+        </Routes></Suspense></ErrorBoundary>
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
@@ -175,7 +176,7 @@ function Shell() {
     </div>
   );
 }
-export default function App() { return <AuthProvider><Shell /></AuthProvider>; }
+export default function App() { return <ErrorBoundary><AuthProvider><Shell /></AuthProvider></ErrorBoundary>; }
 
 /** Nhắc nối Zalo trên mọi trang (trừ Việc của tôi / trang Zalo đã có thẻ riêng); tạm ẩn 1 ngày */
 function ZaloNudge() {
