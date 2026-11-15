@@ -94,7 +94,8 @@ export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['ki
   else if (!as && kind === 'trinh_duyet') signs.push({ role: ROLE_OF[d.status] ?? d.status, user: au as string, at: now.toISOString(), action: 'ky', note });
   const d2 = { ...d, signs } as Doc;
   const { html: h0, landscape } = await docPrintHtml(o, b, d2, ppl);
-  const html = h0 + await auditHtml(d2, ppl, level);
+  // Bản trình duyệt: chỉ phiếu, không kèm bảng nhật ký (xem lịch sử ở Hành trình duyệt). Bản duyệt / thất bại vẫn lưu nhật ký để đối chiếu
+  const html = kind === 'trinh_duyet' ? h0 : h0 + await auditHtml(d2, ppl, level);
   const pdf = await toPdf(html, stamp, landscape);
   const path = `records/${o.id}/${b.proc}-${d.company}-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.pdf`;
   const up = await sb.storage.from('files').upload(path, pdf, { contentType: 'application/pdf' }); if (up.error) throw up.error;
