@@ -1,0 +1,1 @@
+-- Nhật ký cấu hình (_cfg_audit) + admin_health (áp dụng qua MCP: admin_pro_health_audit)
