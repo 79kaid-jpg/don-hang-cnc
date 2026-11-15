@@ -11,6 +11,7 @@ export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' 
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>>;
+  /** Tên cột trong file nhập (PMSX…) */ import_names?: string[];
   /** Trường nhạy cảm: chỉ người được cấp mới xem (máy chủ che giá trị) */ restricted?: boolean; view_roles?: string[]; view_users?: string[]; view_approver?: boolean };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
@@ -79,7 +80,7 @@ export function colsOf(p: Proc, tbl: string): Col[] {
     if (f.type === 'subtable') { const col: Col = { k: f.key, t: f.label, ty: 'sub', ro: true, sub: tbl.includes('.') ? [] : colsOf(p, tbl + '.' + f.key), w: 10 }; out.push(col); by[f.key] = col; return; }
     if (f.type === 'int') { const col: Col = { k: f.key, t: f.label, n: true, int: true, d: 0, w: c?.w ?? 6, g: c?.g, u: c?.u, info: c?.info }; out.push(col); by[f.key] = col; return; }
     const ty = f.type === 'date' || f.type === 'select' || f.type === 'bool' || f.type === 'ref' || f.type === 'lookup' || f.type === 'datetime' || f.type === 'multi' ? f.type : undefined;
-    const col: Col = { k: f.key, t: f.label, ty, opts: ty === 'select' || ty === 'multi' ? f.options : undefined, ref: ty === 'ref' || ty === 'lookup' ? f.options?.[0] : undefined, ro: ty === 'ref' || undefined, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info };
+    const col: Col = { k: f.key, t: f.label, alias: f.import_names, ty, opts: ty === 'select' || ty === 'multi' ? f.options : undefined, ref: ty === 'ref' || ty === 'lookup' ? f.options?.[0] : undefined, ro: ty === 'ref' || undefined, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info };
     out.push(col); by[f.key] = col; });
   return out;
 }
