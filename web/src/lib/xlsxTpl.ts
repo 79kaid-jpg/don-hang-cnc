@@ -109,7 +109,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
   for (const f of fieldsOf('F0', 'header')) if (!f.sys) L.push({ k: f.key, t: 'F0 · ' + f.label });
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }
-  if (proc === 'QT1') L.push({ k: 'so_ct', t: 'Số CT (cấp khi duyệt)' }, { k: 'phi_vc', t: 'Phí vận chuyển' }, { k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
+  if (proc === 'QT1') L.push({ k: 'ten_hang', t: 'Tên hàng hoá (tự ghép)' }, { k: 'so_ct', t: 'Số CT (cấp khi duyệt)' }, { k: 'phi_vc', t: 'Phí vận chuyển' }, { k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
   for (const [key, def] of PROC_TABLES[proc]) { const T = { t: TABLES[def].t, cols: colsOf(proc, key) };
     L.push({ k: '#' + key, t: 'Lặp dòng: ' + T.t + ' (đặt ở ô đầu dòng)' }, { k: key + '.stt', t: 'STT' });
     for (const c of T.cols) { L.push({ k: key + '.' + c.k, t: c.t }); if (c.n) L.push({ k: 'tong_' + key + '_' + c.k, t: 'Tổng ' + c.t }); } }
