@@ -10,6 +10,11 @@ const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/
 export function ProjectsAdmin() {
   const list = useProjects(); const { can } = useAuth(); const admin = can('admin_it') || can('admin_cnc'); const edit = admin || can('kinh_doanh');
   const [cust, setCust] = useState<Record<string, Customer>>({}); const [cnt, setCnt] = useState<Record<string, number>>({});
+  const [zg, setZg] = useState<{ chat_id: string; name: string; projects: string[] }[]>([]); const [zsel, setZsel] = useState<string[]>([]);
+  const loadZg = () => sb.rpc('zgroups_pick').then(({ data }) => setZg((data as typeof zg) ?? []));
+  useEffect(() => { loadZg(); }, []);
+  const zOf = (id: string) => zg.filter((g) => g.projects.includes(id));
+  const startEd = (p: Project) => { setEd(p); setZsel(zOf(p.id).map((g) => g.chat_id)); };
   const [q, setQ] = useState(''); const [st, setSt] = useState<'open' | 'closed' | 'all'>('open'); const [ed, setEd] = useState<Project | null>(null); const [err, setErr] = useState('');
   useEffect(() => {
     sb.from('customers').select('*').then(({ data }) => setCust(Object.fromEntries(((data as Customer[]) ?? []).map((c) => [c.id, c]))));
@@ -19,7 +24,9 @@ export function ProjectsAdmin() {
   const save = async () => { if (!ed) return; setErr('');
     if (!CODE_RE.test(ed.code)) return setErr('Mã 2–12 ký tự, chỉ chữ in hoa và số');
     const { error } = await sb.from('projects').update({ code: ed.code, name: ed.name.trim(), location: ed.location || null, end_customer_id: ed.end_customer_id || null, note: ed.note || null }).eq('id', ed.id);
-    if (error) return setErr(error.code === '23505' ? 'Mã ' + ed.code + ' đã có' : errText(error)); await reloadProjects(); setEd(null); toast('Đã lưu dự án'); };
+    if (error) return setErr(error.code === '23505' ? 'Mã ' + ed.code + ' đã có' : errText(error));
+    if (zg.length) { const r = await sb.rpc('project_set_zgroups', { p_project: ed.id, p_chats: zsel }); if (r.error) return setErr(errText(r.error)); await loadZg(); }
+    await reloadProjects(); setEd(null); toast('Đã lưu dự án'); };
   const close = async (p: Project, c: boolean) => {
     if (!(await confirmDialog((c ? 'Đóng' : 'Mở lại') + ' dự án ' + p.code + ' – ' + p.name + '?', c ? 'Đóng dự án' : 'Mở lại'))) return;
     const { error } = await sb.rpc('project_close', { p: p.id, close: c }); if (error) return toast(errText(error)); await reloadProjects(); toast(c ? 'Đã đóng dự án' : 'Đã mở lại'); };
@@ -37,15 +44,18 @@ export function ProjectsAdmin() {
             <label className="f"><span>Tên dự án</span><input value={ed.name} onChange={(e) => setEd({ ...ed, name: e.target.value })} /></label>
             <label className="f"><span>Khách cuối</span><select value={ed.end_customer_id ?? ''} onChange={(e) => setEd({ ...ed, end_customer_id: e.target.value || null })}><option value="">—</option>
               {Object.values(cust).filter((c) => c.kind !== 'van_chuyen').sort((a, b) => a.name.localeCompare(b.name)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            {zg.length > 0 && <fieldset className="f pja-zg"><legend>Nhóm Zalo nhận tin dự án</legend>
+              {zg.map((g) => <label key={g.chat_id} className="pja-zgi"><input type="checkbox" checked={zsel.includes(g.chat_id)} onChange={(e) => setZsel(e.target.checked ? [...zsel, g.chat_id] : zsel.filter((x) => x !== g.chat_id))} />{g.name || 'Nhóm ' + g.chat_id.slice(0, 6)}</label>)}
+              {!zsel.length && <small className="f-err">Chưa có nhóm Zalo – tin của dự án sẽ không vào nhóm dự án nào</small>}</fieldset>}
             <label className="f"><span>Địa điểm</span><input value={ed.location ?? ''} onChange={(e) => setEd({ ...ed, location: e.target.value })} /></label>
             {err && <small className="f-err">{err}</small>}
             <div className="row"><button className="btn primary sm" onClick={save} disabled={!ed.name.trim()}>Lưu</button><button className="btn sm" onClick={() => { setEd(null); setErr(''); }}>Huỷ</button></div>
           </div>
         : <>
           <b className="pj-code">{p.code}</b>
-          <div className="pja-t"><b>{p.name}</b><span className="small muted">{[cust[p.end_customer_id ?? '']?.name ?? 'Chưa có khách cuối', p.location, (cnt[p.id] ?? 0) + ' đơn', p.status === 'closed' && 'Đã đóng ' + (p.closed_at ?? '').slice(0, 10)].filter(Boolean).join(' · ')}</span></div>
+          <div className="pja-t"><b>{p.name}</b><span className="small muted">{[cust[p.end_customer_id ?? '']?.name ?? 'Chưa có khách cuối', p.location, (cnt[p.id] ?? 0) + ' đơn', zg.length ? (zOf(p.id).length ? 'Zalo: ' + zOf(p.id).map((g) => g.name).join(', ') : '⚠ chưa có nhóm Zalo') : '', p.status === 'closed' && 'Đã đóng ' + (p.closed_at ?? '').slice(0, 10)].filter(Boolean).join(' · ')}</span></div>
           <div className="pja-act">
-            {edit && p.status === 'open' && <button className="btn sm" onClick={() => setEd(p)}>Sửa</button>}
+            {edit && p.status === 'open' && <button className="btn sm" onClick={() => startEd(p)}>Sửa</button>}
             {admin && <button className={'btn sm' + (p.status === 'open' ? ' ghost' : '')} onClick={() => close(p, p.status === 'open')}>{p.status === 'open' ? 'Đóng' : 'Mở lại'}</button>}
           </div></>}
       </li>)}</ul>}

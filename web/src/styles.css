@@ -3493,3 +3493,7 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .zg-chip{display:inline-flex;align-items:center;gap:2px;background:#EDF3E8;color:#2E6B43;border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
 .zg-chip button{border:0;background:none;color:inherit;cursor:pointer;width:24px;height:24px;border-radius:50%}.zg-chip button:hover{background:rgba(0,0,0,.08)}
 @media (pointer:coarse){.zg-chip button{width:36px;height:36px}.zg-pj select{min-height:44px}}
+.zg-rule{padding-top:6px;border-top:1px dashed var(--line)}.zg-pre{min-height:32px;width:140px}
+.pja-zg{border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px 14px;margin:0}.pja-zg legend{font-size:13px;font-weight:600;padding:0 4px}
+.pja-zgi{display:flex;align-items:center;gap:6px;min-height:36px;font-size:14px}.pja-zgi input{width:18px;height:18px}
+@media (pointer:coarse){.pja-zgi{min-height:44px}.zg-pre{min-height:44px}}

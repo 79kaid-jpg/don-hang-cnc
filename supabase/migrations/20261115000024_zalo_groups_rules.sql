@@ -1,0 +1,1 @@
+-- MCP: zalo_groups rule_customers/rule_prefix/all_projects, trigger zg_projects, zgroups_pick, project_set_zgroups

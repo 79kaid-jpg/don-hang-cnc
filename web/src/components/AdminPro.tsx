@@ -25,6 +25,12 @@ async function tplCheck(): Promise<TplBad[]> {
 export function HealthAdmin({ go }: { go: (tab: string) => void }) {
   const [tb, setTb] = useState<TplBad[] | null>(null);
   useEffect(() => { tplCheck().then(setTb).catch(() => setTb([])); }, []);
+  // Dự án đang mở chưa gắn nhóm Zalo theo dự án (chỉ tính khi đã có nhóm theo dự án)
+  const [nz, setNz] = useState<{ code: string; name: string }[] | null>(null);
+  useEffect(() => { Promise.all([sb.from('zalo_groups').select('projects, all_projects, active'), sb.from('projects').select('id, code, name, status')]).then(([g, p]) => {
+    const gs = ((g.data ?? []) as { projects: string[]; all_projects: boolean; active: boolean }[]).filter((x) => x.active && !x.all_projects);
+    if (!gs.length) return setNz([]); const has = new Set(gs.flatMap((x) => x.projects));
+    setNz(((p.data ?? []) as { id: string; code: string; name: string; status: string }[]).filter((x) => x.status === 'open' && !has.has(x.id) && !/^\s*\[(MẪU|MAU)\]/i.test(x.name))); }); }, []);
   const [days, setDays] = useState(3); const [h, setH] = useState<Health | null>(null); const [err, setErr] = useState(''); const [open, setOpen] = useState<string>('');
   const load = () => sb.rpc('admin_health', { p_days: days }).then(({ data, error }) => { if (error) setErr(errText(error)); else { setErr(''); setH(data as Health); } });
   useEffect(() => { load(); }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -35,6 +41,7 @@ export function HealthAdmin({ go }: { go: (tab: string) => void }) {
     { k: 'locked', t: 'Tài khoản đã khoá vẫn được giao', n: h.locked.length, tone: h.locked.length ? 'warn' : 'ok', sub: 'Nên gỡ khỏi Phụ trách quy trình' },
     { k: 'stuck', t: 'Phiếu kẹt quá ' + h.days + ' ngày', n: h.stuck.length, tone: h.stuck.length ? 'warn' : 'ok', sub: 'Chưa chuyển bước (không tính đơn [MẪU])' },
     { k: 'tpl', t: 'Mẫu in dùng biến không có', n: tb?.length ?? 0, tone: tb === null ? 'ok' : tb.length ? 'warn' : 'ok', sub: tb === null ? 'Đang kiểm tra…' : 'Ô đó sẽ để trống khi in' },
+    { k: 'no_zg', t: 'Dự án chưa có nhóm Zalo', n: nz?.length ?? 0, tone: nz?.length ? 'warn' : 'ok', sub: 'Tin của dự án sẽ không vào nhóm dự án nào' },
     { k: 'no_zalo', t: 'Người dùng chưa nối Zalo', n: h.no_zalo.length, tone: h.no_zalo.length ? 'warn' : 'ok', sub: 'Sẽ không nhận được nhắc việc' }];
   return <div className="hl">
     <div className="hl-top"><span className="small muted">Kiểm tra lúc {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -50,6 +57,8 @@ export function HealthAdmin({ go }: { go: (tab: string) => void }) {
       {h.stuck.length ? <ul>{h.stuck.map((s) => <li key={s.doc}><Link to={'/don/' + s.order + '?tab=' + s.proc}><b>{s.code}</b></Link> · {s.project} · <span className="qt-tag">{s.proc}</span> {CN(s.company)} · {STATUS[s.status] ?? s.status} <span className="muted">· {ago(s.since)}</span></li>)}</ul> : <p className="muted">Không có phiếu nào bị kẹt.</p>}</section>}
     {open === 'tpl' && <section className="card hl-list"><header><b>Mẫu in dùng biến không có</b><button className="btn sm primary" onClick={() => go('tpl')}>Mở Mẫu in</button></header>
       {tb === null ? <p className="muted">Đang kiểm tra…</p> : tb.length ? <ul>{tb.map((t) => <li key={t.id}><span className="qt-tag">{t.proc}</span> <b>{t.name}</b> v{t.version}{t.company ? ' · ' + CN(t.company) : ''}: {t.bad.map((v) => <code key={v} className="hl-bad">{'{' + v + '}'}</code>)}</li>)}</ul> : <p className="muted">Mọi mẫu in đang dùng đều khớp biến.</p>}</section>}
+    {open === 'no_zg' && <section className="card hl-list"><header><b>Dự án chưa có nhóm Zalo</b><button className="btn sm primary" onClick={() => go('pj')}>Mở Dự án</button></header>
+      {nz?.length ? <ul className="hl-cols">{nz.map((p) => <li key={p.code}><b>{p.code}</b> <span className="muted small">{p.name}</span></li>)}</ul> : <p className="muted">Mọi dự án đã có nhóm.</p>}</section>}
     {open === 'no_zalo' && <section className="card hl-list"><header><b>Chưa nối Zalo</b><button className="btn sm primary" onClick={() => go('users')}>Mở Người dùng</button></header>
       {h.no_zalo.length ? <ul className="hl-cols">{h.no_zalo.map((p) => <li key={p.id}>{p.name} <span className="muted small">{p.unit}</span></li>)}</ul> : <p className="muted">Mọi người đã nối.</p>}</section>}
   </div>;
