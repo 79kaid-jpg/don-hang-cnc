@@ -1,4 +1,5 @@
 import { BotNameEdit, ZaloGroups } from '../components/ZaloLink';
+import { CoRoles, CoTags, type Access, type Co } from '../components/CoRoles';
 import { PlanGrid } from '../components/PlanEdit';
 import { ActGrants } from '../components/ActGrants';
 import { ChainPeopleAdmin } from '../components/ChainPeople';
@@ -51,6 +52,9 @@ export default function Admin() {
   };
   useEffect(load, []);
   const [ucos, setUcos] = useState<Record<string, string[]>>({});
+  const [acc, setAcc] = useState<Record<string, Access>>({});
+  useEffect(() => { sb.from('user_co_roles').select('user_id, company, roles').then(({ data }) => { const m: Record<string, Access> = {};
+    for (const r of (data ?? []) as { user_id: string; company: Co; roles: string[] }[]) { (m[r.user_id] ??= { admin: false, cos: {} }).cos[r.company] = r.roles; } setAcc(m); }); }, [people]);
   useEffect(() => { sb.rpc('all_user_cos').then(({ data }) => setUcos(Object.fromEntries(((data as { id: string; cos: string[] }[]) ?? []).map((r) => [r.id, r.cos])))); }, [tab]);
   const list = useMemo(() => (people ?? []).filter((p) => (p.full_name + ' ' + p.roles.join(' ')).toLowerCase().includes(q.toLowerCase())), [people, q]);
   const open = people?.find((p) => p.id === openId) ?? null;
@@ -119,7 +123,7 @@ export default function Admin() {
                   <span className={'adm2-av u-' + p.unit}>{ini(p.full_name)}</span>
                   <span className="adm2-who"><b>{p.full_name || '(chưa đặt tên)'}</b>
                     <span className="small muted">{UNIT_NAME[p.unit] ?? p.unit}{p.position ? ' · ' + p.position : ''}{(ucos[p.id] ?? []).length > 1 && <span className="adm2-cos" title="Kiêm nhiệm nhiều công ty (theo bảng Phụ trách quy trình)">{(ucos[p.id] ?? []).map((c) => <span key={c} className={'adm2-co co-' + c}>{({ PN: 'PNC', IPC: 'IPC', HW: 'HAN' } as Record<string, string>)[c] ?? c}</span>)}</span>}{!p.active && <span className="chip bad sm">Đã khoá</span>}</span></span>
-                  <span className="adm2-tags">{tags.length ? <>{tags.slice(0, 3).map((t) => <span key={t} className="adm2-tag">{t}</span>)}{tags.length > 3 && <span className="adm2-tag more">+{tags.length - 3}</span>}</>
+                  <span className="adm2-tags">{acc[p.id] ? <CoTags a={{ ...acc[p.id], admin: p.roles.includes('admin_it') }} /> : tags.length ? <>{tags.slice(0, 3).map((t) => <span key={t} className="adm2-tag">{t}</span>)}{tags.length > 3 && <span className="adm2-tag more">+{tags.length - 3}</span>}</>
                     : <span className="adm2-tag bad">Chưa có vai trò</span>}
                     {gs.slice(0, 2).map((g) => <span key={g.id} className="adm2-tag grp"><Icon name="users" size={11} />{g.name}</span>)}</span>
                   <span className={'adm2-zl' + (p.zalo_chat_id ? ' on' : '')} title={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'} aria-label={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}>Z</span>
@@ -162,12 +166,18 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
   const init = { full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active, position: p.position ?? '', manager_id: p.manager_id ?? null };
   const [f, setF] = useState(init);
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
-  const dirty = JSON.stringify(f) !== JSON.stringify(init);
+  const [a0, setA0] = useState<Access | null>(null); const [a, setA] = useState<Access | null>(null);
+  useEffect(() => { sb.from('user_co_roles').select('company, roles').eq('user_id', p.id).then(({ data }) => {
+    const cos: Access['cos'] = {}; for (const r of (data ?? []) as { company: Co; roles: string[] }[]) cos[r.company] = r.roles;
+    const x = { admin: p.roles.includes('admin_it'), cos }; setA0(x); setA(x); }); }, [p.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dirty = JSON.stringify(f) !== JSON.stringify(init) || JSON.stringify(a) !== JSON.stringify(a0);
   const isMe = p.id === real?.id;
   const save = async () => {
     setBusy(true); setErr('');
-    const { error } = await sb.from('profiles').update(f).eq('id', p.id);
-    setBusy(false); if (error) setErr(errText(error)); else { toast('Đã lưu ' + f.full_name); onSaved(); }
+    const { roles: _r, ...rest } = f; void _r;
+    const { error } = await sb.from('profiles').update(rest).eq('id', p.id);
+    const e2 = !error && a ? (await sb.rpc('user_set_access', { p_user: p.id, p_admin: a.admin, p_cos: a.cos })).error : null;
+    setBusy(false); if (error || e2) setErr(errText((error ?? e2)!)); else { setA0(a); toast('Đã lưu ' + f.full_name); onSaved(); }
   };
   const loginAs = async () => {
     if (dirty && !(await confirmDialog('Có thay đổi chưa lưu. Bỏ qua và đăng nhập với tư cách người này?', 'Bỏ qua & tiếp tục'))) return;
@@ -208,16 +218,12 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
           <input type="checkbox" className="switch" checked={f.active} disabled={isMe} onChange={(e) => setF({ ...f, active: e.target.checked })} /></label>
       </section>
 
-      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <h2 style={{ marginBottom: 8 }}>Vai trò</h2>
-        {Object.entries(ROLES).map(([k, t]) => (
-          <label key={k} className="role-row">
-            <input type="checkbox" checked={f.roles.includes(k)} disabled={isMe && k === 'admin_it'} onChange={() => toggle(k)} />
-            <span><b>{t}</b><br /><span className="small muted">{ROLE_HINT[k]}</span></span>
-          </label>))}
+      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <h2 style={{ margin: 0 }}>Công ty & vai trò</h2>
+        {a ? <CoRoles v={a} on={setA} hints={ROLE_HINT} lockAdmin={isMe} /> : <Skeleton rows={2} h={40} />}
       </section>
 
-      <UserDataAccess p={p} roles={f.roles} />
+      <UserDataAccess p={p} roles={a ? [...new Set([...(a.admin ? ['admin_it'] : []), ...Object.values(a.cos).flat() as string[]])] : f.roles} />
       <UserAccount p={p} isMe={isMe} onDeleted={() => { onSaved(); onBack(); }} />
       <Msg err={err} />
       <div className="savebar">
@@ -292,18 +298,22 @@ function Flows({ steps, people, onSaved }: { steps: Step[]; people: Profile[]; o
 function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) => void }) {
   const [groups] = useGroups();
   const [f, setF] = useState({ full_name: '', email: '', unit: 'CNC', password: '', roles: [] as string[], group_ids: [] as string[] });
+  const [na, setNa] = useState<Access>({ admin: false, cos: { PN: [] } });
   const [show, setShow] = useState(true); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState<{ id: string; email: string; pw: string } | null>(null);
   const gen = () => { const a = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; const r = crypto.getRandomValues(new Uint32Array(10));
     setF({ ...f, password: Array.from(r, (x) => a[x % a.length]).join('') + '!' }); setShow(true); };
   const tog = (k: 'roles' | 'group_ids', v: string) => setF({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] });
   const submit = async () => {
     setErr(''); setBusy(true);
-    const { data, error } = await sb.functions.invoke('admin-users', { body: f });
+    const cs = Object.keys(na.cos) as Co[]; const unit = cs[0] === 'PN' ? 'CNC' : cs[0] === 'HW' ? 'HANWA' : cs[0] ?? f.unit;
+    const roles = [...new Set([...(na.admin ? ['admin_it'] : []), ...Object.values(na.cos).flat() as string[]])];
+    const { data, error } = await sb.functions.invoke('admin-users', { body: { ...f, unit, roles } });
     setBusy(false);
     let msg = (data as { error?: string } | null)?.error;
     if (error && !msg) { try { msg = (await (error as { context?: Response }).context?.json())?.error; } catch { /* */ } msg = msg || error.message; }
     if (msg) { setErr(msg); return; }
-    setDone({ id: (data as { id: string }).id, email: f.email, pw: f.password });
+    const nid = (data as { id: string }).id; const r2 = await sb.rpc('user_set_access', { p_user: nid, p_admin: na.admin, p_cos: na.cos }); if (r2.error) setErr('Đã tạo tài khoản nhưng chưa lưu được công ty & vai trò: ' + errText(r2.error));
+    setDone({ id: nid, email: f.email, pw: f.password });
   };
   if (done) return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560 }}>
@@ -323,8 +333,6 @@ function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) 
           <label className="f">Họ tên *<input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} placeholder="Nguyễn Văn A" autoFocus /></label>
           <label className="f">Email đăng nhập *<input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="ten@congty.vn" autoComplete="off" /></label>
         </div>
-        <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
-          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div></div>
         <div className="row">
           <label className="f" style={{ flex: '1 1 260px' }}>Mật khẩu tạm * (từ 8 ký tự)
             <input type={show ? 'text' : 'password'} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" className="mono" /></label>
@@ -332,11 +340,9 @@ function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) 
           <button className="btn icon-btn" type="button" onClick={() => setShow(!show)} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><Icon name={show ? 'eyeoff' : 'eye'} size={18} /></button>
         </div>
       </section>
-      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <h2 style={{ marginBottom: 8 }}>Vai trò</h2>
-        {Object.entries(ROLES).map(([k, t]) => (
-          <label key={k} className="role-row"><input type="checkbox" checked={f.roles.includes(k)} onChange={() => tog('roles', k)} />
-            <span><b>{t}</b><br /><span className="small muted">{ROLE_HINT[k]}</span></span></label>))}
+      <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <h2 style={{ margin: 0 }}>Công ty & vai trò</h2>
+        <CoRoles v={na} on={setNa} hints={ROLE_HINT} />
       </section>
       {groups.filter((g) => g.active).length > 0 && (
         <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -347,7 +353,7 @@ function NewUser({ onBack, onDone }: { onBack: () => void; onDone: (id: string) 
         </section>)}
       <Msg err={err} />
       <div className="savebar">
-        <span className="small muted" style={{ flex: 1 }}>{f.roles.length ? f.roles.length + ' vai trò' : 'Chưa chọn vai trò – đăng nhập được nhưng chưa làm được việc gì'}</span>
+        <span className="small muted" style={{ flex: 1 }}>{na.admin || Object.values(na.cos).some((x) => x?.length) ? Object.keys(na.cos).length + ' công ty' : 'Chưa chọn vai trò – đăng nhập được nhưng chưa làm được việc gì'}</span>
         <button className="btn" onClick={onBack}>Huỷ</button>
         <button className="btn primary" disabled={!ok || busy} onClick={submit}><Icon name="plus" size={18} />{busy ? 'Đang tạo…' : 'Tạo tài khoản'}</button>
       </div>

@@ -37,7 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = sb.auth.onAuthStateChange((_e, s) => { setTimeout(() => load(s), 0); });
     return () => data.subscription.unsubscribe();
   }, []);
-  const can = (r: string) => !!me && me.active && (me.roles.includes(r) || me.roles.includes('admin_it'));
+  // Vai trò theo công ty đang làm (Quản trị › Người dùng › Công ty & vai trò). Chưa có dòng công ty nào → vai trò chung như cũ.
+  const [coR, setCoR] = useState<Record<string, string[]> | null>(null);
+  useEffect(() => { if (!me) { setCoR(null); return; } sb.from('user_co_roles').select('company, roles').eq('user_id', me.id).then(({ data }) => {
+    const l = (data ?? []) as { company: string; roles: string[] }[]; setCoR(l.length ? Object.fromEntries(l.map((x) => [x.company, x.roles])) : null); }); }, [me?.id, me?.roles?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const can = (r: string) => { if (!me || !me.active) return false; if (me.roles.includes('admin_it')) return true; if (!coR) return me.roles.includes(r);
+    let sc = 'ALL'; try { sc = localStorage.getItem('scope-co') ?? 'ALL'; } catch { /* */ }
+    return sc in coR ? coR[sc].includes(r) : sc === 'ALL' || !['PN', 'IPC', 'HW'].includes(sc) ? Object.values(coR).some((x) => x.includes(r)) : false; };
   const acting = !!real && !!me && real.id !== me.id;
   setCaUser((me?.id ?? '') + (actUntil ? '+' : ''));
   const actAs = async (id: string) => {

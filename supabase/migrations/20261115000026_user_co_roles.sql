@@ -1,0 +1,1 @@
+-- MCP: user_co_roles (công ty × vai trò), has_role theo active_co, user_cos, user_set_access
