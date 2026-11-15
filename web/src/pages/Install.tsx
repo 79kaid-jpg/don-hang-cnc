@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { BUILD, applyUpdate, isIOSNotSafari, platform, useInstall, useUpdate } from '../lib/pwa';
 import { toast } from '../components/ui';
-import { useBotName, ZaloLink } from '../components/ZaloLink';
+import { BotQR, useBotName, ZaloLink } from '../components/ZaloLink';
 import { ShortcutTable } from '../components/Shortcuts';
 import ProcessGuide from '../components/ProcessGuide';
 
@@ -82,10 +82,11 @@ export default function Install() {
         <h3 className="ins-h3">Liên kết</h3>
         <ol className="ins-steps">
           <Step n={1}>Bấm <b>Liên kết Zalo</b> ở ô bên dưới (hoặc menu tài khoản › <b>Thông báo Zalo</b>). App hiện một <b>mã 6 số</b>, có hiệu lực 30 phút.</Step>
-          <Step n={2}>Mở Zalo trên điện thoại, gõ tìm <b>{bot}</b>, bấm <b>Nhắn tin</b>.</Step>
+          <Step n={2}>Mở bot: <b>quét mã QR</b> bên dưới bằng điện thoại (hoặc bấm <b>Mở bot trên Zalo</b> nếu đang dùng điện thoại). Cách khác: mở Zalo, gõ tìm <b>{bot}</b>. Bấm <b>Nhắn tin</b>.</Step>
           <Step n={3}>Gửi cho bot đúng mã 6 số đó.</Step>
           <Step n={4}>Bot trả lời <b>"Đã liên kết…"</b>, app tự chuyển sang <b>Đã liên kết</b>. Xong.</Step>
         </ol>
+        <BotQR />
         <ZaloLink />
         <h3 className="ins-h3">Nhận tin khi nào</h3>
         <ul className="ins-ul">

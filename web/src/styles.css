@@ -3478,3 +3478,7 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .hi-sug button.on,.hi-sug button:hover{background:var(--soft)}
 @media (pointer:coarse){.hi-sug button{min-height:44px}}
 .hi-undo{color:var(--muted)}.hi-undo .link-btn{font-weight:600}@media (pointer:coarse){.hi-undo .link-btn{min-height:44px}}
+.bot-qr{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.bot-qr img{border-radius:8px;border:1px solid var(--line)}.bot-qr-t{display:grid;gap:6px;justify-items:start;min-width:180px}
+.bot-qr-m{display:none}
+@media (pointer:coarse),(max-width:760px){.bot-qr img,.bot-qr-d{display:none}.bot-qr-m{display:inline-flex;min-height:44px}.bot-qr{padding:8px}}
