@@ -36,7 +36,7 @@ import { advanceDoc } from '../lib/records';
 import { ReviewPdf, reviewQ } from './Records';
 import { parties } from '../lib/xlsxTpl';
 import { RtThumbs, rtFilesAt } from './RtThumbs';
-import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, type FDef } from '../lib/fields';
+import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, fmtCell, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { confirmDialog, toast, Msg } from './ui';
@@ -334,8 +334,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const pjs = useProjects(); const kh0 = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id));
   const refVals: Record<string, string> = { ma_du_an: pjs?.find((p) => p.id === (o as { project_id?: string }).project_id)?.code ?? '', du_an: o.project ?? '', ma_don: docCode(o, b, d.company), ma_noi_bo: o.code,
     khach_hang: kh0?.name ?? '', han_giao: o.due_date ? new Date(o.due_date).toLocaleDateString('vi-VN') : '' };
+  const lookOpts = (src?: string) => src === 'projects' ? (pjs ?? []).map((x) => x.code) : src === 'customers' ? custs.map((x) => x.name) : src === 'people' ? Object.values(people).map((x) => x.full_name).filter(Boolean).sort() : [];
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
-    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, refv: c.ty === 'ref' ? refVals[c.ref ?? ''] ?? '' : undefined, ro: c.ty === 'ref' || closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
+    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, refv: c.ty === 'ref' ? refVals[c.ref ?? ''] ?? '' : undefined, opts: c.ty === 'lookup' ? lookOpts(c.ref) : c.opts, ro: c.ty === 'ref' || closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
     const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required'; const thide = !!tf && pm(tf) === 'hide'; const tst = d.status === 'duyet_them' || d.status === 'da_duyet' ? 'duyet' : d.status; const tview = !!tf && tf.perms?.[d.company]?.[tst] === 'view';
     return { key, title: TABLES[def].t, treq, thide, cols: thide ? [] : tview ? cols.map((c) => ({ ...c, ro: true })) : cols, ed: !thide && !tview && !closed && (adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan'))) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed && !x.thide);
@@ -676,7 +677,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
   // Cột tự giãn theo nội dung dài nhất (tối đa 48 ký tự), không hẹp hơn mặc định
   const wOf = (c: Col) => Math.min(48, Math.max(c.w ?? 7, ...rows.map((r) => String(r[c.k] ?? '').length + 3)));
   const colT = (k: string) => cols.find((c) => c.k === k)?.t ?? '';
-  const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k)).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
+  const totals = useMemo(() => Object.fromEntries(cols.filter((c) => c.n && (c.sum || ['so_tam', 'm2', 'kg', 'tt', 'm2_dot', 'duong_han', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k))).map((c) => [c.k, sumOf(rows, c)])), [rows, cols]);
   let skipped = 0;
   const fromAoa = (aoa: string[][]) => {
     const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
@@ -886,8 +887,8 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const meta = [['Mã đơn hàng', docCode(o, b, d.company)], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
   const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
     const grp = T.cols.some((c) => c.g) ? '<tr class="g"><th></th>' + T.cols.reduce<{ g: string; n: number }[]>((a, c, i) => { const g = c.g ?? ''; const l = a[a.length - 1]; if (i > 0 && l && l.g === g && g) l.n++; else a.push({ g, n: 1 }); return a; }, []).map((x) => `<th colspan="${x.n}">${esc(x.g)}</th>`).join('') + '</tr>' : '';
-    return `<h3>${esc(T.t)}</h3><table>${grp}<tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}${c.u ? '<br><small>' + esc(c.u) + '</small>' : ''}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : r[c.k])}</td>`).join('')}</tr>`).join('')}
-      <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : ['so_tam', 'm2', 'kg', 'tt', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
+    return `<h3>${esc(T.t)}</h3><table>${grp}<tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}${c.u ? '<br><small>' + esc(c.u) + '</small>' : ''}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : fmtCell(c, r[c.k]))}</td>`).join('')}</tr>`).join('')}
+      <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : c.sum || ['so_tam', 'm2', 'kg', 'tt', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
   const roles = b.proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet'];
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
     return `<td><b>${r === 'admin' ? 'Người tạo' : ROLE_NAME[r]}</b><br><small>ký điện tử</small><div class="sp">${s ? '✔ ' + esc(who(s.user)) + ((s as { by?: string }).by ? ' <small>(' + esc(who((s as { by?: string }).by!)) + ' làm thay)</small>' : '') + '<br><small>' + esc(dt(s.at)) + '</small>' : ''}</div></td>`; }).join('');

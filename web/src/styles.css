@@ -3305,3 +3305,8 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .pp-grid .pp-cd,.pp-grid .pp-cs{height:34px;min-height:0;padding:2px 6px;font-size:14px;min-width:9ch;width:100%}
 .pp-ref{color:#4A5563;font-style:italic;white-space:nowrap}.pp-ref::before{content:'🔗 ';font-style:normal;opacity:.6}
 @media (max-width:760px){.pp-mrow-e .pp-cb{width:28px;height:28px;margin:8px 0}.pp-mrow-e .pp-cd,.pp-mrow-e .pp-cs{min-height:44px}}
+.fx-ed{display:flex;flex-direction:column;gap:6px}
+.fx-in{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.fx-in[aria-invalid=true]{border-color:var(--red,#C0392B);background:#FDF3F2}
+.fx-chips{display:flex;flex-wrap:wrap;gap:6px}.fx-chips .chip{min-height:32px;padding:0 10px;font-size:13px}.fx-op{font-family:ui-monospace,monospace;font-weight:700}
+.fx-pv{font-size:13.5px;padding:6px 10px;border-radius:8px;background:#EEF6F0;color:#1F5C38}.fx-pv.bad{background:#FDF3F2;color:#A93226}

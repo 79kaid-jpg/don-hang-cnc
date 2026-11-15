@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { sb } from './supabase';
-import { HEADER, PROC_TABLES, TABLES, FLOW, type Col, type Company, type Proc } from './proc';
+import { HEADER, PROC_TABLES, TABLES, FLOW, numIn, type Col, type Company, type Proc, type Row } from './proc';
+import { evalFormula } from './formula';
 
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
 export type Area = 'header' | 'col' | 'file' | 'table';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
-export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier' | 'bool' | 'ref';
+export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier' | 'bool' | 'ref' | 'formula' | 'lookup';
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>>;
   /** Trường nhạy cảm: chỉ người được cấp mới xem (máy chủ che giá trị) */ restricted?: boolean; view_roles?: string[]; view_users?: string[]; view_approver?: boolean };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
-export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển', bool: 'Có/Không', ref: 'Tham chiếu (lấy từ đơn)' };
+export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển', bool: 'Có/Không', ref: 'Tham chiếu (lấy từ đơn)', formula: 'Công thức', lookup: 'Chọn từ danh mục' };
+/** Danh mục cho kiểu Chọn từ danh mục */
+export const LOOKUPS: [string, string][] = [['projects', 'Dự án (mã)'], ['customers', 'Đối tác (tên)'], ['people', 'Người dùng (tên)']];
 /** Giá trị có thể tham chiếu vào cột bảng – mọi dòng cùng giá trị, chốt lại khi phiếu được duyệt */
 export const REF_VARS: [string, string][] = [['ma_du_an', 'Mã dự án'], ['du_an', 'Tên dự án'], ['ma_don', 'Mã đơn (chứng từ)'], ['ma_noi_bo', 'Mã nội bộ'], ['khach_hang', 'Khách hàng'], ['han_giao', 'Hạn giao']];
 /** Bước mà người làm được nhập liệu theo mặc định */
@@ -66,10 +69,18 @@ export const hdrOf = (p: Proc): [string, string, string][] => fieldsOf(p, 'heade
 /** Cột bảng theo cấu hình, giữ công thức tự tính của mã nguồn */
 export function colsOf(p: Proc, tbl: string): Col[] {
   const def = PROC_TABLES[p].find(([k]) => k === tbl)?.[1]; const src = def ? TABLES[def].cols : [];
-  return fieldsOf(p, 'col', tbl).map((f) => { const c = src.find((x) => x.k === f.key);
-    const ty = f.type === 'date' || f.type === 'select' || f.type === 'bool' || f.type === 'ref' ? f.type : undefined;
-    return { k: f.key, t: f.label, ty, opts: ty === 'select' ? f.options : undefined, ref: ty === 'ref' ? f.options?.[0] : undefined, ro: ty === 'ref' || undefined, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info }; });
+  const out: Col[] = []; const by: Record<string, Col> = {};
+  const getv = (r: Row, k: string, seen: Set<string>): number | null => { const o = by[k]; if (o?.calc) { if (seen.has(k)) return null; seen.add(k); const v = o.fx ? evalFormula(o.fx, (x) => getv(r, x, seen)) : o.calc(r); seen.delete(k); return v; } return numIn(r[k]); };
+  fieldsOf(p, 'col', tbl).forEach((f) => { const c = src.find((x) => x.k === f.key);
+    if (f.type === 'formula') { const fx = f.options?.[0] ?? ''; const col: Col = { k: f.key, t: f.label, n: true, fx, sum: f.options?.[1] === 'sum', d: f.decimals ?? 2, w: 8, calc: (r) => { const s = new Set([f.key]); return evalFormula(fx, (x) => getv(r, x, s)); }, g: c?.g, u: c?.u, info: fx ? ['Công thức: ' + fx] : undefined };
+      out.push(col); by[f.key] = col; return; }
+    const ty = f.type === 'date' || f.type === 'select' || f.type === 'bool' || f.type === 'ref' || f.type === 'lookup' ? f.type : undefined;
+    const col: Col = { k: f.key, t: f.label, ty, opts: ty === 'select' ? f.options : undefined, ref: ty === 'ref' || ty === 'lookup' ? f.options?.[0] : undefined, ro: ty === 'ref' || undefined, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info };
+    out.push(col); by[f.key] = col; });
+  return out;
 }
+/** Chữ hiển thị/in của ô theo kiểu (ngày dd/mm/yyyy, có/không ✓) */
+export const fmtCell = (c: Col, v: unknown): string => { const s = String(v ?? ''); if (c.ty === 'date' && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4); if (c.ty === 'bool') return s ? '✓' : ''; return s; };
 export const tablesOf = (p: Proc) => PROC_TABLES[p].map(([key, def]) => ({ key, title: TABLES[def].t }));
 
 export const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'truong';

@@ -3,7 +3,7 @@ import { docCode } from './myco';
 /** Mẫu in Excel: điền biến {ten}, lặp dòng {#bang} … {bang.cot}, giữ định dạng / ô gộp / logo / công thức */
 import type ExcelJS from 'exceljs';
 import type { Customer, Order, Profile } from './supabase';
-import { hdrOf, colsOf, fieldsOf } from './fields';
+import { hdrOf, colsOf, fieldsOf, fmtCell } from './fields';
 import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
 
 export type TplImg = { base64: string; ext: 'png' | 'jpeg'; w: number; h: number };
@@ -74,7 +74,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
     const T = { t: TABLES[def].t, cols: colsOf(b.proc as Proc, key) }; const rows: Row[] = d.tables?.[key] ?? [];
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
       for (const [k2, v2] of Object.entries(r)) if (v2 != null && typeof v2 !== 'object') o2[k2] = v2 as string | number;
-      for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : String(v); }
+      for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : fmtCell(c, v); }
       // Tên hàng = Tấm + Màu sơn + Rộng×Dài×Dày + Loại GC (bỏ phần trống)
       if (o2.ten_hang == null || o2.ten_hang === '') { const t = (x: unknown) => String(x ?? '').trim(); const kt = [t(r.rong), t(r.dai), t(r.day)].filter(Boolean).join('x');
         o2.ten_hang = ['Tấm', t(r.mau_son), kt, t(r.loai_gc)].filter(Boolean).join(' '); }

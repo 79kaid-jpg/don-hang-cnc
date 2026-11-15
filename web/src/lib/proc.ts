@@ -31,7 +31,7 @@ export const NEXT_LABEL: Record<string, string> = {
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
 /** Cột bảng: key, tên, kiểu (t chữ, n số), có tính tự động */
-export type Col = { k: string; t: string; ty?: 'date' | 'select' | 'bool' | 'ref'; opts?: string[]; ref?: string; refv?: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string; info?: string[] };
+export type Col = { k: string; t: string; sum?: boolean; fx?: string; ty?: 'date' | 'select' | 'bool' | 'ref' | 'lookup'; opts?: string[]; ref?: string; refv?: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string; info?: string[] };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 /** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
