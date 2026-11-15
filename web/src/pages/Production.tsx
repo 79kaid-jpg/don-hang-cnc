@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { sb } from '../lib/supabase';
 import { m2Of, kgOf, type Row } from '../lib/proc';
-import { useMyCo, setViewCo, CO_NAME, type Co } from '../lib/myco';
+import { useMyCo, useScope, setViewCo, CO_NAME, type Co } from '../lib/myco';
 import { Skeleton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { PlanSheet } from '../components/PlanEdit';
@@ -32,7 +32,9 @@ const MN = (ym: string) => 'T' + Number(ym.slice(5));
 
 /** Thống kê sản lượng dự án cho lãnh đạo: đã giao (QT3 khách ký), đặt mới (XNĐH), tồn chưa giao, dự án, khách hàng */
 export default function Production() {
-  const { co: co0, canSwitch } = useMyCo(); const [co, setCo] = useState<Co>(co0);
+  const { co: co0, canSwitch } = useMyCo(); const { scope } = useScope(); const cur: Co = scope && scope !== 'ALL' ? (scope as Co) : co0;
+  const [co, setCo] = useState<Co>(cur);
+  useEffect(() => { setCo(cur); }, [cur]); // theo công ty đang làm
   const [u, setU] = useState<Unit>(() => { try { return (localStorage.getItem('prod-u') as Unit) || 't'; } catch { return 't'; } });
   const [per, setPer] = useState<Per>('M');
   const [sp, setSp] = useSearchParams(); const fm = sp.get('m'), fp = sp.get('pj'), fk = sp.get('kh');
