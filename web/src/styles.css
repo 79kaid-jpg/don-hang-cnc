@@ -3300,3 +3300,8 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .fa-row.drop-before::before,.fa-row.drop-after::after{content:'';position:absolute;left:8px;right:8px;height:3px;border-radius:2px;background:var(--pri,#2F5BA8);z-index:3}
 .fa-row.drop-before::before{top:-2px}.fa-row.drop-after::after{bottom:-2px}
 @media (max-width:760px){.fa-grip{width:36px}}
+/* Ô bảng theo kiểu dữ liệu */
+.pp-grid .pp-cb,.pp-mrow-e .pp-cb{width:20px;height:20px;min-height:0;accent-color:var(--pri,#2F5BA8);cursor:pointer;display:block;margin:auto}
+.pp-grid .pp-cd,.pp-grid .pp-cs{height:34px;min-height:0;padding:2px 6px;font-size:14px;min-width:9ch;width:100%}
+.pp-ref{color:#4A5563;font-style:italic;white-space:nowrap}.pp-ref::before{content:'🔗 ';font-style:normal;opacity:.6}
+@media (max-width:760px){.pp-mrow-e .pp-cb{width:28px;height:28px;margin:8px 0}.pp-mrow-e .pp-cd,.pp-mrow-e .pp-cs{min-height:44px}}

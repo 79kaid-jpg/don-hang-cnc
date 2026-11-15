@@ -5,14 +5,16 @@ import { HEADER, PROC_TABLES, TABLES, FLOW, type Col, type Company, type Proc } 
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
 export type Area = 'header' | 'col' | 'file' | 'table';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
-export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier';
+export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier' | 'bool' | 'ref';
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>>;
   /** Trường nhạy cảm: chỉ người được cấp mới xem (máy chủ che giá trị) */ restricted?: boolean; view_roles?: string[]; view_users?: string[]; view_approver?: boolean };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
-export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển' };
+export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển', bool: 'Có/Không', ref: 'Tham chiếu (lấy từ đơn)' };
+/** Giá trị có thể tham chiếu vào cột bảng – mọi dòng cùng giá trị, chốt lại khi phiếu được duyệt */
+export const REF_VARS: [string, string][] = [['ma_du_an', 'Mã dự án'], ['du_an', 'Tên dự án'], ['ma_don', 'Mã đơn (chứng từ)'], ['ma_noi_bo', 'Mã nội bộ'], ['khach_hang', 'Khách hàng'], ['han_giao', 'Hạn giao']];
 /** Bước mà người làm được nhập liệu theo mặc định */
 export const EDIT_STEPS: Record<Proc, string[]> = { QT0: ['tiep_nhan', 'boc_tach', 'tao_ds'], QT1: ['lap'], QT2: ['lap'], QT3: ['lap'] };
 export const companiesOf = (p: Proc): Company[] => (p === 'QT0' ? ['PN'] : ['PN', 'IPC', 'HW']);
@@ -65,7 +67,8 @@ export const hdrOf = (p: Proc): [string, string, string][] => fieldsOf(p, 'heade
 export function colsOf(p: Proc, tbl: string): Col[] {
   const def = PROC_TABLES[p].find(([k]) => k === tbl)?.[1]; const src = def ? TABLES[def].cols : [];
   return fieldsOf(p, 'col', tbl).map((f) => { const c = src.find((x) => x.k === f.key);
-    return { k: f.key, t: f.label, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info }; });
+    const ty = f.type === 'date' || f.type === 'select' || f.type === 'bool' || f.type === 'ref' ? f.type : undefined;
+    return { k: f.key, t: f.label, ty, opts: ty === 'select' ? f.options : undefined, ref: ty === 'ref' ? f.options?.[0] : undefined, ro: ty === 'ref' || undefined, n: f.type === 'number', d: f.decimals ?? c?.d, w: c?.w ?? (f.type === 'number' ? 7 : 10), calc: f.sys ? c?.calc : undefined, g: c?.g, u: c?.u, info: c?.info }; });
 }
 export const tablesOf = (p: Proc) => PROC_TABLES[p].map(([key, def]) => ({ key, title: TABLES[def].t }));
 

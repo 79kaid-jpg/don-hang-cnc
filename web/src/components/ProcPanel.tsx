@@ -21,6 +21,7 @@ import { normNum, parseTsv } from '../lib/paste';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
+import { useProjects } from '../lib/projects';
 import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row
@@ -330,8 +331,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     cached('custs', () => sb.from('customers').select('*'), 60000).then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
+  const pjs = useProjects(); const kh0 = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id));
+  const refVals: Record<string, string> = { ma_du_an: pjs?.find((p) => p.id === (o as { project_id?: string }).project_id)?.code ?? '', du_an: o.project ?? '', ma_don: docCode(o, b, d.company), ma_noi_bo: o.code,
+    khach_hang: kh0?.name ?? '', han_giao: o.due_date ? new Date(o.due_date).toLocaleDateString('vi-VN') : '' };
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
-    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, ro: closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
+    const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, refv: c.ty === 'ref' ? refVals[c.ref ?? ''] ?? '' : undefined, ro: c.ty === 'ref' || closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
     const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required'; const thide = !!tf && pm(tf) === 'hide'; const tst = d.status === 'duyet_them' || d.status === 'da_duyet' ? 'duyet' : d.status; const tview = !!tf && tf.perms?.[d.company]?.[tst] === 'view';
     return { key, title: TABLES[def].t, treq, thide, cols: thide ? [] : tview ? cols.map((c) => ({ ...c, ro: true })) : cols, ed: !thide && !tview && !closed && (adm || (can && cols.some((c) => !c.ro && !c.calc) && (proc !== 'QT0' || d.status !== 'tiep_nhan'))) }; });
   const editable = hFields.some(canEd) || fFields.some(canEd) || tblDefs.some((x) => x.ed && !x.thide);
@@ -360,7 +364,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const save = async (quiet = false) => {
     const bad = badNums(); if (bad.length) { setErr('Sai kiểu số: ' + bad.join(', ') + '. Chỉ nhập chữ số, dấu thập phân là "," hoặc ".".'); return false; }
     const hh = totalOf() != null ? { ...h, tong_tt: totalOf()! } : h;
-    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: t, p_files: files });
+    const tt = { ...t } as Record<string, Row[]>; for (const x of tblDefs) { const rc = x.cols.filter((c) => c.ty === 'ref'); if (!rc.length || !x.ed || !tt[x.key]?.length) continue;
+      tt[x.key] = tt[x.key].map((r) => { const n = { ...r }; for (const c of rc) n[c.k] = c.refv ?? ''; return n; }); }
+    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: tt, p_files: files });
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
   };
   useUnsavedGuard(dirty);
@@ -614,8 +620,18 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 }
 
 /** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
+/** Ô bảng theo kiểu: ngày / danh sách chọn / có-không / tham chiếu */
+const refOf = (r: Row, c: Col, editable: boolean) => (editable ? c.refv ?? '' : String(r[c.k] ?? '') || (c.refv ?? ''));
+const cellTxt = (r: Row, c: Col, editable = false): string => { if (c.ty === 'ref') return refOf(r, c, editable); const v = String(r[c.k] ?? '');
+  if (c.ty === 'date' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4); if (c.ty === 'bool') return v ? '✓' : ''; return v; };
+function TyCell({ r, c, on }: { r: Row; c: Col; on: (v: string) => void }) {
+  const v = String(r[c.k] ?? '');
+  if (c.ty === 'bool') return <input type="checkbox" className="pp-cb" aria-label={c.t} checked={!!v} onChange={(e) => on(e.target.checked ? 'Có' : '')} />;
+  if (c.ty === 'date') return <input type="date" className="pp-cd" aria-label={c.t} value={/^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : ''} onChange={(e) => on(e.target.value)} />;
+  return <select className="pp-cs" aria-label={c.t} value={v} onChange={(e) => on(e.target.value)}><option value="">–</option>{(c.opts ?? []).map((o) => <option key={o} value={o}>{o}</option>)}{v && !(c.opts ?? []).includes(v) && <option value={v}>{v}</option>}</select>;
+}
 function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals, fixed }: { fixed?: Set<number> | null; cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
-  const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
+  const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.ty ? cellTxt(r, c, editable) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
   const head = cols.find((c) => !c.n) ?? cols[0];
   const GS: Record<string, string> = { 'Thông tin khác': '', 'Kích thước hoàn thiện': 'HT', 'Kích thước thực tế trải': 'trải', 'Kích thước phôi': 'phôi' };
   const lb = (c: Col) => (c.g && GS[c.g] && c.k !== 'ma_tam' && c.k !== 'day' ? c.t + ' ' + GS[c.g] : c.t) + (c.k === 'kg' ? ' (kg)' : '');
@@ -630,6 +646,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
       {open === i && <div className="pp-mrow-e">
         {cols.map((c) => <label key={c.k} className="f"><span>{lb(c)}{c.req && <b className="req"> *</b>}</span>
           {c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
+            : c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
             : <input value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
         {editable && <button type="button" className="btn sm danger-soft" onClick={() => { onChange(rows.filter((_, j) => j !== i)); setOpen(-1); }}><Icon name="trash" size={14} />Bỏ dòng</button>}
       </div>}
@@ -817,11 +834,12 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : undefined}><td className="muted">{i + 1}</td>
-            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+              : editable && !c.ro && c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
                   const nx = (e.currentTarget.closest('table') as HTMLElement | null)?.querySelector<HTMLInputElement>('[data-cell="' + (i + 1) + ':' + c.k + '"]'); if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
-              : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
+              : c.ty ? cellTxt(r, c) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
             {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
           {editable && rows.length === 0 && <tr><td colSpan={cols.length + 2}><div className="pp-dropzone" tabIndex={0} role="textbox" aria-label="Dán dữ liệu từ Excel">
             <Icon name="copy" size={16} /><span><b>Bấm vào đây rồi nhấn Ctrl+V</b> để dán các dòng đã chép từ Excel <span className="muted">(có hoặc không có dòng tiêu đề)</span></span></div></td></tr>}

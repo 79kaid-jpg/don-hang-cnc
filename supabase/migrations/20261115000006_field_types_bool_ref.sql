@@ -1,0 +1,1 @@
+-- Thêm kiểu bool, ref cho proc_fields (áp dụng qua MCP: field_types_bool_ref)
