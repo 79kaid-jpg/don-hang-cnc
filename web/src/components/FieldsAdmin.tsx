@@ -10,8 +10,8 @@ import { confirmDialog, toast } from './ui';
 
 const PROCS: FProc[] = ['F0', 'QT0', 'QT1', 'QT2', 'QT3'];
 const PERMS: Perm[] = ['hide', 'view', 'edit', 'required'];
-const HEAD_GROUPS: [string, FType[]][] = [['Chữ', ['text', 'textarea']], ['Số', ['number', 'int', 'money', 'percent']], ['Thời gian', ['date', 'datetime']], ['Lựa chọn', ['select', 'multi', 'bool', 'lookup']], ['Liên hệ', ['email', 'phone', 'url']], ['Tự tính', ['formula']]];
-const TYPES: Record<Area, FType[]> = { header: ['text', 'textarea', 'number', 'int', 'money', 'percent', 'date', 'datetime', 'select', 'multi', 'bool', 'email', 'phone', 'url', 'lookup', 'formula'], col: ['text', 'number', 'int', 'date', 'datetime', 'select', 'multi', 'bool', 'ref', 'lookup', 'formula', 'subtable'], file: ['file'], table: ['text'] };
+const HEAD_GROUPS: [string, FType[]][] = [['Chữ', ['text', 'textarea']], ['Số', ['number', 'int', 'money', 'percent']], ['Thời gian', ['date', 'datetime']], ['Lựa chọn', ['select', 'multi', 'bool', 'lookup']], ['Liên hệ', ['email', 'phone', 'url', 'location']], ['Tự tính', ['formula']]];
+const TYPES: Record<Area, FType[]> = { header: ['text', 'textarea', 'number', 'int', 'money', 'percent', 'date', 'datetime', 'select', 'multi', 'bool', 'email', 'phone', 'url', 'location', 'lookup', 'formula'], col: ['text', 'number', 'int', 'date', 'datetime', 'select', 'multi', 'bool', 'ref', 'lookup', 'formula', 'subtable'], file: ['file'], table: ['text'] };
 const Chev = ({ up = false, size = 14 }: { up?: boolean; size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={up ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>;
 const stepName = (s: string) => (s === 'tiep_nhan' ? 'Tiếp nhận' : STATUS[s] ?? s);
 

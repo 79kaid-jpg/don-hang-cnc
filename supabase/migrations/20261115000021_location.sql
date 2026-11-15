@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: thêm kiểu location

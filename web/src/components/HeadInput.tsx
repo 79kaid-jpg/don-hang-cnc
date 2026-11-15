@@ -30,6 +30,7 @@ export function HeadInput({ f, v, on, disabled, opts = [], calc }: { f: FDef; v:
     return <div className="hi-chips" role="group" aria-label={f.label}>{all.map((o) => <button key={o} type="button" disabled={disabled} aria-pressed={cur.includes(o)} className={cur.includes(o) ? 'on' : ''} onClick={() => tog(o)}>{cur.includes(o) ? '✓ ' : ''}{o}</button>)}
       {!all.length && <span className="small muted">Chưa có lựa chọn – thêm trong Quản trị</span>}</div>; }
   if (t === 'bool') return <span className="hi-bool"><input type="checkbox" disabled={disabled} checked={!!v} onChange={(e) => on(e.target.checked ? 'Có' : '')} /><span>{v ? 'Có' : 'Không'}</span></span>;
+  if (t === 'location') return <LocInput v={v} on={on} disabled={disabled} />;
   if (t === 'textarea') return <textarea rows={2} disabled={disabled} value={v} onChange={(e) => on(e.target.value)} />;
   if (t === 'date' || t === 'datetime') return <input type={t === 'date' ? 'date' : 'datetime-local'} disabled={disabled} value={v} onChange={(e) => on(e.target.value)} />;
   const link = !focus && v && !headErr(t, v) ? (t === 'email' ? 'mailto:' + v : t === 'phone' ? 'tel:' + v.replace(/[^\d+]/g, '') : t === 'url' ? v : '') : '';
@@ -43,3 +44,27 @@ export function HeadInput({ f, v, on, disabled, opts = [], calc }: { f: FDef; v:
   </span>;
 }
 export { toN };
+
+/** Vị trí: "địa chỉ @lat,lng" – toạ độ lấy từ GPS hoặc link Google Maps dán vào */
+const LL = /@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/;
+export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(LL, '').trim(), ll: m ? m[1] + ',' + m[2] : '' }; };
+export const mapUrl = (v: string) => { const { addr, ll } = parseLoc(v); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ll || addr); };
+function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; disabled?: boolean }) {
+  const { addr, ll } = parseLoc(v); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const join = (a: string, l: string) => (a.trim() + (l ? ' @' + l : '')).trim();
+  const typed = (x: string) => { // dán link Google Maps → tách toạ độ
+    const m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(x) ?? /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(x) ?? /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/.exec(x);
+    if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) on(join(addr, (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6))); else on(join(x, ll)); };
+  const gps = () => { if (!navigator.geolocation) return setErr('Thiết bị không hỗ trợ định vị'); setBusy(true); setErr('');
+    navigator.geolocation.getCurrentPosition((p) => { setBusy(false); on(join(addr, p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6))); },
+      (e) => { setBusy(false); setErr(e.code === 1 ? 'Chưa cho phép truy cập vị trí – bật trong cài đặt trình duyệt' : 'Không lấy được vị trí, thử lại'); }, { enableHighAccuracy: true, timeout: 15000 }); };
+  return <span className="hi-loc">
+    <input type="text" disabled={disabled} value={addr} placeholder="Địa chỉ, hoặc dán link Google Maps" onChange={(e) => typed(e.target.value)} />
+    <span className="hi-loc-bar">
+      {!disabled && <button type="button" className="btn sm" onClick={gps} disabled={busy}>📍 {busy ? 'Đang lấy…' : 'Vị trí hiện tại'}</button>}
+      {(addr || ll) && <a className="btn sm" href={mapUrl(v)} target="_blank" rel="noreferrer">🗺 Mở bản đồ</a>}
+      {ll && <span className="small muted">{ll}{!disabled && <button type="button" className="link-btn" onClick={() => on(addr)} aria-label="Bỏ toạ độ"> ✕</button>}</span>}
+    </span>
+    {err && <small className="f-err">{err}</small>}
+  </span>;
+}
