@@ -3554,3 +3554,8 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .dwg-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#e5e7eb;text-align:center;padding:24px;pointer-events:none}.dwg.light .dwg-msg{color:#374151}.dwg-msg small{opacity:.7}
 .dwg-tools{position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 .dwg-tools button{width:44px;height:44px;border-radius:10px;border:1px solid #ffffff33;background:#000a;color:#fff;font-size:20px;cursor:pointer}.dwg.light .dwg-tools button{background:#fff;color:#111;border-color:#d1d5db}
+/* Menu dưới: phản hồi ngay khi chạm, bỏ hiệu ứng động nặng */
+.bottom-nav a{-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:background-color .08s,color .08s}
+.bottom-nav a:active{background-color:rgba(120,170,240,.18)}
+.bottom-nav a:active svg{transform:scale(.88);transition:transform .08s}
+html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}

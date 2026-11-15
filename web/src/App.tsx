@@ -10,13 +10,13 @@ import { Icon } from './components/Icon';
 import { ScopeChip } from './components/ScopeChip';
 import { ConfirmHost, Toaster } from './components/ui';
 import Login from './pages/Login';
-const MyWork = lazy(() => import('./pages/MyWork'));
-const Orders = lazy(() => import('./pages/Orders'));
-const Board = lazy(() => import('./pages/Board'));
+const L_MyWork = () => import('./pages/MyWork'); const MyWork = lazy(L_MyWork);
+const L_Orders = () => import('./pages/Orders'); const Orders = lazy(L_Orders);
+const L_Board = () => import('./pages/Board'); const Board = lazy(L_Board);
 const NewOrder = lazy(() => import('./pages/NewOrder'));
-const OrderDetail = lazy(() => import('./pages/OrderDetail'));
+const L_OrderDetail = () => import('./pages/OrderDetail'); const OrderDetail = lazy(L_OrderDetail);
 const Admin = lazy(() => import('./pages/Admin'));
-const FlowMap = lazy(() => import('./pages/FlowMap'));
+const L_FlowMap = () => import('./pages/FlowMap'); const FlowMap = lazy(L_FlowMap);
 import Install, { UpdateBar } from './pages/Install';
 import { ZaloLink } from './components/ZaloLink';
 import { Bell } from './components/Bell';
@@ -28,16 +28,25 @@ const WfEditor = lazy(() => import('./wf/WfEditor'));
 const WfRun = lazy(() => import('./wf/WfRun'));
 const WfPrint = lazy(() => import('./wf/WfPrint'));
 import './wf/wf.css';
-const Stats = lazy(() => import('./pages/Stats'));
+const L_Stats = () => import('./pages/Stats'); const Stats = lazy(L_Stats);
 const ProjectReport = lazy(() => import('./pages/ProjectReport'));
 import { Viewer } from './components/Viewer';
 const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
 const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const Simulate = lazy(() => import('./pages/Simulate'));
 
+// Tải sẵn các trang chính khi máy rảnh → bấm menu là mở ngay
+const PRE = [() => L_MyWork(), () => L_Board(), () => L_FlowMap(), () => L_Orders(), () => L_OrderDetail(), () => L_Stats()];
+let preDone = false;
+// iOS Safari chỉ áp :active khi có trình nghe touchstart
+if (typeof document !== 'undefined') document.addEventListener('touchstart', () => {}, { passive: true });
+function preload() { if (preDone) return; preDone = true; const run = (i: number) => { if (i >= PRE.length) return; PRE[i]().catch(() => {}).finally(() => setTimeout(() => run(i + 1), 50)); };
+  const w = window as unknown as { requestIdleCallback?: (f: () => void, o?: object) => void }; if (w.requestIdleCallback) w.requestIdleCallback(() => run(0), { timeout: 2500 }); else setTimeout(() => run(0), 1500); }
+
 function Shell() {
   const { session, me, can, acting, real, stopActing, actUntil } = useAuth();
   const nav = useNavigate();
+  useEffect(() => { if (session) preload(); }, [session]);
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
   // Trình tạo quy trình: hiện mục menu cho người thiết kế, hoặc người đang có việc / phiếu duyệt trong quy trình mới
