@@ -10,7 +10,8 @@ import { confirmDialog, toast } from './ui';
 
 const PROCS: FProc[] = ['F0', 'QT0', 'QT1', 'QT2', 'QT3'];
 const PERMS: Perm[] = ['hide', 'view', 'edit', 'required'];
-const TYPES: Record<Area, FType[]> = { header: ['text', 'number', 'date', 'select', 'textarea'], col: ['text', 'number', 'int', 'date', 'datetime', 'select', 'multi', 'bool', 'ref', 'lookup', 'formula', 'subtable'], file: ['file'], table: ['text'] };
+const HEAD_GROUPS: [string, FType[]][] = [['Chữ', ['text', 'textarea']], ['Số', ['number', 'int', 'money', 'percent']], ['Thời gian', ['date', 'datetime']], ['Lựa chọn', ['select', 'multi', 'bool', 'lookup']], ['Liên hệ', ['email', 'phone', 'url']], ['Tự tính', ['formula']]];
+const TYPES: Record<Area, FType[]> = { header: ['text', 'textarea', 'number', 'int', 'money', 'percent', 'date', 'datetime', 'select', 'multi', 'bool', 'email', 'phone', 'url', 'lookup', 'formula'], col: ['text', 'number', 'int', 'date', 'datetime', 'select', 'multi', 'bool', 'ref', 'lookup', 'formula', 'subtable'], file: ['file'], table: ['text'] };
 const Chev = ({ up = false, size = 14 }: { up?: boolean; size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={up ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>;
 const stepName = (s: string) => (s === 'tiep_nhan' ? 'Tiếp nhận' : STATUS[s] ?? s);
 
@@ -95,7 +96,7 @@ function Row({ f, use, proc, open, onOpen, onMove, first, last, canEdit, grip, d
     if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; setX({ ...x, perms: p }); };
   const setAll = (s: string, v: string) => { const p = { ...(x.perms ?? {}) }; for (const c of cos) { const row = { ...(p[c] ?? {}) }; if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; } setX({ ...x, perms: p }); };
   const save = async () => {
-    if (x.type === 'formula' && proc !== 'F0') { const e = checkFormula(x.options[0] ?? '', [...colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key).flatMap((c) => [c.k, ...(c.sub ?? []).map((s) => c.k + '.' + s.k)]), 'ty_trong']); if (e) return toast('Công thức chưa đúng: ' + e); }
+    if (x.type === 'formula' && proc !== 'F0' && f.area === 'col') { const e = checkFormula(x.options[0] ?? '', [...colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key).flatMap((c) => [c.k, ...(c.sub ?? []).map((s) => c.k + '.' + s.k)]), 'ty_trong']); if (e) return toast('Công thức chưa đúng: ' + e); }
     if ((x.type === 'ref' || x.type === 'lookup') && !x.options[0]) return toast('Chưa chọn nguồn cho ' + x.label);
     setBusy(true);
     const upd = { label: x.label.trim() || f.label, import_names: (x.import_names ?? []).map((v) => v.trim()).filter(Boolean), type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, restricted: !!x.restricted, view_roles: x.view_roles ?? [], view_users: x.view_users ?? [], view_approver: !!x.view_approver, updated_at: new Date().toISOString() };
@@ -128,13 +129,18 @@ function Row({ f, use, proc, open, onOpen, onMove, first, last, canEdit, grip, d
         <div className="grid2">
           <label className="f">Tên hiển thị<input value={x.label} disabled={!canEdit} onChange={(e) => setX({ ...x, label: e.target.value })} /></label>
           {f.area !== 'file' && f.area !== 'table' && <label className="f">Kiểu dữ liệu<select value={x.type} disabled={!canEdit || f.sys} onChange={(e) => setX({ ...x, type: e.target.value as FType })}>
-            {(f.type === 'person' ? ['person' as FType] : TYPES[f.area].filter((t) => !(t === 'subtable' && f.tbl.includes('.')))).map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</select></label>}
+            {f.type === 'person' ? <option value="person">{TYPE_NAME.person}</option> : f.area === 'header'
+              ? HEAD_GROUPS.map(([g, ts]) => { const l = ts.filter((t) => !(proc === 'F0' && (t === 'formula' || t === 'lookup'))); return l.length ? <optgroup key={g} label={g}>{l.map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</optgroup> : null; })
+              : TYPES[f.area].filter((t) => !(t === 'subtable' && f.tbl.includes('.'))).map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</select></label>}
+          {f.area === 'header' && x.type === 'formula' && (() => { const keys = allFields(proc).filter((y) => y.area === 'header' && y.key !== x.key).map((y) => y.key); const e = checkFormula(x.options[0] ?? '', keys);
+            return <label className="f f-wide">Công thức <small className="muted">dùng mã trường đầu phiếu, VD: {'{tong_tt} * {vat} / 100'}</small><input disabled={!canEdit} value={x.options[0] ?? ''} onChange={(ev) => setX({ ...x, options: [ev.target.value] })} />
+              <small className={e && x.options[0] ? 'f-err' : 'muted'}>{e && x.options[0] ? e : 'Mã có thể dùng: ' + keys.map((k) => '{' + k + '}').join(' ')}</small></label>; })()}
           {f.area === 'col' && !f.tbl.includes('.') && x.type !== 'formula' && x.type !== 'ref' && x.type !== 'subtable' && <label className="f">Tên cột trong file nhập <small className="muted">(file phần mềm SX… cách nhau dấu phẩy)</small><input disabled={!canEdit} value={(x.import_names ?? []).join(',')} placeholder={'vd: ' + x.label} onChange={(e) => setX({ ...x, import_names: e.target.value.split(',') })} /></label>}
           {f.area === 'col' && x.type === 'formula' && <FormulaEd x={x} setX={setX} canEdit={canEdit} proc={proc} />}
           {x.type === 'lookup' && <label className="f">Danh mục<select disabled={!canEdit} value={x.options[0] ?? ''} onChange={(e) => setX({ ...x, options: [e.target.value] })}><option value="">– chọn –</option>{LOOKUPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select><small className="muted">Người nhập chọn từ danh sách này thay vì gõ tay.</small></label>}
           {x.type === 'ref' && <label className="f">Lấy giá trị<select disabled={!canEdit} value={x.options[0] ?? ''} onChange={(e) => setX({ ...x, options: [e.target.value] })}><option value="">– chọn –</option>{REF_VARS.map(([k, l]) => <option key={k} value={k}>{l} {'{' + k + '}'}</option>)}</select><small className="muted">Mọi dòng hiện cùng giá trị, chỉ xem. Giá trị được chốt khi phiếu được duyệt.</small></label>}
           {(x.type === 'select' || x.type === 'multi') && <label className="f f-wide">Các lựa chọn (mỗi dòng một giá trị)<textarea rows={3} disabled={!canEdit} value={x.options.join('\n')} onChange={(e) => setX({ ...x, options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })} /></label>}
-          {f.area === 'col' && (x.type === 'number' || x.type === 'formula') && <label className="f">Số chữ số thập phân<input inputMode="numeric" disabled={!canEdit} value={x.decimals ?? ''} onChange={(e) => setX({ ...x, decimals: e.target.value === '' ? null : Math.max(0, Math.min(4, +e.target.value || 0)) })} /></label>}
+          {(x.type === 'number' || x.type === 'formula') && <label className="f">Số chữ số thập phân<input inputMode="numeric" disabled={!canEdit} value={x.decimals ?? ''} onChange={(e) => setX({ ...x, decimals: e.target.value === '' ? null : Math.max(0, Math.min(4, +e.target.value || 0)) })} /></label>}
           {f0 && <label className="f">Quyền<select value={f0Perm(x)} disabled={!canEdit || (f.key === 'project')} onChange={(e) => setX({ ...x, perms: e.target.value === 'edit' ? {} : { '*': { '*': e.target.value as Perm } } })}>
             <option value="edit">Nhập được (không bắt buộc)</option><option value="required">Bắt buộc</option><option value="hide">Ẩn</option></select></label>}
           {f.area === 'header' && <label className="f f-wide">Hướng dẫn nhập (hiện dưới ô)<input disabled={!canEdit} value={x.help} onChange={(e) => setX({ ...x, help: e.target.value })} placeholder="VD: Ghi theo số trên hợp đồng" /></label>}

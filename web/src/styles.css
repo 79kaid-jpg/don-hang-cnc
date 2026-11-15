@@ -3455,3 +3455,14 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .fa-del{flex:none;width:36px;height:36px;display:grid;place-items:center;border:1px solid transparent;border-radius:8px;background:none;color:#B5483B;cursor:pointer}
 .fa-del:hover{background:#FBEDEB;border-color:#F0C9C3}.fa-del.dis{color:var(--muted);opacity:.45;cursor:not-allowed}.fa-del.dis:hover{background:none;border-color:transparent}
 @media (pointer:coarse){.fa-del{width:44px;height:44px}}
+/* Ô đầu phiếu theo kiểu */
+.hi-wrap{position:relative;display:block}.hi-wrap input{width:100%}
+.hi-unit input{padding-right:30px}.hi-unit::after{content:attr(data-unit);position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+.hi-go{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:grid;place-items:center;border-radius:6px;text-decoration:none;background:var(--soft)}
+.hi-wrap:has(.hi-go) input{padding-right:42px}
+.hi-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;align-items:center}
+.hi-chips button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:4px 12px;font:inherit;font-size:13px;min-height:32px;cursor:pointer;color:var(--ink)}
+.hi-chips button.on{background:#E3EAF7;border-color:#9DB3DA;color:#1F3F78;font-weight:600}
+.hi-bool{display:flex;align-items:center;gap:8px;min-height:40px}.hi-bool input{width:22px;height:22px}
+.f-calc{background:var(--soft)!important;font-weight:600}
+@media (pointer:coarse){.hi-chips button{min-height:44px;padding:6px 14px}.hi-go{width:40px;height:40px}}

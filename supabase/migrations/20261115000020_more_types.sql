@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: proc_fields_type_check thêm money, percent, email, phone, url

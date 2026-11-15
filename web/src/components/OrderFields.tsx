@@ -1,3 +1,4 @@
+import { HeadInput, headErr } from './HeadInput';
 import { fieldsOf, f0Perm, useFields } from '../lib/fields';
 import { isNumOk, numTyping } from '../lib/proc';
 import type { Profile } from '../lib/supabase';
@@ -18,8 +19,9 @@ export function OrderFields({ vals, extra, onVal, onExtra, disabled, people, ski
       {f.type === 'select' ? <select disabled={disabled} value={v} onChange={(e) => on(e.target.value)}>{!f.options.includes(v) && <option value={v}>{v || '—'}</option>}{f.options.map((o) => <option key={o}>{o}</option>)}</select>
         : f.type === 'person' ? <select disabled={disabled} value={v} onChange={(e) => on(e.target.value)}><option value="">[chưa giao]</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select>
         : f.type === 'textarea' ? <textarea rows={3} disabled={disabled} value={v} onChange={(e) => on(e.target.value)} />
+        : !['text', 'number', 'date'].includes(f.type) ? <HeadInput f={f} v={v} on={on} disabled={disabled} />
         : <input type={f.type === 'date' ? 'date' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} required={req} disabled={disabled} value={v} onChange={(e) => on(e.target.value)}
             placeholder={f.key === 'contact' ? 'Tên · số điện thoại' : undefined} />}
-      {f.type === 'number' && !isNumOk(v) && <small className="f-err">Phải là số</small>}
+      {headErr(f.type, v) && <small className="f-err">{headErr(f.type, v)}</small>}
       {f.help && <small className="muted">{f.help}</small>}</label>; })}</>;
 }

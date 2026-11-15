@@ -30,6 +30,8 @@ import {
   stampDens, matOf, subRows,
 } from '../lib/proc';
 import { Icon } from './Icon';
+import { evalFormula } from '../lib/formula';
+import { HeadInput, headErr } from './HeadInput';
 import { CoBar, CoLink } from './CoBar';
 import { codeFile, docCode, reloadCoIdx, useCoIdx, useMyCo } from '../lib/myco';
 import { checkExcelFile, type XCheck } from '../lib/excelCheck';
@@ -362,15 +364,18 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     setH(H0); setT(T0); setDirty(true);
     toast(nh + nt ? `Đã nạp ${nh} ô đầu phiếu, ${nt} bảng mẫu. Kiểm tra rồi bấm Lưu.` : 'Không còn ô trống để nạp');
   };
+  const fxHead = (f: { options: string[]; decimals?: number | null }) => { const r = evalFormula(f.options[0] ?? '', (k) => { const x = String(h[k] ?? '').trim(); if (!x) return null; const n = Number(x.replace(',', '.')); return isFinite(n) ? n : null; });
+    return r == null ? '' : String(Math.round(r * 10 ** (f.decimals ?? 2)) / 10 ** (f.decimals ?? 2)); };
   const badNums = (): string[] => {
     const out: string[] = [];
-    for (const f of hFields) if (f.type === 'number' && !isNumOk(h[f.key])) out.push(f.label);
+    for (const f of hFields) if (headErr(f.type, String(h[f.key] ?? ''))) out.push(f.label);
     for (const tb of tblDefs) for (const c of tb.cols) if (c.n && !c.calc) { const n = (t[tb.key] ?? []).filter((r) => !okNum(c, r[c.k])).length; if (n) out.push(`${c.t} (${n} dòng)`); }
     return out;
   };
   const save = async (quiet = false) => {
     const bad = badNums(); if (bad.length) { setErr('Sai kiểu số: ' + bad.join(', ') + '. Chỉ nhập chữ số, dấu thập phân là "," hoặc ".".'); return false; }
-    const hh = totalOf() != null ? { ...h, tong_tt: totalOf()! } : h;
+    const hh0 = { ...h }; for (const f of hFields) if (f.type === 'formula') hh0[f.key] = fxHead(f);
+    const hh = totalOf() != null ? { ...hh0, tong_tt: totalOf()! } : hh0;
     const tt = { ...t } as Record<string, Row[]>; for (const x of tblDefs) if (x.ed && tt[x.key]?.length && x.cols.some((c) => c.k === 'kg')) tt[x.key] = tt[x.key].map(stampDens);
     for (const x of tblDefs) { const rc = x.cols.filter((c) => c.ty === 'ref'); if (!rc.length || !x.ed || !tt[x.key]?.length) continue;
       tt[x.key] = tt[x.key].map((r) => { const n = { ...r }; for (const c of rc) n[c.k] = c.refv ?? ''; return n; }); }
@@ -508,6 +513,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
+              : !['text', 'number', 'select', 'textarea'].includes(f.type) ? <HeadInput f={f} v={String(v)} on={on} disabled={!ed} opts={f.type === 'lookup' ? lookOpts(f.options[0]) : undefined} calc={f.type === 'formula' ? fxHead(f) : undefined} />
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
               : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
               : <input type={f.type === 'date' ? 'date' : 'text'} list={f.key === 'dk_giao' ? 'dkg-' + d.id : (f.key === 'dia_diem' || f.key === 'noi_giao') && ship.length ? 'ship-' + d.id : f.key === 'xe' && plates.length ? 'xe-' + d.id : f.key === 'tai_xe' && plates.length ? 'tx-' + d.id : undefined} inputMode={f.type === 'number' ? 'decimal' : undefined} disabled={!ed} value={v} aria-invalid={f.type === 'number' && !isNumOk(v) ? true : undefined}
@@ -515,7 +521,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                   if (pv?.driver && !h.tai_xe) { setH({ ...h, xe: x, tai_xe: pv.driver }); setDirty(true); } else on(x); }} />}
             {f.key === 'xe' && plates.length > 0 && <datalist id={'xe-' + d.id}>{plates.map((p) => <option key={p.plate} value={p.plate}>{p.driver}</option>)}</datalist>}
             {f.key === 'tai_xe' && plates.length > 0 && <datalist id={'tx-' + d.id}>{[...new Set(plates.map((p) => p.driver).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
-            {f.type === 'number' && !isNumOk(v) && <small className="f-err">Phải là số, VD: 12 hoặc 12,5</small>}
+            {headErr(f.type, String(v)) && <small className="f-err">{headErr(f.type, String(v))}</small>}
             {f.key === 'dk_giao' && <datalist id={'dkg-' + d.id}>{[...new Set([...DKG, ...dkgs])].map((x) => <option key={x} value={x} />)}</datalist>}
             {(f.key === 'dia_diem' || f.key === 'noi_giao') && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
             {f.help && <small className="muted">{f.help}</small>}</label>; })}

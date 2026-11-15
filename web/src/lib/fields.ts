@@ -7,7 +7,7 @@ import { reloadMaterials } from './materials';
 /** Trường dữ liệu QT0–QT3 cấu hình trong Quản trị → Trường dữ liệu (bảng proc_fields) */
 export type Area = 'header' | 'col' | 'file' | 'table';
 export type Perm = 'hide' | 'view' | 'edit' | 'required';
-export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier' | 'bool' | 'ref' | 'formula' | 'lookup' | 'int' | 'datetime' | 'multi' | 'subtable';
+export type FType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'file' | 'person' | 'carrier' | 'bool' | 'ref' | 'formula' | 'lookup' | 'int' | 'datetime' | 'multi' | 'subtable' | 'money' | 'percent' | 'email' | 'phone' | 'url';
 export type FProc = Proc | 'F0';
 export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: string; label: string; type: FType; options: string[]; help: string;
   decimals: number | null; ord: number; active: boolean; sys: boolean; perms: Record<string, Record<string, Perm>>;
@@ -15,7 +15,7 @@ export type FDef = { id?: string; proc: FProc; area: Area; tbl: string; key: str
   /** Trường nhạy cảm: chỉ người được cấp mới xem (máy chủ che giá trị) */ restricted?: boolean; view_roles?: string[]; view_users?: string[]; view_approver?: boolean };
 
 export const PERM_NAME: Record<Perm, string> = { hide: 'Ẩn', view: 'Xem', edit: 'Sửa', required: 'Bắt buộc' };
-export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển', bool: 'Có/Không', ref: 'Tham chiếu (lấy từ đơn)', formula: 'Công thức', lookup: 'Chọn từ danh mục', int: 'Số nguyên', datetime: 'Ngày giờ', multi: 'Danh sách (nhiều lựa chọn)', subtable: 'Bảng con (bảng trong bảng)' };
+export const TYPE_NAME: Record<FType, string> = { text: 'Chữ', number: 'Số', date: 'Ngày', select: 'Danh sách chọn', textarea: 'Đoạn văn', file: 'Tệp', person: 'Người dùng', carrier: 'Đơn vị vận chuyển', bool: 'Có/Không', ref: 'Tham chiếu (lấy từ đơn)', formula: 'Công thức', lookup: 'Chọn từ danh mục', int: 'Số nguyên', datetime: 'Ngày giờ', multi: 'Danh sách (nhiều lựa chọn)', subtable: 'Bảng con (bảng trong bảng)', money: 'Tiền (đ)', percent: 'Phần trăm (%)', email: 'Email', phone: 'Số điện thoại', url: 'Đường link' };
 /** Danh mục cho kiểu Chọn từ danh mục */
 export const LOOKUPS: [string, string][] = [['materials', 'Vật liệu (tên)'], ['projects', 'Dự án (mã)'], ['customers', 'Đối tác (tên)'], ['people', 'Người dùng (tên)']];
 /** Giá trị có thể tham chiếu vào cột bảng – mọi dòng cùng giá trị, chốt lại khi phiếu được duyệt */
