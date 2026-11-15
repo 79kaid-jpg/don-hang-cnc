@@ -107,7 +107,7 @@ export function ZaloGroups({ canEdit }: { canEdit: boolean }) {
     <b>Nhóm Zalo nhận thông báo</b>
     <ol className="small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
       <li>Thêm bot vào nhóm: trưởng/phó nhóm mở link mời {inv ? <><a href={inv} target="_blank" rel="noreferrer">{inv}</a> <button type="button" className="btn sm ghost" onClick={() => navigator.clipboard?.writeText(inv)}>Chép</button></> : '(chưa có)'}</li>
-      <li>Admin (đã liên kết Zalo với PMS) gõ trong nhóm: <span className="kbd">/noi PN</span> · <span className="kbd">/noi IPC</span> · <span className="kbd">/noi HW</span> · hoặc <span className="kbd">/noi tatca</span> · nhóm theo dự án: <span className="kbd">/noi duan SLUC</span> (nhiều mã cách nhau dấu cách)</li>
+      <li>Admin (đã liên kết Zalo với PMS) gõ trong nhóm – <b>phải @nhắc bot trước</b> (gõ @ rồi chọn bot): <span className="kbd">@Bot PMS Notification /noi PN</span> · <span className="kbd">/noi IPC</span> · <span className="kbd">/noi HW</span> · hoặc <span className="kbd">/noi tatca</span> · nhóm theo dự án: <span className="kbd">/noi duan SLUC</span> (nhiều mã cách nhau dấu cách)</li>
       <li>Nhóm theo dự án: đặt <b>quy tắc tự thêm</b> (khách cuối, đầu mã dự án) để dự án mới tự vào nhóm. Hoặc chọn nhóm ngay trong Quản trị › Dự án › Sửa.</li>
       <li>Nhóm hiện ở danh sách dưới; chọn loại tin nhóm nhận. Gõ <span className="kbd">/nhom</span> để xem, <span className="kbd">/huy</span> để huỷ.</li></ol>
     {rows === null ? <span className="small muted">Đang tải…</span> : !rows.length ? <p className="small muted" style={{ margin: 0 }}>Chưa có nhóm nào được nối.</p>

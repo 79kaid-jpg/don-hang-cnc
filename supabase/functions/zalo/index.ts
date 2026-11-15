@@ -55,11 +55,16 @@ Deno.serve(async (req) => {
     const ct = String(m.chat?.chat_type ?? m.chat?.type ?? 'PRIVATE').toUpperCase();
     if (ct !== 'PRIVATE' && ct !== 'USER') {
       const from = m.from?.id ? String(m.from.id) : '';
-      if (text.startsWith('/')) {
-        const { data: ack } = await db.rpc('zalo_group_cmd', { p_chat: chat, p_from: from, p_name: String(m.chat?.title ?? m.chat?.name ?? m.chat?.display_name ?? ''), p_text: text });
+      // Trong nhóm bot chỉ nhận tin khi được @nhắc: bỏ "@Bot PMS Notification" (hoặc @tên bot bất kỳ) ở đầu/giữa tin
+      const { data: bn } = await db.from('app_settings').select('value').eq('key', 'zalo_bot_name').maybeSingle();
+      const bot = String(bn?.value ?? 'Bot PMS Notification').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let t2 = text.replace(new RegExp('@' + bot, 'gi'), '').replace(/\s+/g, ' ').trim();
+      if (/^(noi|nối|huy|huỷ|hủy|nhom|nhóm)\b/i.test(t2)) t2 = '/' + t2.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+      if (t2.startsWith('/')) {
+        const { data: ack } = await db.rpc('zalo_group_cmd', { p_chat: chat, p_from: from, p_name: String(m.chat?.title ?? m.chat?.name ?? m.chat?.display_name ?? ''), p_text: t2 });
         if (ack) await send(chat, ack);
-      } else if (from && text) {
-        const { data: ack } = await db.rpc('zalo_reply', { p_chat: from, p_text: text, p_raw: { ...m, _group: '1' } });
+      } else if (from && t2) {
+        const { data: ack } = await db.rpc('zalo_reply', { p_chat: from, p_text: t2, p_raw: { ...m, _group: '1' } });
         if (ack) await send(chat, ack);
       }
       return json({ ok: true });
