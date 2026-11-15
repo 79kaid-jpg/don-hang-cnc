@@ -265,8 +265,11 @@ export function toHtml(wb: ExcelJS.Workbook): string {
   const gs = (ws as unknown as { _groups?: { head: number[]; from: number; to: number }[] })._groups ?? [];
   const tag = (r: number) => { const i = gs.findIndex((g) => r >= g.from && r <= g.to); if (i >= 0) return ` data-g="${i}"`; const j = gs.findIndex((g) => g.head.includes(r)); return j >= 0 ? ` data-h="${j}"` : ''; };
   const tblOpen = h; const hd = (gs[0]?.head ?? []).filter((r) => r >= r0 && r <= r1 && !ws.getRow(r).hidden); const hd0 = Math.min(...hd), hd1 = Math.max(...hd);
+  // Phần cuối (sau dòng tổng của bảng lặp cuối cùng: lưu ý, ký tên…) luôn nằm trọn 1 trang, không bị lặp tiêu đề cột
+  const tail = gs.length ? Math.max(...gs.map((g) => g.to)) + 2 : 0; let inTail = false;
   for (let r = r0; r <= r1; r++) { const row = ws.getRow(r); if (row.hidden) continue;
     if (hd.length && r === hd0) h += '</table>' + tblOpen + '<thead>';
+    if (tail && r >= tail && !inTail && r > hd1) { inTail = true; h += (hd.length ? '</tbody>' : '') + '</table><div class="pt-keep" style="break-inside:avoid;page-break-inside:avoid">' + tblOpen; }
     h += `<tr${tag(r)} style="height:${(row.height ?? 15) * 1.33}px">`;
     const skip = new Set<number>();
     for (const c of vcols) { if (hide.has(r + ':' + c) || skip.has(c)) continue;
@@ -292,7 +295,7 @@ export function toHtml(wb: ExcelJS.Workbook): string {
           skip.add(n); spill++; if (ns) vcols.filter((x) => x > n && x < n + ns[1]).forEach((x) => { skip.add(x); spill++; }); } }
       h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st}">${esc(v)}</td>`; }
     h += '</tr>'; if (hd.length && r === hd1) h += '</thead><tbody>'; }
-  h += (hd.length ? '</tbody>' : '') + '</table>';
+  h += inTail ? '</table></div>' : (hd.length ? '</tbody>' : '') + '</table>';
   const imgs = ws.getImages().map((im) => { const m = wb.getImage(+im.imageId) as { base64?: string; buffer?: ArrayBuffer; extension: string };
     let b64 = m.base64 ?? ''; if (!b64 && m.buffer) { const u = new Uint8Array(m.buffer as ArrayBuffer); let s = ''; u.forEach((x) => { s += String.fromCharCode(x); }); b64 = btoa(s); }
     if (b64.includes(',')) b64 = b64.split(',')[1];
