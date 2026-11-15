@@ -1,0 +1,1 @@
+-- Bảo mật: thu hồi quyền gọi hàm public từ anon/public; khoá search_path _num/_ds_key/_num0 – áp dụng qua MCP
