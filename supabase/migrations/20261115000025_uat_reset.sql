@@ -1,0 +1,1 @@
+-- 15/11/2026: dọn dữ liệu UAT (qua MCP). Bản sao lưu: schema uat_backup_20261115. Giữ cấu hình, người dùng, đối tác, mẫu in.
