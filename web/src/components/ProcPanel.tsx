@@ -45,7 +45,7 @@ const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v)
 
 /** Một quy trình của một đơn: danh sách hồ sơ (lần / lệnh / đợt) → chuỗi công ty → bản đang chọn */
 export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
-  const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
+  const [batchesRaw, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
   const [psp] = useSearchParams();
   const [bid, setBid] = useState(() => psp.get('b') ?? ''); const [co, setCo] = useState<Company | ''>(() => (psp.get('co') as Company | null) ?? '');
   const [info, setInfo] = useState(false);
@@ -59,6 +59,10 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
     if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); const dd = (d as Doc[]) ?? []; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
+  const { canSwitch: multiCo0 } = useScope(); const myCos0 = useMyCo().allowed as string[];
+  // Người chỉ thuộc 1 công ty: chỉ thấy hồ sơ có phiếu của công ty mình
+  const batchesAll = batchesRaw;
+  const batches = !batchesAll || multiCo0 || !myCos0.length ? batchesAll : batchesAll.filter((x) => { const ds = docs.filter((d) => d.batch_id === x.id); return !ds.length || ds.some((d) => myCos0.includes(d.company)); });
   const B = batches?.find((x) => x.id === bid) ?? batches?.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches?.at(-1);
   useEffect(() => { dispatchEvent(new CustomEvent('pp-batch', { detail: { proc, id: B?.id ?? '' } })); }, [proc, B?.id]);
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
