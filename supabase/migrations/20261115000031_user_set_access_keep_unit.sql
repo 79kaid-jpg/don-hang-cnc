@@ -1,0 +1,1 @@
+-- user_set_access: chỉ tự điền đơn vị khi trống/Khác/IT, không ghi đè lựa chọn của admin (xem migration trên DB)

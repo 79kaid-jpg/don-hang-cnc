@@ -163,7 +163,7 @@ export default function Admin() {
 
 function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => void; onSaved: () => void; people?: Profile[] }) {
   const { real, actAs } = useAuth(); const nav = useNavigate();
-  const init = { full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active, position: p.position ?? '', manager_id: p.manager_id ?? null };
+  const [init, setInit] = useState(() => ({ full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active, position: p.position ?? '', manager_id: p.manager_id ?? null }));
   const [f, setF] = useState(init);
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const [a0, setA0] = useState<Access | null>(null); const [a, setA] = useState<Access | null>(null);
@@ -177,7 +177,7 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
     const { roles: _r, ...rest } = f; void _r;
     const { error } = await sb.from('profiles').update(rest).eq('id', p.id);
     const e2 = !error && a ? (await sb.rpc('user_set_access', { p_user: p.id, p_admin: a.admin, p_cos: a.cos })).error : null;
-    setBusy(false); if (error || e2) setErr(errText((error ?? e2)!)); else { setA0(a); toast('Đã lưu ' + f.full_name); onSaved(); }
+    setBusy(false); if (error || e2) setErr(errText((error ?? e2)!)); else { setA0(a); setInit(f); toast('Đã lưu ' + f.full_name); onSaved(); }
   };
   const loginAs = async () => {
     if (dirty && !(await confirmDialog('Có thay đổi chưa lưu. Bỏ qua và đăng nhập với tư cách người này?', 'Bỏ qua & tiếp tục'))) return;
@@ -206,7 +206,8 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
         <h2>Thông tin</h2>
         <label className="f">Họ tên<input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></label>
         <div className="f" role="group" aria-label="Đơn vị"><span>Đơn vị</span>
-          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div></div>
+          <div className="seg">{UNITS.map((u) => <button key={u} type="button" aria-pressed={f.unit === u} onClick={() => setF({ ...f, unit: u })}>{UNIT_NAME[u]}</button>)}</div>
+          {(() => { const c = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, Co>)[f.unit]; return c && a && a.cos[c] === undefined && <p className="small" role="status" style={{ margin: '6px 0 0', color: '#B45309' }}>⚠ {f.full_name} thuộc {UNIT_NAME[f.unit]} nhưng chưa có quyền ở công ty này – tick ở bảng Công ty × Vai trò bên dưới.</p>; })()}</div>
         <label className="f">Chức vụ<input value={f.position} placeholder="Ví dụ: Trưởng phòng kỹ thuật" onChange={(e) => setF({ ...f, position: e.target.value })} /></label>
         <label className="f">Quản lý trực tiếp
           <select value={f.manager_id ?? ''} onChange={(e) => setF({ ...f, manager_id: e.target.value || null })}>
