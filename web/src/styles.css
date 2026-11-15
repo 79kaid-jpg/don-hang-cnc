@@ -3472,3 +3472,8 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .mm-ph{display:grid;place-items:center;font-size:13px;color:var(--muted);height:90px}
 .mm-pin{background:none;border:0}
 @media (max-width:640px){.mm{height:200px}}
+.hi-loc-in{position:relative;display:block}
+.hi-sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1001;list-style:none;margin:0;padding:4px;background:#fff;border:1px solid var(--line2);border-radius:10px;box-shadow:0 10px 28px rgba(20,28,40,.16);max-height:260px;overflow:auto}
+.hi-sug button{width:100%;text-align:left;border:0;background:none;font:inherit;font-size:14px;padding:8px 10px;border-radius:6px;cursor:pointer;min-height:40px;color:var(--ink)}
+.hi-sug button.on,.hi-sug button:hover{background:var(--soft)}
+@media (pointer:coarse){.hi-sug button{min-height:44px}}

@@ -24,6 +24,6 @@ export default function MiniMap({ ll, onPick, readOnly }: { ll: string; onPick: 
     map.current = m; setTimeout(() => m.invalidateSize(), 50);
     return () => { m.remove(); map.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!map.current || !mk.current) return; const p = pos(); mk.current.setLatLng(p); if (!map.current.getBounds().pad(-0.2).contains(p)) map.current.setView(p); }, [ll]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!map.current || !mk.current) return; const p = pos(); mk.current.setLatLng(p); if (!map.current.getBounds().pad(-0.2).contains(p)) map.current.flyTo(p, Math.max(map.current.getZoom(), 16), { duration: 0.8 }); }, [ll]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div ref={box} className="mm" role="application" aria-label={'Bản đồ vị trí ' + ll + (readOnly ? '' : '. Chạm vào bản đồ hoặc kéo ghim để đổi vị trí')} />;
 }

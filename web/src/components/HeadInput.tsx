@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 const MiniMap = lazy(() => import('./MiniMap'));
 import { isNumOk, numTyping } from '../lib/proc';
 import type { FDef } from '../lib/fields';
@@ -48,7 +48,7 @@ export { toN };
 
 /** Vị trí: "địa chỉ @lat,lng" – toạ độ lấy từ GPS hoặc link Google Maps dán vào */
 const LL = /@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/;
-export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(LL, '').trim(), ll: m ? m[1] + ',' + m[2] : '' }; };
+export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(/\s*@-?\d{1,2}\.\d+,\s*-?\d{1,3}\.\d+/, '').replace(/^\s+/, ''), ll: m ? m[1] + ',' + m[2] : '' }; };
 export const mapUrl = (v: string) => { const { addr, ll } = parseLoc(v); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ll || addr); };
 /** Tra ngược toạ độ → địa chỉ (Nominatim, tiếng Việt) */
 async function revGeo(ll: string): Promise<string> {
@@ -64,20 +64,40 @@ async function revGeo(ll: string): Promise<string> {
     const v = parts.length >= 2 ? [...new Set(parts)].join(', ') : j.display_name ?? ''; if (v) return clean(v); } } catch (e) { console.warn('[geo] osm', e); }
   return '';
 }
+/** Gợi ý địa chỉ (Esri), ưu tiên quanh vị trí đang có / TP.HCM */
+const ESRI = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/';
+type Sug = { text: string; magicKey: string };
+async function suggest(q: string, near: string, sig: AbortSignal): Promise<Sug[]> {
+  const [lat, lon] = (near || '10.7769,106.7009').split(',');
+  const r = await fetch(`${ESRI}suggest?f=json&countryCode=VNM&maxSuggestions=5&langCode=vi&location=${lon},${lat}&text=${encodeURIComponent(q)}`, { signal: sig });
+  const j = await r.json() as { suggestions?: Sug[] }; return j.suggestions ?? []; }
+async function locate(sg: Sug): Promise<{ addr: string; ll: string } | null> {
+  const r = await fetch(`${ESRI}findAddressCandidates?f=json&maxLocations=1&langCode=vi&outFields=LongLabel&SingleLine=${encodeURIComponent(sg.text)}&magicKey=${encodeURIComponent(sg.magicKey)}`);
+  const j = await r.json() as { candidates?: { address: string; location: { x: number; y: number }; attributes?: { LongLabel?: string } }[] }; const c = j.candidates?.[0]; if (!c) return null;
+  return { addr: (c.attributes?.LongLabel || c.address || sg.text).replace(/,\s*(Việt Nam|Vietnam|VNM)$/i, ''), ll: c.location.y.toFixed(6) + ',' + c.location.x.toFixed(6) }; }
 let autoAddr = ''; // địa chỉ do app điền gần nhất (để không ghi đè địa chỉ người dùng gõ)
 function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; disabled?: boolean }) {
   const { addr, ll } = parseLoc(v); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [geo, setGeo] = useState(false);
-  const join = (a: string, l: string) => (a.trim() + (l ? ' @' + l : '')).trim();
+  const join = (a: string, l: string) => a.replace(/^\s+/, '') + (l ? ' @' + l : '');
+  const [sugs, setSugs] = useState<Sug[]>([]); const [si, setSi] = useState(0); const tm = useRef(0); const ac = useRef<AbortController | null>(null);
+  const ask = (q: string) => { clearTimeout(tm.current); ac.current?.abort(); if (q.trim().length < 3) { setSugs([]); return; }
+    tm.current = window.setTimeout(() => { const c = new AbortController(); ac.current = c; suggest(q, ll, c.signal).then((l) => { setSugs(l); setSi(0); }).catch(() => {}); }, 400); };
+  const choose = async (sg: Sug) => { setSugs([]); setGeo(true); setErr(''); const r = await locate(sg).catch(() => null); setGeo(false);
+    if (r) { autoAddr = ''; on(join(r.addr, r.ll)); } else setErr('Không tìm thấy vị trí của địa chỉ này'); };
   const pick = async (nl: string) => { on(join(addr, nl)); if (addr && addr !== autoAddr) return; setGeo(true); setErr(''); const a = await revGeo(nl); setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } else setErr('Không tìm được địa chỉ cho điểm này – gõ tay vào ô trên'); };
   const typed = (x: string) => { // dán link Google Maps → tách toạ độ
     const m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(x) ?? /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(x) ?? /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/.exec(x);
     if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) { if (addr === x) return; const nl = (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6); if (!addr || addr === autoAddr) { on(join('', nl)); autoAddr = ''; setGeo(true); revGeo(nl).then((a) => { setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } }); } else on(join(addr, nl)); }
-    else on(join(x, ll)); };
+    else { on(join(x, ll)); ask(x); } };
   const gps = () => { if (!navigator.geolocation) return setErr('Thiết bị không hỗ trợ định vị'); setBusy(true); setErr('');
     navigator.geolocation.getCurrentPosition((p) => { setBusy(false); pick(p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6)); },
       (e) => { setBusy(false); setErr(e.code === 1 ? 'Chưa cho phép truy cập vị trí – bật trong cài đặt trình duyệt' : 'Không lấy được vị trí, thử lại'); }, { enableHighAccuracy: true, timeout: 15000 }); };
   return <span className="hi-loc" onClick={(e) => { if ((e.target as HTMLElement).closest('.mm')) e.preventDefault(); /* không để <label> chuyển cú bấm sang ô nhập */ }}>
-    <input type="text" disabled={disabled} value={addr} placeholder="Địa chỉ, hoặc dán link Google Maps" onChange={(e) => typed(e.target.value)} />
+    <span className="hi-loc-in"><input type="text" disabled={disabled} value={addr} placeholder="Gõ địa chỉ để tìm, hoặc dán link Google Maps" onChange={(e) => typed(e.target.value)}
+      role="combobox" aria-expanded={sugs.length > 0} aria-autocomplete="list" onBlur={() => setTimeout(() => setSugs([]), 200)}
+      onKeyDown={(e) => { if (!sugs.length) return; if (e.key === 'ArrowDown') { e.preventDefault(); setSi((si + 1) % sugs.length); } else if (e.key === 'ArrowUp') { e.preventDefault(); setSi((si - 1 + sugs.length) % sugs.length); } else if (e.key === 'Enter') { e.preventDefault(); choose(sugs[si]); } else if (e.key === 'Escape') setSugs([]); }} />
+      {sugs.length > 0 && <ul className="hi-sug" role="listbox">{sugs.map((x, i) => <li key={x.magicKey} role="option" aria-selected={i === si}>
+        <button type="button" className={i === si ? 'on' : ''} onMouseDown={(e) => e.preventDefault()} onClick={() => choose(x)}>📍 {x.text}</button></li>)}</ul>}</span>
     <span className="hi-loc-bar">
       {!disabled && <button type="button" className="btn sm" onClick={gps} disabled={busy}>📍 {busy ? 'Đang lấy…' : 'Vị trí hiện tại'}</button>}
       {(addr || ll) && <a className="btn sm" href={mapUrl(v)} target="_blank" rel="noreferrer">🗺 Mở bản đồ</a>}
