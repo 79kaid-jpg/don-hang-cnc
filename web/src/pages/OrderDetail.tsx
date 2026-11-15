@@ -13,6 +13,8 @@ import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams , useNavigate} from 'react-router-dom';
 import { sb, errText, type Approval, type Customer, type Line, type Order, type Profile } from '../lib/supabase';
+import { procData, allPeople, allCustomers } from '../lib/orderData';
+import { cached, peek } from '../lib/qcache';
 import { useAuth } from '../lib/auth';
 import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { useProjects } from '../lib/projects';
@@ -39,29 +41,34 @@ export default function OrderDetail() {
   useEffect(() => { const h = (e: Event) => setSelB((e as CustomEvent).detail); addEventListener('pp-batch', h); return () => removeEventListener('pp-batch', h); }, []);
   const tab0 = sp.get('tab') ?? 'QT0'; const tab = TABS.some(([k]) => k === tab0) ? tab0 : 'QT0';
   const { can } = useAuth();
-  const [o, setO] = useState<Order | null>(null);
-  const [people, setPeople] = useState<Record<string, Profile>>({});
-  const [cust, setCust] = useState<Record<string, Customer>>({});
-  const [events, setEvents] = useState<Ev[]>([]);
-  const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
+  // Mở lại đơn vừa xem: hiện ngay bản nhớ tạm rồi cập nhật ngầm
+  const c0 = peek<{ o: Order; people: Record<string, Profile>; cust: Record<string, Customer>; events: Ev[]; bs: Batch[]; ds: Doc[] }>('od:' + id, 600000);
+  const [o, setO] = useState<Order | null>(c0?.o ?? null);
+  const [people, setPeople] = useState<Record<string, Profile>>(c0?.people ?? {});
+  const [cust, setCust] = useState<Record<string, Customer>>(c0?.cust ?? {});
+  const [events, setEvents] = useState<Ev[]>(c0?.events ?? []);
+  const [bs, setBs] = useState<Batch[]>(c0?.bs ?? []); const [ds, setDs] = useState<Doc[]>(c0?.ds ?? []);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
   const load = useCallback(async () => {
     reloadCoIdx();
+    // tải trước nội dung phiếu của tab đang mở – song song với đầu đơn (khung phiếu dùng lại, không tải lặp)
+    if (id && /^QT[0-3]$/.test(tab)) procData(id, tab).catch(() => {});
     const [a, g, h, i, j] = await Promise.all([
       sb.from('orders').select('*').eq('id', id).single(),
-      sb.from('profiles').select('*'),
-      sb.from('customers').select('*'),
+      allPeople(), allCustomers(),
       sb.from('audit_log').select('id, at, actor, acting_as, action').eq('order_id', id).eq('table_name', 'event').order('at', { ascending: false }),
       sb.from('batches').select('*').eq('order_id', id).order('seq')
     ]);
-    setO(a.data as Order);
-    setPeople(Object.fromEntries(((g.data as Profile[]) ?? []).map((p) => [p.id, p])));
-    setCust(Object.fromEntries(((h.data as Customer[]) ?? []).map((x) => [x.id, x])));
-    setEvents((i.data as Ev[]) ?? []);
-    const b = (j.data as Batch[]) ?? []; setBs(b);
-    if (b.length) { const { data } = await sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at').in('batch_id', b.map((x) => x.id)); setDs((data as Doc[]) ?? []); } else setDs([]);
-  }, [id]);
+    const b = (j.data as Batch[]) ?? [];
+    const dd = b.length ? (((await sb.from('docs_v').select('id, batch_id, company, status, status_at, created_at').in('batch_id', b.map((x) => x.id))).data as Doc[]) ?? []) : [];
+    const pm = Object.fromEntries(g.map((p) => [p.id, p])), cm = Object.fromEntries(h.map((x) => [x.id, x]));
+    // cập nhật một lần (React gộp) → một nhịp vẽ
+    setO(a.data as Order); setPeople(pm); setCust(cm); setEvents((i.data as Ev[]) ?? []); setBs(b); setDs(dd);
+    if (a.data) cached('od:' + id, () => Promise.resolve({ o: a.data as Order, people: pm, cust: cm, events: (i.data as Ev[]) ?? [], bs: b, ds: dd }), 0);
+    // tải sẵn tab QT kế bên
+    const nx = { QT0: 'QT1', QT1: 'QT2', QT2: 'QT3' }[tab]; if (id && nx) setTimeout(() => procData(id, nx).catch(() => {}), 800);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   useEffect(() => { // menu ⋯ / Thêm: tự đóng khi bấm ra ngoài, chọn mục, hoặc Esc
     const shut = (keep?: Element | null) => document.querySelectorAll<HTMLDetailsElement>('details.odh-more[open], details.odt-more[open]').forEach((x) => { if (x !== keep) x.open = false; });

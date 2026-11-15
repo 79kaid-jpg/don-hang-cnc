@@ -3546,3 +3546,6 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .pja-fg>*{min-width:0}.pja-fg input:not([type=checkbox]),.pja-fg select,.pja-fg textarea{width:100%;max-width:100%;box-sizing:border-box}.pja-fg div.f>span:first-child{font-size:14px;font-weight:600}
 .kb-ghost{position:fixed!important}
 .eb{display:grid;gap:10px;max-width:640px;margin:24px auto;border-color:#F0C9C3}.eb-msg{margin:0;padding:8px 10px;background:#FBEDEB;border-radius:8px;font-size:12px;white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto}.eb .btn{min-height:44px}
+.pp-skel{display:grid;gap:12px;min-height:420px;align-content:start}.pp-skel span{display:block;height:18px;border-radius:6px;background:linear-gradient(90deg,var(--soft) 25%,#fff 50%,var(--soft) 75%);background-size:200% 100%;animation:sk 1.2s linear infinite}
+.pp-skel span:nth-child(1){width:40%;height:24px}.pp-skel span:nth-child(2){width:70%}.pp-skel span:nth-child(3){height:44px}.pp-skel span:nth-child(4){height:220px}
+@keyframes sk{to{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.pp-skel span{animation:none}}

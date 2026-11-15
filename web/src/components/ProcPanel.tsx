@@ -30,6 +30,7 @@ import {
   stampDens, matOf, subRows,
 } from '../lib/proc';
 import { Icon } from './Icon';
+import { procData, procKey, type ProcData } from '../lib/orderData';
 import { evalFormula } from '../lib/formula';
 import { HeadInput, headErr } from './HeadInput';
 import { CoBar, CoLink } from './CoBar';
@@ -51,7 +52,9 @@ const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v)
 
 /** Một quy trình của một đơn: danh sách hồ sơ (lần / lệnh / đợt) → chuỗi công ty → bản đang chọn */
 export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
-  const [batchesRaw, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]);
+  const pre = peek<ProcData>(procKey(o.id, proc), 20000); // đã tải sẵn cùng lúc với đầu đơn → hiện ngay
+  const [batchesRaw, setBatches] = useState<Batch[] | null>(pre?.batches ?? null); const [docs, setDocs] = useState<Doc[]>(pre?.docs ?? []);
+  const first = useRef('');
   const [psp] = useSearchParams();
   const [bid, setBid] = useState(() => psp.get('b') ?? ''); const [co, setCo] = useState<Company | ''>(() => (psp.get('co') as Company | null) ?? '');
   const [info, setInfo] = useState(false);
@@ -60,9 +63,10 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   useEffect(() => { if (psp2.get('new') !== '1' || psp2.get('tab') !== proc) return; setCreating(true); const n = new URLSearchParams(psp2); n.delete('new'); setPsp2(n, { replace: true }); }, [psp2.get('new')]); // eslint-disable-line react-hooks/exhaustive-deps
   const load = useCallback(async () => {
     reloadCoIdx();
-    const { data: b } = await sb.from('batches').select('*').eq('order_id', o.id).eq('proc', proc).order('seq');
-    const bs = (b as Batch[]) ?? []; setBatches(bs);
-    if (bs.length) { const { data: d } = await sb.from('docs_v').select('*').in('batch_id', bs.map((x) => x.id)); const dd = (d as Doc[]) ?? []; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
+    // lần đầu dùng dữ liệu đã tải sẵn (chung với trang đơn); các lần sau (lưu, chuyển bước) tải mới
+    const f = first.current === o.id + proc; first.current = o.id + proc;
+    const r = await procData(o.id, proc, f); const bs = r.batches; setBatches(bs);
+    if (bs.length) { const dd = r.docs; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
   const { canSwitch: multiCo0 } = useScope(); const myCos0 = useMyCo().allowed as string[];
@@ -74,7 +78,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
   const cur = [...bDocs].sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
   const D = bDocs.find((d) => d.company === co) ?? (cur?.can_view === false ? bDocs.filter((x) => x.can_view !== false).at(-1) ?? cur : cur);
-  if (!batches) return <div className="card muted">Đang tải {proc}…</div>;
+  if (!batches) return <div className="card pp-skel" aria-busy="true" aria-label={'Đang tải ' + proc}><span /><span /><span /><span /></div>;
   return (
     <div className="pp">
       <div className="pp-head">
