@@ -3421,3 +3421,5 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 @media (max-width:760px){.cl-hero{width:100%;justify-content:center;min-height:48px}}
 .kb-card:has(.cl-chip){padding-bottom:50px}
 .tk-reply.tk-multi{flex-direction:column;align-items:stretch}.tk-reply.tk-multi textarea{width:100%;min-height:72px}
+.ins-h3{font-size:15px;margin:8px 0 0}.ins-ul{margin:0;padding-left:20px;line-height:1.7;font-size:14px}
+.ins-eg{margin:0;padding:10px 12px;background:var(--soft);border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.55}

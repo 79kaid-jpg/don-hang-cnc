@@ -77,27 +77,39 @@ export default function Install() {
 
       <section className="card" aria-labelledby="h-zalo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2 id="h-zalo">2. Nhận thông báo duyệt qua Zalo</h2>
-        <p className="muted" style={{ margin: 0 }}>Bot <b>{bot}</b> nhắn riêng cho bạn khi đến lượt bạn duyệt phiếu, và báo cho người tạo đơn khi phiếu bị từ chối. Mỗi người chỉ cần liên kết một lần.</p>
+        <p className="muted" style={{ margin: 0 }}>Bot <b>{bot}</b> nhắn riêng cho bạn khi có việc, kèm link mở thẳng phiếu. Bạn trả lời bot ngay trong Zalo, tin tự vào mục <b>Trao đổi</b> của phiếu. Mỗi người chỉ cần liên kết một lần.</p>
+        <h3 className="ins-h3">Liên kết</h3>
         <ol className="ins-steps">
-          <Step n={1}>Bấm <b>Liên kết Zalo</b> ở ô bên dưới (hoặc biểu tượng chuông <span className="kbd"><Icon name="bell" size={16} /></span> trên đầu trang). App hiện một <b>mã 6 số</b>, có hiệu lực 30 phút.</Step>
+          <Step n={1}>Bấm <b>Liên kết Zalo</b> ở ô bên dưới (hoặc menu tài khoản › <b>Thông báo Zalo</b>). App hiện một <b>mã 6 số</b>, có hiệu lực 30 phút.</Step>
           <Step n={2}>Mở Zalo trên điện thoại, gõ tìm <b>{bot}</b>, bấm <b>Nhắn tin</b>.</Step>
           <Step n={3}>Gửi cho bot đúng mã 6 số đó.</Step>
-          <Step n={4}>Bot trả lời <b>"Đã liên kết Zalo với tài khoản …"</b>, app tự chuyển sang <b>Đã liên kết</b>. Xong.</Step>
+          <Step n={4}>Bot trả lời <b>"Đã liên kết…"</b>, app tự chuyển sang <b>Đã liên kết</b>. Xong.</Step>
         </ol>
         <ZaloLink />
-        <div className="small" style={{ lineHeight: 1.7 }}>
-          <b>Bạn sẽ nhận tin khi:</b>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
-            <li>Đến lượt bạn duyệt: XNĐH (F2), dự toán NVL (F3), PO, từng cấp lệnh gia công (F5). Tin có mã đơn, tên phiếu, cấp duyệt, hạn và link mở thẳng phiếu.</li>
-            <li>Phiếu của đơn bạn tạo bị từ chối: kèm người từ chối và lý do.</li>
-          </ul>
-          <b>Lưu ý:</b>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
-            <li>Mở link trong tin nhắn bằng trình duyệt (hoặc app đã cài) và đăng nhập tài khoản của bạn.</li>
-            <li>Gửi sai mã hoặc mã hết hạn: bấm Liên kết Zalo lại để lấy mã mới.</li>
-            <li>Đổi số Zalo: bấm <b>Huỷ liên kết</b> rồi liên kết lại với Zalo mới.</li>
-          </ul>
-        </div>
+        <h3 className="ins-h3">Nhận tin khi nào</h3>
+        <ul className="ins-ul">
+          <li>Đến lượt bạn làm hoặc duyệt một bước (mọi QT), kèm hạn xử lý.</li>
+          <li>Phiếu bị <b>trả về</b> cho bạn: kèm người trả về và lý do.</li>
+          <li>Quản lý <b>nhắc việc</b> hoặc <b>giao lại</b> phiếu cho bạn.</li>
+          <li>Có người <b>tag @tên bạn</b> trong Trao đổi, hoặc trả lời phiếu bạn đang theo.</li>
+        </ul>
+        <h3 className="ins-h3">Trả lời & tag qua Zalo</h3>
+        <ul className="ins-ul">
+          <li><b>Nhắn thẳng</b> nội dung (không cần quote): tin vào phiếu của tin gần nhất bot gửi cho bạn (trong 48 giờ).</li>
+          <li>Trả lời phiếu khác: <b>gõ mã ở đầu tin</b>. Mã nằm ở dòng cuối mỗi tin bot, VD <span className="kbd">003 ok</span>.</li>
+          <li><b>Tag người</b>: thêm <span className="kbd">@Tên</span> (không dấu cũng được, VD <span className="kbd">@kien</span>). Chỉ tag được người xem được phiếu, tối đa 5 người. Họ nhận chuông + Zalo.</li>
+          <li>Gõ <span className="kbd">@?</span> để bot gửi danh sách người tag được của phiếu.</li>
+          <li>Bot luôn báo lại <b>"✓ Đã ghi phản hồi vào ĐH-…"</b> để bạn biết tin vào phiếu nào.</li>
+        </ul>
+        <pre className="ins-eg">{'🔔 Nhắc việc từ Kim Phụng\nĐH-202611-003 · SLUC\nQT0 · PN · Tạo DS tấm\n…\n↩ Trả lời: nhắn thẳng (vào phiếu này) hoặc gõ mã trước nội dung\n003'}</pre>
+        <p className="small muted" style={{ margin: 0 }}>Bạn trả lời: <span className="kbd">Em làm xong trước 10h @Kiên</span> → ghi vào ĐH-202611-003 và nhắc Kiên.</p>
+        <p className="small muted" style={{ margin: 0 }}>Trong app cũng tag được: gõ <span className="kbd">@</span> ở ô Trả lời hoặc ô Nhắc việc để chọn người.</p>
+        <h3 className="ins-h3">Lưu ý</h3>
+        <ul className="ins-ul">
+          <li>Mở link trong tin bằng trình duyệt (hoặc app đã cài) và đăng nhập tài khoản của bạn.</li>
+          <li>Gửi sai mã hoặc mã hết hạn: bấm Liên kết Zalo lại để lấy mã mới.</li>
+          <li>Đổi số Zalo, hoặc công ty <b>đổi sang bot mới</b>: bấm <b>Huỷ liên kết</b> rồi liên kết lại với bot mới. Mở nhanh: <a href="./?z=1#/zalo">trang Thông báo Zalo</a>.</li>
+        </ul>
       </section>
 
       <section className="card" aria-labelledby="h-up" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
