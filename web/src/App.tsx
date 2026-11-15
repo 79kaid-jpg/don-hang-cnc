@@ -149,7 +149,7 @@ function Shell() {
         {acting && (
           <div className={'acting' + (actUntil ? ' act-do' : '')} role="status">
             <span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span>
-            <span className="act-t">{actUntil ? 'Đang làm thay' : 'Đang xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <span className="small"> · chỉ xem đơn thật</span>}</span>
+            <span className="act-t">{actUntil ? <><span className="act-dang">Đang l</span><span className="act-l">L</span>àm thay</> : 'Đang xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <span className="small"> · chỉ xem đơn thật</span>}</span>
             <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
             <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
           </div>)}
