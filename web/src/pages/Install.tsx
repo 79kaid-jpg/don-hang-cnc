@@ -110,7 +110,7 @@ export default function Install() {
         <ul className="ins-ul">
           <li>Bot có thể vào <b>nhóm Zalo của phòng / công ty</b> để báo tin chung: <b>đơn mới, phiếu đã duyệt, phiếu bị trả về, phiếu trễ hạn</b>. Tin "đến lượt bạn", nhắc việc, tag vẫn gửi riêng.</li>
           <li>Thêm bot: trưởng/phó nhóm mở link mời <a href="https://bot.zaloplatforms.com/groups/invite/bot.RjrIfAmD" target="_blank" rel="noreferrer">bot.zaloplatforms.com/groups/invite/bot.RjrIfAmD</a> và chọn nhóm.</li>
-          <li>Nối nhóm với PMS (chỉ admin đã liên kết Zalo): gõ trong nhóm <span className="kbd">/noi PN</span>, <span className="kbd">/noi IPC</span>, <span className="kbd">/noi HW</span> hoặc <span className="kbd">/noi tatca</span>. Gõ <span className="kbd">/nhom</span> để xem nhóm đang nhận gì, <span className="kbd">/huy</span> để ngừng.</li>
+          <li>Nối nhóm với PMS (chỉ admin đã liên kết Zalo): gõ trong nhóm <span className="kbd">/noi PN</span>, <span className="kbd">/noi IPC</span>, <span className="kbd">/noi HW</span> hoặc <span className="kbd">/noi tatca</span>. <b>Nhóm theo dự án</b>: <span className="kbd">/noi duan SLUC</span> (nhiều mã cách nhau dấu cách, có thể thêm công ty: <span className="kbd">/noi duan SLUC PN</span>) – nhóm chỉ nhận tin của các dự án đó. Gõ <span className="kbd">/nhom</span> để xem nhóm đang nhận gì, <span className="kbd">/huy</span> để ngừng.</li>
           <li>Trả lời vào phiếu từ nhóm: <b>gõ mã phiếu trước nội dung</b>, VD <span className="kbd">003 đã giao xong</span> (trong nhóm không đoán theo tin gần nhất).</li>
           <li>Admin chọn nhóm nhận loại tin nào ở Quản trị › Kết nối & API › Nhóm Zalo.</li>
         </ul>

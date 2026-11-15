@@ -3489,3 +3489,7 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .zg-ev button.on{background:#E3EAF7;border-color:#9DB3DA;color:#1F3F78;font-weight:600}
 @media (pointer:coarse){.zg-ev button,.zg-h select{min-height:44px}}
 .card .kbd,.zg .kbd{white-space:nowrap;width:auto;min-width:0;height:auto;display:inline-block;padding:0 6px;font-size:13px}
+.zg-pj{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.zg-pj select{min-height:32px;max-width:220px}
+.zg-chip{display:inline-flex;align-items:center;gap:2px;background:#EDF3E8;color:#2E6B43;border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
+.zg-chip button{border:0;background:none;color:inherit;cursor:pointer;width:24px;height:24px;border-radius:50%}.zg-chip button:hover{background:rgba(0,0,0,.08)}
+@media (pointer:coarse){.zg-chip button{width:36px;height:36px}.zg-pj select{min-height:44px}}
