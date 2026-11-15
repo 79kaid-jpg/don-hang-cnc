@@ -239,7 +239,7 @@ const ROLE_HINT: Record<string, string> = {
   giam_doc: 'Thấy các trường nhạy cảm (giá, tiền) của công ty mình – theo cấu hình Trường dữ liệu',
   kinh_doanh: 'Tạo đơn, F0, sửa F1, lập XNĐH, ghi khách xác nhận',
   ky_thuat: 'Bóc tách F1', kiem_tra_f1: 'Kiểm tra F1 (ĐK1)',
-  admin_cnc: 'Lập XNĐH, LGC, bàn giao, LGH chặng 1',
+  admin_cnc: 'Quản trị nghiệp vụ của công ty: tạo đơn, lập phiếu, quản lý dự án, đối tác, đánh số',
   ke_hoach: 'Dự toán NVL (giai đoạn sau)', mua_hang: 'PO (giai đoạn sau)', kho_qc: 'Nhập kho, QC, giao hàng',
   ipc: 'Phần IPC của LGC, LGH chặng 2', duyet: 'Duyệt các cấp được gán (người duyệt QT1 thấy giá của công ty mình)',
   thiet_ke_qt: 'Tạo, sửa, chạy thử, phát hành quy trình của mình; xoá khi chưa có công việc', xem: 'Chỉ xem hồ sơ của công ty mình (không thấy giá)'
