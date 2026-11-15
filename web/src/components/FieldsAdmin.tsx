@@ -27,14 +27,12 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
       ...all.filter((f) => f.area === 'col' && f.tbl === t.key && f.type === 'subtable' && f.active).map((f) => ({ area: 'col' as Area, tbl: t.key + '.' + f.key, title: '↳ Cột · Bảng con “' + f.label + '” (trong ' + t.title + ')', sub: 'Mỗi dòng của bảng cha có một bảng con với các cột này. Công thức ở bảng cha cộng được cột số của bảng con: {' + f.key + '.ten_cot}' }))]),
     { area: 'table', tbl: '', title: 'Quyền cả bảng', sub: 'Đứng trên quyền từng cột. Ẩn = ẩn cả bảng · Xem = cả bảng chỉ xem (kể cả cột đang để Sửa) · Sửa = theo quyền từng cột · Bắt buộc = như Sửa và bảng phải có ít nhất 1 dòng mới ký được' },
     { area: 'file', tbl: '', title: 'Tệp đính kèm', sub: 'Mỗi dòng là một loại tệp; Bắt buộc = phải tải ít nhất 1 tệp trước khi ký' }];
-  const add = async (area: Area, tbl: string) => {
+  // Thêm = bản nháp trong máy, chỉ ghi khi bấm Lưu
+  const [draft, setDraft] = useState<FDef | null>(null);
+  const add = (area: Area, tbl: string) => {
     const label = area === 'file' ? 'Loại tệp mới' : area === 'col' ? 'Cột mới' : 'Trường mới';
-    const keys = new Set(all.filter((f) => f.area === area && f.tbl === tbl).map((f) => f.key));
-    let key = slug(label); let i = 2; while (keys.has(key)) key = slug(label) + '_' + i++;
     const ord = Math.max(-1, ...all.filter((f) => f.area === area && f.tbl === tbl).map((f) => f.ord)) + 1;
-    const { data, error } = await sb.from('proc_fields').insert({ proc, area, tbl, key, label, type: area === 'file' ? 'file' : 'text', ord, sys: false }).select('id').single();
-    if (error) return toast(errText(error));
-    await loadFields(); setOpen((data as { id: string }).id);
+    setDraft({ proc, area, tbl, key: '', label, type: area === 'file' ? 'file' : 'text', options: [], help: '', decimals: null, ord, active: true, sys: false, perms: {}, import_names: [] } as FDef); setOpen('__draft');
   };
   const move = async (f: FDef, dir: -1 | 1) => {
     const list = all.filter((x) => x.area === f.area && x.tbl === f.tbl); const i = list.findIndex((x) => x.id === f.id); const o = list[i + dir]; if (!o) return;
@@ -74,12 +72,15 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
           <ul className={'fa-list' + (drag?.sec === s.area + s.tbl ? ' dragging' : '')}>{list.map((f, i) => { const sk = s.area + s.tbl; const dg = drag?.sec === sk ? drag : null;
             return <Row key={f.id ?? f.key} f={f} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
             open={open === f.id} onOpen={() => setOpen(open === f.id ? '' : f.id ?? '')} onMove={(d) => move(f, d)}
-            grip={list.length > 1 && !open ? (e) => startDrag(e, sk, list, i) : undefined} dragCls={dg ? (dg.from === i ? ' drag-src' : '') + (dg.to === i && dg.to !== dg.from && dg.to !== dg.from + 1 ? ' drop-before' : '') + (dg.to === list.length && i === list.length - 1 && dg.from !== i ? ' drop-after' : '') : ''} />; })}</ul>
+            grip={list.length > 1 && !open && !draft ? (e) => startDrag(e, sk, list, i) : undefined} dragCls={dg ? (dg.from === i ? ' drag-src' : '') + (dg.to === i && dg.to !== dg.from && dg.to !== dg.from + 1 ? ' drop-before' : '') + (dg.to === list.length && i === list.length - 1 && dg.from !== i ? ' drop-after' : '') : ''} />; })}
+          {draft && draft.area === s.area && draft.tbl === s.tbl && <Row key="__draft" f={draft} proc={proc} first last canEdit={canEdit} open onOpen={() => {}} onMove={() => {}}
+            draft taken={new Set(all.filter((f) => f.area === s.area && f.tbl === s.tbl).map((f) => f.key))} onDone={() => { setDraft(null); setOpen(''); }} />}
+          </ul>
         </section>; })}
     </div>);
 }
 
-function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCls = '' }: { f: FDef; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean; grip?: (e: React.PointerEvent) => void; dragCls?: string }) {
+function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCls = '', draft, taken, onDone }: { f: FDef; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean; grip?: (e: React.PointerEvent) => void; dragCls?: string; draft?: boolean; taken?: Set<string>; onDone?: () => void }) {
   const [x, setX] = useState(f); const [busy, setBusy] = useState(false);
   useEffect(() => setX(f), [f]);
   const dirty = JSON.stringify(x) !== JSON.stringify(f);
@@ -93,12 +94,17 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCl
     if (x.type === 'formula' && proc !== 'F0') { const e = checkFormula(x.options[0] ?? '', [...colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key).flatMap((c) => [c.k, ...(c.sub ?? []).map((s) => c.k + '.' + s.k)]), 'ty_trong']); if (e) return toast('Công thức chưa đúng: ' + e); }
     if ((x.type === 'ref' || x.type === 'lookup') && !x.options[0]) return toast('Chưa chọn nguồn cho ' + x.label);
     setBusy(true);
-    const { error } = await sb.from('proc_fields').update({ label: x.label.trim() || f.label, import_names: (x.import_names ?? []).map((v) => v.trim()).filter(Boolean), type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, restricted: !!x.restricted, view_roles: x.view_roles ?? [], view_users: x.view_users ?? [], view_approver: !!x.view_approver, updated_at: new Date().toISOString() }).eq('id', f.id!);
-    setBusy(false); if (error) return toast(errText(error)); toast('Đã lưu ' + x.label); loadFields(); };
+    const upd = { label: x.label.trim() || f.label, import_names: (x.import_names ?? []).map((v) => v.trim()).filter(Boolean), type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, restricted: !!x.restricted, view_roles: x.view_roles ?? [], view_users: x.view_users ?? [], view_approver: !!x.view_approver, updated_at: new Date().toISOString() };
+    let error; if (draft) { let key = slug(upd.label); let k = 2; const base = key; while (taken?.has(key)) key = base + '_' + k++;
+      ({ error } = await sb.from('proc_fields').insert({ ...upd, proc, area: f.area, tbl: f.tbl, key, ord: f.ord, sys: false })); }
+    else ({ error } = await sb.from('proc_fields').update(upd).eq('id', f.id!));
+    setBusy(false); if (error) return toast(errText(error)); toast('Đã lưu ' + x.label); await loadFields(); onDone?.(); };
+  const hardDel = async () => { if (!(await confirmDialog(`Xoá hẳn “${f.label}”? Chỉ xoá được khi chưa phiếu nào có dữ liệu ở trường này. Không hoàn tác được.`, 'Xoá hẳn', true))) return;
+    const { error } = await sb.rpc('field_delete', { p_id: f.id }); if (error) return toast(errText(error)); toast('Đã xoá ' + f.label); loadFields(); };
   const del = async () => { if (!(await confirmDialog(`Ẩn hẳn “${f.label}”? Dữ liệu đã nhập vẫn được giữ, có thể bật lại.`, 'Ẩn trường'))) return;
     await sb.from('proc_fields').update({ active: false }).eq('id', f.id!); loadFields(); };
   return (
-    <li className={'fa-row' + (open ? ' open' : '') + (f.active ? '' : ' off') + dragCls}>
+    <li className={'fa-row' + (open ? ' open' : '') + (f.active ? '' : ' off') + (draft ? ' fa-draft' : '') + dragCls}>
       <div className="fa-line">
         {canEdit && grip && <span className="fa-grip" onPointerDown={grip} title="Kéo để sắp xếp" aria-hidden="true"><svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span>}
         {canEdit && <span className="fa-mv"><button className="link-btn" disabled={first} onClick={() => onMove(-1)} aria-label="Lên"><Chev up /></button>
@@ -138,11 +144,12 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCl
         </table></div></>}
         {!f0 && f.area !== 'table' && <ViewAccess x={x} setX={setX} canEdit={canEdit} />}
         {canEdit && <div className="row fa-act">
-          {!f.sys && (f.active ? <button className="btn sm" onClick={del}><Icon name="eyeoff" size={15} />Ẩn trường</button>
+          {!f.sys && !draft && <button className="btn sm danger-soft" onClick={hardDel} title="Xoá hẳn (chỉ khi chưa có dữ liệu)"><Icon name="trash" size={15} />Xoá</button>}
+          {!f.sys && !draft && (f.active ? <button className="btn sm" onClick={del}><Icon name="eyeoff" size={15} />Ẩn trường</button>
             : <button className="btn sm" onClick={() => setX({ ...x, active: true })}><Icon name="eye" size={15} />Bật lại</button>)}
           <span style={{ flex: 1 }} />
-          {dirty && <button className="btn sm" onClick={() => setX(f)}>Huỷ</button>}
-          <button className="btn sm primary" disabled={!dirty || busy} onClick={save}>{busy ? 'Đang lưu…' : dirty ? 'Lưu' : 'Đã lưu'}</button></div>}
+          {(dirty || draft) && <button className="btn sm" onClick={() => (draft ? onDone?.() : setX(f))}>Huỷ</button>}
+          <button className="btn sm primary" disabled={(!dirty && !draft) || busy || !x.label.trim()} onClick={save}>{busy ? 'Đang lưu…' : draft ? 'Lưu trường mới' : dirty ? 'Lưu' : 'Đã lưu'}</button></div>}
       </div>}
     </li>);
 }

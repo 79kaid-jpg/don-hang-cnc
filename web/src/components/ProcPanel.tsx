@@ -1093,8 +1093,9 @@ function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void
     setSp((p) => { const n = new URLSearchParams(p); n.set('tab', b.proc); n.set('b', String(data)); n.set('co', d.company); return n; });
     onChanged();
   };
-  return <div className="pp-clone"><span className="small muted">{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'} · muốn làm lại với thông tin tương tự?</span>
-    <button type="button" className="btn" disabled={busy} onClick={go}><Icon name="file" size={15} />{busy ? 'Đang tạo…' : 'Clone thành đơn mới'}</button></div>;
+  return <div className={'pp-clone2' + (d.status === 'fail' ? ' fail' : '')}><span className="pp-clone2-ic" aria-hidden="true"><Icon name="copy" size={18} /></span>
+    <span className="pp-clone2-t"><b>{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'}</b><small>Làm lại với thông tin tương tự – hồ sơ mới bắt đầu từ bước đầu</small></span>
+    <button type="button" className="cl-hero" disabled={busy} onClick={go}><Icon name="copy" size={16} />{busy ? 'Đang tạo…' : 'Clone thành hồ sơ mới'}</button></div>;
 }
 
 /** Chọn tấm từ QT0 đã duyệt để đưa vào QT1 */

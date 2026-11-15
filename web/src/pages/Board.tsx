@@ -18,6 +18,7 @@ import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope } from '../lib/myco'
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 import { Sheet } from '../components/Sheet';
+import { CloneChip } from '../components/CloneChip';
 import { ProjectPicker } from '../components/ProjectPicker';
 
 /** Kanban theo swimlane: mỗi quy trình một bảng; thẻ = một hồ sơ (lần bóc tách / XNĐH / lệnh / đợt giao).
@@ -276,6 +277,7 @@ export default function Board() {
                               <Link className="kb-ib kb-open" aria-label="Xem hồ sơ" title="Xem hồ sơ (Enter)" to={'/don/' + it.b.order_id + '?tab=' + qt}><Icon name="eye" size={17} /></Link></>}
                           {canBack(it) && <button className="kb-ib kb-back" aria-label="Trả về" title="Trả về (R)" onClick={() => setDlg({ c: it, action: 'back' })}><Icon name="back" size={17} /></button>}
                         </div>}
+                        {['hoan_tat', 'fail'].includes(COLS[it.i]?.key) && it.doc && ['da_duyet', 'fail'].includes(it.doc.status) && <CloneChip docId={it.doc.id} orderId={it.b.order_id} proc={qt} company={it.doc.company} title={it.b.title} />}
                       </article>))}
                   </div>
                 </section>);

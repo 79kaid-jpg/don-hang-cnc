@@ -3391,3 +3391,32 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .pp-bto button{min-height:40px;padding:0 14px;border:1px solid var(--line2);border-radius:999px;background:#fff;font:inherit;font-size:14px;cursor:pointer}
 .pp-bto button small{color:var(--muted);font-size:11px;margin-left:4px}.pp-bto button.on{border-color:var(--red,#C0392B);background:#FDF0EE;color:#A93226;font-weight:600}
 @media (max-width:760px){.pp-bto button{min-height:44px;flex:1 1 0}}
+.fa-row.fa-draft{border:1.5px dashed #9AB0D6;border-radius:10px;background:#F7FAFF}
+.fa-row.fa-draft .fa-lb::after{content:'chưa lưu';margin-left:8px;font-size:11px;font-weight:600;color:#2F5BA8;background:#E3EAF7;border-radius:999px;padding:1px 8px}
+.fa-row.fa-draft .fa-mv,.fa-row.fa-draft .fa-grip{visibility:hidden}
+/* Clone: chip trên thẻ Kanban */
+.kb-card{position:relative}
+.cl-chip{position:absolute;right:10px;bottom:10px;z-index:3}
+.cl-btn{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #C9D6EE;background:linear-gradient(180deg,#FFFFFF,#EEF3FC);color:#24406E;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(20,40,80,.08);transition:opacity .15s,transform .15s,box-shadow .15s}
+.cl-btn:hover{box-shadow:0 4px 12px -4px rgba(36,64,110,.35);transform:translateY(-1px)}
+.cl-btn:focus-visible{outline:2px solid var(--ring,#2F5BA8);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){.kb-card .cl-btn{opacity:0}.kb-card:hover .cl-btn,.kb-card:focus-within .cl-btn,.cl-btn[aria-expanded=true]{opacity:1}}
+.cl-pop{position:fixed;z-index:200;width:min(280px,80vw);background:#fff;border:1px solid var(--line2);border-radius:12px;box-shadow:0 14px 32px -8px rgba(20,28,40,.3);padding:12px;animation:clIn .14s ease-out}
+.cl-pop p{margin:0 0 10px;font-size:13px;line-height:1.45;color:var(--ink)}
+.cl-pop-b{display:flex;gap:8px;justify-content:flex-end}
+.cl-go{background:linear-gradient(135deg,#2F5BA8,#4C7BD1);color:#fff;border-color:transparent}
+@keyframes clIn{from{opacity:0;transform:translateY(4px)}}
+@media (prefers-reduced-motion:reduce){.cl-pop,.cl-btn{animation:none;transition:none}}
+@media (max-width:760px){.cl-btn{height:44px;padding:0 14px}.cl-pop{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,64px) + 12px);width:auto}}
+/* Clone: thanh nổi bật trong phiếu */
+.pp-clone2{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#F2F7FF,#E9F1FE);border:1px solid #CFDDF4;box-shadow:0 6px 18px -12px rgba(36,64,110,.45)}
+.pp-clone2.fail{background:linear-gradient(135deg,#FFF6F4,#FDECE8);border-color:#F2CEC6}
+.pp-clone2-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#fff;color:#2F5BA8;box-shadow:0 1px 3px rgba(20,40,80,.12);flex:none}
+.pp-clone2.fail .pp-clone2-ic{color:#B42318}
+.pp-clone2-t{display:flex;flex-direction:column;gap:1px;flex:1 1 220px;min-width:0}.pp-clone2-t small{color:var(--muted)}
+.cl-hero{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(135deg,#2F5BA8,#4C7BD1);color:#fff;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 8px 18px -8px rgba(47,91,168,.65);transition:transform .15s,box-shadow .15s,filter .15s}
+.cl-hero:hover{transform:translateY(-1px);box-shadow:0 12px 24px -10px rgba(47,91,168,.75);filter:brightness(1.05)}
+.cl-hero:active{transform:none}.cl-hero:disabled{opacity:.6;cursor:default}
+.cl-hero:focus-visible{outline:3px solid rgba(76,123,209,.45);outline-offset:2px}
+@media (max-width:760px){.cl-hero{width:100%;justify-content:center;min-height:48px}}
+.kb-card:has(.cl-chip){padding-bottom:50px}
