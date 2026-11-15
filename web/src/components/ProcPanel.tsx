@@ -850,7 +850,11 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
           const KEEP = new Set(['don_gia', 'tt', 'ghi_chu', '_id']); const key = (r: Row) => String(r.ma_tam ?? '').trim().toLowerCase();
           const cur = rows.filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
           const idx = new Map(cur.map((r, i) => [key(r), i])); const next = cur.map((r) => ({ ...r })); let up = 0, add = 0;
-          for (const s0 of sel) { const s1 = Object.fromEntries(Object.entries(s0).filter(([k]) => !KEEP.has(k))) as Row; const j = key(s0) ? idx.get(key(s0)) : undefined;
+          // m²/tấm: QT0 chỉ có kích thước trải / tổng m² → tự tính khi chưa có
+          const n = (v: unknown) => { const x = Number(String(v ?? '').replace(',', '.')); return String(v ?? '').trim() && isFinite(x) ? x : null; };
+          const m2t = (r: Row) => { if (String(r.m2_tam ?? '').trim()) return r.m2_tam; const tr = n(r.trai_rong), td = n(r.trai_dai), m = n(r.m2), st = n(r.so_tam), w = n(r.rong), l = n(r.dai);
+            const v = tr != null && td != null ? tr * td / 1e6 : m != null && st ? m / st : w != null && l != null ? w * l / 1e6 : null; return v == null ? '' : String(Math.round(v * 10000) / 10000); };
+          for (const s0 of sel) { const s1 = Object.fromEntries(Object.entries(s0).filter(([k]) => !KEEP.has(k))) as Row; s1.m2_tam = m2t(s0); const j = key(s0) ? idx.get(key(s0)) : undefined;
             if (j != null) { next[j] = { ...next[j], ...s1 }; up++; } else { next.push(s1); add++; } }
           if (cur.length && !(await confirmDialog(`Cập nhật ${up} tấm đã có (giữ đơn giá, ghi chú) và thêm ${add} tấm mới?`, 'Lấy từ QT0'))) return;
           onChange(next); setPick(null); toast(`Đã lấy từ QT0: cập nhật ${up}, thêm ${add} tấm – bấm Lưu để giữ`); }} />}

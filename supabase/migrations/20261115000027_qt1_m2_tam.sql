@@ -1,0 +1,1 @@
+-- MCP: _num, _m2_tam; batch_create QT1 tính m2_tam từ QT0; điền lại QT1 đang có
