@@ -1,0 +1,1 @@
+-- Bảng materials (tỷ trọng) + kiểu int, datetime, multi, subtable (áp dụng qua MCP: materials_and_types3)

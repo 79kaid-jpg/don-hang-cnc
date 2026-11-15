@@ -2,6 +2,8 @@
 export type Proc = 'QT0' | 'QT1' | 'QT2' | 'QT3';
 export type Company = 'PN' | 'IPC' | 'HW';
 export type Row = Record<string, string | number | null>;
+/** Bảng con trong một ô (kiểu Bảng trong bảng) */
+export const subRows = (r: Row, k: string): Row[] => { const v = (r as Record<string, unknown>)[k]; return Array.isArray(v) ? (v as Row[]) : []; };
 export type Doc = { can_view?: boolean; hidden?: string[]; assignee?: string | null; id: string; batch_id: string; company: Company; status: string; header: Record<string, string>; tables: Record<string, Row[]>;
   files: { kind: string; name: string; path: string; at?: string }[]; notes: { role: string; user: string; at: string; text: string }[];
   signs: { role: string; user: string; at: string; action: string; note?: string }[]; status_at: string; created_at: string };
@@ -31,13 +33,33 @@ export const NEXT_LABEL: Record<string, string> = {
 export const CHECK5 = ['Bóc tách đã được duyệt', 'Đủ vật liệu, vật tư', 'Đủ công cụ sản xuất', 'Vấn đề kỹ thuật đã xử lý', 'Đã công bố tiêu chuẩn QC'];
 
 /** Cột bảng: key, tên, kiểu (t chữ, n số), có tính tự động */
-export type Col = { k: string; t: string; sum?: boolean; fx?: string; ty?: 'date' | 'select' | 'bool' | 'ref' | 'lookup'; opts?: string[]; ref?: string; refv?: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string; info?: string[] };
+export type Col = { k: string; t: string; sum?: boolean; fx?: string; ty?: 'date' | 'select' | 'bool' | 'ref' | 'lookup' | 'datetime' | 'multi' | 'sub'; int?: boolean; sub?: Col[]; opts?: string[]; ref?: string; refv?: string; n?: boolean; ro?: boolean; req?: boolean; calc?: (r: Row) => number | null; d?: number; w?: number; g?: string; u?: string; info?: string[] };
 const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) && String(v ?? '') !== '' ? x : null; };
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 /** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
 export const ALU = 2.75, STEEL = 7.85;
 export const isAlu = (r: Row) => /nh[oô]m|alu|^\s*a\d{3,4}/i.test(String(r.vat_lieu ?? '') + ' ' + String(r.mac_thep ?? '')) || /^\s*a\d{3,4}/i.test(String(r.mac_thep ?? ''));
-export const densOf = (r: Row) => (isAlu(r) ? ALU : STEEL);
+/** Danh mục vật liệu (Quản trị → Vật liệu): tên, tỷ trọng, từ khoá nhận diện */
+export type Material = { id: string; name: string; density: number; keywords: string[]; is_default: boolean; active: boolean; ord: number };
+let MATS: Material[] = [];
+export const setMaterials = (m: Material[]) => { MATS = m.filter((x) => x.active); };
+const nrm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+/** Vật liệu của dòng: ưu tiên ô chọn đúng tên vật liệu, rồi từ khoá trong tên hàng / mác thép; không khớp → mặc định */
+export function matOf(r: Row): { m: Material | null; how: 'chon' | 'tu_khoa' | 'mac_dinh' } {
+  if (!MATS.length) return { m: null, how: 'mac_dinh' };
+  for (const v of Object.values(r)) if (typeof v === 'string' && v) { const x = MATS.find((m) => m.name.toLowerCase() === v.trim().toLowerCase()); if (x) return { m: x, how: 'chon' }; }
+  const txt = nrm(String(r.vat_lieu ?? '') + ' ' + String(r.mac_thep ?? '') + ' ' + String(r.ten_hang ?? ''));
+  let best: Material | null = null; let bl = 0;
+  for (const m of MATS) for (const k of m.keywords) { const kk = nrm(k.trim()); if (kk && txt.includes(kk) && kk.length > bl) { best = m; bl = kk.length; } }
+  if (best) return { m: best, how: 'tu_khoa' };
+  return { m: MATS.find((m) => m.is_default) ?? null, how: 'mac_dinh' };
+}
+const matTxt = (r: Row) => String(r.vat_lieu ?? '') + '|' + String(r.mac_thep ?? '');
+/** Tỷ trọng: giá trị đã chốt trong phiếu (nếu tên hàng/mác chưa đổi) → danh mục → mặc định cũ */
+export const densOf = (r: Row): number => { const s = num(r.ty_trong); if (s != null && r._vl === matTxt(r)) return s;
+  const { m } = matOf(r); return m ? Number(m.density) : isAlu(r) ? ALU : STEEL; };
+/** Ghi tỷ trọng hiện tại vào dòng (khi lưu phiếu) để phiếu đã duyệt giữ nguyên số kg */
+export const stampDens = (r: Row): Row => { if (!String(r.vat_lieu ?? '').trim() && !String(r.mac_thep ?? '').trim()) return r; const { m } = matOf(r); return m ? { ...r, ty_trong: Number(m.density), _vl: matTxt(r) } : r; };
 export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {

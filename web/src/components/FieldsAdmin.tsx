@@ -10,7 +10,7 @@ import { confirmDialog, toast } from './ui';
 
 const PROCS: FProc[] = ['F0', 'QT0', 'QT1', 'QT2', 'QT3'];
 const PERMS: Perm[] = ['hide', 'view', 'edit', 'required'];
-const TYPES: Record<Area, FType[]> = { header: ['text', 'number', 'date', 'select', 'textarea'], col: ['text', 'number', 'date', 'select', 'bool', 'ref', 'lookup', 'formula'], file: ['file'], table: ['text'] };
+const TYPES: Record<Area, FType[]> = { header: ['text', 'number', 'date', 'select', 'textarea'], col: ['text', 'number', 'int', 'date', 'datetime', 'select', 'multi', 'bool', 'ref', 'lookup', 'formula', 'subtable'], file: ['file'], table: ['text'] };
 const Chev = ({ up = false, size = 14 }: { up?: boolean; size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={up ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>;
 const stepName = (s: string) => (s === 'tiep_nhan' ? 'Tiếp nhận' : STATUS[s] ?? s);
 
@@ -23,7 +23,8 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
   const sections: { area: Area; tbl: string; title: string; sub: string }[] = proc === 'F0'
     ? [{ area: 'header', tbl: '', title: 'Thông tin đơn hàng', sub: 'Ô nhập khi tạo đơn và ở tab F0. Khách hàng luôn bắt buộc. Ô có sẵn chỉ đổi được tên, lựa chọn và Ẩn / Bắt buộc' }] : [
     { area: 'header', tbl: '', title: 'Thông tin phiếu', sub: 'Các ô nhập ở đầu phiếu' },
-    ...tablesOf(proc as Proc).map((t) => ({ area: 'col' as Area, tbl: t.key, title: 'Cột · ' + t.title, sub: 'Cột của bảng. Cột tự tính chỉ đổi được tên và quyền' })),
+    ...tablesOf(proc as Proc).flatMap((t) => [{ area: 'col' as Area, tbl: t.key, title: 'Cột · ' + t.title, sub: 'Cột của bảng. Cột tự tính chỉ đổi được tên và quyền' },
+      ...all.filter((f) => f.area === 'col' && f.tbl === t.key && f.type === 'subtable' && f.active).map((f) => ({ area: 'col' as Area, tbl: t.key + '.' + f.key, title: '↳ Cột · Bảng con “' + f.label + '” (trong ' + t.title + ')', sub: 'Mỗi dòng của bảng cha có một bảng con với các cột này. Công thức ở bảng cha cộng được cột số của bảng con: {' + f.key + '.ten_cot}' }))]),
     { area: 'table', tbl: '', title: 'Quyền cả bảng', sub: 'Đứng trên quyền từng cột. Ẩn = ẩn cả bảng · Xem = cả bảng chỉ xem (kể cả cột đang để Sửa) · Sửa = theo quyền từng cột · Bắt buộc = như Sửa và bảng phải có ít nhất 1 dòng mới ký được' },
     { area: 'file', tbl: '', title: 'Tệp đính kèm', sub: 'Mỗi dòng là một loại tệp; Bắt buộc = phải tải ít nhất 1 tệp trước khi ký' }];
   const add = async (area: Area, tbl: string) => {
@@ -89,7 +90,7 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCl
     if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; setX({ ...x, perms: p }); };
   const setAll = (s: string, v: string) => { const p = { ...(x.perms ?? {}) }; for (const c of cos) { const row = { ...(p[c] ?? {}) }; if (v) row[s] = v as Perm; else delete row[s]; p[c] = row; } setX({ ...x, perms: p }); };
   const save = async () => {
-    if (x.type === 'formula' && proc !== 'F0') { const e = checkFormula(x.options[0] ?? '', colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key).map((c) => c.k)); if (e) return toast('Công thức chưa đúng: ' + e); }
+    if (x.type === 'formula' && proc !== 'F0') { const e = checkFormula(x.options[0] ?? '', [...colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key).flatMap((c) => [c.k, ...(c.sub ?? []).map((s) => c.k + '.' + s.k)]), 'ty_trong']); if (e) return toast('Công thức chưa đúng: ' + e); }
     if ((x.type === 'ref' || x.type === 'lookup') && !x.options[0]) return toast('Chưa chọn nguồn cho ' + x.label);
     setBusy(true);
     const { error } = await sb.from('proc_fields').update({ label: x.label.trim() || f.label, type: x.type, options: x.options, help: x.help, decimals: x.decimals, active: x.active, perms: x.perms, restricted: !!x.restricted, view_roles: x.view_roles ?? [], view_users: x.view_users ?? [], view_approver: !!x.view_approver, updated_at: new Date().toISOString() }).eq('id', f.id!);
@@ -113,11 +114,11 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCl
         <div className="grid2">
           <label className="f">Tên hiển thị<input value={x.label} disabled={!canEdit} onChange={(e) => setX({ ...x, label: e.target.value })} /></label>
           {f.area !== 'file' && f.area !== 'table' && <label className="f">Kiểu dữ liệu<select value={x.type} disabled={!canEdit || f.sys} onChange={(e) => setX({ ...x, type: e.target.value as FType })}>
-            {(f.type === 'person' ? ['person' as FType] : TYPES[f.area]).map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</select></label>}
+            {(f.type === 'person' ? ['person' as FType] : TYPES[f.area].filter((t) => !(t === 'subtable' && f.tbl.includes('.')))).map((t) => <option key={t} value={t}>{TYPE_NAME[t]}</option>)}</select></label>}
           {f.area === 'col' && x.type === 'formula' && <FormulaEd x={x} setX={setX} canEdit={canEdit} proc={proc} />}
           {x.type === 'lookup' && <label className="f">Danh mục<select disabled={!canEdit} value={x.options[0] ?? ''} onChange={(e) => setX({ ...x, options: [e.target.value] })}><option value="">– chọn –</option>{LOOKUPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select><small className="muted">Người nhập chọn từ danh sách này thay vì gõ tay.</small></label>}
           {x.type === 'ref' && <label className="f">Lấy giá trị<select disabled={!canEdit} value={x.options[0] ?? ''} onChange={(e) => setX({ ...x, options: [e.target.value] })}><option value="">– chọn –</option>{REF_VARS.map(([k, l]) => <option key={k} value={k}>{l} {'{' + k + '}'}</option>)}</select><small className="muted">Mọi dòng hiện cùng giá trị, chỉ xem. Giá trị được chốt khi phiếu được duyệt.</small></label>}
-          {x.type === 'select' && <label className="f f-wide">Các lựa chọn (mỗi dòng một giá trị)<textarea rows={3} disabled={!canEdit} value={x.options.join('\n')} onChange={(e) => setX({ ...x, options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })} /></label>}
+          {(x.type === 'select' || x.type === 'multi') && <label className="f f-wide">Các lựa chọn (mỗi dòng một giá trị)<textarea rows={3} disabled={!canEdit} value={x.options.join('\n')} onChange={(e) => setX({ ...x, options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })} /></label>}
           {f.area === 'col' && (x.type === 'number' || x.type === 'formula') && <label className="f">Số chữ số thập phân<input inputMode="numeric" disabled={!canEdit} value={x.decimals ?? ''} onChange={(e) => setX({ ...x, decimals: e.target.value === '' ? null : Math.max(0, Math.min(4, +e.target.value || 0)) })} /></label>}
           {f0 && <label className="f">Quyền<select value={f0Perm(x)} disabled={!canEdit || (f.key === 'project')} onChange={(e) => setX({ ...x, perms: e.target.value === 'edit' ? {} : { '*': { '*': e.target.value as Perm } } })}>
             <option value="edit">Nhập được (không bắt buộc)</option><option value="required">Bắt buộc</option><option value="hide">Ẩn</option></select></label>}
@@ -176,14 +177,17 @@ function ViewAccess({ x, setX, canEdit }: { x: FDef; setX: (f: FDef) => void; ca
 function FormulaEd({ x, setX, canEdit, proc }: { x: FDef; setX: (v: FDef) => void; canEdit: boolean; proc: FProc }) {
   const fx = x.options[0] ?? ''; const sum = x.options[1] === 'sum';
   const cols = proc === 'F0' ? [] : colsOf(proc as PProc, x.tbl).filter((c) => c.k !== x.key);
-  const err = checkFormula(fx, cols.map((c) => c.k));
   const sample: Record<string, number> = {}; const SM: Record<string, number> = { rong: 1200, dai: 2400, day: 3, so_tam: 2, m2: 5.76, kg: 46.7, don_gia: 100000, tt: 576000 }; cols.forEach((c) => { sample[c.k] = c.n ? SM[c.k] ?? 10 : 0; });
+  const subKeys = cols.filter((c) => c.ty === 'sub').flatMap((c) => (c.sub ?? []).filter((s) => s.n).map((s) => c.k + '.' + s.k));
+  const err = checkFormula(fx, [...cols.map((c) => c.k), 'ty_trong', ...subKeys]); sample.ty_trong = 2.75;
   const pv = err ? null : evalFormula(fx, (k) => sample[k] ?? null);
   const set = (v: string, s2 = sum) => setX({ ...x, options: [v, s2 ? 'sum' : ''] });
   return <div className="f f-wide fx-ed">
     <span>Công thức <small className="muted">dùng tên cột trong ngoặc nhọn, + − * / ^ ( ) và hàm {Object.keys(FUNCS).join(', ')}</small></span>
     <input className="fx-in" spellCheck={false} disabled={!canEdit} value={fx} placeholder="{rong}*{dai}/1000000*{so_tam}" aria-invalid={!!fx && !!err} onChange={(e) => set(e.target.value)} />
     {canEdit && <div className="fx-chips">{cols.filter((c) => c.n).map((c) => <button key={c.k} type="button" className="chip" title={c.t} onClick={() => set(fx + '{' + c.k + '}')}>{c.t}</button>)}
+      {subKeys.map((k) => <button key={k} type="button" className="chip" title="Tổng cột này của bảng con trong dòng" onClick={() => set(fx + '{' + k + '}')}>Σ {k}</button>)}
+      <button type="button" className="chip" title="Tỷ trọng vật liệu của dòng (Quản trị → Vật liệu)" onClick={() => set(fx + '{ty_trong}')}>Tỷ trọng</button>
       {['+', '−', '*', '/', '(', ')'].map((o) => <button key={o} type="button" className="chip fx-op" onClick={() => set(fx + (o === '−' ? '-' : o))}>{o}</button>)}</div>}
     <div className={'fx-pv' + (fx && err ? ' bad' : '')}>{!fx ? 'Nhập công thức để xem trước' : err ? '⚠ ' + err : <>Thử với số mẫu → <b>{pv == null ? '(trống)' : pv.toLocaleString('vi-VN', { maximumFractionDigits: x.decimals ?? 2 })}</b> <small className="muted">({cols.filter((c) => c.n && fx.includes('{' + c.k + '}')).map((c) => c.t + '=' + sample[c.k]).join(', ')})</small></>}</div>
     <label className="nba-sw"><input type="checkbox" disabled={!canEdit} checked={sum} onChange={(e) => set(fx, e.target.checked)} /><span>Cộng tổng ở cuối bảng</span></label>

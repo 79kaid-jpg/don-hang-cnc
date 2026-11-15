@@ -3310,3 +3310,27 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .fx-in[aria-invalid=true]{border-color:var(--red,#C0392B);background:#FDF3F2}
 .fx-chips{display:flex;flex-wrap:wrap;gap:6px}.fx-chips .chip{min-height:32px;padding:0 10px;font-size:13px}.fx-op{font-family:ui-monospace,monospace;font-weight:700}
 .fx-pv{font-size:13.5px;padding:6px 10px;border-radius:8px;background:#EEF6F0;color:#1F5C38}.fx-pv.bad{background:#FDF3F2;color:#A93226}
+.pp-grid td.pp-kgw .calc{color:#9A5B12}.pp-grid td.pp-kgw .calc::after{content:' ⚠';font-size:11px}
+/* Quản trị → Vật liệu */
+.mat{display:flex;flex-direction:column;gap:12px}
+.mat-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mat-it{display:grid;grid-template-columns:minmax(140px,1.2fr) 120px minmax(180px,2fr) auto;gap:10px 14px;align-items:end;padding:12px 14px}
+.mat-it.off{opacity:.6}.mat-a{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-height:40px}
+.mat-it input{min-height:40px;height:40px;padding:6px 10px;font-size:15px}
+@media (max-width:760px){.mat-it{grid-template-columns:1fr 110px}.mat-k,.mat-a{grid-column:1/-1}.mat-a{justify-content:flex-start}.mat-it input{min-height:44px;height:44px;font-size:16px}}
+/* Bảng con, nhiều lựa chọn */
+.pp-subbtn{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:0 10px;border:1px solid var(--line2);border-radius:999px;background:#fff;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.pp-subbtn svg{transition:transform .15s}.pp-subbtn.on{border-color:var(--pri,#2F5BA8);color:var(--pri,#2F5BA8)}.pp-subbtn.on svg{transform:rotate(180deg)}
+.pp-subrow>td{background:#F5F7FA;padding:6px 10px 10px!important}
+.pp-sub{border-left:3px solid #C9D3E1;padding-left:10px}.pp-sub .pp-tbl{margin:0}
+.pp-multi{position:relative}.pp-multi>summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px;min-height:34px;align-items:center;padding:2px 6px;border:1px solid var(--line2);border-radius:8px;background:#fff;min-width:12ch}
+.pp-multi>summary::-webkit-details-marker{display:none}
+.pp-chip{background:#E8EEF8;color:#24406E;border-radius:999px;padding:1px 8px;font-size:12.5px;white-space:nowrap}
+.pp-mpop{position:absolute;z-index:30;top:calc(100% + 4px);left:0;min-width:200px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line2);border-radius:10px;box-shadow:0 12px 28px rgba(20,28,40,.16);padding:4px}
+.pp-mpop label{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:6px;cursor:pointer;white-space:nowrap}.pp-mpop label:hover{background:var(--soft)}
+@media (max-width:760px){.pp-mpop label{min-height:44px}.pp-mrow-e .pp-sub{grid-column:1/-1}}
+.pp-mpop input[type=checkbox]{width:18px;height:18px;min-height:0;padding:0;margin:0;flex:none;accent-color:var(--pri,#2F5BA8)}
+.pp-mpop label{justify-content:flex-start}
+.mat-it .f{min-width:0}.mat-it input{width:100%;box-sizing:border-box}
+.mat-a input[type=checkbox]{width:20px;height:20px;min-height:0}
+@media (max-width:760px){.mat-it{grid-template-columns:minmax(0,1fr) 96px;align-items:end}}

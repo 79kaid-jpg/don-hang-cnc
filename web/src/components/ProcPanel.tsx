@@ -18,13 +18,15 @@ import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import { useProjects } from '../lib/projects';
+import { useMaterials } from '../lib/materials';
 import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
-  sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row
+  sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row,
+  stampDens, matOf, subRows,
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { CoBar, CoLink } from './CoBar';
@@ -331,10 +333,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     cached('custs', () => sb.from('customers').select('*'), 60000).then(({ data }) => { const cs = (data as Customer[]) ?? []; setCusts(cs); const { buyer } = parties(o, d.company, proc, cs, h.end_customer_id);
       setShip([...(buyer?.ship_addresses ?? []), buyer?.address ?? ''].filter(Boolean)); }); }, [d.id, h.end_customer_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const fFields = fieldsOf(proc, 'file').filter((f) => pm(f) !== 'hide');
-  const pjs = useProjects(); const kh0 = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id));
+  const pjs = useProjects(); const mats = useMaterials(); const kh0 = custs.find((c) => c.id === (o.customer_id ?? o.kh2_id ?? o.kh1_id));
   const refVals: Record<string, string> = { ma_du_an: pjs?.find((p) => p.id === (o as { project_id?: string }).project_id)?.code ?? '', du_an: o.project ?? '', ma_don: docCode(o, b, d.company), ma_noi_bo: o.code,
     khach_hang: kh0?.name ?? '', han_giao: o.due_date ? new Date(o.due_date).toLocaleDateString('vi-VN') : '' };
-  const lookOpts = (src?: string) => src === 'projects' ? (pjs ?? []).map((x) => x.code) : src === 'customers' ? custs.map((x) => x.name) : src === 'people' ? Object.values(people).map((x) => x.full_name).filter(Boolean).sort() : [];
+  const lookOpts = (src?: string) => src === 'materials' ? (mats ?? []).filter((m) => m.active).map((m) => m.name) : src === 'projects' ? (pjs ?? []).map((x) => x.code) : src === 'customers' ? custs.map((x) => x.name) : src === 'people' ? Object.values(people).map((x) => x.full_name).filter(Boolean).sort() : [];
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
     const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, refv: c.ty === 'ref' ? refVals[c.ref ?? ''] ?? '' : undefined, opts: c.ty === 'lookup' ? lookOpts(c.ref) : c.opts, ro: c.ty === 'ref' || closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
     const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required'; const thide = !!tf && pm(tf) === 'hide'; const tst = d.status === 'duyet_them' || d.status === 'da_duyet' ? 'duyet' : d.status; const tview = !!tf && tf.perms?.[d.company]?.[tst] === 'view';
@@ -359,13 +361,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const badNums = (): string[] => {
     const out: string[] = [];
     for (const f of hFields) if (f.type === 'number' && !isNumOk(h[f.key])) out.push(f.label);
-    for (const tb of tblDefs) for (const c of tb.cols) if (c.n && !c.calc) { const n = (t[tb.key] ?? []).filter((r) => !isNumOk(r[c.k])).length; if (n) out.push(`${c.t} (${n} dòng)`); }
+    for (const tb of tblDefs) for (const c of tb.cols) if (c.n && !c.calc) { const n = (t[tb.key] ?? []).filter((r) => !okNum(c, r[c.k])).length; if (n) out.push(`${c.t} (${n} dòng)`); }
     return out;
   };
   const save = async (quiet = false) => {
     const bad = badNums(); if (bad.length) { setErr('Sai kiểu số: ' + bad.join(', ') + '. Chỉ nhập chữ số, dấu thập phân là "," hoặc ".".'); return false; }
     const hh = totalOf() != null ? { ...h, tong_tt: totalOf()! } : h;
-    const tt = { ...t } as Record<string, Row[]>; for (const x of tblDefs) { const rc = x.cols.filter((c) => c.ty === 'ref'); if (!rc.length || !x.ed || !tt[x.key]?.length) continue;
+    const tt = { ...t } as Record<string, Row[]>; for (const x of tblDefs) if (x.ed && tt[x.key]?.length && x.cols.some((c) => c.k === 'kg')) tt[x.key] = tt[x.key].map(stampDens);
+    for (const x of tblDefs) { const rc = x.cols.filter((c) => c.ty === 'ref'); if (!rc.length || !x.ed || !tt[x.key]?.length) continue;
       tt[x.key] = tt[x.key].map((r) => { const n = { ...r }; for (const c of rc) n[c.k] = c.refv ?? ''; return n; }); }
     const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: tt, p_files: files });
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
@@ -621,15 +624,33 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 }
 
 /** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
+const kgTip = (r: Row) => { const { m, how } = matOf(r); return m ? (how === 'mac_dinh' ? '⚠ Chưa rõ vật liệu – đang tính theo ' : 'Vật liệu: ') + m.name + ' · tỷ trọng ' + m.density : undefined; };
 /** Ô bảng theo kiểu: ngày / danh sách chọn / có-không / tham chiếu */
 const refOf = (r: Row, c: Col, editable: boolean) => (editable ? c.refv ?? '' : String(r[c.k] ?? '') || (c.refv ?? ''));
-const cellTxt = (r: Row, c: Col, editable = false): string => { if (c.ty === 'ref') return refOf(r, c, editable); const v = String(r[c.k] ?? '');
+const cellTxt = (r: Row, c: Col, editable = false): string => { if (c.ty === 'ref') return refOf(r, c, editable); if (c.ty === 'datetime' || c.ty === 'sub') return fmtCell(c, r[c.k]); const v = String(r[c.k] ?? '');
   if (c.ty === 'date' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4); if (c.ty === 'bool') return v ? '✓' : ''; return v; };
 function TyCell({ r, c, on }: { r: Row; c: Col; on: (v: string) => void }) {
   const v = String(r[c.k] ?? '');
   if (c.ty === 'bool') return <input type="checkbox" className="pp-cb" aria-label={c.t} checked={!!v} onChange={(e) => on(e.target.checked ? 'Có' : '')} />;
+  if (c.ty === 'datetime') return <input type="datetime-local" className="pp-cd" aria-label={c.t} value={/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v) ? v.slice(0, 16) : ''} onChange={(e) => on(e.target.value)} />;
+  if (c.ty === 'multi') return <MultiCell c={c} v={v} on={on} />;
   if (c.ty === 'date') return <input type="date" className="pp-cd" aria-label={c.t} value={/^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : ''} onChange={(e) => on(e.target.value)} />;
   return <select className="pp-cs" aria-label={c.t} value={v} onChange={(e) => on(e.target.value)}><option value="">–</option>{(c.opts ?? []).map((o) => <option key={o} value={o}>{o}</option>)}{v && !(c.opts ?? []).includes(v) && <option value={v}>{v}</option>}</select>;
+}
+const okNum = (c: Col, v: unknown) => isNumOk(v) && (!c.int || v == null || String(v).trim() === '' || Number.isInteger(numIn(v)));
+/** Nhiều lựa chọn: lưu "a; b; c", chọn bằng hộp đánh dấu trong menu thả */
+function MultiCell({ c, v, on }: { c: Col; v: string; on: (v: string) => void }) {
+  const cur = v.split(';').map((x) => x.trim()).filter(Boolean); const opts = [...new Set([...(c.opts ?? []), ...cur])];
+  const tog = (o: string) => on((cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o]).join('; '));
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => { const f = (e: Event) => { const d = ref.current; if (d?.open && !d.contains(e.target as Node)) d.open = false; }; document.addEventListener('pointerdown', f); return () => document.removeEventListener('pointerdown', f); }, []);
+  return <details ref={ref} className="pp-multi" onKeyDown={(e) => { if (e.key === 'Escape') (e.currentTarget as HTMLDetailsElement).open = false; }}><summary aria-label={c.t}>{cur.length ? cur.map((x) => <span key={x} className="pp-chip">{x}</span>) : <span className="muted">–</span>}</summary>
+    <div className="pp-mpop" role="group" aria-label={c.t}>{opts.map((o) => <label key={o}><input type="checkbox" checked={cur.includes(o)} onChange={() => tog(o)} />{o}</label>)}</div></details>;
+}
+/** Bảng con của một dòng – dùng lại TableEdit, chỉ 1 cấp */
+function SubTable({ r, i, c, rows, editable, onChange, fname }: { r: Row; i: number; c: Col; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string }) {
+  return <div className="pp-sub"><TableEdit title={c.t + ' · dòng ' + (i + 1)} cols={c.sub ?? []} rows={subRows(r, c.k)} editable={editable} fname={fname + '-' + c.k + '-' + (i + 1)}
+    onChange={(rs) => onChange(rows.map((x, j) => (j === i ? ({ ...x, [c.k]: rs } as unknown as Row) : x)))} /></div>;
 }
 function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, totals, fixed }: { fixed?: Set<number> | null; cols: Col[]; rows: Row[]; shown: number[]; editable: boolean; open: number; setOpen: (i: number) => void; set: (i: number, k: string, v: string) => void; onChange: (r: Row[]) => void; totals: Record<string, number> }) {
   const val = (r: Row, c: Col) => c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.ty ? cellTxt(r, c, editable) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '');
@@ -646,9 +667,10 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
         {right && <span className="pp-mrow-r"><b>{val(r, right) || '—'}</b><span className="small muted">{/\(([^)]+)\)/.exec(right.t)?.[1] ?? right.t}</span></span>}</button>
       {open === i && <div className="pp-mrow-e">
         {cols.map((c) => <label key={c.k} className="f"><span>{lb(c)}{c.req && <b className="req"> *</b>}</span>
-          {c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
+          {c.ty === 'sub' ? <SubTable r={r} i={i} c={c} rows={rows} editable={editable} onChange={onChange} fname="sub" />
+            : c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
             : c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
-            : <input value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
+            : <input value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
         {editable && <button type="button" className="btn sm danger-soft" onClick={() => { onChange(rows.filter((_, j) => j !== i)); setOpen(-1); }}><Icon name="trash" size={14} />Bỏ dòng</button>}
       </div>}
     </div>)}
@@ -665,6 +687,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
+  const [subOpen, setSubOpen] = useState<string | null>(null);
   const set = (i: number, k: string, v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   // Áp dụng một giá trị cho cả cột: từ ô vừa sửa (gợi ý) hoặc từ nút ở tiêu đề cột
   const [fill, setFill] = useState<{ k: string; v: string } | null>(null); const [hdr, setHdr] = useState<{ k: string; v: string } | null>(null);
@@ -755,7 +778,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
   useEffect(() => { const mq = window.matchMedia('(max-width:760px)'); const f = () => setMob(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
   const step = mob ? 10 : 25;
   const [lim, setLim] = useState(0); const L = lim || step;
-  const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))));
+  const bad = (r: Row) => cols.some((c) => !c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))));
   const ql = q.trim().toLowerCase();
   // Bấm "Lỗi": giữ cố định danh sách dòng lỗi lúc bấm – sửa xong dòng vẫn ở lại (✓), bấm lại để làm mới
   const setErrOnly = (v: boolean) => { setErrOnlyS(v); setErrSnap(v ? new Set(rows.map((_, i) => i).filter((i) => bad(rows[i]))) : null); };
@@ -834,14 +857,15 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
-          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <tr key={i} data-row={i} className={bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : undefined}><td className="muted">{i + 1}</td>
-            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !isNumOk(r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : undefined}>{c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} className={bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : undefined}><td className="muted">{i + 1}</td>
+            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro && c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
-              : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !isNumOk(r[c.k]) ? true : undefined} title={c.n && !isNumOk(r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
+              : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} title={c.n && !okNum(c, r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
                   const nx = (e.currentTarget.closest('table') as HTMLElement | null)?.querySelector<HTMLInputElement>('[data-cell="' + (i + 1) + ':' + c.k + '"]'); if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }} className={c.n ? 'num' : undefined} style={{ minWidth: wOf(c) + 'ch' }} />
               : c.ty ? cellTxt(r, c) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : String(r[c.k] ?? '')}</td>)}
-            {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>)}
+            {editable && <td><button className="link-btn" aria-label="Bỏ dòng" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></td>}</tr>
+            {(() => { const sc = cols.find((c) => c.ty === 'sub' && subOpen === i + ':' + c.k); return sc ? <tr className="pp-subrow"><td /><td colSpan={cols.length + (editable ? 1 : 0)}><SubTable r={r} i={i} c={sc} rows={rows} editable={editable} onChange={onChange} fname={fname} /></td></tr> : null; })()}</Fragment>)}
           {editable && rows.length === 0 && <tr><td colSpan={cols.length + 2}><div className="pp-dropzone" tabIndex={0} role="textbox" aria-label="Dán dữ liệu từ Excel">
             <Icon name="copy" size={16} /><span><b>Bấm vào đây rồi nhấn Ctrl+V</b> để dán các dòng đã chép từ Excel <span className="muted">(có hoặc không có dòng tiêu đề)</span></span></div></td></tr>}
           {editable && !folded && <tr><td colSpan={cols.length + 2}><button className="link-btn" onClick={() => onChange([...rows, {}])}><Icon name="plus" size={14} />Thêm dòng</button></td></tr>}
@@ -887,7 +911,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
   const meta = [['Mã đơn hàng', docCode(o, b, d.company)], ['Dự án', o.project], ...hdrOf(b.proc).map(([k, l]) => [l, d.header[k] ?? ''])];
   const tbl = PROC_TABLES[b.proc].map(([key, def]) => { const T = { t: TABLES[def].t, cols: colsOf(b.proc, key) }; const rows = d.tables[key] ?? [];
     const grp = T.cols.some((c) => c.g) ? '<tr class="g"><th></th>' + T.cols.reduce<{ g: string; n: number }[]>((a, c, i) => { const g = c.g ?? ''; const l = a[a.length - 1]; if (i > 0 && l && l.g === g && g) l.n++; else a.push({ g, n: 1 }); return a; }, []).map((x) => `<th colspan="${x.n}">${esc(x.g)}</th>`).join('') + '</tr>' : '';
-    return `<h3>${esc(T.t)}</h3><table>${grp}<tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}${c.u ? '<br><small>' + esc(c.u) + '</small>' : ''}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : fmtCell(c, r[c.k]))}</td>`).join('')}</tr>`).join('')}
+    return `<h3>${esc(T.t)}</h3><table>${grp}<tr><th>STT</th>${T.cols.map((c) => `<th>${esc(c.t)}${c.u ? '<br><small>' + esc(c.u) + '</small>' : ''}</th>`).join('')}</tr>${rows.map((r, i) => `<tr><td>${i + 1}</td>${T.cols.map((c) => `<td class="${c.n ? 'n' : ''}">${esc(c.calc ? fmtN(c.calc(r), c.d ?? 0) : c.n ? fmtN(numIn(r[c.k]), c.d ?? 0) : fmtCell(c, r[c.k]))}</td>`).join('')}</tr>${T.cols.filter((c) => c.ty === 'sub' && subRows(r, c.k).length).map((c) => `<tr class="sr"><td></td><td colspan="${T.cols.length}"><b>${esc(c.t)}</b><table class="subt"><tr>${(c.sub ?? []).map((x) => `<th>${esc(x.t)}</th>`).join('')}</tr>${subRows(r, c.k).map((x) => `<tr>${(c.sub ?? []).map((y) => `<td class="${y.n ? 'n' : ''}">${esc(y.calc ? fmtN(y.calc(x), y.d ?? 0) : y.n ? fmtN(numIn(x[y.k]), y.d ?? 0) : fmtCell(y, x[y.k]))}</td>`).join('')}</tr>`).join('')}</table></td></tr>`).join('')}`).join('')}
       <tr class="t"><td></td>${T.cols.map((c, j) => `<td class="n">${j === 0 ? 'TỔNG' : c.sum || ['so_tam', 'm2', 'kg', 'tt', 'm2_ht', 'phoi_sl', 'phoi_m2'].includes(c.k) ? fmtN(sumOf(rows, c), c.d ?? 0) : ''}</td>`).join('')}</tr></table>`; }).join('');
   const roles = b.proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet'];
   const sig = roles.map((r) => { const s = [...d.signs].reverse().find((x) => x.role === r && x.action === 'ky');
@@ -897,7 +921,7 @@ export function docHtml(o: Order, b: Batch, d: Doc, people: Record<string, Profi
     @page{size:A4 ${wideDoc(b.proc) ? 'landscape' : 'portrait'};margin:12mm;@top-left{content:''}@top-center{content:''}@top-right{content:''}@bottom-left{content:''}@bottom-center{content:''}@bottom-right{content:''}}thead{display:table-header-group}body{font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:11px;color:#111}h1{font-size:17px;text-align:center;margin:6px 0 10px}h3{font-size:12px;margin:12px 0 4px}
     .co{font-weight:700;font-size:13px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:3px 5px;vertical-align:top}th{background:#eee}
     td.n{text-align:right}.meta td{border:0;padding:2px 4px}.t td{font-weight:700;background:#f4f4f4}.sig td{text-align:center;width:25%}.sp{height:60px;padding-top:6px}
-    .notes{margin-top:8px;font-size:10.5px}tr.g th{background:#ddd;text-transform:uppercase;font-size:10px;letter-spacing:.03em;text-align:center}th small{font-weight:400;font-style:italic;color:#555}</style></head><body>
+    .notes{margin-top:8px;font-size:10.5px}tr.g th{background:#ddd;text-transform:uppercase;font-size:10px;letter-spacing:.03em;text-align:center}th small{font-weight:400;font-style:italic;color:#555}tr.sr>td{border-top:0;background:#fafafa}table.subt{margin:3px 0 2px 12px;width:calc(100% - 12px)}table.subt th{background:#f2f2f2;font-size:10px}</style></head><body>
     <div class="co">${esc(COMPANY[d.company])}</div><h1>${title}</h1>
     <table class="meta">${meta.map((m, i) => (i % 2 === 0 ? '<tr>' : '') + `<td><b>${esc(m[0])}:</b> ${esc(m[1])}</td>` + (i % 2 ? '</tr>' : '')).join('')}</table>
     ${tbl}
