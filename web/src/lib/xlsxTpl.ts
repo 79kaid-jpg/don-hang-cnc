@@ -215,7 +215,7 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
     // vùng in giãn theo số dòng đã chèn
     const added = loops.reduce((a, L) => a + Math.max(0, (data.tables[L.key] ?? []).length - 1), 0);
     const ps = ws.pageSetup as { printArea?: string };
-    if (added && ps.printArea) ps.printArea = ps.printArea.replace(/(\$?[A-Z]+\$?)(\d+)$/, (_m, c, r) => c + (+r + added));
+    if (ps.printArea) { const pa = ps.printArea.split(/&&|,/)[0].replace(/^.*!/, '').replace(/\$/g, ''); ps.printArea = added ? pa.replace(/([A-Z]+)(\d+)$/, (_m, c, r) => c + (+r + added)) : pa; }
     for (const n of blank) { const r = ws.getRow(n + shiftOf(n)); r.eachCell({ includeEmpty: true }, (c) => { if (c.value == null || cellText(c) === '') c.style = {}; }); }
     // ảnh: ô chỉ chứa {ben_ban_logo} / {kh_logo} → đặt ảnh vừa khít vùng ô (giữ tỉ lệ)
     const mg: string[] = (ws.model as unknown as { merges: string[] }).merges ?? [];
@@ -309,6 +309,8 @@ export function toHtml(wb: ExcelJS.Workbook): string {
 }
 
 export async function downloadWb(wb: ExcelJS.Workbook, name: string) {
+  // exceljs ghi <pageSetUpPr> trước <outlinePr> (sai thứ tự) → Excel báo lỗi phải sửa file; bỏ outlinePr (mặc định của Excel đã như vậy)
+  wb.eachSheet((ws) => { delete (ws.properties as { outlineProperties?: unknown }).outlineProperties; });
   const out = await wb.xlsx.writeBuffer(); const url = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
