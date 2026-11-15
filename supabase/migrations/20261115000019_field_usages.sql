@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: field_usages(proc) – số phiếu dùng mỗi trường (admin_it)

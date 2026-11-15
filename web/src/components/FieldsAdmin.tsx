@@ -20,6 +20,10 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
   const [proc, setProc] = useState<FProc>('QT1');
   const [open, setOpen] = useState<string>('');
   const all = allFields(proc);
+  // Số phiếu đang dùng từng trường → quyết định nút Xoá trên dòng
+  const [uses, setUses] = useState<Record<string, number>>({});
+  const sig = all.map((f) => f.id).join(',');
+  useEffect(() => { if (!canEdit) return; sb.rpc('field_usages', { p_proc: proc }).then(({ data }) => setUses(Object.fromEntries(((data ?? []) as { id: string; n: number }[]).map((r) => [r.id, r.n])))); }, [proc, sig, canEdit]);
   const sections: { area: Area; tbl: string; title: string; sub: string }[] = proc === 'F0'
     ? [{ area: 'header', tbl: '', title: 'Thông tin đơn hàng', sub: 'Ô nhập khi tạo đơn và ở tab F0. Khách hàng luôn bắt buộc. Ô có sẵn chỉ đổi được tên, lựa chọn và Ẩn / Bắt buộc' }] : [
     { area: 'header', tbl: '', title: 'Thông tin phiếu', sub: 'Các ô nhập ở đầu phiếu' },
@@ -70,7 +74,7 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
           <header><div><b>{s.title}</b><div className="small muted">{s.sub}</div></div>
             {canEdit && s.area !== 'table' && <button className="btn sm" onClick={() => add(s.area, s.tbl)}><Icon name="plus" size={15} />Thêm</button>}</header>
           <ul className={'fa-list' + (drag?.sec === s.area + s.tbl ? ' dragging' : '')}>{list.map((f, i) => { const sk = s.area + s.tbl; const dg = drag?.sec === sk ? drag : null;
-            return <Row key={f.id ?? f.key} f={f} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
+            return <Row key={f.id ?? f.key} f={f} use={f.id ? uses[f.id] : undefined} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
             open={open === f.id} onOpen={() => setOpen(open === f.id ? '' : f.id ?? '')} onMove={(d) => move(f, d)}
             grip={list.length > 1 && !open && !draft ? (e) => startDrag(e, sk, list, i) : undefined} dragCls={dg ? (dg.from === i ? ' drag-src' : '') + (dg.to === i && dg.to !== dg.from && dg.to !== dg.from + 1 ? ' drop-before' : '') + (dg.to === list.length && i === list.length - 1 && dg.from !== i ? ' drop-after' : '') : ''} />; })}
           {draft && draft.area === s.area && draft.tbl === s.tbl && <Row key="__draft" f={draft} proc={proc} first last canEdit={canEdit} open onOpen={() => {}} onMove={() => {}}
@@ -80,7 +84,7 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
     </div>);
 }
 
-function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCls = '', draft, taken, onDone }: { f: FDef; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean; grip?: (e: React.PointerEvent) => void; dragCls?: string; draft?: boolean; taken?: Set<string>; onDone?: () => void }) {
+function Row({ f, use, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCls = '', draft, taken, onDone }: { f: FDef; use?: number; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean; grip?: (e: React.PointerEvent) => void; dragCls?: string; draft?: boolean; taken?: Set<string>; onDone?: () => void }) {
   const [x, setX] = useState(f); const [busy, setBusy] = useState(false);
   useEffect(() => setX(f), [f]);
   const dirty = JSON.stringify(x) !== JSON.stringify(f);
@@ -114,6 +118,10 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCl
           <span className="small muted">{f.area === 'table' ? 'Bảng ' + f.key + ' · ' : ''}{f0 && f0Perm(x) !== 'edit' && <span className="fa-req">{PERM_NAME[f0Perm(x)]} · </span>}{TYPE_NAME[f.type]}{f.area !== 'file' ? ' · {' + (f.area === 'col' ? f.tbl + '.' : '') + f.key + '}' : ''}
             {reqs.length > 0 && <span className="fa-req"> · Bắt buộc: {reqs.slice(0, 3).join(', ')}{reqs.length > 3 ? '…' : ''}</span>}{hides > 0 && ' · ẩn ' + hides + ' ô'}</span>
         </button>
+        {canEdit && !f.sys && !draft && use != null && <button type="button" className={'fa-del' + (use > 0 ? ' dis' : '')} aria-disabled={use > 0}
+          aria-label={use > 0 ? `Không xoá được ${f.label}: đã có ${use} phiếu dùng` : 'Xoá ' + f.label}
+          title={use > 0 ? `Đã có ${use} phiếu dùng – chỉ Ẩn được (mở dòng → Ẩn)` : 'Xoá hẳn trường này'}
+          onClick={() => (use > 0 ? toast(`“${f.label}” đã có ${use} phiếu dùng – không xoá được. Mở dòng → Ẩn trường để gỡ khỏi biểu mẫu.`) : hardDel())}><Icon name="trash" size={15} /></button>}
         <span className="fa-chev"><Chev size={16} /></span>
       </div>
       {open && <div className="fa-ed">
