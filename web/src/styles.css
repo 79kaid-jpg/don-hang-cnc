@@ -3562,3 +3562,14 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .bottom-nav a:active{background-color:rgba(120,170,240,.18)}
 .bottom-nav a:active svg{transform:scale(.88);transition:transform .08s}
 html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
+/* Làm thay: chấm trên avatar + hộp trong thanh bên / bảng tài khoản (không che nội dung) */
+.topbar .tb-av{position:relative}
+.topbar.is-acting{box-shadow:inset 0 -3px 0 #E08A2E}
+.topbar.is-acting .tb-av{box-shadow:0 0 0 2.5px #E08A2E!important}
+.tb-act{position:absolute;right:-3px;bottom:-3px;width:17px;height:17px;border-radius:50%;background:#E08A2E;color:#fff;display:grid;place-items:center;border:2px solid #1b2230}
+.act-box{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 10px;border-radius:12px;background:#FBE9D8;border:1.5px solid #A85A12;color:#5C2E07;font-size:13px;line-height:1.3;margin:6px 0}
+.act-box.act-do{background:#fff1e0;border-color:#f0b46a;color:#7a3e00}
+.act-box .act-av{width:26px;height:26px;border-radius:50%;background:#A85A12;color:#fff;display:grid;place-items:center;font-weight:700;flex:none;font-size:12px}
+.act-box .act-bt{flex:1;min-width:0}.act-box small{display:block;opacity:.75;font-size:11.5px}
+.act-box .btn{min-height:36px;border-radius:999px;flex:none;border-color:#A85A12;color:#5C2E07}
+.sheet .act-box{margin:4px 0 12px;font-size:14px}.sheet .act-box .btn{min-height:44px}

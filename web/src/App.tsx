@@ -110,6 +110,7 @@ function Shell() {
           <Bell variant="side" />
           <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} data-kbd="[" onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
         <ScopeChip variant="side" />
+        {acting && <div className={'act-box' + (actUntil ? ' act-do' : '')} role="status"><span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span><span className="act-bt">{actUntil ? 'Làm thay' : 'Xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <> · chỉ xem đơn thật</>}<small>Ghi là {real?.full_name} thay mặt</small></span><button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button></div>}
         <button className="side-search" title="Tìm đơn nhanh (Ctrl K)" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
           <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -119,18 +120,19 @@ function Shell() {
         <AccountMenu me={me} initial={initial} />
       </aside>
 
-      <header className="topbar">
+      <header className={'topbar' + (acting ? ' is-acting' : '')}>
         <img className="logo" src="./icon.svg" alt="" aria-hidden="true" />
         <b className="tb-title">PMS</b>
         <ScopeChip variant="top" />
         <button className="tb-btn" aria-label="Tìm đơn" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}><Icon name="search" size={21} /></button>
         <Bell variant="top" />
-        <button className="tb-av" aria-label={'Tài khoản ' + me.full_name} aria-expanded={sheet} onClick={() => setSheet(true)}>{initial}</button>
+        <button className="tb-av" aria-label={(acting ? 'Đang làm thay ' : 'Tài khoản ') + me.full_name} aria-expanded={sheet} onClick={() => setSheet(true)}>{initial}{acting && <span className="tb-act" aria-hidden="true"><Icon name="user" size={10} /></span>}</button>
       </header>
       {sheet && (
         <div className="sheet-bg" onClick={() => setSheet(false)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Tài khoản" onClick={(e) => e.stopPropagation()}>
             <span className="sheet-grip" aria-hidden="true" />
+            {acting && <div className={'act-box' + (actUntil ? ' act-do' : '')} role="status"><span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span><span className="act-bt">{actUntil ? 'Làm thay' : 'Xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <> · chỉ xem đơn thật</>}<small>Ghi là {real?.full_name} thay mặt</small></span><button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button></div>}
             <div className="who"><span className="avatar" aria-hidden="true">{initial}</span>
               <span style={{ minWidth: 0 }}><b style={{ display: 'block' }}>{me.full_name}</b><span className="small muted">{me.unit} · {me.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}</span></span></div>
             <Appearance />
@@ -146,13 +148,6 @@ function Shell() {
         </div>)}
 
       <main className="main" id="main">
-        {acting && (
-          <div className={'acting' + (actUntil ? ' act-do' : '')} role="status">
-            <span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span>
-            <span className="act-t">{actUntil ? <><span className="act-dang">Đang l</span><span className="act-l">L</span>àm thay</> : 'Đang xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <span className="small"> · chỉ xem đơn thật</span>}</span>
-            <span className="act-real" title={'Thao tác được ghi là ' + real?.full_name + ' thay mặt'}>· {real?.full_name}</span>
-            <button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button>
-          </div>)}
         <ZaloNudge />
         <ErrorBoundary resetKey={loc.pathname}><Suspense fallback={<Skeleton rows={3} h={90} />}><Routes>
           <Route path="/" element={<MyWork />} />
