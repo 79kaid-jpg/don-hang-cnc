@@ -70,10 +70,12 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
     if (bs.length) { const dd = r.docs; setDocs(dd); dd.forEach((x) => { if (!['da_duyet', 'fail'].includes(x.status)) { canActQ(x.id, x.status).catch(() => {}); if (['duyet', 'duyet_them'].includes(x.status)) reviewQ(x.id, x.status).catch(() => {}); } }); } else setDocs([]);
   }, [o.id, proc]);
   useEffect(() => { load(); }, [load]);
-  const { canSwitch: multiCo0 } = useScope(); const myCos0 = useMyCo().allowed as string[];
+  const { canSwitch: multiCo0, scope: scope0 } = useScope(); const myCos0 = useMyCo().allowed as string[];
   // Người chỉ thuộc 1 công ty: chỉ thấy hồ sơ có phiếu của công ty mình
   const batchesAll = batchesRaw;
-  const batches = !batchesAll || multiCo0 || !myCos0.length ? batchesAll : batchesAll.filter((x) => { const ds = docs.filter((d) => d.batch_id === x.id); return !ds.length || ds.some((d) => myCos0.includes(d.company)); });
+  // Nhiều công ty (kể cả admin): chỉ hiện hồ sơ của công ty đang chọn (QT0 dùng chung nên không lọc)
+  const coOk = (x: Batch) => { const ds = docs.filter((d) => d.batch_id === x.id); return !ds.length || (multiCo0 ? (proc === 'QT0' || ds.some((d) => d.company === scope0)) : ds.some((d) => myCos0.includes(d.company))); };
+  const batches = !batchesAll || (!multiCo0 && !myCos0.length) ? batchesAll : batchesAll.filter(coOk);
   const B = batches?.find((x) => x.id === bid) ?? batches?.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches?.at(-1);
   useEffect(() => { dispatchEvent(new CustomEvent('pp-batch', { detail: { proc, id: B?.id ?? '' } })); }, [proc, B?.id]);
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
@@ -130,7 +132,7 @@ const BS = (s: string) => s === 'dang_lam' ? 'đang làm' : s === 'cho_ky' ? 'ch
 function BatchSel({ o, batches, B, onPick }: { o: Order; batches: Batch[]; B: Batch; onPick: (id: string) => void }) {
   const { co } = useMyCo(); const { codeOf } = useCoIdx();
   const dm = (b: Batch) => { const c = codeOf(o.id, co, b.id); const m = c && /^(\d{4})(\d{2})(\d{2})-/.exec(c); if (m) return m[3] + '/' + m[2]; const d = new Date(b.created_at); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
-  const lb = (b: Batch) => <>{b.title}<small className="pp-bdm">{dm(b)}</small></>;
+  const lb = (b: Batch) => { const c = codeOf(o.id, co, b.id); return <>{c || b.title}<small className="pp-bdm">{dm(b)}</small></>; };
   const full = (b: Batch) => codeOf(o.id, co, b.id) || b.title;
   const i = batches.findIndex((x) => x.id === B.id);
   const ref = useRef<HTMLDetailsElement>(null);
