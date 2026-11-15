@@ -48,7 +48,7 @@ export { toN };
 
 /** Vị trí: "địa chỉ @lat,lng" – toạ độ lấy từ GPS hoặc link Google Maps dán vào */
 const LL = /@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/;
-export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(/\s*@-?\d{1,2}\.\d+,\s*-?\d{1,3}\.\d+/, '').replace(/^\s+/, ''), ll: m ? m[1] + ',' + m[2] : '' }; };
+export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(/ ?@-?\d{1,2}\.\d+,\s*-?\d{1,3}\.\d+/, '').replace(/^\s+/, ''), ll: m ? m[1] + ',' + m[2] : '' }; };
 export const mapUrl = (v: string) => { const { addr, ll } = parseLoc(v); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ll || addr); };
 /** Tra ngược toạ độ → địa chỉ (Nominatim, tiếng Việt) */
 async function revGeo(ll: string): Promise<string> {
