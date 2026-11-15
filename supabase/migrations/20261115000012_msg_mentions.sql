@@ -1,0 +1,1 @@
+-- Nhắc tên @ trong Trao đổi: _user_sees_doc, mention_candidates, reply_msg_tag (áp dụng qua MCP)

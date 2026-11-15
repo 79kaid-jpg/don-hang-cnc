@@ -1,6 +1,7 @@
 import { RtThumbs, rtFilesAt } from './RtThumbs';
 import { cached, peek } from '../lib/qcache';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../lib/auth';
 import { sb, errText, type Profile } from '../lib/supabase';
 import { toast } from './ui';
 import { dt } from '../lib/format';
@@ -94,12 +95,42 @@ export function Journey({ d, proc, people }: { d: Doc & { apv?: { queue: string[
   );
 }
 
-type Msg = { id: string; kind: string; from_user: string | null; to_users: string[]; text: string; via: string; meta: Record<string, string | number>; at: string; replied_at: string | null };
+type Msg = { id: string; kind: string; from_user: string | null; to_users: string[]; text: string; via: string; meta: Record<string, string | number> & { tags?: string[] }; at: string; replied_at: string | null };
+type Cand = { uid: string; name: string; pos: string | null; unit: string | null; zalo: boolean };
+const vn = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+/** Chữ tin nhắn: tô đậm @Tên của người được nhắc */
+function MsgText({ m, people }: { m: Msg; people: Record<string, Profile> }) {
+  const names = (m.meta?.tags ?? []).map((u) => people[u]?.full_name).filter(Boolean) as string[];
+  if (!names.length) return <>{m.text}</>;
+  const re = new RegExp('(' + names.map((n) => '@' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
+  return <>{m.text.split(re).map((p, i) => (names.some((n) => '@' + n === p) ? <b key={i} className="tk-at">{p}</b> : p))}</>;
+}
+/** Ô trả lời có gợi ý @tên (chỉ người xem được phiếu / công ty) */
+function MentionBox({ docId, busy, onSend }: { docId: string; busy: boolean; onSend: (text: string, tags: string[]) => Promise<boolean> }) {
+  const [v, setV] = useState(''); const [cands, setCands] = useState<Cand[] | null>(null); const [q, setQ] = useState<{ at: number; s: string } | null>(null); const [i, setI] = useState(0);
+  const [tags, setTags] = useState<Record<string, string>>({}); const ref = useRef<HTMLInputElement>(null);
+  const need = () => { if (cands === null) sb.rpc('mention_candidates', { p_doc: docId }).then(({ data }) => setCands((data as Cand[]) ?? [])); };
+  const track = (val: string, pos: number) => { const m = /(^|\s)@([^\s@]{0,20})$/.exec(val.slice(0, pos)); if (m) { need(); setQ({ at: pos - m[2].length - 1, s: m[2] }); setI(0); } else setQ(null); };
+  const hits = q && cands ? cands.filter((c) => vn(c.name).includes(vn(q.s))).slice(0, 6) : [];
+  const pick = (c: Cand) => { if (!q) return; const end = q.at + 1 + q.s.length; const nv = v.slice(0, q.at) + '@' + c.name + ' ' + v.slice(end); setV(nv); setTags({ ...tags, [c.name]: c.uid }); setQ(null);
+    requestAnimationFrame(() => { const p = q.at + c.name.length + 2; ref.current?.focus(); ref.current?.setSelectionRange(p, p); }); };
+  const live = Object.entries(tags).filter(([n]) => v.includes('@' + n)).map(([, u]) => u);
+  return <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (q && hits[i]) { pick(hits[i]); return; } if (live.length > 5) { toast('Mỗi tin chỉ nhắc tối đa 5 người'); return; } if (await onSend(v, live)) { setV(''); setTags({}); } }}>
+    {q && hits.length > 0 && <ul className="tk-men" role="listbox" aria-label="Nhắc tên">{hits.map((c, j) => <li key={c.uid} role="option" aria-selected={j === i}>
+      <button type="button" className={j === i ? 'on' : ''} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(c)}><b>{c.name}</b><small>{[c.pos, c.unit].filter(Boolean).join(' · ')}</small>{c.zalo ? <span className="tk-mz" title="Đã nối Zalo">Zalo ✓</span> : <span className="tk-mz off" title="Chưa nối Zalo – chỉ báo trong app">chưa Zalo</span>}</button></li>)}</ul>}
+    {q && cands && !hits.length && <div className="tk-men tk-men-none small muted">Không có ai tên “{q.s}” xem được phiếu này</div>}
+    <input ref={ref} placeholder="Trả lời / ghi chú… gõ @ để nhắc tên" value={v} maxLength={500} aria-autocomplete="list"
+      onChange={(e) => { setV(e.target.value); track(e.target.value, e.target.selectionStart ?? e.target.value.length); }}
+      onKeyDown={(e) => { if (!q || !hits.length) return; if (e.key === 'ArrowDown') { e.preventDefault(); setI((i + 1) % hits.length); } else if (e.key === 'ArrowUp') { e.preventDefault(); setI((i - 1 + hits.length) % hits.length); } else if (e.key === 'Escape') setQ(null); }}
+      onBlur={() => setTimeout(() => setQ(null), 150)} />
+    <button className="btn sm primary icon-btn" disabled={busy || !v.trim()} aria-label="Gửi"><Icon name="arrow" size={16} /></button>
+  </form>;
+}
 const KIND: Record<string, [string, string]> = { nudge: ['Nhắc việc', 'bell'], reply: ['Phản hồi', 'chat'], reassign: ['Giao lại', 'users'], auto: ['Tự động', 'clock'], note: ['Ghi chú', 'file'], turn: ['Chuyển bước', 'arrow'], back: ['Trả về', 'alert'] };
 
 /** Trao đổi: nhắc việc / giao lại / phản hồi của người làm (cả qua Zalo) */
 function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; open: boolean }) {
-  const [ms, setMs] = useState<Msg[]>([]); const [mgr, setMgr] = useState(false);
+  const [ms, setMs] = useState<Msg[]>([]); const [mgr, setMgr] = useState(false); const meId = useAuth().me?.id;
   const [mode, setMode] = useState<'' | 'nudge' | 'reassign'>(''); const [txt, setTxt] = useState(''); const [to, setTo] = useState(''); const [rep, setRep] = useState('');
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [exp, setExp] = useState(false);
   const load = () => sb.from('order_msgs').select('*').eq('doc_id', d.id).order('at').then(({ data }) => setMs((data as Msg[]) ?? []));
@@ -139,13 +170,13 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
       </div>}
       {err && <div className="msg err" role="alert"><Icon name="alert" size={16} /><span>{err}</span></div>}
       {exp && ms.length > 0 && <ul className="tk-list" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>{ms.map((m) => { const [lb, ic] = KIND[m.kind] ?? [m.kind, 'file'];
-        return <li key={m.id} className={'tk-m ' + m.kind}><span className="tk-ic"><Icon name={ic} size={12} /></span>
+        return <li key={m.id} className={'tk-m ' + m.kind + (meId && m.meta?.tags?.includes(meId) ? ' tk-me' : '')}><span className="tk-ic"><Icon name={ic} size={12} /></span>
           <div><div className="tk-meta"><b>{nm(m.from_user)}</b> · {lb}{m.kind === 'reassign' && m.meta?.to_name ? ' → ' + m.meta.to_name : ''}{m.via === 'zalo' ? <span className="tk-via">Zalo</span> : null}<span className="small muted"> · {dt(m.at)}</span></div>
-            <div className="tk-txt">{m.text}</div>{/kèm \d+ ảnh/.test(m.text) && <RtThumbs files={rtFilesAt(d, m.at)} size={56} />}</div></li>; })}</ul>}
-      {open && exp && <form className="tk-reply" onSubmit={async (e) => { e.preventDefault(); if (await run('reply_msg', { p_doc: d.id, p_text: rep }, 'Đã gửi')) setRep(''); }}>
-        <input placeholder="Trả lời / ghi chú…" value={rep} onChange={(e) => setRep(e.target.value)} maxLength={500} />
-        <button className="btn sm primary icon-btn" disabled={busy || !rep.trim()} aria-label="Gửi"><Icon name="arrow" size={16} /></button>
-      </form>}
+            <div className="tk-txt"><MsgText m={m} people={people} /></div>{/kèm \d+ ảnh/.test(m.text) && <RtThumbs files={rtFilesAt(d, m.at)} size={56} />}</div></li>; })}</ul>}
+      {open && exp && <MentionBox docId={d.id} busy={busy} onSend={async (text, tags) => { setBusy(true); setErr('');
+        const { data, error } = await sb.rpc('reply_msg_tag', { p_doc: d.id, p_text: text, p_tags: tags }); setBusy(false);
+        if (error) { setErr(errText(error)); return false; } const r = data as { zalo: number; no_zalo: string[] };
+        toast(tags.length ? 'Đã gửi · nhắc ' + tags.length + ' người' + (r.no_zalo.length ? ' · ' + r.no_zalo.join(', ') + ' chưa nối Zalo – chỉ báo trong app' : ' qua chuông + Zalo') : 'Đã gửi'); load(); return true; }} />}
     </div>
   );
 }

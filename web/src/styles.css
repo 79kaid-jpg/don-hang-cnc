@@ -3371,3 +3371,12 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .adm-s-l button.on,.adm-s-l button:hover{background:var(--soft)}.adm-s-l small{color:var(--muted)}.adm-s-none{padding:10px}
 @media (max-width:900px){.hl-cards{grid-template-columns:1fr 1fr}.pm-wrap{display:none}.pm-mob{display:flex}.cio{grid-template-columns:1fr}.hl-cols{columns:1}.adm-s input{font-size:16px;min-height:44px;height:44px}}
 .hl-bad{background:#FDECEA;color:#A93226;border-radius:4px;padding:0 4px;margin-left:4px}.hl-cards{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+/* Trao đổi: nhắc tên @ */
+.tk-reply{position:relative}
+.tk-men{position:absolute;left:0;right:48px;bottom:calc(100% + 6px);z-index:30;list-style:none;margin:0;padding:4px;background:#fff;border:1px solid var(--line2);border-radius:10px;box-shadow:0 -10px 28px rgba(20,28,40,.16);max-height:248px;overflow:auto}
+.tk-men button{width:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;border:0;background:none;font:inherit;color:var(--ink);padding:6px 10px;border-radius:6px;cursor:pointer;min-height:44px}
+.tk-men button small{grid-column:1;color:var(--muted);font-size:12px}.tk-men button .tk-mz{grid-column:2;grid-row:1/3;font-size:11px;color:#2E7D4F;background:#E8F4EC;border-radius:999px;padding:1px 7px}
+.tk-men button .tk-mz.off{color:#8A6D2A;background:#FBF3E2}.tk-men button.on,.tk-men button:hover{background:var(--soft)}
+.tk-men-none{padding:10px}
+.tk-at{color:#2F5BA8;background:#E8EEF8;border-radius:4px;padding:0 3px;font-weight:600}
+.tk-m.tk-me{background:#FFF8E6;border-radius:8px;box-shadow:inset 3px 0 0 var(--gold)}
