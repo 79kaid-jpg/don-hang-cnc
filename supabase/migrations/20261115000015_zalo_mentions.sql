@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: _vn(), _zalo_mentions(uid,doc,text), zalo_reply() hỗ trợ @Tên và "@?" trong tin Zalo.
