@@ -3525,3 +3525,22 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
   .cr-chips button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;min-height:44px;cursor:pointer;color:var(--ink)}
   .cr-chips button.on{background:#E3EAF7;border-color:#9DB3DA;color:#1F3F78;font-weight:600}
 }
+/* Dự án: xem chi tiết */
+.pja-it{display:flex;align-items:center;gap:8px}.pja-row{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;padding:4px 0;min-height:44px}
+.pja-row:hover .pja-t b{text-decoration:underline}.pja-row .pja-t{flex:1;min-width:0}
+.pjv{display:grid;gap:12px}.pjv-top{display:flex}
+.pjv-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.pjv-ttl{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pjv-ttl h2{margin:0;font-size:20px}
+.pjv-act{display:flex;gap:6px;flex-wrap:wrap}
+.pjv-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px;align-items:start}.pjv-side{display:grid;gap:12px}
+.pjv-grid h3{margin:0 0 8px;font-size:15px}
+.pjv-dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:0 0 10px;font-size:14px}.pjv-dl dt{color:var(--muted)}.pjv-dl dd{margin:0}
+.pjv-map summary{cursor:pointer;font-weight:600;font-size:13px;margin-bottom:6px;min-height:32px}
+.pjv-ords,.pjv-zg{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.pjv-ords a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--ink);border:1px solid var(--line);min-height:44px}.pjv-ords a:hover{background:var(--soft)}.pjv-ords a span{flex:1}
+.pjv-zg li{padding:6px 0;font-size:14px}
+.pjv-bar{display:none}
+.pja-save{position:sticky;bottom:0;background:var(--card);padding:10px 0;border-top:1px solid var(--line)}
+@media (max-width:1100px){.pjv-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.pjv-dl{grid-template-columns:1fr}.pjv-dl dt{font-weight:600;color:var(--ink);margin-top:4px}.pjv-act .pjv-edit{display:none}
+  .pjv-bar{display:flex;position:sticky;bottom:70px;z-index:5}.pjv-bar .btn{flex:1;min-height:48px;justify-content:center}.pja-ed-btn{display:none}}
+.pja-fg>*{min-width:0}.pja-fg input:not([type=checkbox]),.pja-fg select,.pja-fg textarea{width:100%;max-width:100%;box-sizing:border-box}.pja-fg div.f>span:first-child{font-size:14px;font-weight:600}

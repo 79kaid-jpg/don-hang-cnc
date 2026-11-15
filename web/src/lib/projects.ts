@@ -7,7 +7,7 @@ export async function reloadProjects() { const { data } = await sb.from('project
 /** Danh mục dự án (dùng chung, tải 1 lần) */
 export function useProjects() {
   const [list, set] = useState<Project[] | null>(cache);
-  useEffect(() => { subs.add(set); if (!cache) reloadProjects(); return () => { subs.delete(set); }; }, []);
+  useEffect(() => { subs.add(set); if (!cache) reloadProjects(); else set(cache); return () => { subs.delete(set); }; }, []);
   return list;
 }
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd');
