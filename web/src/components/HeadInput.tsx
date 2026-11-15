@@ -50,24 +50,35 @@ export { toN };
 const LL = /@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/;
 export const parseLoc = (v: string) => { const m = LL.exec(v ?? ''); return { addr: (v ?? '').replace(LL, '').trim(), ll: m ? m[1] + ',' + m[2] : '' }; };
 export const mapUrl = (v: string) => { const { addr, ll } = parseLoc(v); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ll || addr); };
+/** Tra ngược toạ độ → địa chỉ (Nominatim, tiếng Việt) */
+async function revGeo(ll: string): Promise<string> {
+  const [lat, lon] = ll.split(',');
+  try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=vi&zoom=18`); if (!r.ok) return '';
+    const j = await r.json() as { display_name?: string; address?: Record<string, string> }; const a = j.address ?? {};
+    const parts = [[a.house_number, a.road].filter(Boolean).join(' '), a.quarter || a.suburb || a.neighbourhood, a.city_district || a.county || a.town, a.city || a.state].filter(Boolean);
+    return parts.length >= 2 ? [...new Set(parts)].join(', ') : (j.display_name ?? '').replace(/, \d{5,6}, Việt Nam$/, '').replace(/, Việt Nam$/, ''); } catch { return ''; }
+}
+let autoAddr = ''; // địa chỉ do app điền gần nhất (để không ghi đè địa chỉ người dùng gõ)
 function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; disabled?: boolean }) {
-  const { addr, ll } = parseLoc(v); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const { addr, ll } = parseLoc(v); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [geo, setGeo] = useState(false);
   const join = (a: string, l: string) => (a.trim() + (l ? ' @' + l : '')).trim();
+  const pick = async (nl: string) => { on(join(addr, nl)); if (addr && addr !== autoAddr) return; setGeo(true); const a = await revGeo(nl); setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } };
   const typed = (x: string) => { // dán link Google Maps → tách toạ độ
     const m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(x) ?? /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(x) ?? /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/.exec(x);
-    if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) on(join(addr, (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6))); else on(join(x, ll)); };
+    if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) { if (addr === x) return; const nl = (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6); if (!addr || addr === autoAddr) { on(join('', nl)); autoAddr = ''; setGeo(true); revGeo(nl).then((a) => { setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } }); } else on(join(addr, nl)); }
+    else on(join(x, ll)); };
   const gps = () => { if (!navigator.geolocation) return setErr('Thiết bị không hỗ trợ định vị'); setBusy(true); setErr('');
-    navigator.geolocation.getCurrentPosition((p) => { setBusy(false); on(join(addr, p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6))); },
+    navigator.geolocation.getCurrentPosition((p) => { setBusy(false); pick(p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6)); },
       (e) => { setBusy(false); setErr(e.code === 1 ? 'Chưa cho phép truy cập vị trí – bật trong cài đặt trình duyệt' : 'Không lấy được vị trí, thử lại'); }, { enableHighAccuracy: true, timeout: 15000 }); };
-  return <span className="hi-loc">
+  return <span className="hi-loc" onClick={(e) => { if ((e.target as HTMLElement).closest('.mm')) e.preventDefault(); /* không để <label> chuyển cú bấm sang ô nhập */ }}>
     <input type="text" disabled={disabled} value={addr} placeholder="Địa chỉ, hoặc dán link Google Maps" onChange={(e) => typed(e.target.value)} />
     <span className="hi-loc-bar">
       {!disabled && <button type="button" className="btn sm" onClick={gps} disabled={busy}>📍 {busy ? 'Đang lấy…' : 'Vị trí hiện tại'}</button>}
       {(addr || ll) && <a className="btn sm" href={mapUrl(v)} target="_blank" rel="noreferrer">🗺 Mở bản đồ</a>}
       {ll && <span className="small muted">{ll}{!disabled && <button type="button" className="link-btn" onClick={() => on(addr)} aria-label="Bỏ toạ độ"> ✕</button>}</span>}
     </span>
-    {err && <small className="f-err">{err}</small>}
-    {ll ? <Suspense fallback={<div className="mm mm-ph">Đang tải bản đồ…</div>}><MiniMap ll={ll} readOnly={disabled} onPick={(x) => on(join(addr, x))} /></Suspense>
+    {err && <small className="f-err">{err}</small>}{geo && <small className="muted">Đang tìm địa chỉ…</small>}
+    {ll ? <Suspense fallback={<div className="mm mm-ph">Đang tải bản đồ…</div>}><MiniMap ll={ll} readOnly={disabled} onPick={pick} /></Suspense>
       : <div className="mm mm-ph">Chưa có vị trí – bấm 📍 hoặc dán link Google Maps</div>}
     {ll && !disabled && <small className="muted">Kéo ghim hoặc chạm vào bản đồ để chỉnh vị trí{matchMedia('(pointer:coarse)').matches ? ' · 2 ngón để kéo/phóng bản đồ' : ''}.</small>}
   </span>;

@@ -11,7 +11,10 @@ export default function MiniMap({ ll, onPick, readOnly }: { ll: string; onPick: 
   useEffect(() => {
     const touch = matchMedia('(pointer:coarse)').matches;
     const m = L.map(box.current!, { center: pos(), zoom: 16, scrollWheelZoom: !touch, dragging: !touch, touchZoom: true, attributionControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+    // Nền CARTO Voyager (cho phép web dùng); lỗi nhiều ô → chuyển sang OSM
+    let errs = 0; const osm = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '© OpenStreetMap © CARTO' }).addTo(m);
+    carto.on('tileerror', () => { if (++errs === 3) { m.removeLayer(carto); osm().addTo(m); } });
     const set = (p: L.LatLng) => cb.current(p.lat.toFixed(6) + ',' + p.lng.toFixed(6));
     mk.current = L.marker(pos(), { icon: pin, draggable: !readOnly, keyboard: false }).addTo(m);
     if (!readOnly) { mk.current.on('dragend', () => set(mk.current!.getLatLng())); m.on('click', (e: L.LeafletMouseEvent) => set(e.latlng)); }
