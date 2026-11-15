@@ -38,6 +38,24 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
     await sb.from('proc_fields').update({ ord: o.ord }).eq('id', f.id!); await sb.from('proc_fields').update({ ord: f.ord === o.ord ? f.ord + dir : f.ord }).eq('id', o.id!);
     loadFields();
   };
+  // Kéo-thả sắp xếp: tay nắm ⋮⋮, chỉ trong cùng nhóm (thông tin / một bảng)
+  const [drag, setDrag] = useState<{ sec: string; from: number; to: number } | null>(null);
+  const reorder = async (list: FDef[], from: number, to: number) => {
+    if (from === to) return; const a = [...list]; const [m] = a.splice(from, 1); a.splice(to > from ? to - 1 : to, 0, m);
+    const ch = a.map((f, i) => ({ f, i })).filter(({ f, i }) => f.ord !== i);
+    const rs = await Promise.all(ch.map(({ f, i }) => sb.from('proc_fields').update({ ord: i }).eq('id', f.id!)));
+    const e = rs.find((r) => r.error)?.error; if (e) toast(errText(e)); else toast('Đã lưu thứ tự'); loadFields(); };
+  const startDrag = (ev: React.PointerEvent, sec: string, list: FDef[], from: number) => {
+    if (!canEdit || open) return; ev.preventDefault(); const ul = (ev.currentTarget as HTMLElement).closest('ul')!; const touch = ev.pointerType !== 'mouse';
+    let on = !touch; let st = { sec, from, to: from }; const t0 = touch ? window.setTimeout(() => { on = true; setDrag(st); navigator.vibrate?.(10); }, 200) : 0;
+    if (on) setDrag(st);
+    const mv = (e: PointerEvent) => { if (!on) return; e.preventDefault(); const lis = [...ul.children] as HTMLElement[]; let to = lis.length;
+      for (let i = 0; i < lis.length; i++) { const r = lis[i].getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { to = i; break; } }
+      if (e.clientY < 80) scrollBy(0, -12); else if (e.clientY > innerHeight - 80) scrollBy(0, 12);
+      if (to !== st.to) { st = { ...st, to }; setDrag(st); } };
+    const up = () => { clearTimeout(t0); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      setDrag(null); if (on) reorder(list, st.from, st.to); };
+    addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up); };
   return (
     <div className="fa">
       <div className="fa-top">
@@ -50,13 +68,15 @@ export function FieldsAdmin({ canEdit }: { canEdit: boolean }) {
         return <section key={s.area + s.tbl} className="fa-sec">
           <header><div><b>{s.title}</b><div className="small muted">{s.sub}</div></div>
             {canEdit && s.area !== 'table' && <button className="btn sm" onClick={() => add(s.area, s.tbl)}><Icon name="plus" size={15} />Thêm</button>}</header>
-          <ul className="fa-list">{list.map((f, i) => <Row key={f.id ?? f.key} f={f} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
-            open={open === f.id} onOpen={() => setOpen(open === f.id ? '' : f.id ?? '')} onMove={(d) => move(f, d)} />)}</ul>
+          <ul className={'fa-list' + (drag?.sec === s.area + s.tbl ? ' dragging' : '')}>{list.map((f, i) => { const sk = s.area + s.tbl; const dg = drag?.sec === sk ? drag : null;
+            return <Row key={f.id ?? f.key} f={f} proc={proc} first={i === 0} last={i === list.length - 1} canEdit={canEdit}
+            open={open === f.id} onOpen={() => setOpen(open === f.id ? '' : f.id ?? '')} onMove={(d) => move(f, d)}
+            grip={list.length > 1 && !open ? (e) => startDrag(e, sk, list, i) : undefined} dragCls={dg ? (dg.from === i ? ' drag-src' : '') + (dg.to === i && dg.to !== dg.from && dg.to !== dg.from + 1 ? ' drop-before' : '') + (dg.to === list.length && i === list.length - 1 && dg.from !== i ? ' drop-after' : '') : ''} />; })}</ul>
         </section>; })}
     </div>);
 }
 
-function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean }) {
+function Row({ f, proc, open, onOpen, onMove, first, last, canEdit, grip, dragCls = '' }: { f: FDef; proc: FProc; open: boolean; onOpen: () => void; onMove: (d: -1 | 1) => void; first: boolean; last: boolean; canEdit: boolean; grip?: (e: React.PointerEvent) => void; dragCls?: string }) {
   const [x, setX] = useState(f); const [busy, setBusy] = useState(false);
   useEffect(() => setX(f), [f]);
   const dirty = JSON.stringify(x) !== JSON.stringify(f);
@@ -72,8 +92,9 @@ function Row({ f, proc, open, onOpen, onMove, first, last, canEdit }: { f: FDef;
   const del = async () => { if (!(await confirmDialog(`Ẩn hẳn “${f.label}”? Dữ liệu đã nhập vẫn được giữ, có thể bật lại.`, 'Ẩn trường'))) return;
     await sb.from('proc_fields').update({ active: false }).eq('id', f.id!); loadFields(); };
   return (
-    <li className={'fa-row' + (open ? ' open' : '') + (f.active ? '' : ' off')}>
+    <li className={'fa-row' + (open ? ' open' : '') + (f.active ? '' : ' off') + dragCls}>
       <div className="fa-line">
+        {canEdit && grip && <span className="fa-grip" onPointerDown={grip} title="Kéo để sắp xếp" aria-hidden="true"><svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span>}
         {canEdit && <span className="fa-mv"><button className="link-btn" disabled={first} onClick={() => onMove(-1)} aria-label="Lên"><Chev up /></button>
           <button className="link-btn" disabled={last} onClick={() => onMove(1)} aria-label="Xuống"><Chev /></button></span>}
         <button className="fa-main" onClick={onOpen} aria-expanded={open}>

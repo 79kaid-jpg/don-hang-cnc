@@ -3291,3 +3291,12 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
   .od-group .od-tabs button{min-height:48px;padding:6px 12px 8px}
   .od-group .od-tabs button{flex-direction:row;align-items:center;gap:6px}.od-group .od-tabs button span{font-size:12.5px}
 }
+/* Kéo-thả sắp xếp trường dữ liệu */
+.fa-grip{flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;min-height:44px;color:#9AA3AE;cursor:grab;touch-action:none;border-radius:6px}
+.fa-grip:hover{color:var(--ink);background:var(--soft)}
+.fa-list.dragging{user-select:none;cursor:grabbing}.fa-list.dragging .fa-grip{cursor:grabbing}
+.fa-row.drag-src{opacity:.45;background:var(--soft)}
+.fa-row{position:relative}
+.fa-row.drop-before::before,.fa-row.drop-after::after{content:'';position:absolute;left:8px;right:8px;height:3px;border-radius:2px;background:var(--pri,#2F5BA8);z-index:3}
+.fa-row.drop-before::before{top:-2px}.fa-row.drop-after::after{bottom:-2px}
+@media (max-width:760px){.fa-grip{width:36px}}
