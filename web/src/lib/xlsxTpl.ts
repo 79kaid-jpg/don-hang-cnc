@@ -91,6 +91,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   // Tên biến cũ trong mẫu: ma_mau = màu sơn, ky_hieu_tam = mã tấm; Nơi giao hàng
   for (const r of tables.ds ?? []) { if (r.ma_mau == null || r.ma_mau === '') r.ma_mau = r.mau_son ?? ''; if (r.ky_hieu_tam == null || r.ky_hieu_tam === '') r.ky_hieu_tam = r.ma_tam ?? ''; }
   if (vars.noi_giao == null) vars.noi_giao = '';
+  if (vars.so_ct == null) vars.so_ct = '';
   void ROLE_OF; return { vars, tables };
 }
 
@@ -108,7 +109,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
   for (const f of fieldsOf('F0', 'header')) if (!f.sys) L.push({ k: f.key, t: 'F0 · ' + f.label });
   for (const [k, t] of hdrOf(proc)) L.push({ k, t });
   for (const r of proc === 'QT0' ? ['admin', 'ky_thuat', 'kiem_tra', 'duyet'] : ['lap', 'kiem_tra', 'duyet']) { L.push({ k: 'nguoi_' + r, t: 'Người ký ' + r }, { k: 'ngay_' + r, t: 'Ngày ký ' + r }); }
-  if (proc === 'QT1') L.push({ k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
+  if (proc === 'QT1') L.push({ k: 'so_ct', t: 'Số CT (cấp khi duyệt)' }, { k: 'phi_vc', t: 'Phí vận chuyển' }, { k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
   for (const [key, def] of PROC_TABLES[proc]) { const T = { t: TABLES[def].t, cols: colsOf(proc, key) };
     L.push({ k: '#' + key, t: 'Lặp dòng: ' + T.t + ' (đặt ở ô đầu dòng)' }, { k: key + '.stt', t: 'STT' });
     for (const c of T.cols) { L.push({ k: key + '.' + c.k, t: c.t }); if (c.n) L.push({ k: 'tong_' + key + '_' + c.k, t: 'Tổng ' + c.t }); } }
@@ -242,7 +243,10 @@ export function toHtml(wb: ExcelJS.Workbook): string {
   let h = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:12px"><colgroup>${cols.map((w) => `<col style="width:${(w / total * 100).toFixed(2)}%">`).join('')}</colgroup>`;
   const gs = (ws as unknown as { _groups?: { head: number[]; from: number; to: number }[] })._groups ?? [];
   const tag = (r: number) => { const i = gs.findIndex((g) => r >= g.from && r <= g.to); if (i >= 0) return ` data-g="${i}"`; const j = gs.findIndex((g) => g.head.includes(r)); return j >= 0 ? ` data-h="${j}"` : ''; };
-  for (let r = r0; r <= r1; r++) { const row = ws.getRow(r); if (row.hidden) continue; h += `<tr${tag(r)} style="height:${(row.height ?? 15) * 1.33}px">`;
+  const tblOpen = h; const hd = (gs[0]?.head ?? []).filter((r) => r >= r0 && r <= r1 && !ws.getRow(r).hidden); const hd0 = Math.min(...hd), hd1 = Math.max(...hd);
+  for (let r = r0; r <= r1; r++) { const row = ws.getRow(r); if (row.hidden) continue;
+    if (hd.length && r === hd0) h += '</table>' + tblOpen + '<thead>';
+    h += `<tr${tag(r)} style="height:${(row.height ?? 15) * 1.33}px">`;
     const skip = new Set<number>();
     for (const c of vcols) { if (hide.has(r + ':' + c) || skip.has(c)) continue;
       const cell = ws.getCell(r, c); const sp0 = span[r + ':' + c];
@@ -266,8 +270,8 @@ export function toHtml(wb: ExcelJS.Workbook): string {
           const ns = span[r + ':' + n]; if (ns && ns[0] > 1) break; const nb = ws.getCell(r, n).border; if (nb?.left?.style || nb?.right?.style) break;
           skip.add(n); spill++; if (ns) vcols.filter((x) => x > n && x < n + ns[1]).forEach((x) => { skip.add(x); spill++; }); } }
       h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st}">${esc(v)}</td>`; }
-    h += '</tr>'; }
-  h += '</table>';
+    h += '</tr>'; if (hd.length && r === hd1) h += '</thead><tbody>'; }
+  h += (hd.length ? '</tbody>' : '') + '</table>';
   const imgs = ws.getImages().map((im) => { const m = wb.getImage(+im.imageId) as { base64?: string; buffer?: ArrayBuffer; extension: string };
     let b64 = m.base64 ?? ''; if (!b64 && m.buffer) { const u = new Uint8Array(m.buffer as ArrayBuffer); let s = ''; u.forEach((x) => { s += String.fromCharCode(x); }); b64 = btoa(s); }
     if (b64.includes(',')) b64 = b64.split(',')[1];

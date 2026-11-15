@@ -144,7 +144,8 @@ function directPrint(html: string, landscape?: boolean) {
   f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
   document.body.appendChild(f);
   const w = f.contentWindow!; w.document.open();
-  w.document.write(html.replace('</head>', (landscape ? '<style>@page{size:A4 landscape}</style>' : '') + '</head>')); w.document.close();
+  const st = `<style>@page{size:A4 ${landscape ? 'landscape' : 'portrait'}}@page{margin:10mm;@top-left{content:''}@top-center{content:''}@top-right{content:''}@bottom-left{content:''}@bottom-center{content:''}@bottom-right{content:''}}thead{display:table-header-group}html,body{margin:0;background:#fff}tr,img{break-inside:avoid}</style>`;
+  w.document.write(/<\/head>/i.test(html) ? html.replace(/<\/head>/i, st + '</head>') : '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">' + st + '</head><body>' + html + '</body></html>'); w.document.close();
   const go = () => { try { w.focus(); w.print(); } finally { setTimeout(() => f.remove(), 60000); } };
   if (w.document.readyState === 'complete') setTimeout(go, 300); else f.onload = () => setTimeout(go, 300);
 }

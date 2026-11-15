@@ -3244,3 +3244,12 @@ thead th:has(.col-i){white-space:nowrap}
 .pv-it{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:56px}
 .pv-it.used{opacity:.6}.pv-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
 .pv-used{display:inline-flex;align-items:center;gap:4px;color:#16A34A}
+/* Chế độ Tất cả công ty: nền xám trung tính để phân biệt với PN */
+html[data-scope=ALL]{--bg:#EEEFF2}html[data-scope=ALL] body{background-color:var(--bg)}
+html[data-scope=ALL] body::before{content:'';position:fixed;left:0;right:0;top:0;height:3px;z-index:200;pointer-events:none;background:#5b6472}
+html[data-scope=ALL] .topbar{background:rgba(236,237,241,.95)}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] body{background-color:#E2E4E9}
+html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-image:var(--fc-mesh),linear-gradient(180deg,#F6F7F9,#E3E5EA)}
+.nba-ct{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line,#ddd);display:flex;flex-direction:column;gap:8px}
+.nba-ctg{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}
+@media (max-width:760px){.nba-ctg{grid-template-columns:1fr}}

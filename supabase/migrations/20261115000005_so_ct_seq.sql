@@ -1,0 +1,1 @@
+-- Số CT (XNĐH) theo dãy số từng công ty, cấp khi duyệt; áp dụng qua MCP (so_ct_seq, so_ct_strip_insert)

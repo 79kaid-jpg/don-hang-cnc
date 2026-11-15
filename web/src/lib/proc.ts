@@ -76,7 +76,7 @@ export const HEADER: Record<Proc, [string, string, string?][]> = {
   QT3: [['so_phieu', 'Số phiếu'], ['ngay_giao', 'Ngày giao', 'date'], ['dia_diem', 'Địa điểm giao'], ['xe', 'Xe / biển số'], ['tai_xe', 'Tài xế']]
 };
 /** Cột nào thuộc riêng mỗi công ty (không chép sang bên sau) */
-export const OWN_HEADER = ['so_lenh', 'so_hd', 'so_phieu', 'so_xn'];
+export const OWN_HEADER = ['so_lenh', 'so_hd', 'so_phieu', 'so_xn', 'so_ct'];
 
 export const sumOf = (rows: Row[], c: Col) => rows.reduce((s, r) => s + (Number((c.calc ? c.calc(r) : num(r[c.k])) ?? 0)), 0);
 export const numIn = num;

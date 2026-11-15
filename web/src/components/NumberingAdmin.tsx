@@ -26,5 +26,26 @@ function Row({ c, canEdit }: { c: Company; canEdit: boolean }) {
     {canEdit && <div className="nba-tok">{TOK.map(([t, l]) => <button key={t} type="button" className="chip" onClick={() => ins(t)} title={l}>{t}</button>)}</div>}
     <div className="nba-pv"><span className="muted small">Xem trước</span><b>{pv || '…'}</b></div>
     {canEdit && rule !== c.rule && <div className="row"><button className="btn primary sm" disabled={busy || !rule.trim()} onClick={() => save({ rule: rule.trim() })}>Lưu mẫu</button><button className="btn sm" onClick={() => setRule(c.rule)}>Huỷ</button></div>}
+    <CtSeq c={c} canEdit={canEdit} />
   </section>;
+}
+/** Số chứng từ (Số CT) của XNĐH: cấp theo dãy khi phiếu được duyệt */
+function CtSeq({ c, canEdit }: { c: Company; canEdit: boolean }) {
+  const [rule, setRule] = useState(c.ct_rule ?? '{BAN}-{YYYY}/{SEQ:4}'); const [last, setLast] = useState(String(c.ct_last ?? 0)); const [pv, setPv] = useState(''); const [busy, setBusy] = useState(false);
+  const load = () => sb.rpc('ct_preview', { p_co: c.code }).then(({ data }) => setPv(data ?? ''));
+  useEffect(() => { load(); }, [c.ct_rule, c.ct_last, c.ct_yearly]); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = async (patch: Partial<Company>) => { setBusy(true); const { error } = await sb.from('companies').update(patch).eq('code', c.code); setBusy(false);
+    if (error) return toast(errText(error)); await reloadCompanies(); toast('Đã lưu Số CT ' + c.code); };
+  const dirty = rule !== (c.ct_rule ?? '') || last !== String(c.ct_last ?? 0);
+  return <div className="nba-ct">
+    <b className="small">Số CT (XNĐH) · cấp khi phiếu được duyệt</b>
+    <div className="nba-ctg">
+      <label className="f"><span>Mẫu Số CT</span><input value={rule} disabled={!canEdit} onChange={(e) => setRule(e.target.value)} spellCheck={false} /></label>
+      <label className="f"><span>Số cuối đã cấp</span><input type="number" min={0} inputMode="numeric" value={last} disabled={!canEdit} onChange={(e) => setLast(e.target.value)} /></label>
+      <label className="nba-sw"><input type="checkbox" disabled={!canEdit || busy} checked={!!c.ct_yearly} onChange={(e) => save({ ct_yearly: e.target.checked })} /><span>Đếm lại từ 1 mỗi năm</span></label>
+    </div>
+    {canEdit && <div className="nba-tok">{[['{YYYY}', 'Năm'], ['{YY}', 'Năm (2 số)'], ['{BAN}', 'Mã công ty'], ['{SEQ:4}', 'Số thứ tự 4 chữ số']].map(([t, l]) => <button key={t} type="button" className="chip" onClick={() => setRule((r) => r + t)} title={l}>{t}</button>)}</div>}
+    <div className="nba-pv"><span className="muted small">Số tiếp theo</span><b>{pv || '…'}</b></div>
+    {canEdit && dirty && <div className="row"><button className="btn primary sm" disabled={busy || !rule.includes('{SEQ') || !(Number(last) >= 0)} onClick={() => save({ ct_rule: rule.trim(), ct_last: Math.floor(Number(last)), ct_year: new Date().getFullYear() })}>Lưu Số CT</button><button className="btn sm" onClick={() => { setRule(c.ct_rule ?? ''); setLast(String(c.ct_last ?? 0)); }}>Huỷ</button></div>}
+  </div>;
 }
