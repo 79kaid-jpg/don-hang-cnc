@@ -3420,3 +3420,4 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .cl-hero:focus-visible{outline:3px solid rgba(76,123,209,.45);outline-offset:2px}
 @media (max-width:760px){.cl-hero{width:100%;justify-content:center;min-height:48px}}
 .kb-card:has(.cl-chip){padding-bottom:50px}
+.tk-reply.tk-multi{flex-direction:column;align-items:stretch}.tk-reply.tk-multi textarea{width:100%;min-height:72px}

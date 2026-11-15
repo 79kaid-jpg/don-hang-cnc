@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: nudge(p_doc,p_text,p_tags) – tag @Tên khi Nhắc việc
