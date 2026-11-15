@@ -223,13 +223,17 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
       const im = data.images?.[m[1]]; if (!im) return;
       const g = mg.find((x) => { const [a, z] = x.split(':'); return +a.replace(/\D/g, '') === rn && colN(a.replace(/\d/g, '')) === cn && !!z; });
       let r2 = rn, c2 = cn; if (g) { const z = g.split(':')[1]; r2 = +z.replace(/\D/g, ''); c2 = colN(z.replace(/\d/g, '')); }
-      let W = 0; for (let k = cn; k <= c2; k++) W += (ws.getColumn(k).width ?? 9) * 7; let H = 0; for (let k = rn; k <= r2; k++) H += (ws.getRow(k).height ?? 15) * 1.33;
-      const sc = Math.min(W / im.w, H / im.h) * 0.92; const w = im.w * sc, h = im.h * sc;
+      // Kích thước ô theo cách Excel tính (px): cột = độ rộng × 7 + 5, dòng = cao (pt) × 4/3
+      const cw = (k: number) => (ws.getColumn(k).hidden ? 0 : Math.round((ws.getColumn(k).width ?? 8.43) * 7 + 5)), rh = (k: number) => (ws.getRow(k).hidden ? 0 : (ws.getRow(k).height ?? 15) * 4 / 3);
+      let W = 0; for (let k = cn; k <= c2; k++) W += cw(k); let H = 0; for (let k = rn; k <= r2; k++) H += rh(k);
+      const sc = Math.min(W / im.w, H / im.h) * 0.96; const w = im.w * sc, h = im.h * sc;
+      const ox = W * 0.02, oy = (H - h) / 2; // lề trái 2%, căn giữa theo chiều dọc
       const id = wb.addImage({ base64: im.base64, extension: im.ext });
       // Neo 2 góc (twoCellAnchor): exceljs ghi oneCellAnchor kèm editAs → sai chuẩn, Excel báo lỗi phải sửa file
-      const at = (start: number, px: number, size: (k: number) => number) => { let k = start, left = px + size(k) * 0.04; while (left > size(k) && k < start + 50) { left -= size(k); k++; } return k - 1 + left / size(k); };
-      const cw = (k: number) => (ws.getColumn(k).width ?? 9) * 7, rh = (k: number) => (ws.getRow(k).height ?? 15) * 1.33;
-      ws.addImage(id, { tl: { col: cn - 1 + 0.04, row: rn - 1 + 0.04 } as ExcelJS.Anchor, br: { col: at(cn, w, cw), row: at(rn, h, rh) } as ExcelJS.Anchor, editAs: 'oneCell' } as unknown as ExcelJS.ImageRange); }));
+      // Ghi thẳng vị trí gốc (EMU = px × 9525): exceljs tự đổi số lẻ theo độ rộng × 10000 nên logo bị thu nhỏ sai
+      const at = (start: number, px: number, size: (k: number) => number) => { let k = start, left = px; while (left > size(k) && k < start + 50) { left -= size(k); k++; } return { n: k - 1, off: Math.round(left * 9525) }; };
+      const A = (c: { n: number; off: number }, r: { n: number; off: number }) => ({ nativeCol: c.n, nativeColOff: c.off, nativeRow: r.n, nativeRowOff: r.off }) as unknown as ExcelJS.Anchor;
+      ws.addImage(id, { tl: A(at(cn, ox, cw), at(rn, oy, rh)), br: A(at(cn, ox + w, cw), at(rn, oy + h, rh)), editAs: 'oneCell' } as unknown as ExcelJS.ImageRange); }));
     // biến đơn
     ws.eachRow((r) => r.eachCell((c) => { const s = cellText(c); if (!s.includes('{')) return;
       const only = s.match(/^\s*\{([a-z0-9_]+)\}\s*$/i); if (only && typeof data.vars[only[1]] === 'number') { c.value = data.vars[only[1]] as number; return; }
@@ -303,11 +307,15 @@ export function toHtml(wb: ExcelJS.Workbook): string {
     let b64 = m.base64 ?? ''; if (!b64 && m.buffer) { const u = new Uint8Array(m.buffer as ArrayBuffer); let s = ''; u.forEach((x) => { s += String.fromCharCode(x); }); b64 = btoa(s); }
     if (b64.includes(',')) b64 = b64.split(',')[1];
     const tl = im.range.tl as { nativeCol: number; nativeRow: number; col: number; row: number }; const br = im.range.br as { nativeCol: number; nativeRow: number } | undefined;
-    const left = vcols.filter((c) => c - 1 < Math.floor(tl.col)).reduce((a, c) => a + wOf(c), 0) / total * 100;
+    const cp = (x: number) => { const f = Math.floor(x); return vcols.filter((c) => c - 1 < f).reduce((a, c) => a + wOf(c), 0) + (vcols.includes(f + 1) ? (x - f) * wOf(f + 1) : 0); };
+    const rp = (y: number) => { const f = Math.floor(y); let t = 0; for (let r = r0; r <= f; r++) if (!ws.getRow(r).hidden) t += (ws.getRow(r).height ?? 15) * 1.33; return t + (y - f) * (ws.getRow(f + 1).height ?? 15) * 1.33; };
     const ext = (im.range as unknown as { ext?: { width: number; height: number } }).ext;
-    const wpx = ext?.width ?? (br ? vcols.filter((c) => c - 1 >= Math.floor(tl.col) && c - 1 < br.nativeCol).reduce((a, c) => a + wOf(c), 0) : 90);
-    let top = 0; for (let r = r0; r <= Math.floor(tl.row); r++) if (!ws.getRow(r).hidden) top += (ws.getRow(r).height ?? 15) * 1.33;
-    return `<img src="data:image/${m.extension};base64,${b64}" style="position:absolute;left:${left}%;top:${top}px;width:${Math.min(wpx, 220)}px">`; }).join('');
+    // vị trí gốc (EMU) → phần lẻ theo độ rộng ô thật của Excel
+    const fx = (q: { nativeCol: number; nativeColOff?: number }) => q.nativeCol + Math.min(0.999, (q.nativeColOff ?? 0) / 9525 / Math.max(1, (ws.getColumn(q.nativeCol + 1).width ?? 8.43) * 7 + 5));
+    const fy = (q: { nativeRow: number; nativeRowOff?: number }) => q.nativeRow + Math.min(0.999, (q.nativeRowOff ?? 0) / 9525 / Math.max(1, (ws.getRow(q.nativeRow + 1).height ?? 15) * 4 / 3));
+    const left = cp(fx(tl)) / total * 100, top = rp(fy(tl));
+    const wcss = br ? ((cp(fx(br as never)) - cp(fx(tl))) / total * 100).toFixed(2) + '%' : Math.min(ext?.width ?? 90, 220) + 'px';
+    return `<img src="data:image/${m.extension};base64,${b64}" style="position:absolute;left:${left}%;top:${top}px;width:${wcss}">`; }).join('');
   return `<div style="position:relative">${imgs}${h}</div>`;
 }
 
