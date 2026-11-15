@@ -28,7 +28,7 @@ export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
     setTimeout(() => ref.current?.querySelector<HTMLButtonElement>('.scope-it button[aria-selected=false]')?.focus(), 30); };
     addEventListener('scope-open', f); return () => removeEventListener('scope-open', f); }, [open]);
   // Báo máy chủ công ty đang làm (máy chủ chặn thao tác sai công ty)
-  useEffect(() => { if (canSwitch) sb.rpc('set_active_co', { p_co: scope }); }, [scope, canSwitch]);
+  useEffect(() => { if (canSwitch) sb.rpc('set_active_co', { p_co: scope }).then(() => dispatchEvent(new Event('scope-synced'))); }, [scope, canSwitch]);
   useEffect(() => { document.documentElement.dataset.scope = canSwitch ? scope : (own ?? ''); }, [scope, canSwitch, own]);
   if (!canSwitch) return null;
   return <div className={'scope scope-' + variant + ' sc-' + scope} ref={ref}>

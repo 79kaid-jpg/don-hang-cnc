@@ -61,6 +61,8 @@ export default function MyWork() {
     }); }, [me]);
   const loadRows = () => sb.rpc('my_docs').then(({ data }) => setRows((data as M[]) ?? []));
   useEffect(() => { if (me) loadRows(); }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Đổi công ty: máy chủ cập nhật xong mới tải lại danh sách việc
+  useEffect(() => { const f = () => { if (me) loadRows(); }; addEventListener('scope-synced', f); return () => removeEventListener('scope-synced', f); }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
   // Duyệt nhiều phiếu: chỉ phiếu đang ở bước Duyệt; máy chủ vẫn kiểm checklist / mục bắt buộc từng phiếu
   const canBulk = (r: M) => !!r.doc_id && r.kind !== 'final' && (r.status === 'duyet' || r.status === 'duyet_them');
   const [pick, setPick] = useState<Set<string>>(new Set()); const [bulkBusy, setBulkBusy] = useState(false);
