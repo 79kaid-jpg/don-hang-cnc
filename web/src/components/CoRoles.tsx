@@ -5,7 +5,9 @@ export type Co = 'PN' | 'IPC' | 'HW';
 export type Access = { admin: boolean; cos: Partial<Record<Co, string[]>> };
 export const COS: [Co, string][] = [['PN', 'Phương Nam CNC'], ['IPC', 'IPC'], ['HW', 'Hanwa']];
 export const CO_SHORT: Record<Co, string> = { PN: 'PNC', IPC: 'IPC', HW: 'HAN' };
-const CO_ROLES = Object.entries(ROLES).filter(([k]) => k !== 'admin_it');
+// Ẩn vai trò cũ không còn dùng: ipc (thay bằng tick công ty IPC), ke_hoach, mua_hang (giai đoạn sau)
+const HIDDEN = ['admin_it', 'ipc', 'ke_hoach', 'mua_hang'];
+const CO_ROLES = Object.entries(ROLES).filter(([k]) => !HIDDEN.includes(k));
 /** Tên ngắn trên nhãn danh sách */
 export const ROLE_SHORT: Record<string, string> = { giam_doc: 'GĐ', kinh_doanh: 'KD', ky_thuat: 'KT bóc tách', kiem_tra_f1: 'KT F1', admin_cnc: 'Admin', ke_hoach: 'KH', mua_hang: 'Mua', kho_qc: 'Kho/QC', ipc: 'IPC', duyet: 'Duyệt', thiet_ke_qt: 'TK QT', xem: 'Xem' };
 
