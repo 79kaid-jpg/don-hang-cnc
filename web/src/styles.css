@@ -3395,7 +3395,7 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .fa-row.fa-draft .fa-lb::after{content:'chưa lưu';margin-left:8px;font-size:11px;font-weight:600;color:#2F5BA8;background:#E3EAF7;border-radius:999px;padding:1px 8px}
 .fa-row.fa-draft .fa-mv,.fa-row.fa-draft .fa-grip{visibility:hidden}
 /* Clone: chip trên thẻ Kanban */
-.kb-card{position:relative}
+.kb-card:not(.kb-ghost){position:relative}
 .cl-chip{position:absolute;right:10px;bottom:10px;z-index:3}
 .cl-btn{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #C9D6EE;background:linear-gradient(180deg,#FFFFFF,#EEF3FC);color:#24406E;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(20,40,80,.08);transition:opacity .15s,transform .15s,box-shadow .15s}
 .cl-btn:hover{box-shadow:0 4px 12px -4px rgba(36,64,110,.35);transform:translateY(-1px)}
@@ -3544,3 +3544,4 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 @media (max-width:640px){.pjv-dl{grid-template-columns:1fr}.pjv-dl dt{font-weight:600;color:var(--ink);margin-top:4px}.pjv-act .pjv-edit{display:none}
   .pjv-bar{display:flex;position:sticky;bottom:70px;z-index:5}.pjv-bar .btn{flex:1;min-height:48px;justify-content:center}.pja-ed-btn{display:none}}
 .pja-fg>*{min-width:0}.pja-fg input:not([type=checkbox]),.pja-fg select,.pja-fg textarea{width:100%;max-width:100%;box-sizing:border-box}.pja-fg div.f>span:first-child{font-size:14px;font-weight:600}
+.kb-ghost{position:fixed!important}
