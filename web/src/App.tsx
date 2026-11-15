@@ -31,6 +31,7 @@ const Stats = lazy(() => import('./pages/Stats'));
 const ProjectReport = lazy(() => import('./pages/ProjectReport'));
 import { Viewer } from './components/Viewer';
 const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
+const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const Simulate = lazy(() => import('./pages/Simulate'));
 
 function Shell() {
@@ -160,6 +161,7 @@ function Shell() {
           <Route path="/quy-trinh-moi/in/:id" element={<WfPrint />} />
           <Route path="/cai-app" element={<Install />} />
           <Route path="/quy-trinh" element={<ProcessDoc />} />
+          <Route path="/huong-dan" element={<RoleGuide />} />
           <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes></Suspense>

@@ -29,7 +29,8 @@ export default function Install() {
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-up')?.scrollIntoView({ behavior: 'smooth' }); }}>3. Cập nhật</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-qt')?.scrollIntoView({ behavior: 'smooth' }); }}>4. Quy trình</a>
         <a className="btn sm" href="#/cai-app" onClick={(e) => { e.preventDefault(); document.getElementById('h-kb')?.scrollIntoView({ behavior: 'smooth' }); }}>5. Phím tắt</a>
-        <a className="btn sm primary" href="#/quy-trinh">6. Tài liệu quy trình BASE</a></nav>
+        <a className="btn sm" href="#/quy-trinh">6. Tài liệu quy trình BASE</a>
+        <a className="btn sm primary" href="#/huong-dan"><Icon name="users" size={16} />Hướng dẫn theo người</a></nav>
       <div><h2 id="h-install" style={{ marginTop: 8 }}>1. Cài app lên màn hình chính</h2>
         <p className="muted">Mở như một ứng dụng: biểu tượng riêng, toàn màn hình, không thanh địa chỉ.</p></div>
 
@@ -127,7 +128,7 @@ export default function Install() {
         <h2 id="h-qt">4. Quy trình đơn hàng</h2>
         <p className="muted" style={{ margin: 0 }}>Bấm một quy trình rồi bấm từng bước để xem ai làm, nhập gì, ai duyệt và làm ở đâu trong app. Dùng để đối chiếu khi chạy đơn.</p>
         <ProcessGuide />
-        <div className="row"><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình (sơ đồ, bảng bước, biểu mẫu)</a></div>
+        <div className="row"><a className="btn primary" href="#/huong-dan"><Icon name="users" size={18} />Hướng dẫn từng bước theo người (có ảnh)</a><a className="btn" href="#/quy-trinh"><Icon name="file" size={18} />Mở tài liệu quy trình (sơ đồ, bảng bước, biểu mẫu)</a></div>
       </section>
       <section className="card" aria-labelledby="h-kb" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h2 id="h-kb">5. Phím tắt (máy tính)</h2>
