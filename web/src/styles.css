@@ -3482,3 +3482,10 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .bot-qr img{border-radius:8px;border:1px solid var(--line)}.bot-qr-t{display:grid;gap:6px;justify-items:start;min-width:180px}
 .bot-qr-m{display:none}
 @media (pointer:coarse),(max-width:760px){.bot-qr img,.bot-qr-d{display:none}.bot-qr-m{display:inline-flex;min-height:44px}.bot-qr{padding:8px}}
+.zg-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.zg-list li{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px}.zg-list li.off{opacity:.6}
+.zg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.zg-h b{flex:1;min-width:140px}.zg-h select{min-height:36px}
+.zg-sw{display:flex;gap:6px;align-items:center;font-size:13px}
+.zg-ev{display:flex;flex-wrap:wrap;gap:6px}.zg-ev button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:4px 12px;font:inherit;font-size:13px;min-height:32px;cursor:pointer;color:var(--ink)}
+.zg-ev button.on{background:#E3EAF7;border-color:#9DB3DA;color:#1F3F78;font-weight:600}
+@media (pointer:coarse){.zg-ev button,.zg-h select{min-height:44px}}
+.card .kbd,.zg .kbd{white-space:nowrap;width:auto;min-width:0;height:auto;display:inline-block;padding:0 6px;font-size:13px}

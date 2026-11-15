@@ -106,6 +106,14 @@ export default function Install() {
         <pre className="ins-eg">{'🔔 Nhắc việc từ Kim Phụng\nĐH-202611-003 · SLUC\nQT0 · PN · Tạo DS tấm\n…\n↩ Trả lời: nhắn thẳng (vào phiếu này) hoặc gõ mã trước nội dung\n003'}</pre>
         <p className="small muted" style={{ margin: 0 }}>Bạn trả lời: <span className="kbd">Em làm xong trước 10h @Kiên</span> → ghi vào ĐH-202611-003 và nhắc Kiên.</p>
         <p className="small muted" style={{ margin: 0 }}>Trong app cũng tag được: gõ <span className="kbd">@</span> ở ô Trả lời hoặc ô Nhắc việc để chọn người.</p>
+        <h3 className="ins-h3">Bot trong nhóm Zalo</h3>
+        <ul className="ins-ul">
+          <li>Bot có thể vào <b>nhóm Zalo của phòng / công ty</b> để báo tin chung: <b>đơn mới, phiếu đã duyệt, phiếu bị trả về, phiếu trễ hạn</b>. Tin "đến lượt bạn", nhắc việc, tag vẫn gửi riêng.</li>
+          <li>Thêm bot: trưởng/phó nhóm mở link mời <a href="https://bot.zaloplatforms.com/groups/invite/bot.RjrIfAmD" target="_blank" rel="noreferrer">bot.zaloplatforms.com/groups/invite/bot.RjrIfAmD</a> và chọn nhóm.</li>
+          <li>Nối nhóm với PMS (chỉ admin đã liên kết Zalo): gõ trong nhóm <span className="kbd">/noi PN</span>, <span className="kbd">/noi IPC</span>, <span className="kbd">/noi HW</span> hoặc <span className="kbd">/noi tatca</span>. Gõ <span className="kbd">/nhom</span> để xem nhóm đang nhận gì, <span className="kbd">/huy</span> để ngừng.</li>
+          <li>Trả lời vào phiếu từ nhóm: <b>gõ mã phiếu trước nội dung</b>, VD <span className="kbd">003 đã giao xong</span> (trong nhóm không đoán theo tin gần nhất).</li>
+          <li>Admin chọn nhóm nhận loại tin nào ở Quản trị › Kết nối & API › Nhóm Zalo.</li>
+        </ul>
         <h3 className="ins-h3">Lưu ý</h3>
         <ul className="ins-ul">
           <li>Mở link trong tin bằng trình duyệt (hoặc app đã cài) và đăng nhập tài khoản của bạn.</li>

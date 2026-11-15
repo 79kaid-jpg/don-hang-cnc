@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: zalo_groups, _zgroup, zalo_group_cmd, trigger zg_docs/zg_orders, sla_scan báo nhóm, zalo_reply chế độ nhóm

@@ -51,6 +51,19 @@ Deno.serve(async (req) => {
     const chat = m?.chat?.id ? String(m.chat.id) : null;
     if (!chat) return json({ ok: true });
     const text = String(m.text ?? '').trim();
+    // Tin trong nhóm: lệnh /noi /huy /nhom, hoặc trả lời phiếu khi có gõ mã
+    const ct = String(m.chat?.chat_type ?? m.chat?.type ?? 'PRIVATE').toUpperCase();
+    if (ct !== 'PRIVATE' && ct !== 'USER') {
+      const from = m.from?.id ? String(m.from.id) : '';
+      if (text.startsWith('/')) {
+        const { data: ack } = await db.rpc('zalo_group_cmd', { p_chat: chat, p_from: from, p_name: String(m.chat?.title ?? m.chat?.name ?? m.chat?.display_name ?? ''), p_text: text });
+        if (ack) await send(chat, ack);
+      } else if (from && text) {
+        const { data: ack } = await db.rpc('zalo_reply', { p_chat: from, p_text: text, p_raw: { ...m, _group: '1' } });
+        if (ack) await send(chat, ack);
+      }
+      return json({ ok: true });
+    }
     const code = text.match(/^(\d{6})$/)?.[1];
     if (code) {
       const { data: c } = await db.from('zalo_link_codes').select('user_id, expires_at').eq('code', code).maybeSingle();
@@ -170,7 +183,7 @@ Deno.serve(async (req) => {
       if (rc) { const { data: su } = await db.storage.from('files').createSignedUrl(rc.path, 7 * 86400); if (su?.signedUrl) pdf = '\n📄 Bản trình duyệt (PDF): ' + su.signedUrl; }
     }
     const { data: ps } = await db.from('profiles').select('id, zalo_chat_id').in('id', [...ids]);
-    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { const r = await send(p.zalo_chat_id, text + pdf + '\n\nTrả lời: quote tin này để ghi vào ' + (dcode ?? 'đơn') + '.'); const mid = r?.result?.message_id ?? r?.message_id;
+    let n = 0; for (const p of ps ?? []) if (p.zalo_chat_id) { const r = await send(p.zalo_chat_id, text + pdf + '\n\n↩ Trả lời: nhắn thẳng (vào phiếu này) hoặc gõ mã trước nội dung\n' + String(dcode ?? '').split('-').pop()); const mid = r?.result?.message_id ?? r?.message_id;
       if (mid) await db.rpc('zalo_out_add', { p_chat: p.zalo_chat_id, p_doc: doc_id, p_msg: String(mid) }); n++; }
     return json({ ok: true, sent: n, to: ids.size });
   }

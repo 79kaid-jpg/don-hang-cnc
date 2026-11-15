@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { sb, errText } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Icon } from './Icon';
-import { Msg, confirmDialog } from './ui';
+import { Msg, confirmDialog, toast } from './ui';
 
 /** Tên bot Zalo – admin đổi trong Quản trị › Kết nối & API */
 let botName = 'Bot PMS Notification'; const subs = new Set<(v: string) => void>();
@@ -92,4 +92,31 @@ export function ZaloLink({ compact = false }: { compact?: boolean }) {
       {code && <BotQR />}
       <Msg err={err} ok="" />
     </div>);
+}
+
+/** Nhóm Zalo nhận thông báo tổng (Quản trị › Kết nối & API) */
+type ZG = { chat_id: string; name: string; company: string | null; events: string[]; active: boolean; at: string };
+const ZEV: [string, string][] = [['new_order', 'Đơn mới'], ['approved', 'Phiếu đã duyệt'], ['returned', 'Phiếu bị trả về'], ['late', 'Phiếu trễ hạn']];
+export function ZaloGroups({ canEdit }: { canEdit: boolean }) {
+  const [rows, setRows] = useState<ZG[] | null>(null); const [inv, setInv] = useState('');
+  const load = () => sb.from('zalo_groups').select('*').order('at').then(({ data }) => setRows((data as ZG[]) ?? []));
+  useEffect(() => { load(); sb.from('app_settings').select('value').eq('key', 'zalo_group_link').maybeSingle().then(({ data }) => setInv(data?.value ?? '')); }, []);
+  const up = async (g: ZG, patch: Partial<ZG>) => { const { error } = await sb.from('zalo_groups').update(patch).eq('chat_id', g.chat_id); if (error) toast(errText(error)); load(); };
+  const del = async (g: ZG) => { if (!(await confirmDialog(`Huỷ nối nhóm “${g.name || g.chat_id}”? Bot sẽ không gửi tin vào nhóm này nữa (bot vẫn ở trong nhóm).`, 'Huỷ nối', true))) return; await sb.from('zalo_groups').delete().eq('chat_id', g.chat_id); load(); };
+  return <div className="card zg" style={{ display: 'grid', gap: 10 }}>
+    <b>Nhóm Zalo nhận thông báo</b>
+    <ol className="small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
+      <li>Thêm bot vào nhóm: trưởng/phó nhóm mở link mời {inv ? <><a href={inv} target="_blank" rel="noreferrer">{inv}</a> <button type="button" className="btn sm ghost" onClick={() => navigator.clipboard?.writeText(inv)}>Chép</button></> : '(chưa có)'}</li>
+      <li>Admin (đã liên kết Zalo với PMS) gõ trong nhóm: <span className="kbd">/noi PN</span> · <span className="kbd">/noi IPC</span> · <span className="kbd">/noi HW</span> · hoặc <span className="kbd">/noi tatca</span></li>
+      <li>Nhóm hiện ở danh sách dưới; chọn loại tin nhóm nhận. Gõ <span className="kbd">/nhom</span> để xem, <span className="kbd">/huy</span> để huỷ.</li></ol>
+    {rows === null ? <span className="small muted">Đang tải…</span> : !rows.length ? <p className="small muted" style={{ margin: 0 }}>Chưa có nhóm nào được nối.</p>
+      : <ul className="zg-list">{rows.map((g) => <li key={g.chat_id} className={g.active ? '' : 'off'}>
+        <div className="zg-h"><b>{g.name || 'Nhóm ' + g.chat_id.slice(0, 6)}</b>
+          <select disabled={!canEdit} value={g.company ?? ''} aria-label="Công ty" onChange={(e) => up(g, { company: e.target.value || null })}><option value="">Tất cả công ty</option><option value="PN">Phương Nam CNC</option><option value="IPC">IPC</option><option value="HW">Hanwa</option></select>
+          <label className="zg-sw"><input type="checkbox" disabled={!canEdit} checked={g.active} onChange={(e) => up(g, { active: e.target.checked })} />{g.active ? 'Đang bật' : 'Đang tắt'}</label>
+          {canEdit && <button type="button" className="fa-del" aria-label="Huỷ nối nhóm" title="Huỷ nối nhóm" onClick={() => del(g)}><Icon name="trash" size={15} /></button>}</div>
+        <div className="zg-ev">{ZEV.map(([k, l]) => { const on = g.events.includes(k); return <button key={k} type="button" disabled={!canEdit || !g.active} aria-pressed={on} className={on ? 'on' : ''}
+          onClick={() => up(g, { events: on ? g.events.filter((x) => x !== k) : [...g.events, k] })}>{on ? '✓ ' : ''}{l}</button>; })}</div></li>)}</ul>}
+    <p className="small muted" style={{ margin: 0 }}>Tin cá nhân (đến lượt bạn, nhắc việc, tag) vẫn gửi riêng từng người. Đơn [MẪU] không gửi vào nhóm. Trong nhóm, muốn ghi vào phiếu thì gõ mã phiếu trước nội dung, VD “003 ok”.</p>
+  </div>;
 }
