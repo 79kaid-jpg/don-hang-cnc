@@ -31,7 +31,8 @@ export function readPmsx(sheets: unknown[][][], defs: { tbl: string; title: RegE
       if (r.every((v) => /^\(?\d*\)?$/.test(String(v ?? '').trim()))) continue; // dòng đánh số cột (1)(2)… / dòng trống
       const o: Row = {}; for (const [ci, k] of Object.entries(map)) { const v = r[+ci]; if (v !== '' && v != null) o[k] = typeof v === 'number' ? v : String(v).trim(); }
       // Độ dày lấy từ tên hàng "Nhôm 3.0 x W x L" nếu file không có cột dày
-      if (o.day == null && o.vat_lieu != null && d.cols.some((c) => c.k === 'day')) { const m = /(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*x/i.exec(String(o.vat_lieu)); if (m) o.day = Number(m[1].replace(',', '.')); }
+      if (o.day == null && o.vat_lieu != null) { // kể cả khi cột Dày đang ẩn – cần để tính khối lượng
+        const m = /(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*x/i.exec(String(o.vat_lieu)); if (m) o.day = Number(m[1].replace(',', '.')); }
       if (Object.keys(o).length) data.push(o); }
     out.push({ tbl: d.tbl, rows: data, unmatched });
   }
