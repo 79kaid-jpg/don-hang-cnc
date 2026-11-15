@@ -435,7 +435,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
               <div className="odh-menu" role="menu">{COMPANIES.map((c) => { const x = docs.find((y) => y.company === c); return <button key={c} type="button" role="menuitem" disabled={!x} aria-current={c === d.company} onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; onPickCo?.(c); }}><b>{COMPANY[c]}</b><span className="small muted" style={{ marginLeft: 'auto' }}>{x ? STATUS[x.status] : 'chưa tới'}</span></button>; })}</div></details>}
             <span className="pp-dst">· {d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</span>
             {can && !['da_duyet', 'fail'].includes(d.status) && <span className="pp-mine">Việc của bạn</span>}</div>
-          <div className="small muted">{(role || lvName) && <><Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}</div></div>
+          <div className="small muted">{(role || lvName) && <><Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}{(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}</div></div>
+        {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
         <div className="row" style={{ gap: 6 }}>
           {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <button type="button" className={'btn xs icon-only pp-admi pp-vwi' + (viewInfo ? ' on' : '')} aria-expanded={viewInfo} title="Bạn đang xem (không có quyền làm bước này)" aria-label="Bạn đang xem – xem chi tiết" onClick={() => setViewInfo(!viewInfo)}><Icon name="eye" size={14} /></button>}
           {admEdit && <button type="button" className={'btn xs icon-only pp-admi' + (admInfo ? ' on' : '')} aria-expanded={admInfo} title="Đang sửa với quyền Admin" aria-label="Đang sửa với quyền Admin – xem chi tiết" onClick={() => setAdmInfo(!admInfo)}><Icon name="shield" size={14} /></button>}
@@ -458,9 +459,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         return <div className="pp-sum" aria-label="Tóm tắt">{parts.map((x, i) => <span key={i}>{x}</span>)}</div>; })()}
       {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && viewInfo && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
 
-      {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
       <ReviewPdf docId={d.id} status={d.status} />
-      {(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}
       {proc === 'QT3' && d.company === 'HW' && <div className="f qt3-end"><span>Khách nhận hàng <span className="muted small">(Hanwa đổi được; mặc định là khách cuối của dự án)</span></span>
         <CustomerPicker value={h.end_customer_id || o.customer_id || ''} list={custs} canCreate={false} onChange={(c) => { if (!(can || adm)) return; setH({ ...h, end_customer_id: c?.id ?? '' }); setDirty(true); }} /></div>}
       {(() => { const ls = (d.signs ?? []).at(-1); if (!ls || ls.action !== 'tra_ve' || ['da_duyet', 'fail'].includes(d.status)) return null; const im = rtFilesAt({ files }, ls.at);

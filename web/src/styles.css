@@ -3253,3 +3253,23 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .nba-ct{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line,#ddd);display:flex;flex-direction:column;gap:8px}
 .nba-ctg{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}
 @media (max-width:760px){.nba-ctg{grid-template-columns:1fr}}
+/* Phiếu gọn (hướng A): bước nằm cùng hàng tiêu đề, "Thuộc đơn" thành nhãn nhỏ, ô nhập thấp */
+.pp-doc-head{align-items:center;row-gap:8px}
+.pp-doc-head .pp-dh{flex:0 1 auto}.pp-doc-head>.row{margin-left:auto}
+.pp-doc-head .doc-steps{flex:1 1 220px;margin:0;min-width:0}.pp-doc-head .doc-steps li{min-width:0;white-space:nowrap}
+.pp-doc-head .doc-steps li{padding:4px 8px}
+.pp-dh .cob-link{display:inline-flex;align-items:center;gap:6px;margin:0 0 0 8px;padding:1px 8px;border-radius:8px;background:var(--surface,#fff);border:1px solid var(--line2);vertical-align:middle}
+.pp-dh .cob-link .cob-lb{font-size:12px;color:var(--muted)}.pp-dh .cob-link .cob-v{font-size:12.5px;font-weight:600;color:var(--ink)}
+.pp-main{gap:12px}
+.pp-main .grid2{gap:10px 16px}
+.pp-main .grid2 .f{gap:4px;font-size:13.5px}
+.pp-main .grid2 input:not([type=checkbox]):not([type=radio]),.pp-main .grid2 select{min-height:40px;height:40px;padding:6px 10px;font-size:15px}
+.pp-main .grid2 input[type=date]{height:40px;min-height:40px}
+.pp-ck{margin:0}.pp-ck summary{font-size:14px}
+.pp>.pp-head{margin-bottom:4px}
+@media (max-width:760px){
+  .pp-dh .cob-link{margin:4px 0 0}
+  .pp-doc-head .doc-steps{flex-basis:100%}
+  .pp-main .grid2{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pp-main .grid2 input:not([type=checkbox]):not([type=radio]),.pp-main .grid2 select,.pp-main .grid2 input[type=date]{min-height:44px;height:44px;font-size:16px}
+}
