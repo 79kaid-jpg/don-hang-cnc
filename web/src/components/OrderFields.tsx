@@ -12,7 +12,7 @@ export function OrderFields({ vals, extra, onVal, onExtra, disabled, people, ski
   return <>{fieldsOf('F0', 'header').filter((f) => f0Perm(f) !== 'hide' && !(skip ?? []).includes(f.key)).map((f) => {
     const v = (f.sys ? vals[f.key] : extra[f.key]) ?? ''; const on = (x0: string) => { const x = f.type === 'number' ? numTyping(x0) : x0; return f.sys ? onVal(f.key, x) : onExtra(f.key, x); }; const req = f0Perm(f) === 'required';
     const lab = <span>{f.label}{req && <b className="req" aria-label="bắt buộc"> *</b>}</span>;
-    const wide = f.type === 'textarea';
+    const wide = f.type === 'textarea' || f.type === 'location';
     if (f.key === 'project') return <div key={f.key} className="f f-wide">{lab}<ProjectPicker value={vals.project_id ?? ''} name={vals.project ?? ''} customerId={vals.customer_id ?? ''} disabled={disabled}
       onChange={(p) => { onVal('project_id', p?.id ?? ''); onVal('project', p?.name ?? ''); }} /></div>;
     return <label key={f.key} className={'f' + (wide ? ' f-wide' : '')} style={wide ? { gridColumn: '1 / -1' } : undefined}>{lab}

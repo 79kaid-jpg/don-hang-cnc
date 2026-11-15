@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
+const MiniMap = lazy(() => import('./MiniMap'));
 import { isNumOk, numTyping } from '../lib/proc';
 import type { FDef } from '../lib/fields';
 
@@ -66,5 +67,8 @@ function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; dis
       {ll && <span className="small muted">{ll}{!disabled && <button type="button" className="link-btn" onClick={() => on(addr)} aria-label="Bỏ toạ độ"> ✕</button>}</span>}
     </span>
     {err && <small className="f-err">{err}</small>}
+    {ll ? <Suspense fallback={<div className="mm mm-ph">Đang tải bản đồ…</div>}><MiniMap ll={ll} readOnly={disabled} onPick={(x) => on(join(addr, x))} /></Suspense>
+      : <div className="mm mm-ph">Chưa có vị trí – bấm 📍 hoặc dán link Google Maps</div>}
+    {ll && !disabled && <small className="muted">Kéo ghim hoặc chạm vào bản đồ để chỉnh vị trí{matchMedia('(pointer:coarse)').matches ? ' · 2 ngón để kéo/phóng bản đồ' : ''}.</small>}
   </span>;
 }
