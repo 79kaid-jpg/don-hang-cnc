@@ -3370,3 +3370,4 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .adm-s-l button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:none;font:inherit;text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;min-height:44px;color:var(--ink)}
 .adm-s-l button.on,.adm-s-l button:hover{background:var(--soft)}.adm-s-l small{color:var(--muted)}.adm-s-none{padding:10px}
 @media (max-width:900px){.hl-cards{grid-template-columns:1fr 1fr}.pm-wrap{display:none}.pm-mob{display:flex}.cio{grid-template-columns:1fr}.hl-cols{columns:1}.adm-s input{font-size:16px;min-height:44px;height:44px}}
+.hl-bad{background:#FDECEA;color:#A93226;border-radius:4px;padding:0 4px;margin-left:4px}.hl-cards{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}

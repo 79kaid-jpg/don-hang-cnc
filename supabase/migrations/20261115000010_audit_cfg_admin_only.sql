@@ -1,0 +1,1 @@
+-- audit_log: dòng cấu hình chỉ admin xem (audit_cfg_admin_only)

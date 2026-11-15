@@ -4,10 +4,11 @@ import { docCode } from './myco';
 import type ExcelJS from 'exceljs';
 import type { Customer, Order, Profile } from './supabase';
 import { hdrOf, colsOf, fieldsOf, fmtCell } from './fields';
-import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, type Batch, type Doc, type Proc, type Row } from './proc';
+import { PROC_TABLES, ROLE_OF, TABLES, numIn, sumOf, subRows, type Batch, type Doc, type Proc, type Row } from './proc';
 
 export type TplImg = { base64: string; ext: 'png' | 'jpeg'; w: number; h: number };
-export type TplData = { vars: Record<string, string | number>; tables: Record<string, Record<string, string | number>[]>; images?: Record<string, TplImg> };
+export type TplData = { vars: Record<string, string | number>; tables: Record<string, Record<string, string | number>[]>; images?: Record<string, TplImg>;
+  /** Bảng con: subs[bảng][cột bảng con][chỉ số dòng cha] = các dòng con */ subs?: Record<string, Record<string, Record<string, string | number>[][]>> };
 /** Mã công ty trong danh mục khách hàng */
 export const CO_CODE: Record<string, string> = { PN: 'PNCNC', IPC: 'IPC', HW: 'HANWA' };
 /** Bên mua theo công ty duyệt: PN → IPC, IPC → Hanwa, Hanwa → khách cuối */
@@ -69,7 +70,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   for (const [k, v] of Object.entries((o as Order & { extra?: Record<string, string> }).extra ?? {})) if (vars[k] == null) vars[k] = v;
   if (vars.han_bao_gia == null) vars.han_bao_gia = fd(o.quote_due ?? undefined);
   for (const r of ['lap', 'kiem_tra', 'duyet', 'admin', 'ky_thuat']) { const s = sg(r); vars['nguoi_' + r] = nm(s?.user); vars['ngay_' + r] = fd(s?.at); }
-  const tables: TplData['tables'] = {};
+  const tables: TplData['tables'] = {}; const subs: NonNullable<TplData['subs']> = {};
   for (const [key, def] of PROC_TABLES[b.proc as Proc]) {
     const T = { t: TABLES[def].t, cols: colsOf(b.proc as Proc, key) }; const rows: Row[] = d.tables?.[key] ?? [];
     tables[key] = rows.map((r, i) => { const o2: Record<string, string | number> = { stt: i + 1 };
@@ -79,6 +80,8 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
       if (o2.ten_hang == null || o2.ten_hang === '') { const t = (x: unknown) => String(x ?? '').trim(); const kt = [t(r.rong), t(r.dai), t(r.day)].filter(Boolean).join('x');
         o2.ten_hang = ['Tấm', t(r.mau_son), kt, t(r.loai_gc)].filter(Boolean).join(' '); }
       return o2; });
+    for (const c of T.cols) if (c.ty === 'sub') { subs[key] = subs[key] ?? {}; subs[key][c.k] = rows.map((r) => subRows(r, c.k).map((x, j) => { const o3: Record<string, string | number> = { stt: j + 1 };
+      for (const y of c.sub ?? []) { const v = y.calc ? y.calc(x) : y.n ? numIn(x[y.k]) : x[y.k]; o3[y.k] = v == null ? '' : y.n ? Math.round(Number(v) * 10 ** (y.d ?? 0)) / 10 ** (y.d ?? 0) : fmtCell(y, v); } return o3; })); }
     for (const c of T.cols) if (c.n) vars['tong_' + key + '_' + c.k] = Math.round(sumOf(rows, c) * 100) / 100;
   }
   if (b.proc === 'QT1') { const c = TABLES.ds1.cols.find((x) => x.k === 'tt')!; const sm = sumOf(d.tables?.ds ?? [], c); const v = numIn(d.header?.vat) ?? 8;
@@ -92,7 +95,7 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
   for (const r of tables.ds ?? []) { if (r.ma_mau == null || r.ma_mau === '') r.ma_mau = r.mau_son ?? ''; if (r.ky_hieu_tam == null || r.ky_hieu_tam === '') r.ky_hieu_tam = r.ma_tam ?? ''; }
   if (vars.noi_giao == null) vars.noi_giao = '';
   if (vars.so_ct == null) vars.so_ct = '';
-  void ROLE_OF; return { vars, tables };
+  void ROLE_OF; return { vars, tables, subs };
 }
 
 /** Danh sách biến có thể dùng cho một quy trình (để hiện trong Quản trị) */
@@ -112,6 +115,7 @@ export function varList(proc: Proc): { k: string; t: string }[] {
   if (proc === 'QT1') L.push({ k: 'ten_hang', t: 'Tên hàng hoá (tự ghép)' }, { k: 'so_ct', t: 'Số CT (cấp khi duyệt)' }, { k: 'phi_vc', t: 'Phí vận chuyển' }, { k: 'tong_tien', t: 'Tổng tiền' }, { k: 'tien_vat', t: 'Tiền VAT' }, { k: 'tong_tt', t: 'Tổng thanh toán' }, { k: 'tong_tt_chu', t: 'Tổng TT bằng chữ' });
   for (const [key, def] of PROC_TABLES[proc]) { const T = { t: TABLES[def].t, cols: colsOf(proc, key) };
     L.push({ k: '#' + key, t: 'Lặp dòng: ' + T.t + ' (đặt ở ô đầu dòng)' }, { k: key + '.stt', t: 'STT' });
+    for (const c of T.cols) if (c.ty === 'sub') L.push({ k: '#' + key + '.' + c.k, t: 'Lặp bảng con “' + c.t + '” (dòng ngay dưới dòng ' + '{#' + key + '})' }, { k: c.k + '.stt', t: 'STT dòng con' }, ...(c.sub ?? []).map((y) => ({ k: c.k + '.' + y.k, t: c.t + ' · ' + y.t })));
     for (const c of T.cols) { L.push({ k: key + '.' + c.k, t: c.t }); if (c.n) L.push({ k: 'tong_' + key + '_' + c.k, t: 'Tổng ' + c.t }); } }
   return L;
 }
@@ -148,7 +152,18 @@ function colWidthChars(ws: ExcelJS.Worksheet, row: number, col: number) {
 }
 export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS.Workbook> {
   const E = await XL(); const wb = new E.Workbook(); await wb.xlsx.load(buf);
+  data = { ...data, tables: { ...data.tables } };
   wb.eachSheet((ws) => {
+    // Bảng con: dòng {#ds.con} ngay dưới dòng {#ds} → trải phẳng thành 1 vòng lặp, dòng con dùng định dạng của dòng mẫu con
+    const subTpl: { cells: { col: number; text: string; style: Partial<ExcelJS.Style> }[]; height?: number }[] = [];
+    ws.eachRow((r, n) => { let m: RegExpMatchArray | null = null; r.eachCell((c) => { m = m ?? cellText(c).match(/\{#([a-z0-9_]+)\.([a-z0-9_]+)\}/i); });
+      if (!m) return; const [, tk, sk] = m as RegExpMatchArray; let parent = false; ws.getRow(n - 1).eachCell((c) => { if (new RegExp('\\{#' + tk + '\\}', 'i').test(cellText(c))) parent = true; }); if (!parent) return;
+      const cells: { col: number; text: string; style: Partial<ExcelJS.Style> }[] = []; r.eachCell({ includeEmpty: true }, (c) => cells.push({ col: Number(c.col), text: cellText(c).replace(/\{#[a-z0-9_.]+\}/gi, ''), style: JSON.parse(JSON.stringify(c.style ?? {})) }));
+      subTpl.push({ cells, height: r.height }); const ti = subTpl.length - 1;
+      const par = data.tables[tk] ?? []; const ch = data.subs?.[tk]?.[sk] ?? []; const flat: Record<string, string | number>[] = [];
+      par.forEach((p, i) => { flat.push(p); for (const x of ch[i] ?? []) flat.push({ ...Object.fromEntries(Object.entries(x).map(([a, b]) => [sk + '.' + a, b])), __c: ti, __k: sk }); });
+      data.tables[tk] = flat; (r as unknown as { _del?: boolean })._del = true; });
+    for (let n = ws.rowCount; n >= 1; n--) if ((ws.getRow(n) as unknown as { _del?: boolean })._del) ws.spliceRows(n, 1);
     // tìm dòng lặp, xử lý từ dưới lên
     const loops: { row: number; key: string }[] = [];
     ws.eachRow((r, n) => r.eachCell((c) => { const m = cellText(c).match(/\{#([a-z0-9_]+)\}/i); if (m) loops.push({ row: n, key: m[1] }); }));
@@ -171,6 +186,12 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
         if (ra === L.row && rz === L.row) { for (let i = 0; i <= k; i++) ws.mergeCells(`${ca}${L.row + i}:${cz}${L.row + i}`); }
         else ws.mergeCells(`${ca}${ra > L.row ? ra + k : ra}:${cz}${rz > L.row ? rz + k : rz}`); }
       for (let i = 0; i <= k; i++) { const it = items[i] ?? {}; const r = ws.getRow(L.row + i); let lines = 1;
+        if (typeof it.__c === 'number') { const T = subTpl[it.__c]; const sk = String(it.__k);
+          for (const cc of T.cells) { const c = r.getCell(cc.col); c.style = JSON.parse(JSON.stringify(cc.style));
+            const only = cc.text.match(/^\s*\{([a-z0-9_]+)\.([a-z0-9_]+)\}\s*$/i);
+            if (only && typeof it[only[1] + '.' + only[2]] === 'number') { c.value = it[only[1] + '.' + only[2]] as number; continue; }
+            c.value = cc.text.replace(RE, (_m, p, name: string) => (p ? '' : name.includes('.') ? String(it[sk + '.' + name.split('.')[1]] ?? '') : String(data.vars[name] ?? ''))); }
+          if (T.height) r.height = T.height; r.commit(); continue; }
         r.eachCell({ includeEmpty: false }, (c) => { const s = cellText(c); if (!items.length && typeof c.value === 'string') { c.value = ''; return; } if (!s.includes('{')) return;
           if (!items.length) { c.value = ''; return; }
           const only = s.match(/^\s*(?:\{#[a-z0-9_]+\})?\s*\{([a-z0-9_]+)\.([a-z0-9_]+)\}\s*$/i);

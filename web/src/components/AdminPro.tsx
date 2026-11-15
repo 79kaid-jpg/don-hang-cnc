@@ -12,7 +12,19 @@ const ago = (s: string) => { const d = (Date.now() - new Date(s).getTime()) / 86
 /* ───────── 1. Sức khoẻ hệ thống ───────── */
 type Health = { missing: { proc: string; company: string; role: string }[]; locked: { proc: string; company: string; role: string; user: string; user_id: string; via: string | null }[];
   no_zalo: { id: string; name: string; unit: string }[]; stuck: { doc: string; order: string; code: string; project: string; proc: string; company: string; status: string; since: string }[]; days: number };
+type TplBad = { id: string; name: string; proc: string; company: string | null; version: number; bad: string[] };
+async function tplCheck(): Promise<TplBad[]> {
+  const { data } = await sb.from('print_templates').select('*').eq('active', true); const out: TplBad[] = [];
+  const { scanVars, varList } = await import('../lib/xlsxTpl');
+  for (const t of (data as { id: string; name: string; proc: string; company: string | null; version: number; path: string; vars: string[] }[]) ?? []) {
+    let vars = t.vars ?? []; if (!vars.length) { const f = await sb.storage.from('files').download(t.path); if (f.data) vars = await scanVars(await f.data.arrayBuffer()); }
+    const known = new Set(varList(t.proc as never).map((v) => v.k)); const bad = vars.filter((v) => !known.has(v));
+    if (bad.length) out.push({ id: t.id, name: t.name, proc: t.proc, company: t.company, version: t.version, bad }); }
+  return out;
+}
 export function HealthAdmin({ go }: { go: (tab: string) => void }) {
+  const [tb, setTb] = useState<TplBad[] | null>(null);
+  useEffect(() => { tplCheck().then(setTb).catch(() => setTb([])); }, []);
   const [days, setDays] = useState(3); const [h, setH] = useState<Health | null>(null); const [err, setErr] = useState(''); const [open, setOpen] = useState<string>('');
   const load = () => sb.rpc('admin_health', { p_days: days }).then(({ data, error }) => { if (error) setErr(errText(error)); else { setErr(''); setH(data as Health); } });
   useEffect(() => { load(); }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -22,6 +34,7 @@ export function HealthAdmin({ go }: { go: (tab: string) => void }) {
     { k: 'missing', t: 'Bước không có người phụ trách', n: h.missing.length, tone: h.missing.length ? 'bad' : 'ok', sub: 'Phiếu tới bước này sẽ không ai nhận' },
     { k: 'locked', t: 'Tài khoản đã khoá vẫn được giao', n: h.locked.length, tone: h.locked.length ? 'warn' : 'ok', sub: 'Nên gỡ khỏi Phụ trách quy trình' },
     { k: 'stuck', t: 'Phiếu kẹt quá ' + h.days + ' ngày', n: h.stuck.length, tone: h.stuck.length ? 'warn' : 'ok', sub: 'Chưa chuyển bước (không tính đơn [MẪU])' },
+    { k: 'tpl', t: 'Mẫu in dùng biến không có', n: tb?.length ?? 0, tone: tb === null ? 'ok' : tb.length ? 'warn' : 'ok', sub: tb === null ? 'Đang kiểm tra…' : 'Ô đó sẽ để trống khi in' },
     { k: 'no_zalo', t: 'Người dùng chưa nối Zalo', n: h.no_zalo.length, tone: h.no_zalo.length ? 'warn' : 'ok', sub: 'Sẽ không nhận được nhắc việc' }];
   return <div className="hl">
     <div className="hl-top"><span className="small muted">Kiểm tra lúc {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -35,6 +48,8 @@ export function HealthAdmin({ go }: { go: (tab: string) => void }) {
       {h.locked.length ? <ul>{h.locked.map((m, i) => <li key={i}><b>{m.user}</b> · <span className="qt-tag">{m.proc}</span> {CN(m.company)} · {RN(m.role)}{m.via && <span className="muted"> (qua nhóm {m.via})</span>}</li>)}</ul> : <p className="muted">Không có.</p>}</section>}
     {open === 'stuck' && <section className="card hl-list"><header><b>Phiếu kẹt quá {h.days} ngày</b></header>
       {h.stuck.length ? <ul>{h.stuck.map((s) => <li key={s.doc}><Link to={'/don/' + s.order + '?tab=' + s.proc}><b>{s.code}</b></Link> · {s.project} · <span className="qt-tag">{s.proc}</span> {CN(s.company)} · {STATUS[s.status] ?? s.status} <span className="muted">· {ago(s.since)}</span></li>)}</ul> : <p className="muted">Không có phiếu nào bị kẹt.</p>}</section>}
+    {open === 'tpl' && <section className="card hl-list"><header><b>Mẫu in dùng biến không có</b><button className="btn sm primary" onClick={() => go('tpl')}>Mở Mẫu in</button></header>
+      {tb === null ? <p className="muted">Đang kiểm tra…</p> : tb.length ? <ul>{tb.map((t) => <li key={t.id}><span className="qt-tag">{t.proc}</span> <b>{t.name}</b> v{t.version}{t.company ? ' · ' + CN(t.company) : ''}: {t.bad.map((v) => <code key={v} className="hl-bad">{'{' + v + '}'}</code>)}</li>)}</ul> : <p className="muted">Mọi mẫu in đang dùng đều khớp biến.</p>}</section>}
     {open === 'no_zalo' && <section className="card hl-list"><header><b>Chưa nối Zalo</b><button className="btn sm primary" onClick={() => go('users')}>Mở Người dùng</button></header>
       {h.no_zalo.length ? <ul className="hl-cols">{h.no_zalo.map((p) => <li key={p.id}>{p.name} <span className="muted small">{p.unit}</span></li>)}</ul> : <p className="muted">Mọi người đã nối.</p>}</section>}
   </div>;

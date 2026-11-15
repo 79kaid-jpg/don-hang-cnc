@@ -23,6 +23,10 @@ export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
   const { scope, canSwitch, options, own } = useScope(); const [open, setOpen] = useState(false); const [pos, setPos] = useState<{ top: number; left: number; bottom: number; cx: number } | null>(null); const [ask, setAsk] = useState<Scope | null>(null); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!open) return; const f = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (ask) setAsk(null); else setOpen(false); } }; document.addEventListener('pointerdown', f); document.addEventListener('keydown', k); return () => { document.removeEventListener('pointerdown', f); document.removeEventListener('keydown', k); }; }, [open, ask]);
   useEffect(() => { if (!open) setAsk(null); }, [open]);
+  // Phím C: mở menu ngay tại nút công ty đang hiện (thay cho hộp xác nhận giữa màn hình)
+  useEffect(() => { const f = () => { const b = ref.current?.querySelector<HTMLButtonElement>('.scope-btn'); if (!b || b.offsetParent === null || open) return; b.click();
+    setTimeout(() => ref.current?.querySelector<HTMLButtonElement>('.scope-it button[aria-selected=false]')?.focus(), 30); };
+    addEventListener('scope-open', f); return () => removeEventListener('scope-open', f); }, [open]);
   // Báo máy chủ công ty đang làm (máy chủ chặn thao tác sai công ty)
   useEffect(() => { if (canSwitch) sb.rpc('set_active_co', { p_co: scope }); }, [scope, canSwitch]);
   useEffect(() => { document.documentElement.dataset.scope = canSwitch ? scope : (own ?? ''); }, [scope, canSwitch, own]);
