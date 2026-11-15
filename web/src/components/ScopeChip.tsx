@@ -40,7 +40,7 @@ export function ScopeChip({ variant }: { variant: 'side' | 'top' }) {
           <span className="scope-dot" aria-hidden="true" /><span className="scope-nm"><b>{full(c)}</b><small>{scope === c ? 'Đang chọn' : c === 'ALL' ? 'Chỉ xem tổng hợp' : 'Làm việc dưới tên ' + NM[c]}</small></span>{scope === c && <Icon name="check" size={16} />}</button>
         {ask === c && <div className="scope-ask" role="group" aria-label={'Xác nhận chuyển sang ' + full(c)}>
           <p>{c === 'ALL' ? 'Xem tổng hợp tất cả công ty. Ở chế độ này chỉ xem; muốn thao tác phải chuyển về đúng công ty.' : 'Mọi trang sẽ hiển thị và thao tác dưới tên ' + NM[c] + '.'}</p>
-          <div className="scope-ask-b"><button type="button" className="go" autoFocus onClick={() => { setScope(c); setOpen(false); }}>{c === 'ALL' ? 'Xem tất cả' : 'Chuyển'}</button>
+          <div className="scope-ask-b"><button type="button" className="go" autoFocus onClick={() => { setScope(c); setOpen(false); if (location.hash !== '#/' && location.hash !== '') location.hash = '#/'; scrollTo(0, 0); }}>{c === 'ALL' ? 'Xem tất cả' : 'Chuyển'}</button>
             <button type="button" className="no" onClick={() => setAsk(null)}>Huỷ</button></div></div>}
       </div>)}
     </div>}
