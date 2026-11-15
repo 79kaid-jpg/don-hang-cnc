@@ -84,7 +84,9 @@ function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; dis
     tm.current = window.setTimeout(() => { const c = new AbortController(); ac.current = c; suggest(q, ll, c.signal).then((l) => { setSugs(l); setSi(0); }).catch(() => {}); }, 400); };
   const choose = async (sg: Sug) => { setSugs([]); setGeo(true); setErr(''); const r = await locate(sg).catch(() => null); setGeo(false);
     if (r) { autoAddr = ''; on(join(r.addr, r.ll)); } else setErr('Không tìm thấy vị trí của địa chỉ này'); };
-  const pick = async (nl: string) => { on(join(addr, nl)); if (addr && addr !== autoAddr) return; setGeo(true); setErr(''); const a = await revGeo(nl); setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } else setErr('Không tìm được địa chỉ cho điểm này – gõ tay vào ô trên'); };
+  const [undo, setUndo] = useState<string | null>(null);
+  const pick = async (nl: string) => { const prev = addr; on(join(addr, nl)); setGeo(true); setErr(''); const a = await revGeo(nl); setGeo(false);
+    if (a) { autoAddr = a; on(join(a, nl)); setUndo(prev && prev !== a ? prev : null); } else setErr('Không tìm được địa chỉ cho điểm này – gõ tay vào ô trên'); };
   const typed = (x: string) => { // dán link Google Maps → tách toạ độ
     const m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(x) ?? /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(x) ?? /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/.exec(x);
     if (m && /maps|goo\.gl|^\s*-?\d/.test(x)) { if (addr === x) return; const nl = (+m[1]).toFixed(6) + ',' + (+m[2]).toFixed(6); if (!addr || addr === autoAddr) { on(join('', nl)); autoAddr = ''; setGeo(true); revGeo(nl).then((a) => { setGeo(false); if (a) { autoAddr = a; on(join(a, nl)); } }); } else on(join(addr, nl)); }
@@ -93,7 +95,7 @@ function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; dis
     navigator.geolocation.getCurrentPosition((p) => { setBusy(false); pick(p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6)); },
       (e) => { setBusy(false); setErr(e.code === 1 ? 'Chưa cho phép truy cập vị trí – bật trong cài đặt trình duyệt' : 'Không lấy được vị trí, thử lại'); }, { enableHighAccuracy: true, timeout: 15000 }); };
   return <span className="hi-loc" onClick={(e) => { if ((e.target as HTMLElement).closest('.mm')) e.preventDefault(); /* không để <label> chuyển cú bấm sang ô nhập */ }}>
-    <span className="hi-loc-in"><input type="text" disabled={disabled} value={addr} placeholder="Gõ địa chỉ để tìm, hoặc dán link Google Maps" onChange={(e) => typed(e.target.value)}
+    <span className="hi-loc-in"><input type="text" disabled={disabled} value={addr} placeholder="Gõ địa chỉ để tìm, hoặc dán link Google Maps" onChange={(e) => { setUndo(null); typed(e.target.value); }}
       role="combobox" aria-expanded={sugs.length > 0} aria-autocomplete="list" onBlur={() => setTimeout(() => setSugs([]), 200)}
       onKeyDown={(e) => { if (!sugs.length) return; if (e.key === 'ArrowDown') { e.preventDefault(); setSi((si + 1) % sugs.length); } else if (e.key === 'ArrowUp') { e.preventDefault(); setSi((si - 1 + sugs.length) % sugs.length); } else if (e.key === 'Enter') { e.preventDefault(); choose(sugs[si]); } else if (e.key === 'Escape') setSugs([]); }} />
       {sugs.length > 0 && <ul className="hi-sug" role="listbox">{sugs.map((x, i) => <li key={x.magicKey} role="option" aria-selected={i === si}>
@@ -104,6 +106,7 @@ function LocInput({ v, on, disabled }: { v: string; on: (x: string) => void; dis
       {ll && <span className="small muted">{ll}{!disabled && <button type="button" className="link-btn" onClick={() => on(addr)} aria-label="Bỏ toạ độ"> ✕</button>}</span>}
     </span>
     {err && <small className="f-err">{err}</small>}{geo && <small className="muted">Đang tìm địa chỉ…</small>}
+    {undo != null && !geo && <span className="hi-undo small">Đã đổi theo ghim · <button type="button" className="link-btn" onClick={() => { on(join(undo, ll)); setUndo(null); }}>↶ Giữ địa chỉ cũ</button></span>}
     {ll ? <Suspense fallback={<div className="mm mm-ph">Đang tải bản đồ…</div>}><MiniMap ll={ll} readOnly={disabled} onPick={pick} /></Suspense>
       : <div className="mm mm-ph">Chưa có vị trí – bấm 📍 hoặc dán link Google Maps</div>}
     {ll && !disabled && <small className="muted">Kéo ghim hoặc chạm vào bản đồ để chỉnh vị trí{matchMedia('(pointer:coarse)').matches ? ' · 2 ngón để kéo/phóng bản đồ' : ''}.</small>}

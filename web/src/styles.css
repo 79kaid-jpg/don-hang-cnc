@@ -3477,3 +3477,4 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .hi-sug button{width:100%;text-align:left;border:0;background:none;font:inherit;font-size:14px;padding:8px 10px;border-radius:6px;cursor:pointer;min-height:40px;color:var(--ink)}
 .hi-sug button.on,.hi-sug button:hover{background:var(--soft)}
 @media (pointer:coarse){.hi-sug button{min-height:44px}}
+.hi-undo{color:var(--muted)}.hi-undo .link-btn{font-weight:600}@media (pointer:coarse){.hi-undo .link-btn{min-height:44px}}
