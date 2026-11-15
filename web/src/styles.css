@@ -3273,3 +3273,21 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
   .pp-main .grid2{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .pp-main .grid2 input:not([type=checkbox]):not([type=radio]),.pp-main .grid2 select,.pp-main .grid2 input[type=date]{min-height:44px;height:44px;font-size:16px}
 }
+/* Chi tiết đơn: tab thẻ hồ sơ nối liền khung nội dung, màu theo QT */
+.odh{margin-bottom:6px}
+.od-group .od-tabs{padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.od-group .od-tabs::-webkit-scrollbar{display:none}
+.od-group .od-tabs button{flex:none;cursor:pointer;font:inherit;color:var(--ink)}
+.od-group .od-tabs button b{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700}
+.od-group .od-tabs button.qx b{color:var(--muted);font-weight:600;font-size:14px}
+.od-group .od-tabs button.qx{justify-content:center}
+.od-group .od-tabs button.qx.on{box-shadow:inset 0 3px 0 #8A8F98}
+.od-group .od-tabs button.qx.on b{color:var(--ink)}
+.od-group .od-tabs button.q0.on span{color:var(--q0)}.od-group .od-tabs button.q1.on span{color:var(--q1)}.od-group .od-tabs button.q2.on span{color:var(--q2)}.od-group .od-tabs button.q3.on span{color:var(--q3)}
+.od-group .od-tabs button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.od-group>.od-panel{border-top-left-radius:16px}
+@media (max-width:760px){
+  .od-group .od-tabs{position:sticky;top:calc(60px + env(safe-area-inset-top));z-index:15;background:var(--bg,#F6F1E6);margin:0 -16px;padding:6px 12px 0}
+  .od-group .od-tabs button{min-height:48px;padding:6px 12px 8px}
+  .od-group .od-tabs button{flex-direction:row;align-items:center;gap:6px}.od-group .od-tabs button span{font-size:12.5px}
+}

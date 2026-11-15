@@ -113,15 +113,14 @@ export default function OrderDetail() {
               {adm0 && <div className="odh-mi"><span className="small muted">Mã nội bộ</span><b>{o.code}</b></div>}
             </div></details>
         </div>
-        <nav className="odt" role="tablist" aria-label="Quy trình">
-          {TABS.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null;
-            return <button key={k} role="tab" aria-selected={tab === k} className={'odt-b' + (tab === k ? ' on' : '') + (s ? '' : ' odt-x')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
-              {s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}<span className="odt-k">{k === 'F0' ? 'Tiếp nhận' : k === 'CT' ? 'Chứng từ' : k === 'LS' ? 'Lịch sử' : k}</span>{s && <span className="odt-n">{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
-          <details className="odt-more"><summary className={'odt-b' + (['F0', 'CT', 'LS'].includes(tab) ? ' on' : '')} aria-label="Tab khác"><Icon name="more" size={18} /></summary>
-            <div className="odh-menu" role="menu">{TABS.filter(([k]) => !PROCS.includes(k as Proc)).map(([k, t]) => <button key={k} role="menuitem" type="button" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setSp({ tab: k }); }}>{t.split(' ').slice(1).join(' ')}</button>)}</div></details>
-        </nav>
       </header>
-      <div className="qt-group od-group"><div className="qt-panel od-panel" key={tab}>
+      <div className="qt-group od-group">
+        <nav className="qt-tabs od-tabs" role="tablist" aria-label="Quy trình" ref={(el) => { const b = el?.querySelector<HTMLElement>('button.on'); if (b && el && (b.offsetLeft < el.scrollLeft || b.offsetLeft + b.offsetWidth > el.scrollLeft + el.clientWidth)) el.scrollLeft = b.offsetLeft - 16; }}>
+          {TABS.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null; const isP = PROCS.includes(k as Proc);
+            return <button key={k} role="tab" aria-selected={tab === k} className={(isP ? 'q' + k.slice(2) : 'qx') + (tab === k ? ' on' : '')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
+              <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
+        </nav>
+      <div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
       {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} />}
