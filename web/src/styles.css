@@ -3380,3 +3380,14 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .tk-men-none{padding:10px}
 .tk-at{color:#2F5BA8;background:#E8EEF8;border-radius:4px;padding:0 3px;font-weight:600}
 .tk-m.tk-me{background:#FFF8E6;border-radius:8px;box-shadow:inset 3px 0 0 var(--gold)}
+/* Sửa sau khi bị trả về */
+.f.f-chg input,.f.f-chg select,.f.f-chg textarea{border-color:#E0A526!important;box-shadow:0 0 0 2px rgba(224,165,38,.25)}
+.f.f-chg>span::after{content:' • đã sửa';color:#B07A0E;font-weight:600;font-size:12px}
+.pp-grid td.pp-chg{box-shadow:inset 0 0 0 2px #E0A526;background:#FFF8E6}
+.pp-grid tr.pp-new td{background:#FFF8E6}.pp-grid tr.pp-new td:first-child{box-shadow:inset 3px 0 0 #E0A526}
+.pp-chgsum{font-size:12.5px;font-weight:600;color:#8A5A00;background:#FFF1CC;border-radius:999px;padding:2px 10px;white-space:nowrap}.pp-chgsum.none{color:var(--muted);background:#F1F2F4;font-weight:500}
+.rt-ban-h2{margin-top:6px}.rt-chg-key{box-shadow:inset 0 0 0 2px #E0A526;background:#FFF8E6;padding:0 4px;border-radius:3px}
+.pp-bto{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 8px}
+.pp-bto button{min-height:40px;padding:0 14px;border:1px solid var(--line2);border-radius:999px;background:#fff;font:inherit;font-size:14px;cursor:pointer}
+.pp-bto button small{color:var(--muted);font-size:11px;margin-left:4px}.pp-bto button.on{border-color:var(--red,#C0392B);background:#FDF0EE;color:#A93226;font-weight:600}
+@media (max-width:760px){.pp-bto button{min-height:44px;flex:1 1 0}}

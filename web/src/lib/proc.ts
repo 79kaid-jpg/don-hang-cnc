@@ -4,7 +4,8 @@ export type Company = 'PN' | 'IPC' | 'HW';
 export type Row = Record<string, string | number | null>;
 /** Bảng con trong một ô (kiểu Bảng trong bảng) */
 export const subRows = (r: Row, k: string): Row[] => { const v = (r as Record<string, unknown>)[k]; return Array.isArray(v) ? (v as Row[]) : []; };
-export type Doc = { can_view?: boolean; hidden?: string[]; assignee?: string | null; id: string; batch_id: string; company: Company; status: string; header: Record<string, string>; tables: Record<string, Row[]>;
+export type RetSnap = { header: Record<string, string>; tables: Record<string, Row[]>; at: string; note: string; from: string; to: string; by: string };
+export type Doc = { ret_snap?: RetSnap | null; can_view?: boolean; hidden?: string[]; assignee?: string | null; id: string; batch_id: string; company: Company; status: string; header: Record<string, string>; tables: Record<string, Row[]>;
   files: { kind: string; name: string; path: string; at?: string }[]; notes: { role: string; user: string; at: string; text: string }[];
   signs: { role: string; user: string; at: string; action: string; note?: string }[]; status_at: string; created_at: string };
 export type Batch = { id: string; order_id: string; proc: Proc; seq: number; title: string; status: 'dang_lam' | 'cho_ky' | 'hoan_tat' | 'fail' | 'huy';

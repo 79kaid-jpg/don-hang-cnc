@@ -290,7 +290,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const [can, setCan] = useState(() => !!peek<boolean>('ca:' + cacheUser + ':' + d.id + ':' + d.status, 60000));
   const [h, setH] = useState<Record<string, string>>(d.header ?? {}); const [t, setT] = useState<Record<string, Row[]>>(d.tables ?? {}); const [files, setFiles] = useState(d.files ?? []);
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [dirty, setDirty] = useState(false);
-  const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState('');
+  const [ask, setAsk] = useState<'' | 'back' | 'fail'>(''); const [why, setWhy] = useState(''); const [backTo, setBackTo] = useState('');
   const { acting, actUntil } = useAuth(); const lockAct = acting && !actUntil && !/^\s*\[(MẪU|MAU|TEST)\]/i.test(o.project ?? '');
   // Làm nhiều công ty: chỉ thao tác khi đang chọn đúng công ty của phiếu (chuyển công ty tường minh)
   const { scope, canSwitch: multiCo } = useScope(); const myCos = useMyCo().allowed as string[]; const coLock = multiCo && scope !== d.company;
@@ -338,6 +338,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const refVals: Record<string, string> = { ma_du_an: pjs?.find((p) => p.id === (o as { project_id?: string }).project_id)?.code ?? '', du_an: o.project ?? '', ma_don: docCode(o, b, d.company), ma_noi_bo: o.code,
     khach_hang: kh0?.name ?? '', han_giao: o.due_date ? new Date(o.due_date).toLocaleDateString('vi-VN') : '' };
   const lookOpts = (src?: string) => src === 'materials' ? (mats ?? []).filter((m) => m.active).map((m) => m.name) : src === 'projects' ? (pjs ?? []).map((x) => x.code) : src === 'customers' ? custs.map((x) => x.name) : src === 'people' ? Object.values(people).map((x) => x.full_name).filter(Boolean).sort() : [];
+  // Phiếu đang sửa sau khi bị trả về: so với bản lúc trả về để tô phần đã sửa (cho tới khi qua lại bước đã trả về)
+  const rs = (() => { const x = d.ret_snap; if (!x || ['da_duyet', 'fail'].includes(d.status)) return null; const fl = FLOW[proc] as string[]; const pos = (s: string) => fl.indexOf(s === 'duyet_them' ? 'duyet' : s);
+    return pos(d.status) >= 0 && pos(d.status) < pos(x.from) ? x : null; })();
   const tblDefs = PROC_TABLES[proc].map(([key, def]) => { const fs = fieldsOf(proc, 'col', key);
     const cols = colsOf(proc, key).flatMap((c) => { const f = fs.find((x) => x.key === c.k)!; const p = pm(f); return p === 'hide' || hid.has(key + ':' + c.k) ? [] : [{ ...c, refv: c.ty === 'ref' ? refVals[c.ref ?? ''] ?? '' : undefined, opts: c.ty === 'lookup' ? lookOpts(c.ref) : c.opts, ro: c.ty === 'ref' || closed || (!adm && !(p === 'edit' || p === 'required')), req: p === 'required' }]; });
     const tf = fieldsOf(proc, 'table').find((x) => x.key === key); const treq = !!tf && pm(tf) === 'required'; const thide = !!tf && pm(tf) === 'hide'; const tst = d.status === 'duyet_them' || d.status === 'da_duyet' ? 'duyet' : d.status; const tview = !!tf && tf.perms?.[d.company]?.[tst] === 'view';
@@ -382,11 +385,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     e.preventDefault(); if (key !== 't' && shut) { setShut(false); setTimeout(go, 60); } else go(); };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
   const [rtImgs, setRtImgs] = useState<Blob[]>([]); const [anOpen, setAnOpen] = useState(false);
-  const act = async (action: 'next' | 'back' | 'fail', n = '') => {
+  const act = async (action: 'next' | 'back' | 'fail', n = '', to?: string) => {
     setErr(''); setBusy(true);
     if (editable && dirty && !(await save(true))) { setBusy(false); return; }
     try {
-      const r = await advanceDoc(o, b, { ...d, ...h0(d) }, action, n); setBusy(false);
+      const r = await advanceDoc(o, b, { ...d, ...h0(d) }, action, n, to); setBusy(false);
       toast(action === 'next' ? 'Đã ký → ' + (STATUS[r.next] ?? r.next) : action === 'back' ? 'Đã trả về' : 'Đã đánh Thất bại'); if (r.warn) setTimeout(() => toast(r.warn!), 1500);
       setAsk(''); setWhy(''); onChanged();
     } catch (e) { setBusy(false); const m = errText(e as Error); const ms = /checklist bắt buộc/.test(m) ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
@@ -497,13 +500,13 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       <ReviewPdf docId={d.id} status={d.status} />
       {proc === 'QT3' && d.company === 'HW' && <div className="f qt3-end"><span>Khách nhận hàng <span className="muted small">(Hanwa đổi được; mặc định là khách cuối của dự án)</span></span>
         <CustomerPicker value={h.end_customer_id || o.customer_id || ''} list={custs} canCreate={false} onChange={(c) => { if (!(can || adm)) return; setH({ ...h, end_customer_id: c?.id ?? '' }); setDirty(true); }} /></div>}
-      {(() => { const ls = (d.signs ?? []).at(-1); if (!ls || ls.action !== 'tra_ve' || ['da_duyet', 'fail'].includes(d.status)) return null; const im = rtFilesAt({ files }, ls.at);
+      {(() => { const ls = rs ? [...(d.signs ?? [])].reverse().find((x) => x.action === 'tra_ve') : (d.signs ?? []).at(-1); if (!ls || ls.action !== 'tra_ve' || ['da_duyet', 'fail'].includes(d.status)) return null; const im = rtFilesAt({ files }, ls.at);
         return <div className="rt-ban" role="note"><div className="rt-ban-h"><Icon name="back" size={16} /><b>Bị trả về</b><span className="small muted"> · {people[ls.user]?.full_name ?? ''} · {dt(ls.at)}</span></div>
-          {ls.note && <div className="rt-ban-t">{ls.note}</div>}<RtThumbs files={im} size={72} /></div>; })()}
+          {ls.note && <div className="rt-ban-t">{ls.note}</div>}<RtThumbs files={im} size={72} />{rs && <div className="small rt-ban-h2">Trả về từ <b>{STATUS[rs.from] ?? rs.from}</b> → <b>{STATUS[rs.to] ?? rs.to}</b> · ô / dòng <span className="rt-chg-key">viền vàng</span> là chỗ đã sửa sau khi bị trả về</div>}</div>; })()}
       {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
-        {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
-          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '')}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
+        {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
+          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
               : f.type === 'textarea' ? <textarea rows={2} disabled={!ed} value={v} onChange={(e) => on(e.target.value)} />
@@ -538,7 +541,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
-        <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed}
+        <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
@@ -556,6 +559,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           {ask ? (<div className="pp-ask">
             <label className="f">{ask === 'fail' ? 'Lý do thất bại – dừng hẳn lượt này (hao hụt lớn, vượt dự toán, khách huỷ…)' : 'Lý do trả về'} *<textarea rows={2} autoFocus value={why} onChange={(e) => setWhy(e.target.value)}
               onPaste={(e) => { const f = [...e.clipboardData.files].find((x) => x.type.startsWith('image/')); if (f) { e.preventDefault(); setRtImgs((a) => [...a, f]); } }} /></label>
+            {ask === 'back' && (() => { const fl = FLOW[proc]; const ci = d.status === 'duyet_them' ? fl.indexOf('duyet') + 1 : fl.indexOf(d.status); const opts = fl.slice(0, ci).filter((s) => s !== 'anh_giao');
+              const def = proc === 'QT0' ? ({ boc_tach: 'tiep_nhan', tao_ds: 'boc_tach', kiem_tra: 'boc_tach', duyet: 'kiem_tra', duyet_them: 'kiem_tra' } as Record<string, string>)[d.status] : ({ kiem_tra: 'lap', duyet: 'lap', duyet_them: 'lap', anh_giao: 'duyet' } as Record<string, string>)[d.status];
+              if (opts.length < 2) return null; const cur = backTo || def;
+              return <div className="pp-bto" role="radiogroup" aria-label="Trả về bước"><span className="small">Trả về bước</span>{opts.map((s) => <button key={s} type="button" role="radio" aria-checked={cur === s} className={cur === s ? 'on' : ''} onClick={() => setBackTo(s)}>{STATUS[s] ?? s}{s === def ? <small> mặc định</small> : null}</button>)}</div>; })()}
             {rtImgs.length > 0 && <div className="rt-imgs">{rtImgs.map((b, i) => <span key={i} className="rt-img"><img src={URL.createObjectURL(b)} alt={'Ảnh ghi chú ' + (i + 1)} />
               <button type="button" aria-label="Bỏ ảnh" onClick={() => setRtImgs((a) => a.filter((_, j) => j !== i))}><Icon name="x" size={12} /></button></span>)}</div>}
             {anOpen && <Annotate capture={async () => { const el = document.querySelector('.pp-doc') as HTMLElement | null; if (!el) return null; const { toBlob } = await import('html-to-image');
@@ -569,7 +576,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                   for (const [i, bl] of rtImgs.entries()) { const path = `${o.id}/${b.id}/${d.company}/tv-${Date.now()}-${i}.png`; const r = await sb.storage.from('files').upload(path, bl, { contentType: 'image/png' }); if (r.error) { setErr(errText(r.error)); return; }
                     nf.push({ kind: 'tra_ve', name: 'Ảnh ghi chú ' + (i + 1) + '.png', path, at, by: meId, step: d.status } as (typeof files)[number]); }
                   if (!(await persist(nf, 'Đã gắn ' + rtImgs.length + ' ảnh ghi chú'))) return; note += ' (kèm ' + rtImgs.length + ' ảnh)'; }
-                await act(ask, note); setRtImgs([]); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
+                await act(ask, note, ask === 'back' && backTo ? backTo : undefined); setRtImgs([]); setBackTo(''); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
             {!first && <button className="btn kb-back pp-sec" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
             {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go pp-sec" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
@@ -703,12 +710,17 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0' }: { title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev }: { prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
   const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const [subOpen, setSubOpen] = useState<string | null>(null);
+  // So với bản lúc bị trả về
+  const pv = useMemo(() => (prev ? new Map(prev.map((x) => [String(x._id ?? ''), x])) : null), [prev]);
+  const chg = (r: Row, c: Col) => { if (!pv || c.calc || c.ty === 'ref') return false; const p0 = pv.get(String(r._id ?? '')); if (!p0) return true; return JSON.stringify(p0[c.k] ?? '') !== JSON.stringify(r[c.k] ?? '') && String(p0[c.k] ?? '') !== String(r[c.k] ?? ''); };
+  const isNew = (r: Row) => !!pv && !pv.has(String(r._id ?? ''));
+  const removed = pv ? [...pv.keys()].filter((k) => k && !rows.some((r) => String(r._id ?? '') === k)).length : 0;
   const set = (i: number, k: string, v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   // Áp dụng một giá trị cho cả cột: từ ô vừa sửa (gợi ý) hoặc từ nút ở tiêu đề cột
   const [fill, setFill] = useState<{ k: string; v: string } | null>(null); const [hdr, setHdr] = useState<{ k: string; v: string } | null>(null);
@@ -824,6 +836,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
               {ql && <span className="small muted pp-sx-n">{hit.length}/{rows.length}</span>}
               {q && <button type="button" className="pp-sx-x" aria-label="Xoá tìm" onPointerDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setLim(0); sRef.current?.focus(); }}><Icon name="x" size={13} /></button>}</label>
             : <button type="button" className="pp-sx-btn" aria-label="Tìm trong bảng (Ctrl+F)" title="Tìm trong bảng (Ctrl+F)" onClick={openSearch}><Icon name="search" size={16} /></button>}</span>}
+        {pv && (() => { const nN = rows.filter(isNew).length; const nC = rows.filter((r) => !isNew(r) && cols.some((c) => chg(r, c))).length; return nN + nC + removed > 0
+          ? <span className="pp-chgsum" title="So với lúc bị trả về">Đã sửa: {[nC && nC + ' dòng sửa', nN && nN + ' dòng mới', removed && removed + ' dòng bỏ'].filter(Boolean).join(' · ')}</span> : <span className="pp-chgsum none">Chưa sửa gì so với lúc trả về</span>; })()}
         {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
         {pick && <Qt0Pick label={srcLabel} src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
@@ -878,8 +892,8 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
-          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} className={bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : undefined}><td className="muted">{i + 1}</td>
-            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} className={(bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : '') + (isNew(r) ? ' pp-new' : '') || undefined}><td className="muted">{i + 1}</td>
+            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '') + (!isNew(r) && chg(r, c) ? ' pp-chg' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
               : editable && !c.ro && c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
               : editable && !c.ro ? <input onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} title={c.n && !okNum(c, r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột

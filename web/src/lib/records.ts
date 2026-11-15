@@ -106,7 +106,7 @@ export async function saveRecord(o: Order, b: Batch, d: Doc, kind: DocRecord['ki
  *  - gửi sang bước Duyệt → "Bản trình duyệt"
  *  - Duyệt / Duyệt thêm → "Đã duyệt" (mỗi cấp một bản; cấp cuối = Thành công)
  *  - Thất bại → "Thất bại" */
-export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: string[]; idx: number } | null }, action: 'next' | 'back' | 'fail', note: string): Promise<{ next: string; warn?: string }> {
+export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: string[]; idx: number } | null }, action: 'next' | 'back' | 'fail', note: string, to?: string): Promise<{ next: string; warn?: string }> {
   if (action === 'next') await flushChecks(d.id);
   const { FLOW } = await import('./proc');
   const fl = FLOW[b.proc as keyof typeof FLOW]; const i = fl.indexOf(d.status);
@@ -119,7 +119,7 @@ export async function advanceDoc(o: Order, b: Batch, d: Doc & { apv?: { queue: s
     else if (action === 'fail') rec = await saveRecord(o, b, d, 'tu_choi', note, null, 'that_bai');
   } catch (e) { warn = 'Chưa lưu được chứng từ PDF: ' + ((e as Error).message ?? e); }
   if (action === 'next') { try { const { syncAuto } = await import('./checks'); await syncAuto(b.proc as never, d as never); } catch { /* bỏ qua – máy chủ vẫn kiểm */ } }
-  const { data, error } = await sb.rpc('doc_advance', { p_doc: d.id, p_action: action, p_note: note });
+  const { data, error } = await sb.rpc('doc_advance', { p_doc: d.id, p_action: action, p_note: note, ...(to ? { p_to: to } : {}) });
   if (error) { if (rec) await sb.from('doc_records').update({ note: '(đã huỷ – ký không thành công) ' + rec.note }).eq('id', rec.id); throw error; }
   if (rec && rec.kind === 'duyet' && data === 'da_duyet') await sb.from('doc_records').update({ result: 'thanh_cong' }).eq('id', rec.id);
   return { next: data as string, warn };

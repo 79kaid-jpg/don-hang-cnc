@@ -1,0 +1,1 @@
+-- Trả về chọn bước + ret_snap (áp dụng qua MCP: return_choose_step, docs_v_ret_snap)
