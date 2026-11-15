@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: _reply_hint(doc) – mã ngắn đứng riêng dòng cuối tin Zalo; zalo_reply đoán phiếu theo tin gần nhất bot gửi (zalo_out, 48h)
