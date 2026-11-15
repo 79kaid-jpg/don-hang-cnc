@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { BUILD, applyUpdate, isIOSNotSafari, platform, useInstall, useUpdate } from '../lib/pwa';
 import { toast } from '../components/ui';
-import { BOT_NAME, ZaloLink } from '../components/ZaloLink';
+import { useBotName, ZaloLink } from '../components/ZaloLink';
 import { ShortcutTable } from '../components/Shortcuts';
 import ProcessGuide from '../components/ProcessGuide';
 
@@ -10,6 +10,7 @@ const URL_APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
 
 /** Hướng dẫn cài app vào màn hình chính, theo đúng thiết bị đang dùng */
 export default function Install() {
+  const [bot] = useBotName();
   const { standalone, canPrompt, prompt } = useInstall();
   const update = useUpdate();
   const detected = platform();
@@ -76,10 +77,10 @@ export default function Install() {
 
       <section className="card" aria-labelledby="h-zalo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2 id="h-zalo">2. Nhận thông báo duyệt qua Zalo</h2>
-        <p className="muted" style={{ margin: 0 }}>Bot <b>{BOT_NAME}</b> nhắn riêng cho bạn khi đến lượt bạn duyệt phiếu, và báo cho người tạo đơn khi phiếu bị từ chối. Mỗi người chỉ cần liên kết một lần.</p>
+        <p className="muted" style={{ margin: 0 }}>Bot <b>{bot}</b> nhắn riêng cho bạn khi đến lượt bạn duyệt phiếu, và báo cho người tạo đơn khi phiếu bị từ chối. Mỗi người chỉ cần liên kết một lần.</p>
         <ol className="ins-steps">
           <Step n={1}>Bấm <b>Liên kết Zalo</b> ở ô bên dưới (hoặc biểu tượng chuông <span className="kbd"><Icon name="bell" size={16} /></span> trên đầu trang). App hiện một <b>mã 6 số</b>, có hiệu lực 30 phút.</Step>
-          <Step n={2}>Mở Zalo trên điện thoại, gõ tìm <b>{BOT_NAME}</b>, bấm <b>Nhắn tin</b>.</Step>
+          <Step n={2}>Mở Zalo trên điện thoại, gõ tìm <b>{bot}</b>, bấm <b>Nhắn tin</b>.</Step>
           <Step n={3}>Gửi cho bot đúng mã 6 số đó.</Step>
           <Step n={4}>Bot trả lời <b>"Đã liên kết Zalo với tài khoản …"</b>, app tự chuyển sang <b>Đã liên kết</b>. Xong.</Step>
         </ol>

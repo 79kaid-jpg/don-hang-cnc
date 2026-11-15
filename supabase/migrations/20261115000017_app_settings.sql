@@ -1,0 +1,1 @@
+-- Đã áp dụng qua MCP: bảng app_settings (zalo_bot_name), RLS đọc: mọi người, ghi: admin_it

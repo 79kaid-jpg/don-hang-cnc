@@ -1,3 +1,4 @@
+import { BotNameEdit } from '../components/ZaloLink';
 import { PlanGrid } from '../components/PlanEdit';
 import { ActGrants } from '../components/ActGrants';
 import { ChainPeopleAdmin } from '../components/ChainPeople';
@@ -146,7 +147,7 @@ export default function Admin() {
       {tab === 'act' && <ActGrants people={people ?? []} />}
       {tab === 'plan' && <PlanGrid canEdit={can('admin_it')} />}
       {tab === 'perf' && <PerfAdmin canEdit={can('admin_it')} />}
-      {tab === 'base' && <BaseConnect canEdit={can('admin_it')} />}
+      {tab === 'base' && <><BotNameEdit canEdit={can('admin_it')} /><BaseConnect canEdit={can('admin_it')} /></>}
       {tab === 'groups' && <GroupsAdmin canEdit={can('admin_it')} />}
       {tab === 'sd' && <StepDefaultsAdmin canEdit={can('admin_it')} />}
       {tab === 'guide' && <GuidesAdmin canEdit={can('admin_it')} />}

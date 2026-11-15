@@ -4,12 +4,32 @@ import { useAuth } from '../lib/auth';
 import { Icon } from './Icon';
 import { Msg, confirmDialog } from './ui';
 
-export const BOT_NAME = 'Bot Đơn hàng IPCCNC';
+/** Tên bot Zalo – admin đổi trong Quản trị › Kết nối & API */
+let botName = 'Bot PMS Notification'; const subs = new Set<(v: string) => void>();
+let loaded = false;
+export function useBotName(): [string, (v: string) => Promise<string | null>] {
+  const [v, setV] = useState(botName);
+  useEffect(() => { subs.add(setV); if (!loaded) { loaded = true; sb.from('app_settings').select('value').eq('key', 'zalo_bot_name').maybeSingle().then(({ data }) => { if (data?.value) { botName = data.value; subs.forEach((f) => f(botName)); } }); }
+    return () => { subs.delete(setV); }; }, []);
+  const save = async (nv: string) => { const { error } = await sb.from('app_settings').upsert({ key: 'zalo_bot_name', value: nv.trim(), updated_at: new Date().toISOString() }); if (error) return errText(error); botName = nv.trim(); subs.forEach((f) => f(botName)); return null; };
+  return [v, save];
+}
+/** Ô sửa tên bot (Quản trị) */
+export function BotNameEdit({ canEdit }: { canEdit: boolean }) {
+  const [name, save] = useBotName(); const [v, setV] = useState<string | null>(null); const [msg, setMsg] = useState('');
+  const cur = v ?? name;
+  return <div className="card" style={{ display: 'grid', gap: 8 }}>
+    <b>Tên bot Zalo</b><span className="small muted">Hiện trong hướng dẫn liên kết Zalo cho người dùng. Đổi khi thay bot.</span>
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}><input style={{ flex: '1 1 220px', minHeight: 40 }} value={cur} disabled={!canEdit} maxLength={80} aria-label="Tên bot Zalo" onChange={(e) => setV(e.target.value)} />
+      {canEdit && <button className="btn primary" disabled={!cur.trim() || cur === name} onClick={async () => { const e = await save(cur); setMsg(e ?? 'Đã lưu'); if (!e) setV(null); }}>Lưu</button>}</div>
+    {msg && <span className="small muted" role="status">{msg}</span>}
+  </div>;
+}
 
 /** Liên kết Zalo để nhận thông báo duyệt. compact = thẻ nhắc trên trang Việc của tôi (ẩn khi đã liên kết) */
 export function ZaloLink({ compact = false }: { compact?: boolean }) {
   const { me, reload, acting } = useAuth();
-  const [code, setCode] = useState(''); const [err, setErr] = useState('');
+  const [code, setCode] = useState(''); const [err, setErr] = useState(''); const [bot] = useBotName();
   // chờ người dùng gửi mã cho bot → kiểm tra lại mỗi 4 giây
   useEffect(() => {
     if (!code || me?.zalo_chat_id) return;
@@ -34,7 +54,7 @@ export function ZaloLink({ compact = false }: { compact?: boolean }) {
       </div>
       {code && (
         <ol className="small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
-          <li>Mở Zalo, tìm <b>{BOT_NAME}</b> và bấm Nhắn tin.</li>
+          <li>Mở Zalo, tìm <b>{bot}</b> và bấm Nhắn tin.</li>
           <li>Gửi cho bot mã: <b className="zalo-code">{code}</b> <button className="btn sm ghost" onClick={() => navigator.clipboard?.writeText(code)}>Chép mã</button></li>
           <li>Bot trả lời "Đã liên kết" là xong. Mã có hiệu lực 30 phút. <span className="muted">Đang chờ…</span></li>
         </ol>)}
