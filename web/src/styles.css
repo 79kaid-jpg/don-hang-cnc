@@ -3549,3 +3549,8 @@ html[data-glass=facade]:not([data-theme=dark])[data-scope=ALL] .side{background-
 .pp-skel{display:grid;gap:12px;min-height:420px;align-content:start}.pp-skel span{display:block;height:18px;border-radius:6px;background:linear-gradient(90deg,var(--soft) 25%,#fff 50%,var(--soft) 75%);background-size:200% 100%;animation:sk 1.2s linear infinite}
 .pp-skel span:nth-child(1){width:40%;height:24px}.pp-skel span:nth-child(2){width:70%}.pp-skel span:nth-child(3){height:44px}.pp-skel span:nth-child(4){height:220px}
 @keyframes sk{to{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.pp-skel span{animation:none}}
+.dwg{flex:1;position:relative;background:#16181d;overflow:hidden}.dwg.light{background:#fff}.dwg.light .dwg-c svg{filter:invert(1) hue-rotate(180deg)}
+.dwg-c{position:absolute;inset:0;touch-action:none;cursor:grab}.dwg-c:active{cursor:grabbing}.dwg-c svg{width:100%;height:100%;display:block}
+.dwg-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#e5e7eb;text-align:center;padding:24px;pointer-events:none}.dwg.light .dwg-msg{color:#374151}.dwg-msg small{opacity:.7}
+.dwg-tools{position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.dwg-tools button{width:44px;height:44px;border-radius:10px;border:1px solid #ffffff33;background:#000a;color:#fff;font-size:20px;cursor:pointer}.dwg.light .dwg-tools button{background:#fff;color:#111;border-color:#d1d5db}
