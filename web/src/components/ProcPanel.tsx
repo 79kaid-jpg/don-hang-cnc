@@ -8,8 +8,9 @@ import { FixMsg } from './FixMsg';
 import { isTyping, keyOf, modalOpen } from './Shortcuts';
 import { missingReq, jumpField } from '../lib/checks';
 import { goFix } from '../lib/gotoFix';
-import { cached, cacheUser, peek } from '../lib/qcache';
-export const canActQ = (id: string, st: string) => cached('ca:' + cacheUser + ':' + id + ':' + st, () => sb.rpc('can_act', { p_doc: id }).then((r) => !!r.data), 60000);
+import { cached, cacheUser, peek, dropCache } from '../lib/qcache';
+// Chỉ nhớ kết quả "được làm"; kết quả "không" hỏi lại (vd vừa đổi công ty, máy chủ chưa cập nhật)
+export const canActQ = (id: string, st: string) => { const k = 'ca:' + cacheUser + ':' + id + ':' + st; return cached(k, () => sb.rpc('can_act', { p_doc: id }).then((r) => !!r.data), 60000).then((v) => { if (!v) dropCache(k); return v; }); };
 import { viewHtml, viewUrl } from '../lib/viewer';
 import { Assignees } from './Assignees';
 import { useGuides, guideFor, guideByKey } from '../lib/guides';
@@ -302,7 +303,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const { scope, canSwitch: multiCo } = useScope(); const myCos = useMyCo().allowed as string[]; const coLock = multiCo && scope !== d.company;
   if ((lockAct || coLock) && can) setCan(false);
   const [canRaw, setCanRaw] = useState(false);
-  useEffect(() => { canActQ(d.id, d.status + '|' + scope).then((v) => { setCanRaw(v); setCan(v && !lockAct && !coLock); }); }, [d.id, d.status, lockAct, coLock, scope]);
+  useEffect(() => { if (coLock) return; canActQ(d.id, d.status + '|' + scope).then((v) => { setCanRaw(v); setCan(v && !lockAct && !coLock); }); }, [d.id, d.status, lockAct, coLock, scope]);
   const [lvs, setLvs] = useState<{ id: string; name: string; user_id: string | null; group_id: string | null; sla_h: number }[]>([]);
   const apv = (d as Doc & { apv?: { queue: string[]; idx: number } }).apv;
   useEffect(() => { if (apv?.queue?.length) sb.from('approval_levels').select('id, name, user_id, group_id, sla_h').in('id', apv.queue).then(({ data }) => setLvs((data as never[]) ?? [])); }, [apv?.queue?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
