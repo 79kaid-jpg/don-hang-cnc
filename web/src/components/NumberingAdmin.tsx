@@ -3,13 +3,13 @@ import { sb, errText } from '../lib/supabase';
 import { useCompanies, reloadCompanies, type Company } from '../lib/coorders';
 import { toast } from './ui';
 
-const TOK: [string, string][] = [['{YYYYMMDD}', 'Ngày tạo'], ['{YYMMDD}', 'Ngày (ngắn)'], ['{BAN}', 'Công ty bán'], ['{MUA}', 'Bên mua'], ['{DA}', 'Mã dự án'], ['{STT:2}', 'STT trong ngày']];
+const TOK: [string, string][] = [['{DA}', 'Mã dự án'], ['{B1}', 'Chữ đầu công ty (P/I/H)'], ['{YYMM}', 'Năm-tháng'], ['{YYYYMMDD}', 'Ngày tạo'], ['{YYMMDD}', 'Ngày (ngắn)'], ['{BAN}', 'Công ty bán'], ['{MUA}', 'Bên mua'], ['{STT:2}', 'Số thứ tự']];
 
 /** Quản trị → Đánh số: mẫu mã đơn theo công ty, bật/tắt cho sửa, xem trước */
 export function NumberingAdmin({ canEdit }: { canEdit: boolean }) {
   const cos = useCompanies();
   return <div className="nba">
-    <p className="muted small" style={{ margin: 0 }}>Mã đơn được cấp tự động khi công ty lập XNĐH (QT1). STT đếm theo số đơn trong ngày của từng công ty. Khi Hanwa bán, {'{MUA}'} là mã khách cuối.</p>
+    <p className="muted small" style={{ margin: 0 }}>Mã đơn được cấp tự động khi công ty lập XNĐH (QT1). STT đếm riêng theo công ty + dự án (nếu mẫu có {'{DA}'}), về lại 01 khi sang ngày (mẫu có ngày) hoặc sang tháng (mẫu có {'{YYMM}'}). VD {'{DA}{B1}{YYMM}-{STT:2}'} → SLUCOLP2611-01. Khi Hanwa bán, {'{MUA}'} là mã khách cuối.</p>
     {cos === null ? <p className="muted">Đang tải…</p> : cos.map((c) => <Row key={c.code} c={c} canEdit={canEdit} />)}
   </div>;
 }
