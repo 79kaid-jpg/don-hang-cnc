@@ -226,7 +226,10 @@ export async function fillXlsx(buf: ArrayBuffer, data: TplData): Promise<ExcelJS
       let W = 0; for (let k = cn; k <= c2; k++) W += (ws.getColumn(k).width ?? 9) * 7; let H = 0; for (let k = rn; k <= r2; k++) H += (ws.getRow(k).height ?? 15) * 1.33;
       const sc = Math.min(W / im.w, H / im.h) * 0.92; const w = im.w * sc, h = im.h * sc;
       const id = wb.addImage({ base64: im.base64, extension: im.ext });
-      ws.addImage(id, { tl: { col: cn - 1 + 0.04, row: rn - 1 + 0.04 } as ExcelJS.Anchor, ext: { width: w, height: h }, editAs: 'oneCell' } as unknown as ExcelJS.ImageRange); }));
+      // Neo 2 góc (twoCellAnchor): exceljs ghi oneCellAnchor kèm editAs → sai chuẩn, Excel báo lỗi phải sửa file
+      const at = (start: number, px: number, size: (k: number) => number) => { let k = start, left = px + size(k) * 0.04; while (left > size(k) && k < start + 50) { left -= size(k); k++; } return k - 1 + left / size(k); };
+      const cw = (k: number) => (ws.getColumn(k).width ?? 9) * 7, rh = (k: number) => (ws.getRow(k).height ?? 15) * 1.33;
+      ws.addImage(id, { tl: { col: cn - 1 + 0.04, row: rn - 1 + 0.04 } as ExcelJS.Anchor, br: { col: at(cn, w, cw), row: at(rn, h, rh) } as ExcelJS.Anchor, editAs: 'oneCell' } as unknown as ExcelJS.ImageRange); }));
     // biến đơn
     ws.eachRow((r) => r.eachCell((c) => { const s = cellText(c); if (!s.includes('{')) return;
       const only = s.match(/^\s*\{([a-z0-9_]+)\}\s*$/i); if (only && typeof data.vars[only[1]] === 'number') { c.value = data.vars[only[1]] as number; return; }
