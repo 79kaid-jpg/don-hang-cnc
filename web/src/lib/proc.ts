@@ -39,7 +39,7 @@ const num = (v: unknown) => { const x = Number(String(v ?? '').replace(/\s/g, ''
 export const m2Of = (r: Row) => { const a = num(r.m2_tam), s = num(r.so_tam); return a != null && s != null ? +(a * s).toFixed(3) : num(r.m2); };
 /** Khối lượng riêng (g/cm³): nhôm 2,75 (khớp lệnh gia công giấy), còn lại thép 7,85 */
 export const ALU = 2.75, STEEL = 7.85;
-export const isAlu = (r: Row) => /nh[oô]m|alu|^\s*a\d{3,4}/i.test(String(r.vat_lieu ?? '') + ' ' + String(r.mac_thep ?? '')) || /^\s*a\d{3,4}/i.test(String(r.mac_thep ?? ''));
+export const isAlu = (r: Row) => /nh[oô]m|alu|^\s*a\d{3,4}/i.test(String(r.vat_lieu ?? '') + ' ' + String(r.ten_hang ?? '') + ' ' + String(r.mac_thep ?? '')) || /^\s*a\d{3,4}/i.test(String(r.mac_thep ?? ''));
 /** Danh mục vật liệu (Quản trị → Vật liệu): tên, tỷ trọng, từ khoá nhận diện */
 export type Material = { id: string; name: string; density: number; keywords: string[]; is_default: boolean; active: boolean; ord: number };
 let MATS: Material[] = [];
@@ -55,13 +55,16 @@ export function matOf(r: Row): { m: Material | null; how: 'chon' | 'tu_khoa' | '
   if (best) return { m: best, how: 'tu_khoa' };
   return { m: MATS.find((m) => m.is_default) ?? null, how: 'mac_dinh' };
 }
-const matTxt = (r: Row) => String(r.vat_lieu ?? '') + '|' + String(r.mac_thep ?? '') + (r._vat ? '|' + String(r._vat) : '');
+const matTxt = (r: Row) => String(r.vat_lieu ?? r.ten_hang ?? '') + '|' + String(r.mac_thep ?? '') + (r._vat ? '|' + String(r._vat) : '');
 /** Tỷ trọng: giá trị đã chốt trong phiếu (nếu tên hàng/mác chưa đổi) → danh mục → mặc định cũ */
 export const densOf = (r: Row): number => { const s = num(r.ty_trong); if (s != null && r._vl === matTxt(r)) return s;
   const { m } = matOf(r); return m ? Number(m.density) : isAlu(r) ? ALU : STEEL; };
 /** Ghi tỷ trọng hiện tại vào dòng (khi lưu phiếu) để phiếu đã duyệt giữ nguyên số kg */
 export const stampDens = (r: Row): Row => { if (!String(r.vat_lieu ?? '').trim() && !String(r.mac_thep ?? '').trim() && !String(r._vat ?? '').trim()) return r; const { m } = matOf(r); return m ? { ...r, ty_trong: Number(m.density), _vl: matTxt(r) } : r; };
 export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
+/** QT3: m² = Rộng × Dài × Số tấm (mm → m²) khi đủ số, không thì lấy số đã nhập */
+export const m2Q3 = (r: Row) => { const w = num(r.rong), l = num(r.dai_mm ?? r.dai), s = num(r.so_tam); return w != null && l != null && s != null ? +(w * l * s / 1e6).toFixed(4) : num(r.m2); };
+export const kgQ3 = (r: Row) => { const m = m2Q3(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
   nl0: { t: 'Bảng 1 – Nguyên vật liệu (phôi)', cols: [
@@ -91,7 +94,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
   tp3: { t: 'Danh sách thành phẩm của đợt giao', cols: [
     { k: 'pallet', t: 'Mã pallet', w: 8 }, { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 },
-    { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] }
+    { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Q3 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 2, calc: kgQ3 }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] }
 };
 /** bảng của từng quy trình: [khoá lưu trong docs.tables, định nghĩa cột] */
 export const PROC_TABLES: Record<Proc, [string, string][]> = { QT0: [['nl', 'nl0'], ['ds', 'ds0']], QT1: [['ds', 'ds1']], QT2: [['nl', 'nl'], ['tp', 'tp2']], QT3: [['tp', 'tp3']] };

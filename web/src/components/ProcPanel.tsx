@@ -23,7 +23,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import { useProjects } from '../lib/projects';
-import { readPmsx, readPmsxHead } from '../lib/pmsx';
+import { readPmsx, readPmsxHead, readBbgh } from '../lib/pmsx';
 import { useMaterials } from '../lib/materials';
 import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
@@ -418,7 +418,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     for (const file of Array.from(e.target.files ?? [])) {
       let check: XCheck | undefined;
       if (kind === 'excel') { const r = await checkExcelFile(file); if (!r.ok) { setErr(r.error); e.target.value = ''; return; } check = r.c; xf = file; }
-      if (proc === 'QT2' && /\.xlsx?$/i.test(file.name)) pf = file;
+      if ((proc === 'QT2' || proc === 'QT3') && /\.xlsx?$/i.test(file.name)) pf = file;
       const path = `${o.id}/${b.id}/${d.company}/${Date.now()}-${safeName(file.name)}`;
       const r = await sb.storage.from('files').upload(path, file); if (r.error) { setErr(errText(r.error)); return; }
       nf.push({ kind, name: file.name, path, at: new Date().toISOString(), by: meId, step: d.status, ...(check ? { check } : {}) } as (typeof files)[number]);
@@ -437,20 +437,25 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
     const sheets = wb.SheetNames.map((sn) => X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }));
     const defs = tblDefs.filter((x) => x.ed && !x.thide).map((x) => ({ tbl: x.key, title: x.key === 'nl' ? /xuat hang|nguyen lieu|nvl/ : /nhap hang|thanh pham/, cols: x.cols }));
-    const got = readPmsx(sheets, defs).filter((x) => x.rows.length); if (!got.length) return;
+    const cols3 = (k: string) => tblDefs.find((x) => x.key === 'tp')?.cols.find((c) => c.k === k)?.calc;
+    const bb = proc === 'QT3' ? readBbgh(sheets, defs[0] ?? { tbl: 'tp', cols: [] }) : null;
+    const got = (bb ? (bb.block ? [bb.block] : []) : readPmsx(sheets, defs)).filter((x) => x.rows.length); if (!got.length) return;
     const hk = new Set(fieldsOf(proc, 'header').filter((f) => canEd(f)).map((f) => f.key));
-    const hd = Object.fromEntries(Object.entries(readPmsxHead(sheets)).filter(([k]) => hk.has(k)));
+    const hd = Object.fromEntries(Object.entries(bb ? bb.head : readPmsxHead(sheets)).filter(([k]) => hk.has(k)));
+    // QT3: m² / kg do app tự tính → đối chiếu với tổng trong file (lệch > 1%)
+    const calcWarn = bb && got[0]?.total ? (['m2', 'kg'] as const).flatMap((k) => { const c = cols3(k); const f = got[0].total![k]; if (!c || f == null || !f) return [];
+      const a = got[0].rows.reduce((s, r) => s + (Number(c(r)) || 0), 0); return Math.abs(a - f) / f > 0.01 ? [(k === 'm2' ? 'Tổng m²' : 'Khối lượng') + ' app tính ' + a.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' ≠ file ' + f.toLocaleString('vi-VN', { maximumFractionDigits: 2 })] : []; }) : [];
     // Đối chiếu tổng SL / DT / TL với dòng tổng trong file
     const chk = got.filter((x) => x.total).map((x) => { const bad = (['so_tam', 'm2', 'kg'] as const).filter((k) => x.total![k] != null && Math.abs(x.rows.reduce((a, r) => a + (Number(r[k]) || 0), 0) - x.total![k]) > 0.05);
       return { tbl: x.tbl, bad, n: x.total!.so_tam }; });
-    const name = (k: string) => (k === 'nl' ? 'NVL (xuất hàng)' : 'Thành phẩm (nhập hàng)');
+    const name = (k: string) => (proc === 'QT3' ? 'Thành phẩm' : k === 'nl' ? 'NVL (xuất hàng)' : 'Thành phẩm (nhập hàng)');
     const miss = [...new Set(got.flatMap((x) => x.unmatched))];
     const has = got.filter((x) => (t[x.tbl as never] as Row[] | undefined ?? []).some((r) => Object.values(r).some((v) => String(v ?? '').trim())));
-    const HL: Record<string, string> = { so_lenh: 'Số lệnh', nguoi_phat_lenh: 'Người phát lệnh', ma_dh: 'Mã ĐH', kho_xuat: 'Kho xuất', kho_nhan: 'Kho nhận', dang_gc: 'Dạng gia công' };
-    const warn = [...(miss.length ? ['Cột không khớp (bỏ qua): ' + miss.join(', ')] : []), ...chk.filter((c) => c.bad.length).map((c) => name(c.tbl) + ': tổng trong file khác tổng các dòng (' + c.bad.join(', ') + ')')];
+    const HL: Record<string, string> = { so_phieu: 'Số phiếu', ngay_giao: 'Ngày giao', ma_dh_khach: 'Mã ĐH (khách)', dang_gia_cong: 'Dạng gia công', ten_khach: 'Tên khách hàng', dia_diem: 'Địa điểm giao', tai_xe: 'Tài xế', xe: 'Xe', so_lenh: 'Số lệnh', nguoi_phat_lenh: 'Người phát lệnh', ma_dh: 'Mã ĐH', kho_xuat: 'Kho xuất', kho_nhan: 'Kho nhận', dang_gc: 'Dạng gia công' };
+    const warn = [...calcWarn, ...(miss.length ? ['Cột không khớp (bỏ qua): ' + miss.join(', ')] : []), ...chk.filter((c) => c.bad.length).map((c) => name(c.tbl) + ': tổng trong file khác tổng các dòng (' + c.bad.join(', ') + ')')];
     const box = (q: string) => <div className="imp-dlg">
-      <div className="imp-h"><span className="imp-ic"><Icon name="upload" size={18} /></span><div><b>Nhập Lệnh gia công</b><span>{file.name}</span></div></div>
-      <div className="imp-cards">{got.map((x) => <div key={x.tbl}><span>{x.tbl === 'nl' ? 'Bảng 1 · NVL' : 'Bảng 2 · Thành phẩm'}</span><b>{x.rows.length} dòng</b></div>)}</div>
+      <div className="imp-h"><span className="imp-ic"><Icon name="upload" size={18} /></span><div><b>{proc === 'QT3' ? 'Nhập Biên bản giao hàng' : 'Nhập Lệnh gia công'}</b><span>{file.name}</span></div></div>
+      <div className="imp-cards">{got.map((x) => <div key={x.tbl}><span>{proc === 'QT3' ? 'Danh sách thành phẩm' : x.tbl === 'nl' ? 'Bảng 1 · NVL' : 'Bảng 2 · Thành phẩm'}</span><b>{x.rows.length} dòng</b></div>)}</div>
       {Object.keys(hd).length > 0 && <dl className="imp-kv">{Object.entries(hd).map(([k, v]) => <div key={k}><dt>{HL[k] ?? k}</dt><dd>{v}</dd></div>)}</dl>}
       {warn.map((w) => <p key={w} className="imp-warn"><Icon name="alert" size={14} />{w}</p>)}
       <p className="imp-q">{q}</p></div>;
