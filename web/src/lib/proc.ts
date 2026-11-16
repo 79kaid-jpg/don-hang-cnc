@@ -70,15 +70,15 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'ma_mau', t: 'Mã màu', w: 6 }, { k: 'ma_tam', t: 'Dùng cho mã tấm', w: 14 }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
   ds0: { t: 'Bảng 2 – Thành phẩm', cols: [
     // cùng trường, cùng thứ tự, cùng nhãn với Bảng 2 của Lệnh gia công (QT2)
-    { k: 'vat_lieu', t: 'Tên hàng', w: 10, g: 'Thành phẩm' }, { k: 'day', t: 'Dày (mm)', n: true, d: 1, g: 'Thành phẩm' }, { k: 'dai', t: 'Dài (mm)', n: true, g: 'Thành phẩm' }, { k: 'rong', t: 'Rộng (mm)', n: true, g: 'Thành phẩm' },
-    { k: 'mac_thep', t: 'Mác thép', w: 8, g: 'Thành phẩm' }, { k: 'cot_moi', t: 'Đơn vị tính', w: 6, g: 'Thành phẩm' }, { k: 'so_tam', t: 'SL (tấm)', n: true, g: 'Thành phẩm' },
-    { k: 'm2', t: 'DT (m²)', n: true, d: 2, g: 'Thành phẩm' }, { k: 'kg', t: 'TL (kg)', n: true, d: 1, calc: kgOf, g: 'Thành phẩm' }, { k: 'ma_mau', t: 'Mã màu', w: 8, g: 'Thành phẩm' },
-    { k: 'ma_don_hang', t: 'Mã đơn hàng', w: 10, g: 'Thành phẩm' }, { k: 'ma_tam', t: 'KH BV (mã tấm)', w: 12, g: 'Thành phẩm' }, { k: 'ghi_chu', t: 'Ghi chú', w: 14, g: 'Thành phẩm' },
+    { k: 'vat_lieu', t: 'Tên hàng', w: 10 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'rong', t: 'Rộng (mm)', n: true },
+    { k: 'mac_thep', t: 'Mác thép', w: 8 }, { k: 'cot_moi', t: 'Đơn vị tính', w: 6 }, { k: 'so_tam', t: 'SL (tấm)', n: true },
+    { k: 'm2', t: 'DT (m²)', n: true, d: 2 }, { k: 'kg', t: 'TL (kg)', n: true, d: 1, calc: kgOf }, { k: 'ma_mau', t: 'Mã màu', w: 8 },
+    { k: 'ma_don_hang', t: 'Mã đơn hàng', w: 10 }, { k: 'ma_tam', t: 'KH BV (mã tấm)', w: 12 }, { k: 'ghi_chu', t: 'Ghi chú', w: 14 },
     // chỉ QT0: số liệu kỹ thuật – dùng tính m²/tấm cho QT1 và lọc hàn khi tách đơn
-    { k: 'trai_rong', t: 'Rộng trải', n: true, g: 'Kỹ thuật bóc tách', u: 'mm' }, { k: 'trai_dai', t: 'Dài trải', n: true, g: 'Kỹ thuật bóc tách', u: 'mm' }, { k: 'm2_ht', t: 'm² hoàn thiện', n: true, d: 2, g: 'Kỹ thuật bóc tách' },
-    { k: 'loai_gc', t: 'Loại gia công', w: 9, g: 'Kỹ thuật bóc tách' }, { k: 'm2_tam', t: 'm²/tấm', n: true, d: 4, g: 'Kỹ thuật bóc tách' },
-    { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1, g: 'Kỹ thuật bóc tách' }, { k: 'chan', t: 'Số lần chấn', n: true, g: 'Kỹ thuật bóc tách' }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2, g: 'Kỹ thuật bóc tách' },
-    { k: 'phoi_rong', t: 'Rộng phôi', n: true, g: 'Kỹ thuật bóc tách' }, { k: 'phoi_dai', t: 'Dài phôi', n: true, g: 'Kỹ thuật bóc tách' }, { k: 'phoi_sl', t: 'SL phôi', n: true, g: 'Kỹ thuật bóc tách' }, { k: 'phoi_m2', t: 'm² phôi', n: true, d: 2, g: 'Kỹ thuật bóc tách' }] },
+    { k: 'trai_rong', t: 'Rộng trải', n: true, u: 'mm' }, { k: 'trai_dai', t: 'Dài trải', n: true, u: 'mm' }, { k: 'm2_ht', t: 'm² hoàn thiện', n: true, d: 2 },
+    { k: 'loai_gc', t: 'Loại gia công', w: 9 }, { k: 'm2_tam', t: 'm²/tấm', n: true, d: 4 },
+    { k: 'duong_han', t: 'Đường hàn (m)', n: true, d: 1 }, { k: 'chan', t: 'Số lần chấn', n: true }, { k: 'm2_dot', t: 'm² đột', n: true, d: 2 },
+    { k: 'phoi_rong', t: 'Rộng phôi', n: true }, { k: 'phoi_dai', t: 'Dài phôi', n: true }, { k: 'phoi_sl', t: 'SL phôi', n: true }, { k: 'phoi_m2', t: 'm² phôi', n: true, d: 2 }] },
   ds1: { t: 'Danh sách tấm', cols: [
     { k: 'ma_tam', t: 'Mã tấm', w: 10 }, { k: 'vat_lieu', t: 'Vật liệu', w: 8 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'rong', t: 'Rộng (mm)', n: true }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'mau_son', t: 'Màu sơn', w: 6 },
     { k: 'm2_tam', t: 'm² / tấm', n: true, d: 2 }, { k: 'm2', t: 'Tổng m²', n: true, d: 2, calc: m2Of }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf },
