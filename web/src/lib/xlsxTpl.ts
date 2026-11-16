@@ -81,6 +81,8 @@ export function buildData(o: Order, b: Batch, d: Doc, people: Record<string, Pro
       for (const c of T.cols) { const v = c.calc ? c.calc(r) : c.n ? numIn(r[c.k]) : r[c.k]; o2[c.k] = v == null ? '' : c.n ? Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0) : fmtCell(c, v); }
       // Cột tự tính (VD khối lượng kg) vẫn tính khi đang ẩn trong Quản trị → mẫu in dùng được
       for (const c of TABLES[def].cols) if (c.calc && (o2[c.k] == null || o2[c.k] === '')) { const v = c.calc(r); if (v != null) o2[c.k] = Math.round(Number(v) * 10 ** (c.d ?? 0)) / 10 ** (c.d ?? 0); }
+      // Tên gọi khác của cùng một cột (mẫu cũ dùng {tp.vat_lieu}/{tp.dai}, cột mới là ten_hang/dai_mm) → cả hai biến đều có giá trị
+      for (const [x, y] of [['vat_lieu', 'ten_hang'], ['dai', 'dai_mm']] as const) { if ((o2[x] == null || o2[x] === '') && o2[y] != null && o2[y] !== '') o2[x] = o2[y]; if ((o2[y] == null || o2[y] === '') && o2[x] != null && o2[x] !== '') o2[y] = o2[x]; }
       // Tên hàng = Tấm + Màu sơn + Rộng×Dài×Dày + Loại GC (bỏ phần trống)
       if (o2.ten_hang == null || o2.ten_hang === '') { const t = (x: unknown) => String(x ?? '').trim(); const kt = [t(r.rong), t(r.dai), t(r.day)].filter(Boolean).join('x');
         o2.ten_hang = ['Tấm', t(r.ma_mau ?? r.mau_son), kt, t(r.loai_gc)].filter(Boolean).join(' '); }
