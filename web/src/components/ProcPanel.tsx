@@ -57,13 +57,13 @@ import { useWho } from '../lib/people';
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
 
 /** Một quy trình của một đơn: danh sách hồ sơ (lần / lệnh / đợt) → chuỗi công ty → bản đang chọn */
-export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean }) {
+export default function ProcPanel({ o, proc, people, autoNew = false, info: infoP }: { o: Order; proc: Proc; people: Record<string, Profile>; autoNew?: boolean; info?: boolean }) {
   const pre = peek<ProcData>(procKey(o.id, proc), 20000); // đã tải sẵn cùng lúc với đầu đơn → hiện ngay
   const [batchesRaw, setBatches] = useState<Batch[] | null>(pre?.batches ?? null); const [docs, setDocs] = useState<Doc[]>(pre?.docs ?? []);
   const first = useRef('');
   const [psp] = useSearchParams();
   const [bid, setBid] = useState(() => psp.get('b') ?? ''); const [co, setCo] = useState<Company | ''>(() => (psp.get('co') as Company | null) ?? '');
-  const [info, setInfo] = useState(false);
+  const [info0] = useState(false); const info = infoP ?? info0;
   const [creating, setCreating] = useState(autoNew);
   const [psp2, setPsp2] = useSearchParams();
   useEffect(() => { if (psp2.get('new') !== '1' || psp2.get('tab') !== proc) return; setCreating(true); const n = new URLSearchParams(psp2); n.delete('new'); setPsp2(n, { replace: true }); }, [psp2.get('new')]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,13 +94,12 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   return (
     <div className="pp">
       <div className="pp-head">
-        <div className="pp-hl"><button type="button" className={'pp-qt' + (info ? ' on' : '')} aria-expanded={info} aria-label={PROC_NAME[proc] + ' – xem mô tả'} title={PROC_NAME[proc]} onClick={() => setInfo(!info)}><QtTag qt={proc} /><Icon name="info" size={13} /></button>
+        <div className="pp-hl">{canNew && batches.length > 0 && <button type="button" className={'pp-fab q' + proc.slice(2)} data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><span className="pp-fab-c"><Icon name="plus" size={22} /></span><span className="pp-fab-t">{({ QT0: 'Lần mới', QT1: 'XNĐH', QT2: 'Lệnh mới', QT3: 'Đợt mới' } as Record<string, string>)[proc]}</span></button>}
           {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
           {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" data-show={batches.length > 1 ? '0' : '1'} />}
-        {!canNew ? null : batches.length ? <button type="button" className="btn sm pp-new" data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={16} /><span className="pp-new-t">{({ QT0: 'Lần mới', QT1: 'XNĐH', QT2: 'Lệnh', QT3: 'Đợt' } as Record<string, string>)[proc]}</span></button>
-          : <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
+        {canNew && !batches.length && <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
       </div>
-      {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
+      {info && <p className="small pp-desc" role="note">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
             : proc === 'QT1' ? 'Phương Nam lập → duyệt → IPC chép danh sách, đổi giá → duyệt → Hanwa → duyệt. Mỗi bên in bộ của mình cho khách ký.'
             : proc === 'QT2' ? 'Đầu vào là Excel lệnh gia công từ phần mềm sản xuất. Một đơn có thể chia nhiều lệnh. Cả 3 công ty đều lập hồ sơ.'
             : 'Mỗi đợt giao một phiếu, qua 3 công ty rồi khách ký nhận. Tổng các đợt khớp lệnh do phần mềm sản xuất kiểm.'}</p>}

@@ -42,6 +42,7 @@ export default function OrderDetail() {
   const seeQ0 = adm0 || viewCo === 'PN'; // QT0 chỉ Phương Nam
   const TABV = TABS.filter(([k]) => k !== 'QT0' || seeQ0);
   const tab0 = sp.get('tab') ?? (seeQ0 ? 'QT0' : 'QT1'); const tab = TABV.some(([k]) => k === tab0) ? tab0 : seeQ0 ? 'QT0' : 'QT1';
+  const [qInfo, setQInfo] = useState(false); useEffect(() => { setQInfo(false); }, [tab]);
   const { can } = useAuth();
   // Mở lại đơn vừa xem: hiện ngay bản nhớ tạm rồi cập nhật ngầm
   const c0 = peek<{ o: Order; people: Record<string, Profile>; cust: Record<string, Customer>; events: Ev[]; bs: Batch[]; ds: Doc[] }>('od:' + id, 600000);
@@ -127,12 +128,13 @@ export default function OrderDetail() {
         <nav className="qt-tabs od-tabs" role="tablist" aria-label="Quy trình" ref={(el) => { const b = el?.querySelector<HTMLElement>('button.on'); if (b && el && (b.offsetLeft < el.scrollLeft || b.offsetLeft + b.offsetWidth > el.scrollLeft + el.clientWidth)) el.scrollLeft = b.offsetLeft - 16; }}>
           {TABV.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null; const isP = PROCS.includes(k as Proc);
             return <button key={k} role="tab" aria-selected={tab === k} className={(isP ? 'q' + k.slice(2) : 'qx') + (tab === k ? ' on' : '')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
-              <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
+              <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}</span>}</button>; }).flatMap((el, i) => { const k = TABV[i][0];
+              return PROCS.includes(k as Proc) && tab === k ? [el, <button key={k + '-i'} type="button" className={'odt-i q' + k.slice(2) + (qInfo ? ' on' : '')} aria-expanded={qInfo} aria-label={k + ' – xem mô tả quy trình'} title="Mô tả quy trình" onClick={() => setQInfo((v) => !v)}><Icon name="info" size={16} /></button>] : [el]; })}
         </nav>
       <div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />
       {tab === 'F0' && <F0 {...props} cust={cust} people={people} />}
-      {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} />}
+      {PROCS.includes(tab as Proc) && <ProcPanel key={tab} o={o} proc={tab as Proc} people={people} autoNew={sp.get('new') === '1'} info={qInfo} />}
       {tab === 'CT' && <RecordsTab orderId={o.id} people={people} />}
       {tab === 'LS' && (() => {
         // Nhật ký: đổi mã trạng thái sang chữ, nhóm theo ngày, hiện dạng dòng thời gian
