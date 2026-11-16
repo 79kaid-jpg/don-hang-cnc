@@ -102,50 +102,98 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
 }
 
 const STEPS_OF = (p: Proc) => FLOW[p];
-/** Quản trị → Checklist: mẫu mặc định cho từng bước của QT0–QT3 */
+const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
+const PRESETS: [string, Level][] = [['Đối chiếu số lượng với danh sách tấm QT0', 'req'], ['Kiểm tra thành tiền, VAT, tổng thanh toán', 'req'], ['Đã đính kèm file ký tay', 'req'],
+  ['Thông tin khách hàng, dự án đúng', 'req'], ['Kiểm tra quy cách, mác thép', 'req'], ['Hạn giao đã xác nhận với khách', 'rec'], ['Ghi chú chênh lệch (nếu có)', 'note']];
+/** Quản trị → Checklist: bản đồ bước + soạn trực tiếp từng mục */
 export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
   const [all, setAll] = useState<CheckTpl[] | null>(null); const [sel, setSel] = useState<[Proc, string]>(['QT0', 'tiep_nhan']);
-  const [nl, setNl] = useState(''); const [lv, setLv] = useState<Level>('req'); const [drag, setDrag] = useState<string | null>(null);
+  const [nl, setNl] = useState(''); const [drag, setDrag] = useState<string | null>(null);
+  const [undo, setUndo] = useState<CheckTpl | null>(null); const undoT = useRef<number>();
+  const [pane, setPane] = useState<'' | 'copy' | 'tpl' | 'view'>(''); const [dest, setDest] = useState('');
   const load = () => sb.from('step_checks').select('*').order('ord').then(({ data }) => { setAll((data as CheckTpl[]) ?? []); loadChecks(true); });
   useEffect(() => { load(); }, []);
-  const list = (all ?? []).filter((x) => x.proc === sel[0] && x.step === sel[1]);
-  const upd = async (id: string, patch: Partial<CheckTpl>) => { const { error } = await sb.from('step_checks').update(patch).eq('id', id); if (error) toast(errText(error)); else load(); };
-  const add = async () => { if (!nl.trim()) return; const { error } = await sb.from('step_checks').insert({ proc: sel[0], step: sel[1], label: nl.trim(), level: lv, ord: (list.at(-1)?.ord ?? 0) + 1 });
-    if (error) toast(errText(error)); else { setNl(''); load(); } };
-  const del = async (x: CheckTpl) => { if (!(await confirmDialog(`Xoá “${x.label}”? Hồ sơ đang làm đã chụp checklist vẫn giữ nguyên.`, 'Xoá mục'))) return;
-    const { error } = await sb.from('step_checks').delete().eq('id', x.id); if (error) toast(errText(error)); else load(); };
-  const drop = async (target: string) => { if (!drag || drag === target) return; const ids = list.map((x) => x.id); const a = ids.indexOf(drag), b = ids.indexOf(target);
-    ids.splice(b, 0, ids.splice(a, 1)[0]); setDrag(null);
+  const of = (p: string, st: string) => (all ?? []).filter((x) => x.proc === p && x.step === st && x.active);
+  const list = of(sel[0], sel[1]); const nReq = list.filter((x) => x.level === 'req').length;
+  const upd = async (id: string, patch: Partial<CheckTpl>) => { setAll((a) => a && a.map((x) => x.id === id ? { ...x, ...patch } : x));
+    const { error } = await sb.from('step_checks').update(patch).eq('id', id); if (error) { toast(errText(error)); load(); } else loadChecks(true); };
+  const insert = async (rows: { label: string; level: Level; auto?: string | null }[], p = sel[0], st = sel[1]) => {
+    const base = of(p, st).at(-1)?.ord ?? 0;
+    const { error } = await sb.from('step_checks').insert(rows.map((r, i) => ({ proc: p, step: st, label: r.label, level: r.level, auto: r.auto ?? null, ord: base + i + 1 })));
+    if (error) toast(errText(error)); load(); return !error; };
+  const add = async () => { const v = nl.trim(); if (!v) return; if (await insert([{ label: v, level: 'req' }])) setNl(''); };
+  const del = async (x: CheckTpl) => { const { error } = await sb.from('step_checks').delete().eq('id', x.id); if (error) { toast(errText(error)); return; }
+    load(); setUndo(x); clearTimeout(undoT.current); undoT.current = window.setTimeout(() => setUndo(null), 6000); };
+  const restore = async () => { if (!undo) return; const x = undo; setUndo(null);
+    const { error } = await sb.from('step_checks').insert({ proc: x.proc, step: x.step, label: x.label, level: x.level, auto: x.auto ?? null, ord: x.ord }); if (error) toast(errText(error)); load(); };
+  const reorder = async (ids: string[]) => { setAll((a) => a && a.map((x) => ids.includes(x.id) ? { ...x, ord: ids.indexOf(x.id) + 1 } : x).sort((p, q) => p.ord - q.ord));
     await Promise.all(ids.map((id, i) => sb.from('step_checks').update({ ord: i + 1 }).eq('id', id))); load(); };
+  const drop = (target: string) => { if (!drag || drag === target) return; const ids = list.map((x) => x.id); const a = ids.indexOf(drag), b = ids.indexOf(target);
+    ids.splice(b, 0, ids.splice(a, 1)[0]); setDrag(null); reorder(ids); };
+  const move = (i: number, d: number) => { const ids = list.map((x) => x.id); const j = i + d; if (j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; reorder(ids); };
+  const copyTo = async () => { if (!dest || !list.length) return; const [p, st] = dest.split('|');
+    if (await insert(list.map((x) => ({ label: x.label, level: x.level, auto: p === sel[0] ? x.auto : null })), p as Proc, st)) { toast(`Đã chép ${list.length} mục sang ${p} · ${STATUS[st]}`); setPane(''); setDest(''); } };
+  const stepName = (p: Proc, st: string) => p + ' · ' + STATUS[st];
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div><h2 style={{ margin: 0 }}>Checklist theo bước</h2>
-        <p className="small muted" style={{ margin: '4px 0 0' }}>Mẫu mặc định cho từng bước. Khi hồ sơ bắt đầu tích, checklist được chụp lại vào hồ sơ – sửa mẫu chỉ áp dụng cho hồ sơ chưa tích. Mục <b>Bắt buộc</b> chưa tích thì không ký chuyển bước được.</p></div>
-      {!canEdit && <div className="msg info"><Icon name="alert" size={16} /><span>Chỉ Admin IT được sửa.</span></div>}
-      <div className="sca-wrap"><div className="sca-grid">
-        <label className="f sca-pick">Bước
-          <select value={sel[0] + '|' + sel[1]} onChange={(e) => { const [p, st] = e.target.value.split('|'); setSel([p as Proc, st]); }}>
-            {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => <optgroup key={p} label={p + ' · ' + PROC_NAME[p]}>
-              {STEPS_OF(p).map((st) => <option key={st} value={p + '|' + st}>{STATUS[st]} ({(all ?? []).filter((x) => x.proc === p && x.step === st && x.active).length})</option>)}</optgroup>)}
+    <div className="ck2">
+      <section className="card ck2-map" aria-label="Bản đồ checklist">
+        <div><h2>Bản đồ checklist</h2><p className="small muted">Mỗi ô: số mục · <b className="ck2-red">●</b> số mục bắt buộc. Bấm ô để soạn.</p></div>
+        <label className="f ck2-pick">Bước
+          <select value={sel[0] + '|' + sel[1]} onChange={(e) => { const [p, st] = e.target.value.split('|'); setSel([p as Proc, st]); setPane(''); }}>
+            {PROCS.map((p) => <optgroup key={p} label={p + ' · ' + PROC_NAME[p]}>{STEPS_OF(p).map((st) => { const l = of(p, st);
+              return <option key={st} value={p + '|' + st}>{STATUS[st]} ({l.length} mục · {l.filter((x) => x.level === 'req').length} bắt buộc)</option>; })}</optgroup>)}
           </select></label>
-        <nav className="sca-nav" aria-label="Chọn bước">{(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => <div key={p}><h4>{p} · {PROC_NAME[p]}</h4>
-          {STEPS_OF(p).map((s) => { const n = (all ?? []).filter((x) => x.proc === p && x.step === s && x.active).length;
-            return <button key={s} className={sel[0] === p && sel[1] === s ? 'on' : ''} onClick={() => setSel([p, s])}>{STATUS[s]}<em>{n}</em></button>; })}</div>)}</nav>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <b>{sel[0]} · {STATUS[sel[1]]}</b>
-          <ul className="sca-list">{list.map((x) => (
-            <li key={x.id} className={'sca-row' + (drag === x.id ? ' drag' : '')} draggable={canEdit} onDragStart={() => setDrag(x.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(x.id)}>
-              <span className="grip" aria-hidden="true">⋮⋮</span>
-              <input className="sca-label" defaultValue={x.label} disabled={!canEdit} aria-label="Nội dung" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== x.label && upd(x.id, { label: e.target.value.trim() })} />
-              <AutoPick proc={sel[0]} value={x.auto ?? ''} disabled={!canEdit} onChange={(v) => upd(x.id, { auto: v || null })} />
-              <select className="sca-level" value={x.level} disabled={!canEdit} aria-label="Mức" onChange={(e) => upd(x.id, { level: e.target.value as Level })}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
-              {canEdit && <button className="btn xs icon-only sca-del" aria-label="Xoá" onClick={() => del(x)}><Icon name="trash" size={13} /></button>}
-            </li>))}
-            {all && !list.length && <li className="small muted">Bước này chưa có mục nào.</li>}</ul>
-          {canEdit && <div className="sc-add"><input value={nl} placeholder="Thêm mục…" onChange={(e) => setNl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
-            <select value={lv} onChange={(e) => setLv(e.target.value as Level)} style={{ width: 'auto', minWidth: 130, height: 36, minHeight: 36 }}>{(Object.keys(LEVEL_NAME) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_NAME[l]}</option>)}</select>
-            <button className="btn xs primary" onClick={add} disabled={!nl.trim()}><Icon name="plus" size={13} />Thêm</button></div>}
-        </div></div></div>
+        <div className="ck2-rows">{PROCS.map((p) => <div key={p} className="ck2-row"><b className={'ck2-p ' + p}>{p}</b>
+          <div className="ck2-cells">{STEPS_OF(p).map((st) => { const l = of(p, st); const r = l.filter((x) => x.level === 'req').length; const on = sel[0] === p && sel[1] === st;
+            return <button key={st} className={'ck2-cell' + (on ? ' on' : '') + (!l.length ? ' empty' : '')} aria-pressed={on} onClick={() => { setSel([p, st]); setPane(''); }}>
+              <span className="t">{STATUS[st]}</span><span className="n">{l.length}{r > 0 && <em><b className="ck2-red">●</b>{r}</em>}</span></button>; })}</div></div>)}</div>
+        <p className="ck2-note small">Thay đổi áp dụng cho <b>phiếu mới</b>. Phiếu đang làm giữ checklist đã chụp.</p>
+      </section>
+
+      <section className="card ck2-ed" aria-label="Soạn checklist">
+        <header className="ck2-h"><div><small className={'ck2-p ' + sel[0]}>{sel[0]} · {PROC_NAME[sel[0]]}</small><h2>Bước {STATUS[sel[1]]}</h2></div>
+          <div className="ck2-tools">
+            {canEdit && <button className={'btn sm' + (pane === 'tpl' ? ' on' : '')} aria-pressed={pane === 'tpl'} onClick={() => setPane(pane === 'tpl' ? '' : 'tpl')}>Mẫu gợi ý</button>}
+            {canEdit && <button className={'btn sm' + (pane === 'copy' ? ' on' : '')} aria-pressed={pane === 'copy'} disabled={!list.length} onClick={() => setPane(pane === 'copy' ? '' : 'copy')}><span className="ck2-lg">Sao chép sang…</span><span className="ck2-sm">Sao chép</span></button>}
+            <button className={'btn sm' + (pane === 'view' ? ' primary' : '')} aria-pressed={pane === 'view'} onClick={() => setPane(pane === 'view' ? '' : 'view')}><Icon name="eye" size={15} /><span className="ck2-lg">Xem như người làm</span><span className="ck2-sm">Xem trước</span></button>
+          </div></header>
+        {!canEdit && <div className="msg info"><Icon name="alert" size={16} /><span>Chỉ Admin IT được sửa.</span></div>}
+        {pane === 'tpl' && <div className="ck2-pane"><b>Bấm để thêm vào bước này</b><div className="ck2-chips">{PRESETS.filter(([t]) => !list.some((x) => x.label === t)).map(([t, l]) =>
+          <button key={t} className="ck2-chip" onClick={() => insert([{ label: t, level: l }])}><Icon name="plus" size={13} />{t}<em className={'lv ' + l}>{LEVEL_NAME[l]}</em></button>)}</div></div>}
+        {pane === 'copy' && <div className="ck2-pane ck2-copy"><label className="f">Chép {list.length} mục sang bước
+          <select value={dest} onChange={(e) => setDest(e.target.value)}><option value="">— Chọn bước —</option>
+            {PROCS.map((p) => <optgroup key={p} label={p + ' · ' + PROC_NAME[p]}>{STEPS_OF(p).filter((st) => !(p === sel[0] && st === sel[1])).map((st) => <option key={st} value={p + '|' + st}>{STATUS[st]} (đang có {of(p, st).length})</option>)}</optgroup>)}
+          </select></label><button className="btn primary sm" disabled={!dest} onClick={copyTo}>Sao chép</button>
+          <span className="small muted">Mục được thêm vào cuối, không xoá mục đang có. Sang quy trình khác thì bỏ phần “Tự tích”.</span></div>}
+
+        <div className={'ck2-gate' + (nReq ? '' : ' none')}>{nReq ? <><b>Người làm phải tích đủ {nReq} mục bắt buộc</b> mới chuyển được bước tiếp theo.</> : 'Bước này chưa có mục bắt buộc – người làm chuyển bước tự do.'}</div>
+
+        {pane === 'view' ? <ul className="ck2-view" aria-label="Xem trước như người làm">{list.map((x) => <li key={x.id}>
+            <span className={'box' + (x.auto ? ' auto' : '')} aria-hidden="true">{x.auto ? <Icon name="clock" size={13} /> : null}</span>
+            <span className="l">{x.label}{x.auto && <small>Tự tích khi {AUTO_HINT(x.auto)}</small>}</span><em className={'lv ' + x.level}>{LEVEL_NAME[x.level]}</em></li>)}
+          {!list.length && <li className="muted">Bước này chưa có mục nào.</li>}</ul>
+        : <ol className="ck2-list">{list.map((x, i) => (
+          <li key={x.id} className={'ck2-it' + (drag === x.id ? ' drag' : '')} draggable={canEdit} onDragStart={() => setDrag(x.id)} onDragEnd={() => setDrag(null)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(x.id)}>
+            <span className="grip" aria-hidden="true">⋮⋮</span>
+            <div className="ck2-main">
+              <input className="ck2-label" defaultValue={x.label} key={x.id + x.label} disabled={!canEdit} aria-label={'Nội dung mục ' + (i + 1)}
+                onBlur={(e) => { const v = e.target.value.trim(); if (!v) { e.target.value = x.label; toast('Nội dung không được để trống'); } else if (v !== x.label) upd(x.id, { label: v }); }} />
+              <label className="ck2-auto">Tự tích khi: <AutoPick proc={sel[0]} value={x.auto ?? ''} disabled={!canEdit} onChange={(v) => upd(x.id, { auto: v || null })} /></label>
+            </div>
+            <div className="ck2-lv" role="group" aria-label="Mức">{(['req', 'rec', 'note'] as Level[]).map((l) =>
+              <button key={l} type="button" className={'lv ' + l} aria-pressed={x.level === l} disabled={!canEdit} onClick={() => x.level !== l && upd(x.id, { level: l })}>{l === 'rec' ? 'Nên làm' : LEVEL_NAME[l]}</button>)}</div>
+            {canEdit && <div className="ck2-act">
+              <button className="ck2-mv" aria-label="Lên" disabled={!i} onClick={() => move(i, -1)}>↑</button>
+              <button className="ck2-mv" aria-label="Xuống" disabled={i === list.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button className="ck2-del" aria-label={'Xoá ' + x.label} onClick={() => del(x)}><Icon name="trash" size={15} /></button></div>}
+          </li>))}
+          {all && !list.length && <li className="ck2-empty">Bước này chưa có mục nào. Gõ bên dưới hoặc dùng “Mẫu gợi ý”.</li>}</ol>}
+
+        {canEdit && pane !== 'view' && <label className="ck2-add"><span className="sr">Thêm mục mới</span>
+          <input value={nl} placeholder="+ Thêm mục… (Enter để thêm, mặc định Bắt buộc)" onChange={(e) => setNl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          {nl.trim() && <button className="btn primary sm" onClick={add}>Thêm</button>}</label>}
+        {undo && <div className="ck2-undo" role="status">Đã xoá “{undo.label}”<button onClick={restore}>Hoàn tác</button></div>}
+      </section>
     </div>);
 }
 
@@ -155,7 +203,7 @@ function AutoPick({ proc, value, disabled, onChange }: { proc: Proc; value: stri
   const hs = fieldsOf(proc, 'header'), fs = fieldsOf(proc, 'file');
   const tbs = PROC_TABLES[proc].map(([k, def]) => ({ k, t: TABLES[def]?.t ?? k, cols: TABLES[def]?.cols ?? [] }));
   return <select className="sca-auto" value={value} disabled={disabled} aria-label="Tự kiểm tra" onChange={(e) => onChange(e.target.value)}>
-    <option value="">Tích tay</option>
+    <option value="">Không – người làm tự tích</option>
     <option value="req">⚡ Đủ trường bắt buộc của bước</option>
     <optgroup label="⚡ Ô thông tin đã nhập">{hs.map((f) => <option key={f.key} value={'h:' + f.key}>{f.label}</option>)}</optgroup>
     <optgroup label="⚡ Bảng có dữ liệu">{tbs.map((t) => <option key={t.k} value={'t:' + t.k}>{t.t}</option>)}</optgroup>
