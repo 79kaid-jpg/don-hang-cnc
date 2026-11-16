@@ -546,8 +546,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                 {xx.by && <span className="pp-fby" title={xx.step ? 'Tải ở bước ' + (STATUS[xx.step] ?? xx.step) : undefined}>Tải bởi {who(xx.by)}</span>}</span>; })}
               {mine.length === 0 && <span className="small muted">chưa có</span>}
               {ed && <span className="pp-fact">
-                {dels.length > 0 && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới"><Icon name="refresh" size={13} />Thay<input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
-                <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} />{mine.length ? 'Thêm' : 'Tải lên'}<input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>
+                {dels.length > 0 && <label className="btn xs" title="Thay các file bạn đã tải bằng file mới" aria-label="Thay file"><Icon name="refresh" size={13} /><span className="pp-fat">Thay</span><input type="file" multiple hidden onChange={(e) => upload(e, k, true)} /></label>}
+                <label className="btn xs" title={mine.length ? 'Thêm file' : 'Tải file lên'} aria-label={mine.length ? 'Thêm file' : 'Tải file lên'}><Icon name="upload" size={13} /><span className="pp-fat">{mine.length ? 'Thêm' : 'Tải lên'}</span><input type="file" multiple hidden onChange={(e) => upload(e, k)} /></label>
                 {one && <button type="button" className="btn xs icon-only pp-fdel" title={'Gỡ ' + one.name} aria-label={'Gỡ ' + one.name} onClick={() => removeFile(one.path, one.name)}><Icon name="trash" size={13} /></button>}</span>}</>; })()}</span></div>))}
       </div>
 
