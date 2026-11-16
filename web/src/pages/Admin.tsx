@@ -126,7 +126,7 @@ export default function Admin() {
             {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); const tags = [...p.roles.map((r) => ROLES[r] ?? r)];
               return (
               <li key={p.id} className={'adm2-row' + (p.active ? '' : ' off')}>
-                <button className="adm2-open" onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
+                <button className={'adm2-open' + (seen ? ' has-seen' : '')} onClick={() => setOpenId(p.id)} aria-label={'Mở ' + p.full_name}>
                   <span className={'adm2-av u-' + p.unit}>{ini(p.full_name)}</span>
                   <span className="adm2-who"><b>{p.full_name || '(chưa đặt tên)'}</b>
                     <span className="small muted">{UNIT_NAME[p.unit] ?? p.unit}{p.position ? ' · ' + p.position : ''}{(ucos[p.id] ?? []).length > 1 && <span className="adm2-cos" title="Kiêm nhiệm nhiều công ty (theo bảng Phụ trách quy trình)">{(ucos[p.id] ?? []).map((c) => <span key={c} className={'adm2-co co-' + c}>{({ PN: 'PNC', IPC: 'IPC', HW: 'HAN' } as Record<string, string>)[c] ?? c}</span>)}</span>}{!p.active && <span className="chip bad sm">Đã khoá</span>}</span></span>
