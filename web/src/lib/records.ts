@@ -41,21 +41,19 @@ async function toPdf(html: string, stamp: { text: string; sub: string; color: st
   // Ngắt trang không cắt ngang dòng bảng: chèn khoảng trống trước dòng sẽ bị cắt
   const W = landscape ? 1100 : 760; const pageMm = landscape ? [297, 210] : [210, 297];
   const pageH = Math.floor(W * (pageMm[1] - 6 - 8) / (pageMm[0] - 6 - 6));
-  if (!fitOnePage(wrap, W, pageH)) keepRows(wrap, pageH);
+  const RW = fitOnePage(wrap, W, pageH); if (RW === W) keepRows(wrap, pageH);
   try {
-    return await h2p().set({ margin: [6, 6, 8, 6], filename: 'chung-tu.pdf', image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: landscape ? 1100 : 760, windowWidth: (landscape ? 1100 : 760) + 40, scrollX: 0, scrollY: 0 },
+    return await h2p().set({ margin: [6, 6, 8, 6], filename: 'chung-tu.pdf', image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: RW, windowWidth: RW + 40, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(wrap).outputPdf('blob');
   } finally { hold.remove(); }
 }
 
-/** Phiếu chỉ dư chút (≤15%) so với 1 trang: thu nhỏ cho vừa 1 trang (không nhỏ hơn 85%) */
-function fitOnePage(wrap: HTMLElement, W: number, pageH: number): boolean {
-  const H = wrap.scrollHeight; if (H <= pageH || H > pageH * 1.15) return false;
-  const inner = document.createElement('div'); while (wrap.firstChild) inner.appendChild(wrap.firstChild); wrap.appendChild(inner);
+/** Phiếu chỉ dư chút (≤15%) so với 1 trang: dựng rộng hơn để khi co vào khổ A4 vừa 1 trang (không nhỏ hơn 85%). Trả về bề rộng dựng (px) */
+function fitOnePage(wrap: HTMLElement, W: number, pageH: number): number {
+  const H = wrap.scrollHeight; if (H <= pageH || H > pageH * 1.15) return W;
   let s = pageH / H;
-  for (let i = 0; i < 3; i++) { inner.style.cssText = `width:${W / s}px;transform:scale(${s});transform-origin:0 0;position:relative`; const h = inner.scrollHeight * s; if (h <= pageH - 2) break; s *= (pageH - 2) / h; }
-  if (s < 0.85) { while (inner.firstChild) wrap.appendChild(inner.firstChild); inner.remove(); return false; }
-  wrap.style.height = Math.floor(inner.scrollHeight * s) + 'px'; wrap.style.overflow = 'hidden'; return true;
+  for (let i = 0; i < 4; i++) { wrap.style.width = W / s + 'px'; const h = wrap.scrollHeight * s; if (h <= pageH - 2) return Math.ceil(W / s); s *= (pageH - 2) / h; if (s < 0.85) break; }
+  wrap.style.width = W + 'px'; return W;
 }
 
 /** Đẩy dòng bảng bị vắt qua ranh giới trang sang trang sau – các dòng có ô gộp (rowspan) giữ thành một khối */
