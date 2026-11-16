@@ -3,7 +3,7 @@ import { Sheet } from './Sheet';
 import { switchCo } from './ScopeChip';
 import { useScope } from '../lib/myco';
 import { Annotate } from './Annotate';
-import { bocTachRows } from '../lib/excelCheck';
+import { bocTachRows, haoHutOf } from '../lib/excelCheck';
 import { FixMsg } from './FixMsg';
 import { isTyping, keyOf, modalOpen } from './Shortcuts';
 import { missingReq, jumpField } from '../lib/checks';
@@ -453,7 +453,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const tb = tblDefs.find((x) => x.key === 'ds'); if (!tb || !tb.ed) return;
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
     const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
-    const raw = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
+    const shs = wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) }));
+    const raw = bocTachRows(shs); const hh = proc === 'QT0' ? haoHutOf(shs) : null;
     const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.don_vi_tinh ?? '').trim() ? { ...r, don_vi_tinh: 'tấm' } : r));
     const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
     if (!add.length) return;
@@ -465,7 +466,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       else return; }
     const nlNext = nl.length ? (next === add ? nlFromPhoi(add as never) : nlFromPhoi(next as never)) : null;
     setT((x) => ({ ...x, ds: next, ...(nlNext ? { nl: nlNext } : {}) })); setDirty(true);
-    toast('Đã điền ' + add.length + ' dòng thành phẩm' + (nlNext ? ' và ' + nlNext.length + ' dòng NVL' : '') + ' – bấm Lưu để giữ');
+    let hm = '';
+    if (proc === 'QT0' && hFields.some((f) => f.key === 'hao_hut')) {
+      if (!hh) hm = ' · Không tìm thấy tỷ lệ hao hụt trong file';
+      else { const cur0 = String(h.hao_hut ?? '').trim(); const nv = String(hh.v);
+        if (!cur0 || cur0 === nv || await confirmDialog(`Hao hụt dự kiến đang là ${cur0}%. Thay bằng ${nv}% đọc từ file?`, 'Thay')) { setH((x) => ({ ...x, hao_hut: nv, _hao_src: hh.src, _hao_v: nv })); hm = ' · Hao hụt ' + nv + '%'; } } }
+    toast('Đã điền ' + add.length + ' dòng thành phẩm' + (nlNext ? ' và ' + nlNext.length + ' dòng NVL' : '') + hm + ' – bấm Lưu để giữ');
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;
@@ -516,7 +522,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} lap={d.status === 'lap'} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
-          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
+          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}{f.key === 'hao_hut' && h._hao_src && <ColTip info={['Hao hụt đọc từ file bóc tách', 'Ô ' + h._hao_src, 'Giá trị file: ' + h._hao_v + '%' + (String(v) !== String(h._hao_v) ? ' · đã sửa tay thành ' + v + '%' : '')]} />}</span>
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : !['text', 'number', 'select', 'textarea'].includes(f.type) ? <HeadInput f={f} v={String(v)} on={on} disabled={!ed} opts={f.type === 'lookup' ? lookOpts(f.options[0]) : undefined} calc={f.type === 'formula' ? fxHead(f) : undefined} />
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>

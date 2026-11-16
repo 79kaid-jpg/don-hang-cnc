@@ -83,3 +83,21 @@ export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Reco
   for (const r of out) { const vl = String(r.vat_lieu ?? '').trim(), mt = String(r.ma_tam ?? '').trim(); if (mt) { if (!String(r.mac_thep ?? '').trim() && vl) r.mac_thep = vl; r.vat_lieu = mt; } }
   return out;
 }
+
+/** Tỷ lệ hao hụt (%) từ file bóc tách: cột "Tỷ lệ hao hụt" (mặc định cột Q), dòng "Tổng kết"/"Tổng" có số */
+export function haoHutOf(sheets: { name: string; rows: unknown[][] }[]): { v: number; src: string } | null {
+  const col = (j: number) => { let s = ''; for (let n = j + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+  const order = [...sheets].sort((a, b) => Number(norm(b.name) === 'giacong') - Number(norm(a.name) === 'giacong'));
+  for (const sh of order) {
+    const R = sh.rows; const cs: number[] = [];
+    for (let i = 0; i < Math.min(R.length, 30); i++) (R[i] ?? []).forEach((v, j) => { if (norm(v).includes('tylehaohut') && !cs.includes(j)) cs.push(j); });
+    if (norm(sh.name) === 'giacong' && !cs.includes(16)) cs.push(16);
+    for (const ci of cs) for (let i = 0; i < R.length; i++) { const r = R[i] ?? [];
+      if (!r.some((v) => /^tong(ket)?$/.test(norm(v)))) continue;
+      const v = r[ci]; if (v === '' || v == null || !Number.isFinite(Number(v))) continue; const x = Number(v);
+      const pct = Math.abs(x) <= 1 && x !== 0 ? x * 100 : x;
+      const o = num(r[ci - 2]), p = num(r[ci - 1]);
+      return { v: +pct.toFixed(2), src: sh.name + '!' + col(ci) + (i + 1) + (o && p ? ` = 1 − ${+o.toFixed(2)} ÷ ${+p.toFixed(2)} (DT thành phẩm ÷ DT phôi)` : '') }; }
+  }
+  return null;
+}
