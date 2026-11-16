@@ -1,4 +1,5 @@
 import { keyOf } from '../components/Shortcuts';
+import { askRating } from '../components/Rating';
 import { useFields } from '../lib/fields';
 import { Ring } from '../components/Ring';
 import { itemsOf, progress, useChecks, applyAuto, reqKeysOf, type CheckItem } from '../lib/checks';
@@ -295,7 +296,7 @@ function Advance({ c, action, proc, onClose, onDone }: { c: Card; action: 'next'
   const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const nav = useNavigate();
   const st = c.doc?.status ?? '';
   const go = async () => { setBusy(true); setErr('');
-    try { const r = await advanceDoc(c.o!, c.b, c.doc!, action, note.trim()); setBusy(false); toast(action === 'next' ? 'Đã ký' : 'Đã trả về'); if (r.warn) setTimeout(() => toast(r.warn!), 1500); onDone(); }
+    try { const r = await advanceDoc(c.o!, c.b, c.doc!, action, note.trim()); setBusy(false); toast(action === 'next' ? 'Đã ký' : 'Đã trả về'); if (r.warn) setTimeout(() => toast(r.warn!), 1500); onDone(); if (action === 'next' && (st === 'duyet' || st === 'duyet_them')) askRating(c.doc!.id, c.b.proc + ' · ' + c.b.title + ' · ' + c.doc!.company); }
     catch (e) { setBusy(false); setErr(errText(e as Error)); } };
   return (
     <div className="modal-bg" onClick={onClose}><div className="modal mv" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>

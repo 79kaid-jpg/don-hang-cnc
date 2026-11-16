@@ -191,12 +191,12 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
   useEffect(() => { loadSpins(); }, []);
   if (!c || !data) return <p className="muted">Đang tải…</p>;
   const set = <K extends keyof PerfCfg>(k: K, v: PerfCfg[K]) => setC({ ...c, [k]: v });
-  const wsum = c.w_ontime + c.w_speed + c.w_quality + c.w_volume;
+  const wsum = c.w_ontime + c.w_speed + c.w_quality + c.w_volume + (c.w_rating ?? 0);
   const dirty = JSON.stringify(c) !== JSON.stringify(data.cfg);
   const save = async () => { setBusy(true); const { error } = await sb.rpc('set_perf_config', { p_cfg: c }); setBusy(false); if (error) toast(error.message); else { toast('Đã lưu cấu hình'); reload(); } };
   const num = (k: keyof PerfCfg, label: string, unit: string, hint?: string, step = 1) => <label className="pa-f"><span>{label}</span>
     <span className="pa-in"><input type="number" step={step} value={c[k] as number} disabled={!canEdit} onChange={(e) => set(k, +e.target.value as never)} /><em>{unit}</em></span>{hint && <small>{hint}</small>}</label>;
-  const W = [['w_ontime', 'Đúng hạn', '#2E8B57'], ['w_speed', 'Tốc độ', '#2F6FB0'], ['w_quality', 'Chất lượng', '#7A4DB3'], ['w_volume', 'Khối lượng', '#C9A24A']] as const;
+  const W = [['w_ontime', 'Đúng hạn', '#2E8B57'], ['w_speed', 'Tốc độ', '#2F6FB0'], ['w_quality', 'Chất lượng', '#7A4DB3'], ['w_volume', 'Khối lượng', '#C9A24A'], ['w_rating', 'Đánh giá sao', '#D98A0B']] as const;
   const totW = Math.max(1, c.prizes.reduce((a, p) => a + p.weight, 0));
   const names = Object.fromEntries(data.people.map((p) => [p.id, p.full_name]));
   return <div className="pa">
@@ -207,7 +207,7 @@ export function PerfAdmin({ canEdit }: { canEdit: boolean }) {
       <div className="pa-grid">
         {num('period_days', 'Kỳ đánh giá', 'ngày')}{num('sla_h', 'Hạn mỗi bước', 'giờ', 'Quá hạn khi giữ lâu hơn')}
         {num('overdue_penalty', 'Phạt mỗi hồ sơ quá hạn', 'điểm', 'Trừ thẳng vào điểm')}{num('min_steps', 'Tối thiểu để xếp hạng', 'bước')}
-        {num('volume_cap', 'Trần khối lượng', '× TB', 'Làm nhiều hơn mức này không cộng thêm', 0.1)}
+        {num('volume_cap', 'Trần khối lượng', '× TB', 'Làm nhiều hơn mức này không cộng thêm', 0.1)}{num('rating_min', 'Tối thiểu để tính sao', 'lượt', 'Ít hơn: bỏ tiêu chí Đánh giá sao cho người đó')}
       </div></section>
     <section className="pa-card"><header><h3><Icon name="crown" size={18} />Điều kiện vương miện</h3></header>
       <p className="small muted" style={{ marginTop: 0 }}>Người hạng 1 chỉ được vương miện khi đạt <b>tất cả</b> điều kiện dưới đây và không giữ hồ sơ quá hạn nào.</p>

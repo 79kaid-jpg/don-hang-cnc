@@ -31,6 +31,7 @@ import {
   stampDens, matOf, subRows,
 } from '../lib/proc';
 import { Icon } from './Icon';
+import { askRating } from './Rating';
 import { procData, procKey, type ProcData } from '../lib/orderData';
 import { evalFormula } from '../lib/formula';
 import { HeadInput, headErr } from './HeadInput';
@@ -406,6 +407,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       const r = await advanceDoc(o, b, { ...d, ...h0(d) }, action, n, to); setBusy(false);
       toast(action === 'next' ? 'Đã ký → ' + (STATUS[r.next] ?? r.next) : action === 'back' ? 'Đã trả về' : 'Đã đánh Thất bại'); if (r.warn) setTimeout(() => toast(r.warn!), 1500);
       setAsk(''); setWhy(''); onChanged();
+      if (action === 'next' && (d.status === 'duyet' || d.status === 'duyet_them')) askRating(d.id, proc + ' · ' + b.title + ' · ' + d.company);
     } catch (e) { setBusy(false); const m = errText(e as Error); const ms = /checklist bắt buộc/.test(m) ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
       setErr(ms.length ? m + ' – còn trống: ' + ms.map((x) => x.label).join(', ') : m); if (ms[0]) setTimeout(() => jumpField(ms[0].key), 300); }
   };

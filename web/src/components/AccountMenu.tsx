@@ -29,6 +29,7 @@ export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
           <span className="acc-id"><b>{me.full_name}</b><span className="small muted">{[me.position, me.unit].filter(Boolean).join(' · ')}</span></span></div>
         <div className="acc-sec"><Appearance /></div>
         <div className="acc-list">
+          <button role="menuitem" onClick={() => go('/phan-hoi')}><Icon name="star" size={17} /><span>Phản hồi cho tôi</span></button>
           <button role="menuitem" onClick={() => go('/zalo')}><Icon name="bell" size={17} /><span>Thông báo Zalo</span>
             <span className={'acc-st' + (noZalo ? ' off' : '')}>{noZalo ? 'Chưa liên kết' : 'Đã liên kết'}</span></button>
           <button role="menuitem" onClick={() => go('/cai-app')}><Icon name="download" size={17} /><span>Hướng dẫn & cài app</span></button>

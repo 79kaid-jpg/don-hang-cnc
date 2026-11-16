@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { sb } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Icon } from './components/Icon';
+import { RatingHost } from './components/Rating';
 import { ScopeChip } from './components/ScopeChip';
 import { ConfirmHost, Toaster } from './components/ui';
 import Login from './pages/Login';
@@ -33,6 +34,7 @@ const ProjectReport = lazy(() => import('./pages/ProjectReport'));
 import { Viewer } from './components/Viewer';
 const ProcessDoc = lazy(() => import('./pages/ProcessDoc'));
 const RoleGuide = lazy(() => import('./pages/RoleGuide'));
+const MyRatings = lazy(() => import('./components/Rating'));
 const Simulate = lazy(() => import('./pages/Simulate'));
 
 // Tải sẵn các trang chính khi máy rảnh → bấm menu là mở ngay
@@ -140,6 +142,7 @@ function Shell() {
               {can('admin_it') && <NavLink to="/quan-tri"><Icon name="settings" />Quản trị</NavLink>}
               {can('admin_it') && <NavLink to="/mo-phong"><Icon name="run" />Mô phỏng quy trình</NavLink>}
               {(can('thiet_ke_qt') || wfN > 0) && <NavLink to="/quy-trinh-moi"><Icon name="flow" />Tạo quy trình</NavLink>}
+              <NavLink to="/phan-hoi"><Icon name="star" />Phản hồi cho tôi</NavLink>
               <NavLink to="/zalo"><Icon name="bell" />Thông báo Zalo{!me.zalo_chat_id && <span className="nav-badge">!</span>}</NavLink>
               <NavLink to="/cai-app"><Icon name="download" />Hướng dẫn & cài app</NavLink>
               <button onClick={() => sb.auth.signOut()}><Icon name="logout" />Đăng xuất</button>
@@ -167,9 +170,11 @@ function Shell() {
           <Route path="/cai-app" element={<Install />} />
           <Route path="/quy-trinh" element={<ProcessDoc />} />
           <Route path="/huong-dan" element={<RoleGuide />} />
+          <Route path="/phan-hoi" element={<MyRatings />} />
           <Route path="/zalo" element={<><div className="page-head"><div><h1>Thông báo Zalo</h1><p className="muted">Nhận tin nhắn từ bot khi đến lượt bạn duyệt phiếu.</p></div></div><ZaloLink /></>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes></Suspense></ErrorBoundary>
+        <RatingHost />
       </main>
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
