@@ -3573,3 +3573,8 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 .act-box .act-bt{flex:1;min-width:0}.act-box small{display:block;opacity:.75;font-size:11.5px}
 .act-box .btn{min-height:36px;border-radius:999px;flex:none;border-color:#A85A12;color:#5C2E07}
 .sheet .act-box{margin:4px 0 12px;font-size:14px}.sheet .act-box .btn{min-height:44px}
+/* Thanh bên thu gọn: hộp làm thay chỉ còn chữ T + nút × xếp dọc */
+.app.side-hidden:not(.side-peek) .side .act-box{flex-direction:column;gap:4px;padding:6px 2px;border-radius:12px;align-items:center}
+.app.side-hidden:not(.side-peek) .side .act-box .act-bt{display:none}
+.app.side-hidden:not(.side-peek) .side .act-box .btn{font-size:0;gap:0;padding:0;min-height:30px;width:30px;min-width:0;justify-content:center}
+.app.side-hidden:not(.side-peek) .side .act-box .btn svg{width:15px;height:15px}
