@@ -770,7 +770,19 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { vk?: string; q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { vk?: string; q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+  // Bộ chọn cột (nhớ theo người dùng, theo bảng) · mật độ · mở rộng toàn màn hình
+  const pk = 'pp-cols:' + (fname.split('-').slice(-2).join('-'));
+  const TECH = new Set(['trai_rong', 'trai_dai', 'm2_ht', 'loai_gc', 'm2_tam', 'duong_han', 'chan', 'm2_dot', 'phoi_rong', 'phoi_dai', 'phoi_sl', 'phoi_m2']);
+  const BASIC = new Set(['vat_lieu', 'ten_hang', 'day', 'dai', 'rong', 'so_tam', 'm2', 'kg', 'don_gia', 'tt', 'ma_tam']);
+  const hasTech = colsAll.some((c) => TECH.has(c.k)); const many = colsAll.length > 8;
+  const [preset, setPresetS] = useState<'co' | 'du' | 'kt'>(() => { try { return (localStorage.getItem(pk) as 'co' | 'du' | 'kt') || (hasTech ? 'du' : 'kt'); } catch { return 'du'; } });
+  const setPreset = (v: 'co' | 'du' | 'kt') => { setPresetS(v); try { localStorage.setItem(pk, v); } catch { /* bỏ qua */ } };
+  const [dense, setDenseS] = useState(() => { try { return localStorage.getItem('pp-dense') === '1'; } catch { return false; } });
+  const setDense = (v: boolean) => { setDenseS(v); try { localStorage.setItem('pp-dense', v ? '1' : '0'); } catch { /* bỏ qua */ } };
+  const [full, setFull] = useState(false);
+  useEffect(() => { if (!full) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false); }; addEventListener('keydown', k); document.body.style.overflow = 'hidden'; return () => { removeEventListener('keydown', k); document.body.style.overflow = ''; }; }, [full]);
+  const cols = !many ? colsAll : preset === 'kt' ? colsAll : preset === 'du' ? colsAll.filter((c) => !TECH.has(c.k)) : (() => { const b = colsAll.filter((c) => BASIC.has(c.k) || (c.req && !c.ro)); return b.length >= 3 ? b : colsAll.filter((c) => !TECH.has(c.k)); })();
   const [q0, setQ0] = useState<{ code: string; rows: Q0Row[] } | null>(null);
   const openQ0 = async () => { if (!q0src) return; const [{ data: rs }, { data: ls }] = await Promise.all([sb.rpc('qt0_rows', { p_qt0: q0src.id, p_doc: q0src.docId }), sb.rpc('qt0_list', { p_order: q0src.orderId })]);
     const l = ((rs ?? []) as Q0Row[]).filter((x) => String(x.r.ma_tam ?? '').trim()); if (!l.length) { toast('QT0 nguồn không có tấm'); return; }
@@ -783,7 +795,7 @@ function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, from
       else { next.push(Object.fromEntries(Object.entries(t).filter(([kk]) => !KEEP.has(kk))) as Row); add++; } }
     onChange(next); setQ0(null); toast(`Đã lấy từ ${q0.code}: cộng thêm ${up} dòng, thêm mới ${add} dòng – bấm Lưu để giữ`); };
   const [pick, setPick] = useState<Row[] | null>(null);
-  const inCols = cols.filter((c) => !c.calc && !c.ro);
+  const inCols = colsAll.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const [subOpen, setSubOpen] = useState<string | null>(null);
@@ -810,12 +822,12 @@ function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, from
     const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
     const hi = aoa.findIndex((r) => r.some((c) => inCols.some((x) => norm(c) === norm(x.t))));
     let map: (string | null)[];
-    const hidDay = !cols.some((x) => x.k === 'day') && cols.some((x) => x.k === 'kg');
-    if (hi >= 0) { map = aoa[hi].map((c) => cols.find((x) => norm(c) === norm(x.t))?.k ?? (hidDay && ['day', 'daymm', 'doday', 'dodaymm'].includes(norm(c)) ? 'day' : null)); aoa = aoa.slice(hi + 1); }
-    else map = cols.map((c) => c.k);
+    const hidDay = !colsAll.some((x) => x.k === 'day') && colsAll.some((x) => x.k === 'kg');
+    if (hi >= 0) { map = aoa[hi].map((c) => colsAll.find((x) => norm(c) === norm(x.t))?.k ?? (hidDay && ['day', 'daymm', 'doday', 'dodaymm'].includes(norm(c)) ? 'day' : null)); aoa = aoa.slice(hi + 1); }
+    else map = colsAll.map((c) => c.k);
     const out: Row[] = []; skipped = 0;
     for (const r of aoa) {
-      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k === 'day' && !c) { const n = normNum(String(v ?? '')); if (n !== '') row.day = n; return; } if (k && c && !c.calc && !c.ro) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
+      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = colsAll.find((x) => x.k === k); if (k === 'day' && !c) { const n = normNum(String(v ?? '')); if (n !== '') row.day = n; return; } if (k && c && !c.calc && !c.ro) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
       if (!Object.values(row).some((v) => v)) continue;
       if (String(Object.values(row)[0] ?? '').toUpperCase() === 'TỔNG') continue;
       if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) { skipped++; continue; } // dòng ví dụ của file mẫu
@@ -857,9 +869,9 @@ function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, from
     onChange([...rows, ...add]); setMsg('Đã nạp ' + add.length + ' dòng từ ' + f.name + how + (skipped ? ` (bỏ qua ${skipped} dòng ví dụ)` : '')); e.target.value = '';
   };
   // File mẫu: đúng các cột của bảng (cột tự tính để trống, ghi chú "tự tính"), 3 dòng ví dụ
-  const tpl = async () => { const X = await import('xlsx'); const hd = cols.map((c) => c.calc ? c.t + ' (tự tính)' : c.t);
-    const ex = [0, 1, 2].map((i) => cols.map((c) => (c.calc ? '' : sampleRow(c, i))));
-    if (!cols.some((c) => c.k === 'day') && cols.some((c) => c.k === 'kg')) { hd.push('Dày (mm)'); ex.forEach((r, i) => r.push(['1.2', '2', '3'][i])); }
+  const tpl = async () => { const X = await import('xlsx'); const hd = colsAll.map((c) => c.calc ? c.t + ' (tự tính)' : c.t);
+    const ex = [0, 1, 2].map((i) => colsAll.map((c) => (c.calc ? '' : sampleRow(c, i))));
+    if (!colsAll.some((c) => c.k === 'day') && colsAll.some((c) => c.k === 'kg')) { hd.push('Dày (mm)'); ex.forEach((r, i) => r.push(['1.2', '2', '3'][i])); }
     const ws = X.utils.aoa_to_sheet([hd, ...ex]); ws['!cols'] = hd.map((h, j) => ({ wch: Math.max(10, h.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   const fileRef = useRef<HTMLInputElement>(null);
@@ -901,8 +913,13 @@ function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, from
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
-    <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && rows.length) { e.preventDefault(); if (fold) setFold(false); openSearch(); } }}>
+    <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '') + (dense ? ' pp-dense' : '') + (full ? ' pp-full' : '')} role={full ? 'dialog' : undefined} aria-modal={full || undefined} aria-label={full ? title : undefined} onPaste={editable ? pasteAny : undefined} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && rows.length) { e.preventDefault(); if (fold) setFold(false); openSearch(); } }}>
       <div className="row between pp-th"><b>{title}{vk && <VarTag k={'#' + vk} />}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
+        <span className="pp-view" role="group" aria-label="Hiển thị bảng">
+          {many && <span className="pp-seg">{([['co', 'Cơ bản'], ['du', 'Đầy đủ'], ...(hasTech ? [['kt', 'Kỹ thuật']] : [])] as ['co' | 'du' | 'kt', string][]).map(([k, t]) => <button key={k} type="button" aria-pressed={preset === k} className={preset === k ? 'on' : ''} onClick={() => setPreset(k)}>{t}</button>)}</span>}
+          <button type="button" className="pp-vbtn" aria-pressed={dense} title="Mật độ dòng" onClick={() => setDense(!dense)}>{dense ? 'Gọn' : 'Vừa'}</button>
+          {rows.length > 0 && <button type="button" className="pp-vbtn" aria-label={full ? 'Thu nhỏ bảng' : 'Mở rộng bảng'} title={full ? 'Thu nhỏ (Esc)' : 'Mở rộng toàn màn hình'} onClick={() => setFull(!full)}><Icon name={full ? 'x' : 'expand'} size={14} /><span className="pp-vt">{full ? 'Đóng' : 'Mở rộng'}</span></button>}
+        </span>
         {rows.length > 0 && <span className={'pp-sx' + (sOpen || q ? ' open' : '')}>
           {sOpen || q ? <label className="pp-sx-in"><Icon name="search" size={15} /><input ref={sRef} type="search" placeholder="Tìm mã tấm…" value={q} aria-label="Tìm tấm"
               onChange={(e) => { setQ(e.target.value); setLim(0); }} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSOpen(false); } }} onBlur={() => { if (!q.trim()) setSOpen(false); }} />
