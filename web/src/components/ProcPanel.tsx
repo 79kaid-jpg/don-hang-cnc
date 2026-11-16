@@ -28,7 +28,7 @@ import { useMaterials } from '../lib/materials';
 import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row,
-  stampDens, matOf, subRows,
+  stampDens, matOf, m2Of, kgOf, densOf, subRows,
   nlFromPhoi,
 } from '../lib/proc';
 import { Icon } from './Icon';
@@ -454,7 +454,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
     const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
     const raw = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
-    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_')) && v !== '')) as Row);
+    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day') && v !== '')) as Row);
     const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
     if (!add.length) return;
     const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
@@ -553,7 +553,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
-          onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
+          onChange={(rows) => { const dv = proc === 'QT0' && cols.some((c) => c.k === 'cot_moi'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.cot_moi ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, cot_moi: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
             return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined}
@@ -663,6 +663,10 @@ function Qt2Loss({ nl, tp }: { nl: Row[]; tp: Row[] }) {
 
 /** Điện thoại: mỗi dòng một thẻ gọn, bấm để sửa */
 const kgTip = (r: Row) => { const { m, how } = matOf(r); return m ? (how === 'mac_dinh' ? '⚠ Chưa rõ vật liệu – đang tính theo ' : 'Vật liệu: ') + m.name + ' · tỷ trọng ' + m.density : undefined; };
+const kgWhy = (r: Row): string[] => { const m = m2Of(r), d = numIn(r.day), ds = densOf(r), { m: mt, how } = matOf(r), k = kgOf(r);
+  const f = (x: number | null, n: number) => (x == null ? '?' : fmtN(x, n));
+  return ['TL (kg) = DT (m²) × Dày (mm) × Tỷ trọng', f(m, 3) + ' m² × ' + f(d, 2) + ' mm × ' + f(ds, 2) + ' = ' + (k == null ? '?' : f(k, 1) + ' kg'),
+    (mt ? (how === 'mac_dinh' ? '⚠ Chưa rõ vật liệu – tỷ trọng mặc định ' : 'Vật liệu ') + mt.name : 'Tỷ trọng mặc định') + (d == null ? ' · ⚠ thiếu Dày' : m == null ? ' · ⚠ thiếu DT' : '')]; };
 /** Ô bảng theo kiểu: ngày / danh sách chọn / có-không / tham chiếu */
 const refOf = (r: Row, c: Col, editable: boolean) => (editable ? c.refv ?? '' : String(r[c.k] ?? '') || (c.refv ?? ''));
 const cellTxt = (r: Row, c: Col, editable = false): string => { if (c.ty === 'ref') return refOf(r, c, editable); if (c.ty === 'datetime' || c.ty === 'sub') return fmtCell(c, r[c.k]); const v = String(r[c.k] ?? '');
@@ -706,7 +710,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
       {open === i && <div className="pp-mrow-e">
         {cols.map((c) => <label key={c.k} className="f"><span>{lb(c)}{c.req && <b className="req"> *</b>}</span>
           {c.ty === 'sub' ? <SubTable r={r} i={i} c={c} rows={rows} editable={editable} onChange={onChange} fname="sub" />
-            : c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}</output>
+            : c.calc || c.ro || !editable ? <output>{val(r, c) || '—'}{c.k === 'kg' && c.calc && <ColTip info={kgWhy(r)} />}</output>
             : c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
             : <NumInput money={isMoneyCol(c)} value={typeof r[c.k] === 'number' ? String(r[c.k]) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} />}</label>)}
         {editable && <button type="button" className="btn sm danger-soft" onClick={() => { onChange(rows.filter((_, j) => j !== i)); setOpen(-1); }}><Icon name="trash" size={14} />Bỏ dòng</button>}
@@ -760,11 +764,12 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
     const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9²]/g, '');
     const hi = aoa.findIndex((r) => r.some((c) => inCols.some((x) => norm(c) === norm(x.t))));
     let map: (string | null)[];
-    if (hi >= 0) { map = aoa[hi].map((c) => cols.find((x) => norm(c) === norm(x.t))?.k ?? null); aoa = aoa.slice(hi + 1); }
+    const hidDay = !cols.some((x) => x.k === 'day') && cols.some((x) => x.k === 'kg');
+    if (hi >= 0) { map = aoa[hi].map((c) => cols.find((x) => norm(c) === norm(x.t))?.k ?? (hidDay && ['day', 'daymm', 'doday', 'dodaymm'].includes(norm(c)) ? 'day' : null)); aoa = aoa.slice(hi + 1); }
     else map = cols.map((c) => c.k);
     const out: Row[] = []; skipped = 0;
     for (const r of aoa) {
-      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k && c && !c.calc && !c.ro) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
+      const row: Row = {}; r.forEach((v, j) => { const k = map[j]; const c = cols.find((x) => x.k === k); if (k === 'day' && !c) { const n = normNum(String(v ?? '')); if (n !== '') row.day = n; return; } if (k && c && !c.calc && !c.ro) row[k] = c?.n ? normNum(String(v ?? '')) : String(v ?? '').trim(); });
       if (!Object.values(row).some((v) => v)) continue;
       if (String(Object.values(row)[0] ?? '').toUpperCase() === 'TỔNG') continue;
       if ([0, 1, 2].some((i) => inCols.every((c) => String(row[c.k] ?? '') === String(sampleRow(c, i))))) { skipped++; continue; } // dòng ví dụ của file mẫu
@@ -808,6 +813,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
   // File mẫu: đúng các cột của bảng (cột tự tính để trống, ghi chú "tự tính"), 3 dòng ví dụ
   const tpl = async () => { const X = await import('xlsx'); const hd = cols.map((c) => c.calc ? c.t + ' (tự tính)' : c.t);
     const ex = [0, 1, 2].map((i) => cols.map((c) => (c.calc ? '' : sampleRow(c, i))));
+    if (!cols.some((c) => c.k === 'day') && cols.some((c) => c.k === 'kg')) { hd.push('Dày (mm)'); ex.forEach((r, i) => r.push(['1.2', '2', '3'][i])); }
     const ws = X.utils.aoa_to_sheet([hd, ...ex]); ws['!cols'] = hd.map((h, j) => ({ wch: Math.max(10, h.length + 2, ...ex.map((r) => String(r[j]).length + 2)) }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Mau'); X.writeFile(wb, fname + '-mau.xlsx'); };
   const fileRef = useRef<HTMLInputElement>(null);
@@ -920,7 +926,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} className={(bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : '') + (isNew(r) ? ' pp-new' : '') || undefined}><td className="muted">{i + 1}</td>
-            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '') + (!isNew(r) && chg(r, c) ? ' pp-chg' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}</span>
+            {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '') + (!isNew(r) && chg(r, c) ? ' pp-chg' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}{c.k === 'kg' && <ColTip info={kgWhy(r)} />}</span>
               : editable && !c.ro && c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
               : editable && !c.ro ? <NumInput money={isMoneyCol(c)} onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} title={c.n && !okNum(c, r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
                 data-cell={i + ':' + c.k} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); // Enter = xuống ô dưới; không bao giờ tự áp dụng cả cột
