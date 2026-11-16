@@ -149,12 +149,11 @@ export const GH_ITEMS: [string, string][] = [['gh_cccd', 'CCCD & số điện th
 
 /** Gom cột phôi của bảng thành phẩm (file bóc tách) thành Bảng 1 – NVL: cùng vật liệu, dày, khổ phôi → 1 dòng */
 export function nlFromPhoi(rows: Row[]): Row[] {
-  const m = new Map<string, { row: Row; codes: string[] }>();
+  // Mỗi dòng thành phẩm có phôi → 1 dòng NVL (không gộp), giữ mã tấm để đối chiếu 1-1
+  const out: Row[] = [];
   for (const r of rows) { const pr = num(r.phoi_rong), pd = num(r.phoi_dai), sl = num(r.phoi_sl); if (pr == null || pd == null || !sl) continue;
-    const vl = String(r.vat_lieu ?? '').trim(); const k = [vl, num(r.day) ?? '', pr, pd].join('|');
+    const vl = String(r.mac_thep ?? '').trim() || String(r.vat_lieu ?? '').trim();
     const a = num(r.phoi_m2) ?? +(pr * pd * sl / 1e6).toFixed(4);
-    const x = m.get(k) ?? { row: { vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: 0, m2: 0 }, codes: [] };
-    x.row.so_tam = (Number(x.row.so_tam) || 0) + sl; x.row.m2 = +((Number(x.row.m2) || 0) + a).toFixed(4);
-    const c = String(r.ma_tam ?? '').trim(); if (c && !x.codes.includes(c)) x.codes.push(c); m.set(k, x); }
-  return [...m.values()].map(({ row, codes }) => ({ ...row, ma_tam: codes.join(', ') }));
+    out.push({ vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: sl, m2: +a.toFixed(4), ma_tam: String(r.ma_tam ?? '').trim() }); }
+  return out;
 }
