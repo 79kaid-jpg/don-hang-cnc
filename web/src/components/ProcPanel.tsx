@@ -510,19 +510,21 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             <span className="pp-dst">· {d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</span>
             {can && !['da_duyet', 'fail'].includes(d.status) && <span className="pp-mine">Việc của bạn</span>}</div>
           <div className="small muted">{(role || lvName) && <><Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}{(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}</div></div>
-        {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
         <div className="row" style={{ gap: 6 }}>
           {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && <button type="button" className={'btn xs icon-only pp-admi pp-vwi' + (viewInfo ? ' on' : '')} aria-expanded={viewInfo} title="Bạn đang xem (không có quyền làm bước này)" aria-label="Bạn đang xem – xem chi tiết" onClick={() => setViewInfo(!viewInfo)}><Icon name="eye" size={14} /></button>}
           {admEdit && <button type="button" className={'btn xs icon-only pp-admi' + (admInfo ? ' on' : '')} aria-expanded={admInfo} title="Đang sửa với quyền Admin" aria-label="Đang sửa với quyền Admin – xem chi tiết" onClick={() => setAdmInfo(!admInfo)}><Icon name="shield" size={14} /></button>}
           {d.status !== 'da_duyet' && d.status !== 'fail' && <GuideBox compact g={d.status === 'duyet_them' ? guideByKey(guides, 'sim.extra') : guideFor(guides, proc, d.company, d.status)} vars={{ cty: COMPANY[d.company], phieu: PROC_NAME[proc], cap: lvName ?? 'Cấp duyệt thêm' }} />}
           {editable && <button className="btn xs" disabled={!dirty} onClick={() => save()}><Icon name="check" size={13} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           <PrintTplButton o={o} b={b} d={d} people={people} fallback={() => printDoc(o, b, d, people)} />
-          <button className="btn xs icon-only" title="In bản mặc định của app (không theo mẫu Excel)" aria-label="In bản mặc định" onClick={() => printDoc(o, b, d, people)}><Icon name="file" size={13} /></button>
-          {(can || adm) && d.status === FLOW[proc][0] && (proc === 'QT0' || d.company === 'PN') && b.status === 'dang_lam' && <button className="btn xs icon-only danger-soft" title={'Xoá ' + b.title + ' để lập lại (chỉ khi còn ở bước đầu)'} aria-label={'Xoá ' + b.title} onClick={async () => {
+          <details className="pp-more"><summary className="btn xs icon-only" title="Thêm thao tác" aria-label="Thêm thao tác">⋯</summary><div className="pp-more-m" onClick={(e) => { const dt = (e.currentTarget.closest('details') as HTMLDetailsElement); if ((e.target as HTMLElement).closest('button')) dt.open = false; }}>
+          <button className="btn xs" title="In bản mặc định của app (không theo mẫu Excel)" onClick={() => printDoc(o, b, d, people)}><Icon name="file" size={13} />In bản mặc định</button>
+          {(can || adm) && d.status === FLOW[proc][0] && (proc === 'QT0' || d.company === 'PN') && b.status === 'dang_lam' && <button className="btn xs danger-soft" title={'Xoá ' + b.title + ' để lập lại (chỉ khi còn ở bước đầu)'} aria-label={'Xoá ' + b.title} onClick={async () => {
             if (!(await confirmDialog(`Xoá hẳn “${b.title}” (${PROC_NAME[proc]})? Toàn bộ dữ liệu đã nhập sẽ mất. Sau đó bạn có thể mở lại ${BATCH_WORD[proc]} mới.`, 'Xoá hồ sơ', true))) return;
-            const { error } = await sb.rpc('batch_delete', { p_batch: b.id, p_note: '' }); if (error) return toast(errText(error)); toast('Đã xoá ' + b.title); onChanged(); }}><Icon name="trash" size={13} /></button>}
-          {adm && editable && d.status !== 'da_duyet' && <button className="btn xs icon-only" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" aria-label="Nạp dữ liệu mẫu" onClick={fillDemo}><Icon name="bolt" size={13} /></button>}
+            const { error } = await sb.rpc('batch_delete', { p_batch: b.id, p_note: '' }); if (error) return toast(errText(error)); toast('Đã xoá ' + b.title); onChanged(); }}><Icon name="trash" size={13} />Xoá hồ sơ</button>}
+          {adm && editable && d.status !== 'da_duyet' && <button className="btn xs" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" onClick={fillDemo}><Icon name="bolt" size={13} />Nạp dữ liệu mẫu</button>}
+          </div></details>
         </div>
+        {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && (proc !== 'QT1' || d.company === 'HW') && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {admEdit && admInfo && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}

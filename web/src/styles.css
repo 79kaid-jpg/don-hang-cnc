@@ -3804,3 +3804,21 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .imp-warn{margin:0;display:flex;gap:6px;align-items:flex-start;background:#fdf6e3;color:#7a5a12;border-radius:8px;padding:8px 10px;font-size:12.5px}
 .imp-q{margin:0;font-size:14px;color:var(--ink,#1f2937)}.imp-q:empty{display:none}
 @media (max-width:480px){.imp-kv>div{grid-template-columns:1fr;gap:0}.imp-kv dd{margin-bottom:4px}.modal .row .btn{flex:1;min-height:44px}}
+
+/* Đầu phiếu gọn 2 dòng (PA2): tiêu đề + nút | các bước dạng chip */
+.pp-doc-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.pp-doc-head .pp-dh{flex:1 1 260px;min-width:0}
+.pp-doc-head>.row{margin-left:auto;flex-wrap:nowrap;align-items:center}
+.pp-doc-head>.doc-steps{flex:1 1 100%;order:3;display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0}
+.pp-doc-head>.doc-steps li{flex:0 0 auto;min-width:0;padding:3px 10px 3px 4px;gap:6px;border-radius:999px;background:#f2f4f7;color:#5b6472;font-size:13px;font-weight:500;white-space:nowrap}
+.pp-doc-head>.doc-steps li+li::before{content:'›';position:static;width:auto;height:auto;background:none;color:#a3abb6;margin:0 2px 0 -2px;font-size:15px;order:-1}
+.pp-doc-head>.doc-steps li+li{margin-left:14px}.pp-doc-head>.doc-steps li+li::before{position:absolute;left:-13px}
+.pp-doc-head>.doc-steps .dot{width:20px;height:20px;border-width:1.5px;font-size:11px;box-shadow:none}
+.pp-doc-head>.doc-steps li.done{background:#e7f4ec;color:#23704a}
+.pp-doc-head>.doc-steps li.cur{background:#e6effa;color:#1f5a99;font-weight:600}
+.pp-doc-head>.doc-steps li.cur .dot{background:#2f6fb0;border-color:#2f6fb0;box-shadow:none}
+.pp-more{position:relative}.pp-more>summary{list-style:none;cursor:pointer;font-size:16px;line-height:1}.pp-more>summary::-webkit-details-marker{display:none}
+.pp-more-m{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:#fff;border:1px solid #e3e7ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:200px}
+.pp-more-m .btn{justify-content:flex-start;width:100%;white-space:nowrap}
+.pp-more-m .icon-only{width:100%}
+@media (max-width:600px){.pp-doc-head>.row .btn{min-height:40px}.pp-more-m{position:fixed;left:8px;right:8px;top:auto;bottom:8px}.pp-more-m .btn{min-height:44px}}
