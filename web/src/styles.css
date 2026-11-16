@@ -3911,3 +3911,22 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .mw-none{padding:16px}
 @media (max-width:639px){.mw-hello h1{font-size:19px}.mw-hello{margin-bottom:8px}.work{gap:10px;padding:12px}}
 @media (max-width:900px){.mw-bar{top:calc(60px + env(safe-area-inset-top))}}
+/* v2 · Đợt 3 – Kanban: thẻ gọn, tiến độ công ty bằng icon, chân thẻ 1 hàng */
+.kb-card{gap:6px;border-radius:12px;box-shadow:0 1px 2px rgba(20,28,40,.05)}
+.kb-card:hover{box-shadow:var(--shadow)}
+.kb-co{display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 6px}
+.kb-co-ic{width:14px;height:14px;border-radius:50%;display:inline-grid;place-items:center;border:1.5px solid currentColor;box-sizing:border-box;font-style:normal}
+.kb-co.ok .kb-co-ic{background:currentColor}.kb-co.ok .kb-co-ic svg{color:#fff}
+.kb-co.bad .kb-co-ic{background:currentColor}.kb-co.bad .kb-co-ic svg{color:#fff}
+.kb-co.cur .kb-co-ic{background:radial-gradient(circle,currentColor 0 3px,transparent 3.5px)}
+.kb-co.off{opacity:.7}
+.kb-ck{font-size:12px;gap:6px}
+.kb-meta{font-size:12px}
+.kb-acts{gap:6px}
+@media (max-width:639px){
+  .kb-card{padding:12px}
+  .kb-acts .kb-next{flex:1 1 auto;min-height:44px;justify-content:center}
+  .kb-acts .kb-ib{width:44px;height:44px}
+  .kb-pj{font-size:15px}
+}
+@media (min-width:640px) and (max-width:1023px){.kb-board{grid-auto-columns:minmax(280px,1fr)}}
