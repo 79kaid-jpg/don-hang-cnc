@@ -49,18 +49,18 @@ const nrm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').re
 export function matOf(r: Row): { m: Material | null; how: 'chon' | 'tu_khoa' | 'mac_dinh' } {
   if (!MATS.length) return { m: null, how: 'mac_dinh' };
   for (const v of Object.values(r)) if (typeof v === 'string' && v) { const x = MATS.find((m) => m.name.toLowerCase() === v.trim().toLowerCase()); if (x) return { m: x, how: 'chon' }; }
-  const txt = nrm(String(r.vat_lieu ?? '') + ' ' + String(r.mac_thep ?? '') + ' ' + String(r.ten_hang ?? ''));
+  const txt = nrm(String(r.vat_lieu ?? '') + ' ' + String(r._vat ?? '') + ' ' + String(r.mac_thep ?? '') + ' ' + String(r.ten_hang ?? ''));
   let best: Material | null = null; let bl = 0;
   for (const m of MATS) for (const k of m.keywords) { const kk = nrm(k.trim()); if (kk && txt.includes(kk) && kk.length > bl) { best = m; bl = kk.length; } }
   if (best) return { m: best, how: 'tu_khoa' };
   return { m: MATS.find((m) => m.is_default) ?? null, how: 'mac_dinh' };
 }
-const matTxt = (r: Row) => String(r.vat_lieu ?? '') + '|' + String(r.mac_thep ?? '');
+const matTxt = (r: Row) => String(r.vat_lieu ?? '') + '|' + String(r.mac_thep ?? '') + (r._vat ? '|' + String(r._vat) : '');
 /** Tỷ trọng: giá trị đã chốt trong phiếu (nếu tên hàng/mác chưa đổi) → danh mục → mặc định cũ */
 export const densOf = (r: Row): number => { const s = num(r.ty_trong); if (s != null && r._vl === matTxt(r)) return s;
   const { m } = matOf(r); return m ? Number(m.density) : isAlu(r) ? ALU : STEEL; };
 /** Ghi tỷ trọng hiện tại vào dòng (khi lưu phiếu) để phiếu đã duyệt giữ nguyên số kg */
-export const stampDens = (r: Row): Row => { if (!String(r.vat_lieu ?? '').trim() && !String(r.mac_thep ?? '').trim()) return r; const { m } = matOf(r); return m ? { ...r, ty_trong: Number(m.density), _vl: matTxt(r) } : r; };
+export const stampDens = (r: Row): Row => { if (!String(r.vat_lieu ?? '').trim() && !String(r.mac_thep ?? '').trim() && !String(r._vat ?? '').trim()) return r; const { m } = matOf(r); return m ? { ...r, ty_trong: Number(m.density), _vl: matTxt(r) } : r; };
 export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
@@ -152,7 +152,7 @@ export function nlFromPhoi(rows: Row[]): Row[] {
   // Mỗi dòng thành phẩm có phôi → 1 dòng NVL (không gộp), giữ mã tấm để đối chiếu 1-1
   const out: Row[] = [];
   for (const r of rows) { const pr = num(r.phoi_rong), pd = num(r.phoi_dai), sl = num(r.phoi_sl); if (pr == null || pd == null || !sl) continue;
-    const vl = String(r.mac_thep ?? '').trim() || String(r.vat_lieu ?? '').trim();
+    const vl = String(r._vat ?? '').trim() || String(r.mac_thep ?? '').trim() || String(r.vat_lieu ?? '').trim();
     const a = num(r.phoi_m2) ?? +(pr * pd * sl / 1e6).toFixed(4);
     out.push({ vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: sl, m2: +a.toFixed(4), don_vi_tinh: 'tấm', ma_tam: String(r.ma_tam ?? '').trim() }); }
   return out;

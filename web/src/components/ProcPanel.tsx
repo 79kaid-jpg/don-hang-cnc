@@ -455,7 +455,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
     const shs = wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) }));
     const raw = bocTachRows(shs); const hh = proc === 'QT0' ? haoHutOf(shs) : null;
-    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.don_vi_tinh ?? '').trim() ? { ...r, don_vi_tinh: 'tấm' } : r));
+    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep' || k === '_vat') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.don_vi_tinh ?? '').trim() ? { ...r, don_vi_tinh: 'tấm' } : r));
     const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
     if (!add.length) return;
     const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));

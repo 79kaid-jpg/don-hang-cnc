@@ -79,8 +79,8 @@ export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Reco
     // File không có nhóm Thực tế trải: dùng m² hoàn thiện làm khối lượng
     if (!row.m2 && row.m2_ht) row.m2 = row.m2_ht;
     out.push(row); }
-  // Tên hàng = mã tấm; vật liệu (Nhôm/Thép…) chuyển sang Mác thép
-  for (const r of out) { const vl = String(r.vat_lieu ?? '').trim(), mt = String(r.ma_tam ?? '').trim(); if (mt) { if (!String(r.mac_thep ?? '').trim() && vl) r.mac_thep = vl; r.vat_lieu = mt; } }
+  // Tên hàng = mã tấm; vật liệu (Nhôm/Thép…) giữ ẩn trong _vat để tính tỷ trọng; Mác thép chỉ lấy từ file
+  for (const r of out) { const vl = String(r.vat_lieu ?? '').trim(), mt = String(r.ma_tam ?? '').trim(); if (mt) { if (vl) r._vat = vl; r.vat_lieu = mt; } }
   return out;
 }
 
