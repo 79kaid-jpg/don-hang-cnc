@@ -40,26 +40,43 @@ async function toPdf(html: string, stamp: { text: string; sub: string; color: st
   }
   // Ngắt trang không cắt ngang dòng bảng: chèn khoảng trống trước dòng sẽ bị cắt
   const W = landscape ? 1100 : 760; const pageMm = landscape ? [297, 210] : [210, 297];
-  keepRows(wrap, Math.floor(W * (pageMm[1] - 6 - 8) / (pageMm[0] - 6 - 6)));
+  const pageH = Math.floor(W * (pageMm[1] - 6 - 8) / (pageMm[0] - 6 - 6));
+  if (!fitOnePage(wrap, W, pageH)) keepRows(wrap, pageH);
   try {
     return await h2p().set({ margin: [6, 6, 8, 6], filename: 'chung-tu.pdf', image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: landscape ? 1100 : 760, windowWidth: (landscape ? 1100 : 760) + 40, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(wrap).outputPdf('blob');
   } finally { hold.remove(); }
 }
 
-/** Đẩy dòng bảng bị vắt qua ranh giới trang sang trang sau */
+/** Phiếu chỉ dư chút (≤15%) so với 1 trang: thu nhỏ cho vừa 1 trang (không nhỏ hơn 85%) */
+function fitOnePage(wrap: HTMLElement, W: number, pageH: number): boolean {
+  const H = wrap.scrollHeight; if (H <= pageH || H > pageH * 1.15) return false;
+  const inner = document.createElement('div'); while (wrap.firstChild) inner.appendChild(wrap.firstChild); wrap.appendChild(inner);
+  let s = pageH / H;
+  for (let i = 0; i < 3; i++) { inner.style.cssText = `width:${W / s}px;transform:scale(${s});transform-origin:0 0;position:relative`; const h = inner.scrollHeight * s; if (h <= pageH - 2) break; s *= (pageH - 2) / h; }
+  if (s < 0.85) { while (inner.firstChild) wrap.appendChild(inner.firstChild); inner.remove(); return false; }
+  wrap.style.height = Math.floor(inner.scrollHeight * s) + 'px'; wrap.style.overflow = 'hidden'; return true;
+}
+
+/** Đẩy dòng bảng bị vắt qua ranh giới trang sang trang sau – các dòng có ô gộp (rowspan) giữ thành một khối */
 export function keepRows(root: HTMLElement, pageH: number) {
   const top0 = root.getBoundingClientRect().top;
-  for (const tr of Array.from(root.querySelectorAll('tr'))) {
-    const r = tr.getBoundingClientRect(); const t = r.top - top0, b = r.bottom - top0;
-    if (r.height >= pageH || r.height === 0) continue;
-    const pg = Math.floor(t / pageH); if (Math.floor((b - 1) / pageH) === pg) continue;
-    const gap = (pg + 1) * pageH - t; const sp = document.createElement('tr');
-    sp.innerHTML = `<td colspan="99" style="height:${gap}px;padding:0;border:none;border-left:none;border-right:none;background:#fff"></td>`;
-    tr.parentNode!.insertBefore(sp, tr);
-    // lặp lại dòng tiêu đề của bảng ở đầu trang mới
-    const g = tr.getAttribute('data-g');
-    if (g != null) for (const hr of Array.from(root.querySelectorAll(`tr[data-h="${g}"]`))) { const c = hr.cloneNode(true) as HTMLElement; c.removeAttribute('data-h'); tr.parentNode!.insertBefore(c, tr); }
+  for (const tb of Array.from(root.querySelectorAll('table'))) {
+    const rows = Array.from(tb.rows).filter((r) => r.closest('table') === tb);
+    for (let i = 0; i < rows.length; ) {
+      let end = i; for (let j = i; j <= end && j < rows.length; j++) for (const c of Array.from(rows[j].cells)) end = Math.max(end, j + (c.rowSpan || 1) - 1);
+      end = Math.min(end, rows.length - 1);
+      const first = rows[i], last = rows[end]; const a = first.getBoundingClientRect(), z = last.getBoundingClientRect();
+      const t = a.top - top0, b = z.bottom - top0, h = b - t; i = end + 1;
+      if (h >= pageH || h <= 0) continue;
+      const pg = Math.floor(t / pageH); if (Math.floor((b - 1) / pageH) === pg) continue;
+      const gap = (pg + 1) * pageH - t; const sp = document.createElement('tr');
+      sp.innerHTML = `<td colspan="99" style="height:${gap}px;padding:0;border:none;border-left:none;border-right:none;background:#fff"></td>`;
+      first.parentNode!.insertBefore(sp, first);
+      // lặp lại dòng tiêu đề của bảng ở đầu trang mới
+      const g = first.getAttribute('data-g');
+      if (g != null) for (const hr of Array.from(root.querySelectorAll(`tr[data-h="${g}"]`))) { const c = hr.cloneNode(true) as HTMLElement; c.removeAttribute('data-h'); first.parentNode!.insertBefore(c, first); }
+    }
   }
 }
 
