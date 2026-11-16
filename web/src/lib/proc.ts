@@ -71,7 +71,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
   ds0: { t: 'Bảng 2 – Thành phẩm', cols: [
     // cùng trường, cùng thứ tự, cùng nhãn với Bảng 2 của Lệnh gia công (QT2)
     { k: 'vat_lieu', t: 'Tên hàng', w: 10 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'rong', t: 'Rộng (mm)', n: true },
-    { k: 'mac_thep', t: 'Mác thép', w: 8 }, { k: 'cot_moi', t: 'Đơn vị tính', w: 6 }, { k: 'so_tam', t: 'SL (tấm)', n: true },
+    { k: 'mac_thep', t: 'Mác thép', w: 8 }, { k: 'don_vi_tinh', t: 'Đơn vị tính', w: 6 }, { k: 'so_tam', t: 'SL (tấm)', n: true },
     { k: 'm2', t: 'DT (m²)', n: true, d: 2 }, { k: 'kg', t: 'TL (kg)', n: true, d: 1, calc: kgOf }, { k: 'ma_mau', t: 'Mã màu', w: 8 },
     { k: 'ma_don_hang', t: 'Mã đơn hàng', w: 10 }, { k: 'ma_tam', t: 'KH BV (mã tấm)', w: 12 }, { k: 'ghi_chu', t: 'Ghi chú', w: 14 },
     // chỉ QT0: số liệu kỹ thuật – dùng tính m²/tấm cho QT1 và lọc hàn khi tách đơn
@@ -154,6 +154,6 @@ export function nlFromPhoi(rows: Row[]): Row[] {
   for (const r of rows) { const pr = num(r.phoi_rong), pd = num(r.phoi_dai), sl = num(r.phoi_sl); if (pr == null || pd == null || !sl) continue;
     const vl = String(r.mac_thep ?? '').trim() || String(r.vat_lieu ?? '').trim();
     const a = num(r.phoi_m2) ?? +(pr * pd * sl / 1e6).toFixed(4);
-    out.push({ vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: sl, m2: +a.toFixed(4), ma_tam: String(r.ma_tam ?? '').trim() }); }
+    out.push({ vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: sl, m2: +a.toFixed(4), don_vi_tinh: 'tấm', ma_tam: String(r.ma_tam ?? '').trim() }); }
   return out;
 }

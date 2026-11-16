@@ -454,7 +454,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
     const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
     const raw = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
-    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.cot_moi ?? '').trim() ? { ...r, cot_moi: 'tấm' } : r));
+    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.don_vi_tinh ?? '').trim() ? { ...r, don_vi_tinh: 'tấm' } : r));
     const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
     if (!add.length) return;
     const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
@@ -553,7 +553,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
-          onChange={(rows) => { const dv = proc === 'QT0' && cols.some((c) => c.k === 'cot_moi'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.cot_moi ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, cot_moi: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
+          onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
             return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined}

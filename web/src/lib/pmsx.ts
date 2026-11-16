@@ -7,7 +7,7 @@ const key = (s: unknown) => nrm(s).replace(/[^a-z0-9]/g, '');
 /** Tên gọi có sẵn của các cột thường gặp trong file PMSX */
 const BUILTIN: Record<string, string[]> = {
   vat_lieu: ['ten hang', 'ten vat tu', 'ten nvl'], rong: ['quy cach w (mm)', 'quy cach w', 'rong (mm)', 'w (mm)'], dai: ['quy cach l (mm)', 'quy cach l', 'dai (mm)', 'l (mm)'],
-  day: ['do day (mm)', 'do day', 'day (mm)'], mac_thep: ['mac thep', 'ma vat lieu'], cot_moi: ['dvt', 'don vi tinh'], so_tam: ['sl (tam)', 'sl tam', 'so luong (tam)', 'so luong tam'],
+  day: ['do day (mm)', 'do day', 'day (mm)'], mac_thep: ['mac thep', 'ma vat lieu'], don_vi_tinh: ['dvt', 'don vi tinh'], so_tam: ['sl (tam)', 'sl tam', 'so luong (tam)', 'so luong tam'],
   m2: ['dt (m2)', 'dt m2', 'dien tich (m2)', 'sl m2'], kg: ['tl (kg)', 'trong luong (kg)', 'trong luong'], ma_mau: ['ma mau', 'mau son'], ma_don_hang: ['ma don hang', 'ma dh'],
   kh_bv: ['kh bv', 'ky hieu ban ve'], ma_tam: ['kh bv', 'kh bv (ma tam)', 'ma tam'], ghi_chu: ['ghi chu'] };
 
