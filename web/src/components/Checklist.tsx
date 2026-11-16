@@ -1,3 +1,4 @@
+import { InfoChip } from './ui';
 import { useCallback, useEffect, useState } from 'react';
 import { sb, type Order } from '../lib/supabase';
 import { qt2Step } from '../lib/format';
@@ -90,7 +91,7 @@ export function ChecklistAdmin({ canEdit }: { canEdit: boolean }) {
   };
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được sửa checklist.</span></div>}
+      {!canEdit && <InfoChip id="ro" icon="eye" label="Chỉ xem"><p>Chỉ Admin IT được sửa checklist.</p></InfoChip>}
       <label className="f" style={{ maxWidth: 420 }}>Bước
         <select value={step} onChange={(e) => setStep(e.target.value)}>
           {Object.entries(STEP_LABEL).map(([k, t]) => <option key={k} value={k}>{t} ({(items ?? []).filter((i) => i.step === k && i.active).length})</option>)}

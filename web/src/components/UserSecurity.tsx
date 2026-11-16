@@ -3,7 +3,7 @@ import { sb, errText, type Profile } from '../lib/supabase';
 import { PROC_NAME, type Proc } from '../lib/proc';
 import { loadFields, type FDef } from '../lib/fields';
 import { Icon } from './Icon';
-import { Msg, confirmDialog, toast } from './ui';
+import { Msg, confirmDialog, toast, InfoChip } from './ui';
 
 const CO_OF: Record<string, string> = { CNC: 'Phương Nam CNC', IPC: 'IPC', HANWA: 'Hanwa', IT: 'IT (thấy theo quyền Admin)', KHAC: 'Khác' };
 
@@ -23,8 +23,8 @@ export function UserDataAccess({ p, roles }: { p: Profile; roles: string[] }) {
   return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <h2>Phạm vi dữ liệu</h2>
-      <div className="msg info"><Icon name="shield" size={16} /><span>Công ty: <b>{CO_OF[p.unit] ?? p.unit}</b>. {adm ? 'Admin IT thấy toàn bộ dữ liệu của cả 3 công ty.'
-        : 'Chỉ thấy hồ sơ QT1–QT3 của công ty mình; QT0, F0 và thông tin đơn hàng là dữ liệu chung.'}</span></div>
+      <InfoChip id="scope" icon="shield" label={<>Công ty: {CO_OF[p.unit] ?? p.unit}</>}><p>{adm ? 'Admin IT thấy toàn bộ dữ liệu của cả 3 công ty.'
+        : 'Chỉ thấy hồ sơ QT1–QT3 của công ty mình; QT0, F0 và thông tin đơn hàng là dữ liệu chung.'}</p></InfoChip>
       <b style={{ marginTop: 6 }}>Trường nhạy cảm</b>
       <span className="small muted">Bật để người này thấy trường đó (trong hồ sơ công ty họ). Cấu hình theo vai trò ở Quản trị → Trường dữ liệu.</span>
       {!fs ? <span className="small muted">Đang tải…</span> : fs.length === 0 ? <span className="small muted">Chưa có trường nào được đánh dấu nhạy cảm.</span> :

@@ -49,7 +49,7 @@ import { RtThumbs, rtFilesAt } from './RtThumbs';
 import { useFields, fieldsOf, permOf, colsOf, hdrOf, tablesOf, fmtCell, type FDef } from '../lib/fields';
 import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
-import { confirmDialog, toast, Msg } from './ui';
+import { confirmDialog, toast, Msg, InfoChip } from './ui';
 import { useAuth } from '../lib/auth';
 import { VarTag } from '../lib/showVars';
 import { useWho } from '../lib/people';
@@ -107,8 +107,12 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
       {creating && <NewBatch o={o} proc={proc} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); setBid(id); setCo(''); load(); }} />}
       {batches.length === 0 ? <div className="empty"><Icon name="inbox" size={28} /><b>Chưa có hồ sơ {proc} cho đơn này</b><span className="small muted">Bấm “{'Bắt đầu ' + proc}” để mở.</span></div> : (<>
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
-        {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
-        {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Thất bại – đã dừng. {B.proc === 'QT0' ? 'Mở “lần bóc tách mới”' : 'Mở lượt mới'} nếu cần làm lại.</span></div>}
+        {B && B.status === 'hoan_tat' && proc !== 'QT0' && (() => { const co = D?.company ?? ''; const nx = ({ PN: 'IPC', IPC: 'HW' } as Record<string, string>)[co];
+          return <InfoChip id="batch-done" tone="ok" label={<>{B.title} · {co === 'PN' ? 'PNC' : co} xong{nx ? ' → ' + nx : ' cả chuỗi'}</>}>
+            <p>{B.title} của {COMPANY[co as Company] ?? co} đã duyệt xong{B.done_at ? ' lúc ' + new Date(B.done_at).toLocaleString('vi-VN') : ''}.</p>
+            <p>{nx ? `Hệ thống đã tự mở ${B.title.toLowerCase()} cho ${COMPANY[nx as Company]} – chọn ${nx} ở thanh công ty để xem.` : 'Đã đi hết chuỗi PN → IPC → HW.'}</p>
+            {B.final_files.length > 0 && <p>Bản đã ký: {B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</p>}</InfoChip>; })()}
+        {B && B.status === 'fail' && <InfoChip id="batch-fail" tone="err" label={<>{B.title} · Thất bại – đã dừng</>}><p>Lượt này đã dừng hẳn, không thao tác được nữa. {B.proc === 'QT0' ? 'Bấm “Lần mới”' : 'Bấm nút + để mở lượt mới'} nếu cần làm lại. Lý do xem ở tab Lịch sử.</p></InfoChip>}
         {B && proc === 'QT1' && D && D.company === 'PN' && D.status === 'fail' && !(B.checklist as Record<string, unknown> | null)?.recloned_to && <div className="row" style={{ gap: 8, alignItems: 'center' }}><ReClone docId={D.id} onDone={(id) => { setBid(id); setCo(''); load(); }} /><span className="small muted">Chép bảng tấm (kể cả đơn giá) sang đơn mới; tấm đơn khác đã lấy sẽ báo thiếu.</span></div>}
         {B && proc === 'QT0' && B.status === 'hoan_tat' && <Qt0Alloc qt0={B.id} order={o.id} />}
         {B && proc === 'QT1' && (B as Batch & { src_qt0?: string | null }).src_qt0 && D && D.company === 'PN' && D.status === 'lap' && <Qt0Alloc qt0={String((B as Batch & { src_qt0?: string }).src_qt0)} order={o.id} />}
@@ -528,13 +532,13 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && (proc !== 'QT1' || d.company === 'HW') && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
-      {admEdit && admInfo && <div className="msg warn"><Icon name="shield" size={16} /><span>Bạn đang sửa với quyền Admin{d.status === 'da_duyet' ? ' trên phiếu đã duyệt' : ''}. Mọi thay đổi được ghi vào lịch sử đơn hàng.</span></div>}
+      {admEdit && admInfo && <InfoChip id="adm-edit" tone="warn" icon="shield" label={'Sửa bằng quyền Admin' + (d.status === 'da_duyet' ? ' · phiếu đã duyệt' : '')}><p>Bạn đang sửa phiếu với quyền Admin. Mọi thay đổi được ghi vào lịch sử đơn hàng.</p></InfoChip>}
       {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
       {(() => { const tk = tablesOf(proc)[0]?.key; const rs = (tk && (t as Record<string, Row[]>)[tk]) || []; if (!tk || rs.length === 0) return null; const cs = colsOf(proc, tk);
         const g = (k: string) => { const c = cs.find((x) => x.k === k); return c ? sumOf(rs, c) : null; }; const f = (v: number | null, dd: number, u: string) => v == null ? null : fmtN(v, dd) + u;
         const kg = g('kg'); const parts = [rs.length + ' dòng', f(g('so_tam'), 0, ' tấm'), f(g('m2'), 1, ' m²'), kg == null ? null : kg >= 1000 ? fmtN(kg / 1000, 1) + ' t' : fmtN(kg, 0) + ' kg', f(g('tt'), 0, ' đ')].filter(Boolean);
         return <div className="pp-sum" aria-label="Tóm tắt">{parts.map((x, i) => <span key={i}>{x}</span>)}</div>; })()}
-      {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && viewInfo && <div className="msg info"><Icon name="eye" size={16} /><span>Bạn đang xem. Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm (Quản trị → Người phụ trách quy trình).</span></div>}
+      {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && viewInfo && <InfoChip id="view-only" icon="eye" label="Chỉ xem"><p>Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm.</p><p>Đổi người phụ trách: Quản trị → Người phụ trách quy trình.</p></InfoChip>}
 
       <ReviewPdf docId={d.id} status={d.status} />
       {proc === 'QT3' && d.company === 'HW' && <div className="f qt3-end"><span>Khách nhận hàng <span className="muted small">(Hanwa đổi được; mặc định là khách cuối của dự án)</span></span>
@@ -1197,7 +1201,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
             <label><span className="small muted">Số CCCD</span><span className="gh-cc"><input inputMode="numeric" autoComplete="off" value={rev || String(h.tx_cccd ?? '')} disabled={!can} readOnly={!!rev} onFocus={(e) => { if (can && String(h.tx_cccd ?? '').includes('•')) e.target.select(); }} onChange={(e) => { const v = e.target.value; if (v.includes('•')) { if (v.replace(/[^•]/g, '').length < String(h.tx_cccd ?? '').replace(/[^•]/g, '').length) onField('tx_cccd', ''); return; } onField('tx_cccd', v.replace(/[^0-9]/g, '')); }} />
               {seeCccd && String(h.tx_cccd ?? '').includes('•') && eye(!!rev, d.id, setRev, rev)}</span></label>
             <label><span className="small muted">Số điện thoại</span><input type="tel" inputMode="tel" autoComplete="off" value={String(h.tx_sdt ?? '')} disabled={!can} onChange={(e) => onField('tx_sdt', e.target.value)} /></label>
-            {can && <small className="muted">Chụp CCCD: Gemini tự điền tên tài xế và số CCCD. Số được mã hoá; chỉ người có quyền bấm con mắt xem đủ số và xem rõ ảnh.</small>}</div>)}
+            {can && <InfoChip id="gh-cccd" label="Gemini tự đọc CCCD"><p>Chụp mặt trước CCCD: Gemini tự điền tên tài xế và số CCCD.</p><p>Số được mã hoá khi Lưu; chỉ người có quyền bấm con mắt xem đủ số và xem rõ ảnh. Mỗi lần xem được ghi nhật ký.</p></InfoChip>}</div>)}
           {k === 'gh_bbgh' && (() => { const w = [...sWarn.map((x) => 'PN: ' + x), ...bbWarn]; const any = bbPaths.length > 0 || sbbP.some((p) => bbOf(sh)[p]);
             return any ? (w.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{w.join(' · ')}</span></div> : <div className="msg ok gh-ai" role="status"><Icon name="check" size={15} /><span>Số BBGH khớp số phiếu {String(h.so_phieu || sh.so_phieu || '')}</span></div>) : null; })()}
           <div className="gh-thumbs">

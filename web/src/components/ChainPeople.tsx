@@ -4,7 +4,7 @@ import { COMPANIES, COMPANY, PROC_NAME, ROLE_NAME, type Proc } from '../lib/proc
 import { useGroups } from './StepPeople';
 import { QtTag } from './QtTag';
 import { Icon } from './Icon';
-import { confirmDialog, toast } from './ui';
+import { InfoChip, confirmDialog, toast } from './ui';
 
 /** Quản trị: ai lập / kiểm tra / duyệt cho từng quy trình × công ty (chỉ Admin IT sửa) */
 const UNIT_OF: Record<string, string> = { PN: 'CNC', IPC: 'IPC', HW: 'HANWA' };
@@ -47,7 +47,7 @@ export function ChainPeopleAdmin({ canEdit }: { canEdit: boolean }) {
       <optgroup label="Kiêm nhiệm · công ty khác">{people.filter((u) => u.unit !== UNIT_OF[c]).map((u) => <option key={u.id} value={'p:' + u.id}>{u.full_name} · {CO_OF[(u.unit ?? '').toUpperCase()] ?? u.unit ?? '—'}</option>)}</optgroup></select>; };
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được sửa.</span></div>}
+      {!canEdit && <InfoChip id="ro" icon="eye" label="Chỉ xem"><p>Chỉ Admin IT được sửa.</p></InfoChip>}
       <p className="small muted" style={{ margin: 0 }}>Người hoặc nhóm ở mỗi ô được làm bước đó và nhận Zalo khi hồ sơ tới lượt. Giao cho nhóm thì ai trong nhóm cũng làm được. Dòng “Ký tay & hoàn tất”: chọn công ty in mẫu cho khách ký và tải bản ký (mặc định Hanwa – bên ký với khách cuối). Ô “Tải bản ký tay” là người tải bản khách / kho đã ký ở bước cuối QT1–QT3.</p>
       {err && <div className="msg err">{err}</div>}
       {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((p) => (

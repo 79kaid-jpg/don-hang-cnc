@@ -19,7 +19,7 @@ import { useAuth } from '../lib/auth';
 import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
 import { useProjects } from '../lib/projects';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
-import { Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
+import { InfoChip, Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { ApprovalChain } from '../components/Approvals';
 
@@ -374,7 +374,7 @@ function F2({ o, lines, can, run, load, setErr, setOk, prices, conf, appr, steps
               <tr><td colSpan={6}>VAT {editable ? <input aria-label="VAT %" value={vat} onChange={(e) => setVat(e.target.value)} style={{ width: 70, display: 'inline-block' }} /> : vat} %</td><td className="n">{money(after - sub)}</td></tr>
               <tr style={{ fontWeight: 700 }}><td colSpan={6}>Tổng sau VAT</td><td className="n">{money(after)}</td></tr>
             </tbody>
-          </table></div>) : <div className="msg info">Đơn giá và tổng tiền không hiển thị với vai trò của bạn.</div>}
+          </table></div>) : <InfoChip id="ro" icon="eye" label="Ẩn giá"><p>Đơn giá và tổng tiền không hiển thị với vai trò của bạn.</p></InfoChip>}
         {editable && <div className="row"><button className="btn" onClick={savePrices}>Lưu đơn giá</button>
           <button className="btn primary" onClick={() => run('submit_for_approval', { p_order: o.id, p_doc: 'F2' }, 'Đã gửi duyệt XNĐH.')}>Gửi duyệt XNĐH</button></div>}
       </div>

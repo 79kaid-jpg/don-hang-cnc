@@ -3840,3 +3840,16 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .gh-tag{position:absolute;left:4px;top:4px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;line-height:1;padding:3px 5px;border-radius:5px;letter-spacing:.03em}
 .gh-pn{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:-2px}
 @media (max-width:760px){.gh-thumbs{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:4px;-webkit-overflow-scrolling:touch}.gh-th,.gh-add{scroll-snap-align:start;flex:none}.gh-add{width:72px;height:72px}}
+/* InfoChip: thông báo 1 dòng + (i) */
+.ichip{display:inline-flex;flex-direction:column;max-width:100%;margin:6px 0;font-size:13px}
+.ichip-row{display:inline-flex;align-items:center;gap:2px;min-height:32px;border-radius:999px;padding:0 2px 0 10px;background:var(--soft);color:var(--ink,#1f2937);border:1px solid var(--line)}
+.ichip.ok .ichip-row{background:var(--blue-bg);color:var(--blue);border-color:transparent}
+.ichip.warn .ichip-row{background:#fff3d6;color:#8a5a00;border-color:transparent}
+.ichip.err .ichip-row{background:var(--red-bg);color:var(--red);border-color:transparent}
+.ichip-l{display:inline-flex;align-items:center;gap:6px;font-weight:600;padding-right:4px}
+.ichip-i{position:relative;width:44px;height:32px;display:grid;place-items:center;border:0;background:none;color:inherit;cursor:pointer;border-radius:999px;opacity:.8}
+.ichip-i:hover,.ichip.on .ichip-i{opacity:1;background:color-mix(in srgb,currentColor 10%,transparent)}.ichip-i:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ichip-i.new::after{content:'';position:absolute;top:5px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--card,#fff)}
+.ichip-d{margin-top:6px;padding:8px 10px;border-radius:10px;background:var(--card,#fff);border:1px solid var(--line);color:var(--ink,#1f2937);font-size:13px;line-height:1.5;max-width:560px}
+.ichip-d p{margin:0 0 4px}.ichip-d p:last-child{margin:0}
+.ichips{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}

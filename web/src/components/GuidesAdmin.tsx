@@ -4,7 +4,7 @@ import { sb, errText } from '../lib/supabase';
 import { loadGuides, useGuides, type Guide } from '../lib/guides';
 import { GuideBox } from './GuideBox';
 import { Icon } from './Icon';
-import { toast, confirmDialog } from './ui';
+import { toast, confirmDialog, InfoChip } from './ui';
 
 const GROUPS: [string, string][] = [['QT0', 'QT0 · Bóc tách'], ['QT1', 'QT1 · XNĐH'], ['QT2', 'QT2 · Lệnh GC'], ['QT3', 'QT3 · Giao hàng'], ['sim', 'Tình huống chung']];
 const CO: Record<string, string> = { PN: 'Phương Nam', IPC: 'IPC', HW: 'Hanwa' };
@@ -43,8 +43,8 @@ export function GuidesAdmin({ canEdit }: { canEdit: boolean }) {
             {own && canEdit && <button className="btn sm danger-soft" disabled={busy} onClick={async () => { if (await confirmDialog('Bỏ hướng dẫn riêng, dùng lại hướng dẫn chung?', 'Bỏ bản riêng')) { if (await run(() => sb.rpc('guide_unset', { p_key: k }), 'Đã dùng lại hướng dẫn chung')) pick(`${own[1]}.*.${own[3]}`); } }}>Dùng bản chung</button>}
             {canEdit && <button className="btn sm primary" disabled={!dirty || busy} onClick={save}><Icon name="check" size={14} />{dirty ? 'Lưu' : 'Đã lưu'}</button>}
           </div></header>
-        {m && <div className="msg info"><Icon name="users" size={16} /><span>Hướng dẫn chung cho cả 3 công ty. Dùng <code>{'{cty}'}</code> để chèn tên công ty, <code>{'{phieu}'}</code> tên phiếu.
-          {canEdit && <> Cần khác nhau theo công ty: {(['PN', 'IPC', 'HW'] as const).map((c) => <button key={c} className="btn xs" style={{ marginLeft: 6 }} onClick={() => addOwn(c)}>+ Riêng {CO[c]}</button>)}</>}</span></div>}
+        {m && <div className="ichips"><InfoChip id="guide-all" icon="users" label="Dùng chung 3 công ty"><p>Dùng <code>{'{cty}'}</code> để chèn tên công ty, <code>{'{phieu}'}</code> tên phiếu.</p></InfoChip>
+          {canEdit && (['PN', 'IPC', 'HW'] as const).map((c) => <button key={c} className="btn xs" onClick={() => addOwn(c)}>+ Riêng {CO[c]}</button>)}</div>}
         <label className="f">Mục đích <span className="muted small">– bước này để làm gì (1–2 câu)</span>
           <textarea rows={3} disabled={!canEdit} value={f.purpose} onChange={(e) => setF({ ...f, purpose: e.target.value })} /></label>
         <label className="f">Việc cần làm <span className="muted small">– mỗi dòng một việc</span>

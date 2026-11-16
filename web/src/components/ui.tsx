@@ -80,3 +80,19 @@ export function Menu({ label, icon, items, align = 'right', primary, title }: { 
         {it.icon && <Icon name={it.icon} size={15} />}<span><span>{it.label}</span>{it.hint && <span className="mnu-hint">{it.hint}</span>}</span></button></div>)}</div>}
   </div>;
 }
+
+/** Chip trạng thái/hướng dẫn 1 dòng + (i) mở chi tiết (rê chuột trên máy tính, chạm trên điện thoại). Chấm xanh trên (i) khi lần đầu gặp loại này. */
+export function InfoChip({ tone = 'info', icon, label, children, id }: { tone?: 'ok' | 'info' | 'warn' | 'err'; icon?: string; label: ReactNode; children?: ReactNode; id?: string }) {
+  const [pin, setPin] = useState(false); const [hov, setHov] = useState(false);
+  const [fresh, setFresh] = useState(() => { try { return !!id && !localStorage.getItem('ic:' + id); } catch { return false; } });
+  const seen = () => { if (fresh) { setFresh(false); try { localStorage.setItem('ic:' + id, '1'); } catch { /* bỏ qua */ } } };
+  const open = pin || hov;
+  const ic = icon ?? ({ ok: 'check', info: 'info', warn: 'alert', err: 'alert' } as const)[tone];
+  return <div className={'ichip ' + tone + (open ? ' on' : '')}>
+    <div className="ichip-row"><span className="ichip-l"><Icon name={ic} size={14} /><span>{label}</span></span>
+      {children && <button type="button" className={'ichip-i' + (fresh ? ' new' : '')} aria-expanded={open} aria-label="Xem chi tiết"
+        onPointerEnter={(e) => { if (e.pointerType === 'mouse') { setHov(true); seen(); } }} onPointerLeave={(e) => e.pointerType === 'mouse' && setHov(false)}
+        onClick={() => { setPin((v) => !v); seen(); }}><Icon name="info" size={15} /></button>}</div>
+    {children && open && <div className="ichip-d" role="note">{children}</div>}
+  </div>;
+}

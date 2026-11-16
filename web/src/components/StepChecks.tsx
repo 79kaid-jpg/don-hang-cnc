@@ -6,7 +6,7 @@ import { itemsOf, loadChecks, progress, useChecks, applyAuto, reqKeysOf, missing
 import { useAuth } from '../lib/auth';
 import { Ring } from './Ring';
 import { Icon } from './Icon';
-import { toast, confirmDialog } from './ui';
+import { InfoChip, toast, confirmDialog } from './ui';
 
 type DocCk = Doc & { checklist?: Record<string, CheckItem[]> };
 const fdt = (s?: string) => s ? new Date(s).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -157,7 +157,7 @@ export function StepChecksAdmin({ canEdit }: { canEdit: boolean }) {
             {canEdit && <button className={'btn sm' + (pane === 'copy' ? ' on' : '')} aria-pressed={pane === 'copy'} disabled={!list.length} onClick={() => setPane(pane === 'copy' ? '' : 'copy')}><span className="ck2-lg">Sao chép sang…</span><span className="ck2-sm">Sao chép</span></button>}
             <button className={'btn sm' + (pane === 'view' ? ' primary' : '')} aria-pressed={pane === 'view'} onClick={() => setPane(pane === 'view' ? '' : 'view')}><Icon name="eye" size={15} /><span className="ck2-lg">Xem như người làm</span><span className="ck2-sm">Xem trước</span></button>
           </div></header>
-        {!canEdit && <div className="msg info"><Icon name="alert" size={16} /><span>Chỉ Admin IT được sửa.</span></div>}
+        {!canEdit && <InfoChip id="ro" icon="eye" label="Chỉ xem"><p>Chỉ Admin IT được sửa.</p></InfoChip>}
         {pane === 'tpl' && <div className="ck2-pane"><b>Bấm để thêm vào bước này</b><div className="ck2-chips">{PRESETS.filter(([t]) => !list.some((x) => x.label === t)).map(([t, l]) =>
           <button key={t} className="ck2-chip" onClick={() => insert([{ label: t, level: l }])}><Icon name="plus" size={13} />{t}<em className={'lv ' + l}>{LEVEL_NAME[l]}</em></button>)}</div></div>}
         {pane === 'copy' && <div className="ck2-pane ck2-copy"><label className="f">Chép {list.length} mục sang bước

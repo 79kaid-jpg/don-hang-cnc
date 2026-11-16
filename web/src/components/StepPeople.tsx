@@ -5,7 +5,7 @@ import { dt, ROLES } from '../lib/format';
 import { STEP_LABEL } from './Checklist';
 import { QtTag } from './QtTag';
 import { Icon } from './Icon';
-import { confirmDialog, toast } from './ui';
+import { InfoChip, confirmDialog, toast } from './ui';
 
 /** Người thực hiện + người giám sát + thời hạn của bước (giống giai đoạn BASE Workflow) */
 export type OStep = Assign & { order_id: string; step: string; claimed_at: string | null; started_at: string; due_at: string | null; done_at: string | null; done_by: string | null };
@@ -138,7 +138,7 @@ export function StepDefaultsAdmin({ canEdit }: { canEdit: boolean }) {
   const order = Object.keys(STEP_LABEL);
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được sửa người phụ trách mặc định.</span></div>}
+      {!canEdit && <InfoChip id="ro" icon="eye" label="Chỉ xem"><p>Chỉ Admin IT được sửa người phụ trách mặc định.</p></InfoChip>}
       <p className="small muted" style={{ margin: '0 0 8px' }}>Khi đơn vào bước, app tự giao người thực hiện và người giám sát theo bảng này, hạn = giờ vào bước + SLA. Từng đơn vẫn đổi được trong chi tiết đơn.</p>
       {err && <div className="msg err">{err}</div>}
       {(rows ?? []).sort((a, b) => order.indexOf(a.step) - order.indexOf(b.step)).map((d) => (
@@ -200,7 +200,7 @@ export function GroupsAdmin({ canEdit }: { canEdit: boolean }) {
     if (error) setErr(errText(error)); else { setName(''); reload(); setOpen((data as Group).id); } };
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {!canEdit && <div className="msg info"><Icon name="alert" size={18} /><span>Chỉ Admin IT được lập và sửa nhóm.</span></div>}
+      {!canEdit && <InfoChip id="ro" icon="eye" label="Chỉ xem"><p>Chỉ Admin IT được lập và sửa nhóm.</p></InfoChip>}
       <p className="small muted" style={{ margin: 0 }}>Giao bước cho một nhóm thì ai trong nhóm cũng làm và chuyển bước được. Một người có thể ở nhiều nhóm.</p>
       {canEdit && <div className="row"><label className="f" style={{ flex: '1 1 260px' }}>Tên nhóm mới<input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Ví dụ: Kho IPC" /></label>
         <button className="btn primary" onClick={add}><Icon name="plus" size={16} />Tạo nhóm</button></div>}
