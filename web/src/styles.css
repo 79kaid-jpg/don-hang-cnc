@@ -3822,3 +3822,12 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .pp-more-m .btn{justify-content:flex-start;width:100%;white-space:nowrap}
 .pp-more-m .icon-only{width:100%}
 @media (max-width:600px){.pp-doc-head>.row .btn{min-height:40px}.pp-more-m{position:fixed;left:8px;right:8px;top:auto;bottom:8px}.pp-more-m .btn{min-height:44px}}
+/* QT3 · CCCD che số + 👁, ảnh mờ, kết quả AI */
+.gh-cc{display:flex;gap:6px;align-items:center}.gh-cc input{flex:1;min-width:0;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.gh-eye{flex:none;width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--card,#fff);color:var(--accent);cursor:pointer}
+.gh-eye:hover{background:var(--soft)}.gh-eye:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gh-blur{position:relative;display:block;width:100%;height:100%}.gh-blur img{filter:blur(2px)}.gh-blur svg{position:absolute;right:4px;bottom:4px;color:#fff;filter:drop-shadow(0 0 2px #0008)}
+.gh-busy{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:12.5px}
+.gh-busy .spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:ghspin .8s linear infinite}
+@keyframes ghspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.gh-busy .spin{animation:none}}
+.gh-ai{margin-top:6px;font-size:12.5px;display:flex;gap:6px;align-items:flex-start;padding:6px 8px}

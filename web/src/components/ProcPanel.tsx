@@ -432,6 +432,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     if (saved && xf && proc === 'QT0') await fillFromExcel(xf);
     // QT2: điền bảng NVL + Thành phẩm từ file Lệnh gia công của phần mềm SX
     if (saved && pf) await fillFromPmsx(pf);
+    return saved ? nf.filter((x) => !files.includes(x)) : [];
   };
   const fillFromPmsx = async (file: File) => {
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
@@ -1109,15 +1110,56 @@ function HaoTip({ a, z, l, m1, m2 }: { a: number; z: number; l: number | null; m
   </span>;
 }
 
+type Bbg = { so: string; trang: string; ky: boolean };
+const bbOf = (h: Record<string, unknown>): Record<string, Bbg> => { try { return JSON.parse(String(h._bbgh_ai || '{}')); } catch { return {}; } };
+const nSo = (x: string) => x.toUpperCase().replace(/[^A-Z0-9]/g, '');
+/** So số BBGH đọc từ ảnh: trang đầu ↔ trang có chữ ký ↔ Số phiếu nhập trên phiếu */
+function bbCheck(bb: Record<string, Bbg>, paths: string[], soPhieu: string): string[] {
+  const xs = paths.map((p, i) => ({ i: i + 1, ...(bb[p] ?? { so: '', trang: '', ky: false, none: true }) })) as (Bbg & { i: number; none?: boolean })[];
+  if (!xs.length) return []; const w: string[] = [];
+  const none = xs.filter((x) => x.none); if (none.length === xs.length) return ['Chưa đọc được ảnh BBGH bằng AI (chụp lại để đọc)'];
+  for (const x of xs) if (!x.none && !x.so) w.push(`Ảnh ${x.i}: không đọc được số BBGH`);
+  const dau = xs.find((x) => x.trang === 'dau' && x.so), cuoi = xs.find((x) => x.ky && x.so) ?? xs.find((x) => x.trang === 'cuoi' && x.so);
+  if (!xs.some((x) => x.ky)) w.push('Chưa thấy trang có chữ ký');
+  if (dau && cuoi && dau !== cuoi && nSo(dau.so) !== nSo(cuoi.so)) w.push(`Trang đầu số ${dau.so} ≠ trang ký số ${cuoi.so}`);
+  const sp = nSo(soPhieu);
+  if (sp) for (const x of xs) if (x.so && nSo(x.so) !== sp && !nSo(x.so).endsWith(sp) && !sp.endsWith(nSo(x.so))) w.push(`Ảnh ${x.i}: BBGH số ${x.so} ≠ Số phiếu ${soPhieu}`);
+  return w;
+}
+
 /** QT3 · Thủ kho tải ảnh giao hàng: 5 mục, mỗi mục cần ≥ 1 ảnh; điện thoại/tablet mở camera */
 function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: boolean; files: { kind: string; name: string; path: string }[]; h: Record<string, unknown>;
-  onField: (k: string, v: string) => void; upload: (e: React.ChangeEvent<HTMLInputElement>, kind: string) => void; remove: (path: string, name: string) => void }) {
+  onField: (k: string, v: string) => void; upload: (e: React.ChangeEvent<HTMLInputElement>, kind: string) => Promise<{ path: string }[] | undefined | void>; remove: (path: string, name: string) => void }) {
   const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
   const { can: hasRole } = useAuth(); const seeCccd = can || hasRole('admin_it') || hasRole('admin_cnc') || hasRole('kho_qc');
   const [urls, setUrls] = useState<Record<string, string>>({});
-  useEffect(() => { let live = true; const ps = files.filter((f) => f.kind.startsWith('gh_') && (seeCccd || f.kind !== 'gh_cccd')).map((f) => f.path).filter((p) => !urls[p]);
+  useEffect(() => { let live = true; const ps = files.filter((f) => f.kind.startsWith('gh_')).map((f) => (f.kind === 'gh_cccd' && !seeCccd ? f.path + '.blur.jpg' : f.path)).filter((p) => !urls[p]);
     if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
     return () => { live = false; }; }, [files]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [rev, setRev] = useState('');
+  useEffect(() => { setRev(''); }, [h.tx_cccd]);
+  // Ảnh → JPEG nhỏ (gửi AI) hoặc bản làm mờ (người không có quyền xem CCCD)
+  const toJpeg = (file: File, max: number, blur = 0) => new Promise<Blob>((ok, bad) => { const img = new Image(); const u = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const x = c.getContext('2d')!; if (blur) x.filter = `blur(${blur}px)`; x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); c.toBlob((b) => (b ? ok(b) : bad(new Error('Không xử lý được ảnh'))), 'image/jpeg', 0.85); };
+    img.onerror = () => bad(new Error('Không đọc được ảnh')); img.src = u; });
+  const b64 = async (b: Blob) => { const a = new Uint8Array(await b.arrayBuffer()); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode(...a.subarray(i, i + 0x8000)); return btoa(s); };
+  const ai = async (op: 'cccd' | 'bbgh', file: File) => { const { data, error } = await sb.functions.invoke('gh-ai', { body: { op, doc_id: d.id, image: await b64(await toJpeg(file, 1600)) } });
+    const er = (data as { error?: string } | null)?.error ?? (error ? (await (error as { context?: Response }).context?.json?.().catch(() => null))?.error ?? error.message : ''); if (er) throw new Error(er); return data as Record<string, unknown>; };
+  const pick = async (e: React.ChangeEvent<HTMLInputElement>, k: string) => { const fl = Array.from(e.target.files ?? []); const added = (await upload(e, k)) || [];
+    if (k !== 'gh_cccd' && k !== 'gh_bbgh') return; setAiMsg('');
+    let map: Record<string, Bbg> = bbOf(h); const notes: string[] = [];
+    for (let i = 0; i < added.length && i < fl.length; i++) { const f = fl[i], p = added[i].path;
+      try {
+        if (k === 'gh_cccd') { setBusy('Đang làm mờ ảnh CCCD…'); await sb.storage.from('files').upload(p + '.blur.jpg', await toJpeg(f, 480, 14), { upsert: true, contentType: 'image/jpeg' });
+          setBusy('Gemini đang đọc CCCD…'); const r = await ai('cccd', f);
+          if (r.ho_ten && !String(h.tai_xe ?? '').trim()) { onField('tai_xe', String(r.ho_ten)); notes.push('Tài xế: ' + r.ho_ten); }
+          if (r.so_cccd) { onField('tx_cccd', String(r.so_cccd)); notes.push('Số CCCD đã điền (sẽ mã hoá khi Lưu)'); } else notes.push('⚠ Không đọc được số CCCD, nhập tay'); }
+        else { setBusy('Gemini đang đọc BBGH…'); const r = await ai('bbgh', f); map = { ...map, [p]: { so: r.so_bbgh ? String(r.so_bbgh) : '', trang: String(r.trang ?? ''), ky: !!r.co_chu_ky } }; }
+      } catch (x) { notes.push('⚠ ' + (x as Error).message); } }
+    if (k === 'gh_bbgh') onField('_bbgh_ai', JSON.stringify(map));
+    setBusy(''); setAiMsg(notes.join(' · ') + (notes.length || k === 'gh_bbgh' ? ' – nhớ bấm Lưu' : '')); };
+  const bbPaths = files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const bb = bbOf(h); const bbWarn = bbCheck(bb, bbPaths, String(h.so_phieu ?? ''));
   const done = GH_ITEMS.filter(([k]) => files.some((f) => f.kind === k)).length + 0;
   const txOk = String(h.tx_cccd ?? '').trim() && String(h.tx_sdt ?? '').trim();
   return <section className="gh card" aria-label="Ảnh giao hàng">
@@ -1128,15 +1170,19 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
         <span className="gh-n" aria-hidden="true">{ok ? <Icon name="check" size={14} /> : i + 1}</span>
         <div className="gh-body"><b>{lab}</b>
           {k === 'gh_cccd' && <div className="gh-tx">
-            <label><span className="small muted">Số CCCD</span><input inputMode="numeric" autoComplete="off" value={seeCccd ? String(h.tx_cccd ?? '') : (h.tx_cccd ? '••••••••' : '')} disabled={!can} onChange={(e) => onField('tx_cccd', e.target.value)} /></label>
+            <label><span className="small muted">Số CCCD</span><span className="gh-cc"><input inputMode="numeric" autoComplete="off" value={rev || String(h.tx_cccd ?? '')} disabled={!can} readOnly={!!rev} onFocus={(e) => { if (can && String(h.tx_cccd ?? '').includes('•')) e.target.select(); }} onChange={(e) => { const v = e.target.value; if (v.includes('•')) { if (v.replace(/[^•]/g, '').length < String(h.tx_cccd ?? '').replace(/[^•]/g, '').length) onField('tx_cccd', ''); return; } onField('tx_cccd', v.replace(/[^0-9]/g, '')); }} />
+              {seeCccd && String(h.tx_cccd ?? '').includes('•') && <button type="button" className="gh-eye" aria-label={rev ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={rev ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'} onClick={async () => { if (rev) { setRev(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: d.id }); if (error) setAiMsg('⚠ ' + error.message); else setRev(String(data ?? '')); }}><Icon name={rev ? 'eyeoff' : 'eye'} size={18} /></button>}</span></label>
             <label><span className="small muted">Số điện thoại</span><input type="tel" inputMode="tel" autoComplete="off" value={String(h.tx_sdt ?? '')} disabled={!can} onChange={(e) => onField('tx_sdt', e.target.value)} /></label>
-            <small className="muted">Ảnh CCCD chỉ người trong quy trình giao hàng và admin xem, không in, không gửi Zalo.</small></div>}
+            <small className="muted">Chụp CCCD: Gemini tự điền tên tài xế và số CCCD. Số được mã hoá, chỉ người có quyền bấm 👁 xem đủ; ảnh gốc chỉ người có quyền xem rõ.</small></div>}
+          {k === 'gh_bbgh' && bbPaths.length > 0 && (bbWarn.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{bbWarn.join(' · ')}</span></div> : <div className="msg ok gh-ai" role="status"><Icon name="check" size={15} /><span>Số BBGH trang đầu và trang ký khớp số phiếu {String(h.so_phieu ?? '')}</span></div>)}
           {mine.length > 0 && <div className="gh-thumbs">{mine.map((f) => <span key={f.path} className="gh-th">
-            {k === 'gh_cccd' && !seeCccd ? <span className="gh-ph gh-lock" title="Ảnh CCCD chỉ thủ kho và admin xem"><Icon name="eyeoff" size={18} /></span> : urls[f.path] ? <a href={urls[f.path]} target="_blank" rel="noreferrer"><img src={urls[f.path]} alt={lab} loading="lazy" /></a> : <span className="gh-ph" />}
+            {k === 'gh_cccd' && !seeCccd ? (urls[f.path + '.blur.jpg'] ? <span className="gh-blur" title="Ảnh CCCD đã làm mờ – chỉ người có quyền xem rõ"><img src={urls[f.path + '.blur.jpg']} alt="CCCD (đã làm mờ)" loading="lazy" /><Icon name="eyeoff" size={16} /></span> : <span className="gh-ph gh-lock" title="Ảnh CCCD chỉ người có quyền xem"><Icon name="eyeoff" size={18} /></span>) : urls[f.path] ? <a href={urls[f.path]} target="_blank" rel="noreferrer"><img src={urls[f.path]} alt={lab} loading="lazy" /></a> : <span className="gh-ph" />}
             {can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>)}</div>}
           {can && <label className={'btn sm ' + (mine.length ? '' : 'primary') + ' gh-up'}>
             <Icon name={touch ? 'file' : 'upload'} size={15} />{touch ? (mine.length ? 'Chụp thêm' : 'Chụp ảnh') : (mine.length ? 'Thêm ảnh' : 'Tải ảnh lên')}
-            <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden onChange={(e) => upload(e, k)} /></label>}
+            <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
+          {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
+          {!busy && aiMsg && (k === 'gh_cccd' ? aiMsg.includes('CCCD') || aiMsg.includes('Tài xế') : k === 'gh_bbgh' && !aiMsg.includes('CCCD')) && <small className="gh-busy">{aiMsg}</small>}
         </div></li>; })}</ol>
   </section>;
 }
