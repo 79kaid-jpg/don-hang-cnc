@@ -107,7 +107,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
         {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Thất bại – đã dừng. {B.proc === 'QT0' ? 'Mở “lần bóc tách mới”' : 'Mở lượt mới'} nếu cần làm lại.</span></div>}
         {B && proc === 'QT1' && D && D.company === 'PN' && D.status === 'fail' && !(B.checklist as Record<string, unknown> | null)?.recloned_to && <div className="row" style={{ gap: 8, alignItems: 'center' }}><ReClone docId={D.id} onDone={(id) => { setBid(id); setCo(''); load(); }} /><span className="small muted">Chép bảng tấm (kể cả đơn giá) sang đơn mới; tấm đơn khác đã lấy sẽ báo thiếu.</span></div>}
         {B && proc === 'QT0' && B.status === 'hoan_tat' && <Qt0Alloc qt0={B.id} order={o.id} />}
-        {B && proc === 'QT1' && (B as Batch & { src_qt0?: string | null }).src_qt0 && (!D || D.company === 'PN') && <Qt0Alloc qt0={String((B as Batch & { src_qt0?: string }).src_qt0)} order={o.id} />}
+        {B && proc === 'QT1' && (B as Batch & { src_qt0?: string | null }).src_qt0 && D && D.company === 'PN' && D.status === 'lap' && <Qt0Alloc qt0={String((B as Batch & { src_qt0?: string }).src_qt0)} order={o.id} />}
         {B && B.proc === 'QT2' && <Check5 b={B} />}
         {D && B && D.can_view === false && <div className="card lock-card"><Icon name="shield" size={22} /><div><b>Hồ sơ của {COMPANY[D.company]}</b><br />
           <span className="small muted">Bạn chỉ xem được hồ sơ của công ty mình. Tiến độ: {D.status === 'da_duyet' ? 'đã duyệt' : D.status === 'fail' ? 'thất bại' : 'đang xử lý'}.</span></div></div>}
