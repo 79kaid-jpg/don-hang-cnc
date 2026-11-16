@@ -451,7 +451,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const name = (k: string) => (proc === 'QT3' ? 'Thành phẩm' : k === 'nl' ? 'NVL (xuất hàng)' : 'Thành phẩm (nhập hàng)');
     const miss = [...new Set(got.flatMap((x) => x.unmatched))];
     const has = got.filter((x) => (t[x.tbl as never] as Row[] | undefined ?? []).some((r) => Object.values(r).some((v) => String(v ?? '').trim())));
-    const HL: Record<string, string> = { so_phieu: 'Số phiếu', ngay_giao: 'Ngày giao', ma_dh_khach: 'Mã ĐH (khách)', dang_gia_cong: 'Dạng gia công', ten_khach: 'Tên khách hàng', dia_diem: 'Địa điểm giao', tai_xe: 'Tài xế', xe: 'Xe', so_lenh: 'Số lệnh', nguoi_phat_lenh: 'Người phát lệnh', ma_dh: 'Mã ĐH', kho_xuat: 'Kho xuất', kho_nhan: 'Kho nhận', dang_gc: 'Dạng gia công' };
+    const HL: Record<string, string> = { so_phieu: 'Số phiếu', ngay_giao: 'Ngày giao', ma_dh_khach: 'Mã ĐH (khách)', dang_gia_cong: 'Dạng gia công', ten_khach_hang: 'Tên khách hàng', dia_diem: 'Địa điểm giao', tai_xe: 'Tài xế', xe: 'Xe', so_lenh: 'Số lệnh', nguoi_phat_lenh: 'Người phát lệnh', ma_dh: 'Mã ĐH', kho_xuat: 'Kho xuất', kho_nhan: 'Kho nhận', dang_gc: 'Dạng gia công' };
     const warn = [...calcWarn, ...(miss.length ? ['Cột không khớp (bỏ qua): ' + miss.join(', ')] : []), ...chk.filter((c) => c.bad.length).map((c) => name(c.tbl) + ': tổng trong file khác tổng các dòng (' + c.bad.join(', ') + ')')];
     const box = (q: string) => <div className="imp-dlg">
       <div className="imp-h"><span className="imp-ic"><Icon name="upload" size={18} /></span><div><b>{proc === 'QT3' ? 'Nhập Biên bản giao hàng' : 'Nhập Lệnh gia công'}</b><span>{file.name}</span></div></div>

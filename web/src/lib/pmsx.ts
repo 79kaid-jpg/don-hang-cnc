@@ -61,7 +61,7 @@ export function readBbgh(sheets: unknown[][][], d: { tbl: string; cols: (Col & {
     const dm = /ngay\s*(\d{1,2})\s*thang\s*(\d{1,2})\s*nam\s*(\d{4})/.exec(nrm(v(3)));
     const after = (s: string) => s.replace(/^[^:]*:\s*/, '').trim();
     const head = Object.fromEntries(Object.entries({ so_phieu: v(2), ngay_giao: dm ? `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}` : '', ma_dh_khach: v(4), dang_gia_cong: v(6),
-      ten_khach: v(7), dia_diem: v(8), tai_xe: after(v(22)), xe: after(v(23)) }).filter(([, x]) => x && x !== '-'));
+      ten_khach_hang: v(7), dia_diem: v(8), tai_xe: after(v(22)), xe: after(v(23)) }).filter(([, x]) => x && x !== '-'));
     const out = readPmsx([[['DANH SACH THANH PHAM'], ...rows.slice(1)]], [{ tbl: d.tbl, title: /danh sach thanh pham/, cols: d.cols }]);
     return { block: out[0] ?? null, head };
   }
