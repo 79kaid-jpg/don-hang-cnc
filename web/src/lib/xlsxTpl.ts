@@ -277,6 +277,11 @@ export function toHtml(wb: ExcelJS.Workbook): string {
   const wOf = (c: number) => (ws.getColumn(c).width ?? 9) * 7;
   const cols = vcols.map(wOf);
   const total = cols.reduce((a, w) => a + w, 0) || 1;
+  const pageW = isLandscape(wb) ? 1080 : 740; const pxOf = (cs: number[]) => cs.reduce((a, c) => a + wOf(c), 0) / total * pageW - 8;
+  // Như "Shrink to fit" của Excel: số không xuống dòng, từ không bị cắt giữa chừng → thu nhỏ chữ của riêng ô đó (≥ 75%)
+  const fitScale = (txt: string, fs: number, bold: boolean, w: number, num: boolean) => { if (!txt || w <= 0) return 1;
+    const cw = fs * (bold ? 0.6 : 0.56); const longest = num ? txt.length : Math.max(...txt.split(/\s+/).map((x) => x.length));
+    return Math.max(0.75, Math.min(1, w / (longest * cw))); };
   const bd = (b?: Partial<ExcelJS.Border>) => (b?.style ? `${b.style === 'medium' || b.style === 'thick' ? 1.5 : 1}px solid ${argb(b.color) || '#000'}` : '');
   let h = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Be Vietnam Pro',system-ui,sans-serif;font-size:12px"><colgroup>${cols.map((w) => `<col style="width:${(w / total * 100).toFixed(2)}%">`).join('')}</colgroup>`;
   const gs = (ws as unknown as { _groups?: { head: number[]; from: number; to: number }[] })._groups ?? [];
@@ -310,7 +315,10 @@ export function toHtml(wb: ExcelJS.Workbook): string {
           const nv = ws.getCell(r, n).value; if (nv != null && String(nv).trim() !== '') break;
           const ns = span[r + ':' + n]; if (ns && ns[0] > 1) break; const nb = ws.getCell(r, n).border; if (nb?.left?.style || nb?.right?.style) break;
           skip.add(n); spill++; if (ns) vcols.filter((x) => x > n && x < n + ns[1]).forEach((x) => { skip.add(x); spill++; }); } }
-      h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st}">${esc(v)}</td>`; }
+      const ccs = sp ? vcols.filter((x) => x >= c).slice(0, sp[1]) : vcols.filter((x) => x >= c).slice(0, spill);
+      const num = /^[-+]?[\d.,]+\s*%?$/.test(v.trim()); const fs = f.size ? f.size * 1.2 : 12; const k = fitScale(v.trim(), fs, !!f.bold, pxOf(ccs), num);
+      const st2 = st.replace('overflow-wrap:break-word', 'overflow-wrap:normal') + (num ? ';white-space:nowrap' : '') + (k < 1 ? `;font-size:${(fs * k).toFixed(1)}px` : '');
+      h += `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : spill > 1 ? ` colspan="${spill}"` : ''} style="${st2}">${esc(v)}</td>`; }
     h += '</tr>'; if (hd.length && r === hd1) h += '</thead><tbody>'; }
   h += inTail ? '</table></div>' : (hd.length ? '</tbody>' : '') + '</table>';
   const imgs = ws.getImages().map((im) => { const m = wb.getImage(+im.imageId) as { base64?: string; buffer?: ArrayBuffer; extension: string };
