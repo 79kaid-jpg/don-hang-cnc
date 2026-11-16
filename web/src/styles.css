@@ -3785,3 +3785,22 @@ html[data-theme=dark]{--accent:#3B5FC9}
 th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .pt-vq{width:100%;margin:0 0 8px}
 @media (max-width:640px){.f .vtag-w{display:flex;margin:2px 0 0}}
+
+/* Hộp nhập Lệnh gia công (PMSX) */
+.btn.calm{background:#2f6fb0;border-color:#2f6fb0;color:#fff}
+.btn.calm:hover{background:#285f98;border-color:#285f98}
+.imp-dlg{display:flex;flex-direction:column;gap:12px;font-weight:400}
+.imp-h{display:flex;gap:10px;align-items:center}
+.imp-h b{display:block;font-size:16px;font-weight:600;color:var(--ink,#1f2937)}
+.imp-h span{font-size:13px;color:var(--muted,#6b7280)}
+.imp-ic{width:36px;height:36px;border-radius:10px;background:#e8f0fa;color:#2f6fb0;display:flex;align-items:center;justify-content:center;flex:none}
+.imp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.imp-cards>div{background:#f4f6f9;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}
+.imp-cards span{font-size:12.5px;color:var(--muted,#6b7280)}
+.imp-cards b{font-size:20px;font-weight:600;color:var(--ink,#1f2937)}
+.imp-kv{display:grid;gap:4px;margin:0;font-size:13.5px}
+.imp-kv>div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px}
+.imp-kv dt{color:var(--muted,#6b7280)}.imp-kv dd{margin:0;color:var(--ink,#1f2937);overflow-wrap:anywhere}
+.imp-warn{margin:0;display:flex;gap:6px;align-items:flex-start;background:#fdf6e3;color:#7a5a12;border-radius:8px;padding:8px 10px;font-size:12.5px}
+.imp-q{margin:0;font-size:14px;color:var(--ink,#1f2937)}.imp-q:empty{display:none}
+@media (max-width:480px){.imp-kv>div{grid-template-columns:1fr;gap:0}.imp-kv dd{margin-bottom:4px}.modal .row .btn{flex:1;min-height:44px}}

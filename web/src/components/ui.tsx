@@ -32,11 +32,12 @@ export const Msg = ({ err, ok }: { err?: string; ok?: string }) => {
 };
 
 // ── Hộp xác nhận cho thao tác khó hoàn tác ──
-let ask: (q: string, label?: string, safe?: boolean) => Promise<boolean> = async () => true;
+type Tone = boolean | 'calm';
+let ask: (q: ReactNode, label?: string, safe?: Tone) => Promise<boolean> = async () => true;
 /** safe=true: thao tác bình thường (nút vàng); mặc định: thao tác khó hoàn tác (nút đỏ) */
-export const confirmDialog = (q: string, label = 'Xác nhận', safe = false) => ask(q, label, safe);
+export const confirmDialog = (q: ReactNode, label = 'Xác nhận', safe: Tone = false) => ask(q, label, safe);
 export function ConfirmHost() {
-  const [st, setSt] = useState<{ q: string; d: string; safe: boolean; res: (v: boolean) => void } | null>(null);
+  const [st, setSt] = useState<{ q: ReactNode; d: string; safe: Tone; res: (v: boolean) => void } | null>(null);
   useEffect(() => { ask = (q, d = 'Xác nhận', safe = false) => new Promise((res) => setSt({ q, d, safe, res })); }, []);
   if (!st) return null;
   const done = (v: boolean) => { st.res(v); setSt(null); };
@@ -44,10 +45,10 @@ export function ConfirmHost() {
     <div className="modal-bg" onClick={() => done(false)}>
       <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="cf-q" onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === 'Escape' && done(false)}>
-        <p id="cf-q" style={{ margin: 0, fontWeight: 600 }}>{st.q}</p>
+        {typeof st.q === 'string' ? <p id="cf-q" style={{ margin: 0, fontWeight: 600 }}>{st.q}</p> : <div id="cf-q">{st.q}</div>}
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="btn" autoFocus onClick={() => done(false)}>Huỷ</button>
-          <button className={st.safe ? 'btn primary' : 'btn danger-fill'} onClick={() => done(true)}>{st.d}</button>
+          <button className={st.safe === 'calm' ? 'btn calm' : st.safe ? 'btn primary' : 'btn danger-fill'} onClick={() => done(true)}>{st.d}</button>
         </div>
       </div>
     </div>

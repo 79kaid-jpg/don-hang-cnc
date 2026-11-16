@@ -446,11 +446,18 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const name = (k: string) => (k === 'nl' ? 'NVL (xuất hàng)' : 'Thành phẩm (nhập hàng)');
     const miss = [...new Set(got.flatMap((x) => x.unmatched))];
     const has = got.filter((x) => (t[x.tbl as never] as Row[] | undefined ?? []).some((r) => Object.values(r).some((v) => String(v ?? '').trim())));
-    const head = 'File có ' + got.map((x) => x.rows.length + ' dòng ' + name(x.tbl)).join(' và ') + '.' + (Object.keys(hd).length ? ' Đầu phiếu: ' + Object.values(hd).join(' · ') + '.' : '') + (miss.length ? ' Cột không khớp (bỏ qua): ' + miss.join(', ') + '.' : '');
+    const HL: Record<string, string> = { so_lenh: 'Số lệnh', nguoi_phat_lenh: 'Người phát lệnh', ma_dh: 'Mã ĐH', kho_xuat: 'Kho xuất', kho_nhan: 'Kho nhận', dang_gc: 'Dạng gia công' };
+    const warn = [...(miss.length ? ['Cột không khớp (bỏ qua): ' + miss.join(', ')] : []), ...chk.filter((c) => c.bad.length).map((c) => name(c.tbl) + ': tổng trong file khác tổng các dòng (' + c.bad.join(', ') + ')')];
+    const box = (q: string) => <div className="imp-dlg">
+      <div className="imp-h"><span className="imp-ic"><Icon name="upload" size={18} /></span><div><b>Nhập Lệnh gia công</b><span>{file.name}</span></div></div>
+      <div className="imp-cards">{got.map((x) => <div key={x.tbl}><span>{x.tbl === 'nl' ? 'Bảng 1 · NVL' : 'Bảng 2 · Thành phẩm'}</span><b>{x.rows.length} dòng</b></div>)}</div>
+      {Object.keys(hd).length > 0 && <dl className="imp-kv">{Object.entries(hd).map(([k, v]) => <div key={k}><dt>{HL[k] ?? k}</dt><dd>{v}</dd></div>)}</dl>}
+      {warn.map((w) => <p key={w} className="imp-warn"><Icon name="alert" size={14} />{w}</p>)}
+      <p className="imp-q">{q}</p></div>;
     let mode: 'thay' | 'them' = 'thay';
-    if (has.length) { if (await confirmDialog(head + ' Thay toàn bộ dòng đang có trong bảng?', 'Thay toàn bộ')) mode = 'thay';
-      else if (await confirmDialog('Thêm các dòng từ file vào cuối bảng?', 'Thêm vào cuối')) mode = 'them'; else return; }
-    else if (!(await confirmDialog(head + ' Điền vào bảng?', 'Điền vào bảng'))) return;
+    if (has.length) { if (await confirmDialog(box('Bảng đang có dữ liệu. Thay toàn bộ bằng dữ liệu trong file?'), 'Thay toàn bộ', 'calm')) mode = 'thay';
+      else if (await confirmDialog('Thêm các dòng từ file vào cuối bảng?', 'Thêm vào cuối', 'calm')) mode = 'them'; else return; }
+    else if (!(await confirmDialog(box(''), 'Điền vào bảng', 'calm'))) return;
     const nt = { ...t } as Record<string, Row[]>;
     for (const x of got) { const cur = (nt[x.tbl] ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim())); nt[x.tbl] = mode === 'them' ? [...cur, ...x.rows] : x.rows; }
     setT(nt as typeof t); if (Object.keys(hd).length) setH((x) => ({ ...x, ...hd })); setDirty(true);
