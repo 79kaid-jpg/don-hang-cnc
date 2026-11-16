@@ -64,7 +64,11 @@ export const stampDens = (r: Row): Row => { if (!String(r.vat_lieu ?? '').trim()
 export const kgOf = (r: Row) => { const m = m2Of(r), d = num(r.day); return m != null && d != null ? +(m * d * densOf(r)).toFixed(2) : null; };
 export const ttOf = (r: Row) => { const m = m2Of(r), g = num(r.don_gia); return m != null && g != null ? Math.round(m * g) : null; };
 export const TABLES: Record<string, { t: string; cols: Col[] }> = {
-  ds0: { t: 'Danh sách tấm', cols: [
+  nl0: { t: 'Bảng 1 – Nguyên vật liệu (phôi)', cols: [
+    { k: 'vat_lieu', t: 'Tên hàng / vật liệu', w: 12 }, { k: 'day', t: 'Dày (mm)', n: true, d: 1 }, { k: 'dai', t: 'Dài (mm)', n: true }, { k: 'rong', t: 'Rộng (mm)', n: true },
+    { k: 'mac_thep', t: 'Mác thép', w: 8 }, { k: 'so_tam', t: 'SL (tấm)', n: true }, { k: 'm2', t: 'DT (m²)', n: true, d: 2 }, { k: 'kg', t: 'TL (kg)', n: true, d: 1, calc: kgOf },
+    { k: 'ma_mau', t: 'Mã màu', w: 6 }, { k: 'ma_tam', t: 'Dùng cho mã tấm', w: 14 }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] },
+  ds0: { t: 'Bảng 2 – Thành phẩm', cols: [
     { k: 'ma_tam', t: 'Mã tấm', w: 10, g: 'Kích thước hoàn thiện' }, { k: 'day', t: 'Độ dày', n: true, d: 1, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'rong', t: 'Rộng', n: true, g: 'Kích thước hoàn thiện', u: 'mm' }, { k: 'dai', t: 'Dài', n: true, g: 'Kích thước hoàn thiện', u: 'mm' },
     { k: 'so_tam', t: 'Số lượng', n: true, g: 'Kích thước hoàn thiện', u: 'tấm' }, { k: 'mau_son', t: 'Màu sơn', w: 6, g: 'Kích thước hoàn thiện' },
@@ -91,7 +95,7 @@ export const TABLES: Record<string, { t: string; cols: Col[] }> = {
     { k: 'so_tam', t: 'Số tấm', n: true }, { k: 'm2', t: 'Tổng m²', n: true, d: 2 }, { k: 'kg', t: 'Khối lượng (kg)', n: true, d: 1, calc: kgOf }, { k: 'ghi_chu', t: 'Ghi chú', w: 12 }] }
 };
 /** bảng của từng quy trình: [khoá lưu trong docs.tables, định nghĩa cột] */
-export const PROC_TABLES: Record<Proc, [string, string][]> = { QT0: [['ds', 'ds0']], QT1: [['ds', 'ds1']], QT2: [['nl', 'nl'], ['tp', 'tp2']], QT3: [['tp', 'tp3']] };
+export const PROC_TABLES: Record<Proc, [string, string][]> = { QT0: [['nl', 'nl0'], ['ds', 'ds0']], QT1: [['ds', 'ds1']], QT2: [['nl', 'nl'], ['tp', 'tp2']], QT3: [['tp', 'tp3']] };
 export const HEADER: Record<Proc, [string, string, string?][]> = {
   QT0: [['ngay_nhan', 'Ngày nhận bản vẽ', 'date'], ['kenh', 'Kênh nhận (email / Zalo)'], ['hao_hut', 'Hao hụt dự kiến (%)', 'num']],
   QT1: [['so_xn', 'Số XNĐH'], ['ngay', 'Ngày lập', 'date'], ['dk_giao', 'Điều kiện giao hàng'], ['noi_giao', 'Nơi giao hàng'], ['dk_tt', 'Điều kiện thanh toán'], ['vat', 'Thuế GTGT (%)', 'num'], ['phi_vc', 'Phí vận chuyển (đ)', 'num']],
@@ -143,3 +147,15 @@ const docs0 = (b: Batch, ds: Doc[]) => ds.filter((d) => d.batch_id === b.id).map
 
 /** QT3 · Tải ảnh giao hàng: 5 mục bắt buộc có ảnh */
 export const GH_ITEMS: [string, string][] = [['gh_cccd', 'CCCD & số điện thoại tài xế'], ['gh_truoc', 'Ảnh trước khi lên hàng'], ['gh_sau', 'Ảnh sau khi load hàng xong'], ['gh_xe', 'Ảnh nguyên chiếc xe'], ['gh_bbgh', 'Ảnh BBGH đã ký']];
+
+/** Gom cột phôi của bảng thành phẩm (file bóc tách) thành Bảng 1 – NVL: cùng vật liệu, dày, khổ phôi → 1 dòng */
+export function nlFromPhoi(rows: Row[]): Row[] {
+  const m = new Map<string, { row: Row; codes: string[] }>();
+  for (const r of rows) { const pr = num(r.phoi_rong), pd = num(r.phoi_dai), sl = num(r.phoi_sl); if (pr == null || pd == null || !sl) continue;
+    const vl = String(r.vat_lieu ?? '').trim(); const k = [vl, num(r.day) ?? '', pr, pd].join('|');
+    const a = num(r.phoi_m2) ?? +(pr * pd * sl / 1e6).toFixed(4);
+    const x = m.get(k) ?? { row: { vat_lieu: vl, day: r.day ?? null, rong: pr, dai: pd, so_tam: 0, m2: 0 }, codes: [] };
+    x.row.so_tam = (Number(x.row.so_tam) || 0) + sl; x.row.m2 = +((Number(x.row.m2) || 0) + a).toFixed(4);
+    const c = String(r.ma_tam ?? '').trim(); if (c && !x.codes.includes(c)) x.codes.push(c); m.set(k, x); }
+  return [...m.values()].map(({ row, codes }) => ({ ...row, ma_tam: codes.join(', ') }));
+}

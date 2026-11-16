@@ -29,6 +29,7 @@ import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
   sumOf, numIn, isNumOk, numTyping, type Batch, type Col, type Company, type Doc, type Proc, type Row,
   stampDens, matOf, subRows,
+  nlFromPhoi,
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { askRating } from './Rating';
@@ -461,17 +462,19 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const tb = tblDefs.find((x) => x.key === 'ds'); if (!tb || !tb.ed) return;
     const X = await import('xlsx'); const wb = X.read(await file.arrayBuffer());
     const keys = new Set(tb.cols.filter((c) => !c.calc).map((c) => c.k));
-    const add = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })))
-      .map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => keys.has(k) && v !== '')) as Row);
+    const raw = bocTachRows(wb.SheetNames.map((sn) => ({ name: sn, rows: X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }) })));
+    const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_')) && v !== '')) as Row);
+    const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
     if (!add.length) return;
     const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
     let next = add;
     if (cur.length) {
-      if (await confirmDialog(`File có ${add.length} dòng tấm. Thay toàn bộ ${cur.length} dòng đang có trong Danh sách tấm?`, 'Thay toàn bộ')) next = add;
+      if (await confirmDialog(`File có ${add.length} dòng tấm. Thay toàn bộ ${cur.length} dòng đang có trong bảng Thành phẩm${proc === 'QT0' ? ' (và Bảng 1 – NVL)' : ''}?`, 'Thay toàn bộ')) next = add;
       else if (await confirmDialog(`Thêm ${add.length} dòng từ file vào cuối danh sách?`, 'Thêm vào cuối')) next = [...cur, ...add];
       else return; }
-    setT((x) => ({ ...x, ds: next })); setDirty(true);
-    toast('Đã điền ' + add.length + ' dòng từ file vào Danh sách tấm – bấm Lưu để giữ');
+    const nlNext = nl.length ? (next === add ? nlFromPhoi(add as never) : nlFromPhoi(next as never)) : null;
+    setT((x) => ({ ...x, ds: next, ...(nlNext ? { nl: nlNext } : {}) })); setDirty(true);
+    toast('Đã điền ' + add.length + ' dòng thành phẩm' + (nlNext ? ' và ' + nlNext.length + ' dòng NVL (gom theo vật liệu, dày, khổ phôi)' : '') + ' – bấm Lưu để giữ');
   };
   const who = (id?: string) => (id ? people[id]?.full_name ?? '…' : '');
   const first = FLOW[proc][0] === d.status;

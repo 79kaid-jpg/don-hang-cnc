@@ -52,7 +52,7 @@ def build(path):
     for r in (1, 2, 3): ws.row_dimensions[r].height = 20
     ws.row_dimensions[4].height = 8
 
-    ws.merge_cells(f'A5:{LAST}5'); put('A5', 'DANH SÁCH TẤM – BÓC TÁCH BẢN VẼ', f(16, True, c=NAVY), C)
+    ws.merge_cells(f'A5:{LAST}5'); put('A5', 'BÓC TÁCH BẢN VẼ – NVL & THÀNH PHẨM', f(16, True, c=NAVY), C)
     ws.row_dimensions[5].height = 30
     ws.row_dimensions[6].height = 6
 
@@ -70,8 +70,25 @@ def build(path):
         ws.row_dimensions[r].height = 18
     ws.row_dimensions[11].height = 10
 
-    # Bảng
-    h = 12
+    # Bảng 1 – NVL (phôi): STT | Tên hàng | Dùng cho mã tấm | Dày | Dài | Rộng | SL | DT | TL | Ghi chú (J:N)
+    ws.merge_cells(f'A12:{LAST}12'); put('A12', 'BẢNG 1 – NGUYÊN VẬT LIỆU (PHÔI)', f(11, True, c=NAVY), L); ws.row_dimensions[12].height = 22
+    NL = [('STT', 'stt'), ('Tên hàng / vật liệu', 'vat_lieu'), ('Dùng cho mã tấm', 'ma_tam'), ('Dày\n(mm)', 'day'), ('Dài\n(mm)', 'dai'), ('Rộng\n(mm)', 'rong'),
+          ('SL\n(tấm)', 'so_tam'), ('DT\n(m²)', 'm2'), ('TL\n(kg)', 'kg'), ('Ghi chú', 'ghi_chu')]
+    for i, (t, _k) in enumerate(NL): put(f'{chr(65 + i)}13', t, f(9, True), C, HEAD, B)
+    ws.merge_cells(f'J13:{LAST}13'); ws.row_dimensions[13].height = 30
+    for i, (_t, k) in enumerate(NL):
+        v = '{#nl}{nl.stt}' if k == 'stt' else '{nl.' + k + '}'
+        put(f'{chr(65 + i)}14', v, f(9.5), C if k == 'stt' else (R if k in NUM else L), None, B, NUM.get(k))
+    ws.merge_cells(f'J14:{LAST}14'); ws.row_dimensions[14].height = 18
+    for i in range(N): put(f'{chr(65 + i)}15', None, f(9.5, True), R, HEAD, B)
+    ws.merge_cells('A15:F15'); put('A15', 'TỔNG NVL', f(9.5, True), C, HEAD, B)
+    for k, col in (('so_tam', 'G'), ('m2', 'H'), ('kg', 'I')): put(f'{col}15', '{tong_nl_' + k + '}', f(9.5, True), R, HEAD, B, NUM[k])
+    ws.merge_cells(f'J15:{LAST}15'); ws.row_dimensions[15].height = 20
+    ws.row_dimensions[16].height = 10
+
+    # Bảng 2 – Thành phẩm
+    ws.merge_cells(f'A17:{LAST}17'); put('A17', 'BẢNG 2 – THÀNH PHẨM', f(11, True, c=NAVY), L); ws.row_dimensions[17].height = 22
+    h = 18
     for i, (t, _w, _k) in enumerate(COLS):
         put(f'{chr(65 + i)}{h}', t, f(9, True), C, HEAD, B)
     ws.row_dimensions[h].height = 32
