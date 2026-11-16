@@ -3957,3 +3957,20 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 }
 @keyframes sheetUp{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.modal-bg>.modal,.modal-bg>div:first-child{animation:none}}
+/* Phiếu v2 · thanh bước 1 dòng + Liên kết 3 cty + Nhắc/Giao lại */
+.pp-stepbar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:8px}
+.pp-stepbar .doc-steps{display:flex;align-items:center;flex-wrap:nowrap;gap:0;margin:0;padding:0;list-style:none;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0}
+.pp-stepbar .doc-steps::-webkit-scrollbar{display:none}
+.pp-stepbar .doc-steps li{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;color:var(--muted);background:none!important;padding:0!important;border:0!important;box-shadow:none!important}
+.pp-stepbar .doc-steps li::before{display:none!important}
+.pp-stepbar .doc-steps li+li::before{content:''!important;display:block!important;position:static!important;width:18px;height:2px;background:var(--line2);margin:0 6px;flex:none}
+.pp-stepbar .doc-steps li.done{color:var(--ink)}.pp-stepbar .doc-steps li.done+li::before,.pp-stepbar .doc-steps li.done+li.done::before{background:var(--q3,#2E8B57)}
+.pp-stepbar .doc-steps li.cur{color:var(--gold);font-weight:700}
+.pp-hold-acts{display:inline-flex;gap:6px;margin-left:auto}
+.pp-hbtn{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 10px;border-radius:999px;border:1px solid #C7D2FE;background:#EEF2FF;color:var(--gold);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.pp-hbtn:hover{background:#E0E7FF}.pp-hbtn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.pp-link{display:inline-block;margin-left:6px;position:relative}
+.pp-link>summary{list-style:none;display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:0 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer}
+.pp-link>summary::-webkit-details-marker{display:none}.pp-link[open]>summary{border-color:var(--gold);color:var(--gold)}
+.pp-link-h{display:block;padding:6px 12px 4px}
+@media (max-width:639px){.pp-hbtn{min-height:36px;padding:0 12px}.pp-hold-acts{margin-left:0}.pp-link>summary{min-height:32px}}

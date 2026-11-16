@@ -502,6 +502,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
   const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
   const role = ROLE_OF[d.status];
+  const [mgrDoc, setMgrDoc] = useState(false);
+  useEffect(() => { let live = true; setMgrDoc(false); sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => { if (live) setMgrDoc(!!data); }); return () => { live = false; }; }, [d.id]);
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
 
   return (
@@ -509,8 +511,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       <div className="pp-main">
       <div className="pp-doc-head">
         <div className="pp-dh"><div className="pp-dh1">{proc === 'QT0' || docs.length < 2 ? <b className="pp-dco">{proc === 'QT0' ? b.title : COMPANY[d.company]}</b>
-            : <details className="pp-cosel"><summary><b className="pp-dco">{COMPANY[d.company]}</b><span aria-hidden="true" className="muted">▾</span></summary>
-              <div className="odh-menu" role="menu">{COMPANIES.map((c) => { const x = docs.find((y) => y.company === c); return <button key={c} type="button" role="menuitem" disabled={!x} aria-current={c === d.company} onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; onPickCo?.(c); }}><b>{COMPANY[c]}</b><span className="small muted" style={{ marginLeft: 'auto' }}>{x ? STATUS[x.status] : 'chưa tới'}</span></button>; })}</div></details>}
+            : <><b className="pp-dco">{COMPANY[d.company]}</b><details className="pp-cosel pp-link"><summary aria-label="Liên kết 3 công ty"><Icon name="link" size={13} /><span>Liên kết 3 cty</span></summary>
+              <div className="odh-menu" role="menu"><span className="small muted pp-link-h">Phiếu cùng đơn ở các công ty</span>{COMPANIES.map((c) => { const x = docs.find((y) => y.company === c); return <button key={c} type="button" role="menuitem" disabled={!x} aria-current={c === d.company} onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; onPickCo?.(c); }}><b>{COMPANY[c]}</b><span className="small muted" style={{ marginLeft: 'auto' }}>{c === d.company ? 'phiếu này' : x ? STATUS[x.status] : 'chưa tới'}</span></button>; })}</div></details></>}
             <span className="pp-dst">· {d.status === 'duyet_them' ? lvName ?? 'Duyệt thêm' : STATUS[d.status]}</span>
             {can && !['da_duyet', 'fail'].includes(d.status) && <span className="pp-mine">Việc của bạn</span>}</div>
           <div className="small muted">{(role || lvName) && <><Assignees proc={proc} company={d.company} role={d.status === 'duyet_them' ? undefined : role} level={d.status === 'duyet_them' ? lvs.find((l) => l.id === apv?.queue[apv.idx]) : undefined} people={people} /></>} · từ {dt(d.status_at)}{(proc === 'QT2' || proc === 'QT3') && <CoLink coOrderId={(b as { co_order_id?: string | null }).co_order_id} company={d.company} />}</div></div>
@@ -528,7 +530,10 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           {adm && editable && d.status !== 'da_duyet' && <button className="btn xs" title="Admin: nạp dữ liệu mẫu vào ô trống & bảng trống" onClick={fillDemo}><Icon name="bolt" size={13} />Nạp dữ liệu mẫu</button>}
           </div></details>
         </div>
-        {proc !== 'QT0' && d.status !== 'fail' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
+        {d.status !== 'fail' && <div className="pp-stepbar">{proc !== 'QT0' && <DocSteps proc={proc} d={d} live={{ header: h, tables: t as never, files } as never} />}
+          {mgrDoc && !['da_duyet', 'fail'].includes(d.status) && <span className="pp-hold-acts">
+            <button type="button" className="pp-hbtn" onClick={() => dispatchEvent(new CustomEvent('pp-talk', { detail: { doc: d.id, mode: 'nudge' } }))}><Icon name="bell" size={13} />Nhắc</button>
+            <button type="button" className="pp-hbtn" onClick={() => dispatchEvent(new CustomEvent('pp-talk', { detail: { doc: d.id, mode: 'reassign' } }))}><Icon name="users" size={13} />Giao lại</button></span>}</div>}
       </div>
       {d.status === 'da_duyet' && proc !== 'QT0' && (proc !== 'QT1' || d.company === 'HW') && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {admEdit && admInfo && <InfoChip id="adm-edit" tone="warn" icon="shield" label={'Sửa bằng quyền Admin' + (d.status === 'da_duyet' ? ' · phiếu đã duyệt' : '')}><p>Bạn đang sửa phiếu với quyền Admin. Mọi thay đổi được ghi vào lịch sử đơn hàng.</p></InfoChip>}

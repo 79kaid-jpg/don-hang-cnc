@@ -138,6 +138,10 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
   const [mode, setMode] = useState<'' | 'nudge' | 'reassign'>(''); const [txt, setTxt] = useState(''); const [to, setTo] = useState(''); const [rep, setRep] = useState('');
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [exp, setExp] = useState(false);
   const load = () => sb.from('order_msgs').select('*').eq('doc_id', d.id).order('at').then(({ data }) => setMs((data as Msg[]) ?? []));
+  const tkBox = useRef<HTMLDivElement>(null);
+  useEffect(() => { const f = (e: Event) => { const x = (e as CustomEvent<{ doc: string; mode: 'nudge' | 'reassign' }>).detail; if (x?.doc !== d.id || !mgr) return; setExp(true); setMode(x.mode); setErr('');
+    requestAnimationFrame(() => tkBox.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })); };
+    addEventListener('pp-talk', f); return () => removeEventListener('pp-talk', f); }, [d.id, mgr]);
   useEffect(() => { load(); if (open) sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => setMgr(!!data)); else setMgr(false);
     const ch = sb.channel('msgs-' + d.id).on('postgres_changes', { event: '*', schema: 'public', table: 'order_msgs', filter: 'doc_id=eq.' + d.id }, () => load()).subscribe();
     return () => { sb.removeChannel(ch); }; }, [d.id, d.status, open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -151,7 +155,7 @@ function Talk({ d, people, open }: { d: Doc; people: Record<string, Profile>; op
   const users = Object.values(people).filter((p) => p.active !== false).sort((a, z) => a.full_name.localeCompare(z.full_name));
   if (!ms.length && !open) return null;
   return (
-    <div className="tk">
+    <div className="tk" ref={tkBox}>
       <div className="tk-head"><button type="button" className="tk-tog" data-sk="d" data-kbd="Shift D" data-kbd-label="Trao đổi" aria-expanded={exp} onClick={() => setExp(!exp)}><Icon name="chat" size={14} /><b>Trao đổi</b>{ms.length > 0 && <span className="tk-n">{ms.length}</span>}<span className={'tk-car' + (exp ? ' on' : '')}>▾</span></button>
         {!exp && ms.length > 0 && <span className="tk-last small muted" onClick={() => setExp(true)}><b>{nm(ms[ms.length - 1].from_user)}:</b> {ms[ms.length - 1].text}</span>}
         {lastNudge && <span className={'tk-st ' + (lastNudge.replied_at ? 'ok' : waitH >= 4 ? 'late' : 'wait')}>{lastNudge.replied_at ? 'Đã phản hồi' : waitH >= 4 ? 'Chưa phản hồi ' + fmtLeft(waitH) : 'Chờ phản hồi'}</span>}
