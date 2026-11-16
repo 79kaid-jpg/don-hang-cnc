@@ -3831,3 +3831,4 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .gh-busy .spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:ghspin .8s linear infinite}
 @keyframes ghspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.gh-busy .spin{animation:none}}
 .gh-ai{margin-top:6px;font-size:12.5px;display:flex;gap:6px;align-items:flex-start;padding:6px 8px}
+.gh-src{border-style:dashed}.gh-tx-ro{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.gh-ccn{font-variant-numeric:tabular-nums;letter-spacing:.04em}

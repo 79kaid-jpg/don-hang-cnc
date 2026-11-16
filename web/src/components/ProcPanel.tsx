@@ -564,6 +564,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SignedBox d={d} o={o} b={b} files={files} onDone={(nf) => { setFiles(nf); onChanged(); }} />}
       {proc === 'QT3' && (d.status === 'anh_giao' || files.some((x) => x.kind.startsWith('gh_'))) && <GiaoAnh d={d} can={can && d.status === 'anh_giao'} files={files} h={h}
         onField={(k, v) => { setH((x) => ({ ...x, [k]: v })); setDirty(true); }} upload={upload} remove={removeFile} />}
+      {proc === 'QT3' && d.company !== 'PN' && <GiaoSrc d={d} />}
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
@@ -1125,6 +1126,35 @@ function bbCheck(bb: Record<string, Bbg>, paths: string[], soPhieu: string): str
   const sp = nSo(soPhieu);
   if (sp) for (const x of xs) if (x.so && nSo(x.so) !== sp && !nSo(x.so).endsWith(sp) && !sp.endsWith(nSo(x.so))) w.push(`Ảnh ${x.i}: BBGH số ${x.so} ≠ Số phiếu ${soPhieu}`);
   return w;
+}
+
+/** QT3 · IPC/HW: ảnh giao hàng do PN chụp (chỉ xem); CCCD rõ / số đầy đủ theo quyền */
+function GiaoSrc({ d }: { d: Doc }) {
+  type Src = { doc_id: string; status: string; files: { kind: string; name: string; path: string }[]; header: Record<string, string | null> };
+  const [src, setSrc] = useState<Src | null>(null); const [urls, setUrls] = useState<Record<string, string>>({}); const [rev, setRev] = useState(''); const [er, setEr] = useState('');
+  useEffect(() => { let live = true; sb.rpc('gh_src', { p_doc: d.id }).then(async ({ data }) => { if (!live || !data) return; const x = data as Src; setSrc(x);
+    const ps = x.files.flatMap((f) => (f.kind === 'gh_cccd' ? [f.path, f.path + '.blur.jpg'] : [f.path]));
+    const { data: su } = await sb.storage.from('files').createSignedUrls(ps, 3600); if (live && su) setUrls(Object.fromEntries(su.filter((y) => y.signedUrl).map((y) => [y.path!, y.signedUrl]))); });
+    return () => { live = false; }; }, [d.id]);
+  if (!src || !src.files.length) return null;
+  const h = src.header; const cc = String(h.tx_cccd ?? ''); const bbP = src.files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const w = bbCheck(bbOf(h), bbP, String(h.so_phieu ?? ''));
+  return <section className="gh card gh-src" aria-label="Ảnh giao hàng từ Phương Nam">
+    <div className="gh-hd"><b>Ảnh giao hàng từ PN</b><span className="chip sm">{GH_ITEMS.filter(([k]) => src.files.some((f) => f.kind === k)).length}/5 mục</span><span className="small muted">Chỉ xem · do thủ kho PNC chụp</span></div>
+    <ol className="gh-list">{GH_ITEMS.map(([k, lab]) => { const mine = src.files.filter((f) => f.kind === k); if (!mine.length) return null;
+      return <li key={k} className="gh-it ok"><span className="gh-n" aria-hidden="true"><Icon name="check" size={14} /></span><div className="gh-body"><b>{lab}</b>
+        {k === 'gh_cccd' && <div className="gh-tx gh-tx-ro">
+          {h.tai_xe && <span><span className="small muted">Tài xế </span>{h.tai_xe}</span>}
+          {cc && <span className="gh-cc"><span className="small muted">CCCD </span><b className="gh-ccn">{rev || cc}</b>
+            {cc.includes('•') && <button type="button" className="gh-eye" aria-label={rev ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={rev ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'} onClick={async () => { if (rev) { setRev(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: src.doc_id }); if (error) setEr(error.message.includes('quyền') ? 'Bạn không có quyền xem số CCCD' : error.message); else setRev(String(data ?? '')); }}><Icon name={rev ? 'eyeoff' : 'eye'} size={18} /></button>}</span>}
+          {h.tx_sdt && <span><span className="small muted">SĐT </span>{h.tx_sdt}</span>}
+          {er && <small className="gh-busy">⚠ {er}</small>}</div>}
+        {k === 'gh_bbgh' && (w.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{w.join(' · ')}</span></div> : bbP.some((p) => bbOf(h)[p]) ? <div className="msg ok gh-ai"><Icon name="check" size={15} /><span>Số BBGH khớp số phiếu {h.so_phieu}</span></div> : null)}
+        <div className="gh-thumbs">{mine.map((f) => { const clear = urls[f.path], blur = urls[f.path + '.blur.jpg'];
+          return <span key={f.path} className="gh-th">{clear ? <a href={clear} target="_blank" rel="noreferrer"><img src={clear} alt={lab} loading="lazy" /></a>
+            : k === 'gh_cccd' && blur ? <span className="gh-blur" title="Ảnh CCCD đã làm mờ – chỉ người có quyền xem rõ"><img src={blur} alt="CCCD (đã làm mờ)" loading="lazy" /><Icon name="eyeoff" size={16} /></span>
+            : <span className="gh-ph gh-lock"><Icon name="eyeoff" size={18} /></span>}</span>; })}</div>
+      </div></li>; })}</ol>
+  </section>;
 }
 
 /** QT3 · Thủ kho tải ảnh giao hàng: 5 mục, mỗi mục cần ≥ 1 ảnh; điện thoại/tablet mở camera */
