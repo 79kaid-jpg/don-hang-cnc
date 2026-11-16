@@ -3832,3 +3832,11 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 @keyframes ghspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.gh-busy .spin{animation:none}}
 .gh-ai{margin-top:6px;font-size:12.5px;display:flex;gap:6px;align-items:flex-start;padding:6px 8px}
 .gh-src{border-style:dashed}.gh-tx-ro{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.gh-ccn{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+/* QT3 · hàng ảnh: ảnh PN (nhãn) + ảnh riêng + ô "+ Chụp" cùng cỡ */
+.gh-thumbs{margin-top:8px}
+.gh-add{width:84px;height:84px;flex:none;border:1.5px dashed var(--line);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;background:var(--card,#fff);transition:background .15s,border-color .15s}
+.gh-add:hover{background:var(--soft);border-color:var(--accent)}.gh-add:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.gh-add.first{border-style:solid;border-color:var(--accent);background:var(--accent);color:#fff}
+.gh-tag{position:absolute;left:4px;top:4px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;line-height:1;padding:3px 5px;border-radius:5px;letter-spacing:.03em}
+.gh-pn{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:-2px}
+@media (max-width:760px){.gh-thumbs{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:4px;-webkit-overflow-scrolling:touch}.gh-th,.gh-add{scroll-snap-align:start;flex:none}.gh-add{width:72px;height:72px}}

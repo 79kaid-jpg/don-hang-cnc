@@ -562,9 +562,6 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
       {proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SignedBox d={d} o={o} b={b} files={files} onDone={(nf) => { setFiles(nf); onChanged(); }} />}
-      {proc === 'QT3' && (d.status === 'anh_giao' || files.some((x) => x.kind.startsWith('gh_'))) && <GiaoAnh d={d} can={can && d.status === 'anh_giao'} files={files} h={h}
-        onField={(k, v) => { setH((x) => ({ ...x, [k]: v })); setDirty(true); }} upload={upload} remove={removeFile} />}
-      {proc === 'QT3' && d.company !== 'PN' && <GiaoSrc d={d} />}
       <div className="pp-files">
         {fFields.map(({ key: k, label: lab, ...f }) => (
           <div key={k} data-fk={k} className={'pp-fk' + (can && pm({ key: k, label: lab, ...f } as FDef) === 'required' && !files.some((x) => x.kind === k) ? ' f-miss' : '')}><span className="small"><b>{lab}</b>{pm({ key: k, label: lab, ...f } as FDef) === 'required' && <b className="req"> *</b>}</span>
@@ -590,6 +587,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           q0src={proc === 'QT1' && key === 'ds' && d.company === 'PN' && (b as Batch & { src_qt0?: string | null }).src_qt0 ? { id: String((b as Batch & { src_qt0?: string }).src_qt0), docId: d.id, orderId: b.order_id } : undefined} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} vc={numIn(h.phi_vc) ?? 0} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
+      {proc === 'QT3' && <GiaoAnh d={d} can={can && d.status === 'anh_giao'} files={files} h={h}
+        onField={(k, v) => { setH((x) => ({ ...x, [k]: v })); setDirty(true); }} upload={upload} remove={removeFile} />}
 
       <FixMsg err={err} />
       {coLock && (canRaw || myCos.includes(d.company as Company)) && !['da_duyet', 'fail'].includes(d.status) && <div className="co-lock" role="status"><span>Phiếu của <b>{COMPANY[d.company as Company]}</b>. Bạn đang làm ở <b>{scope === 'ALL' ? 'Tất cả công ty' : COMPANY[scope as Company]}</b> nên chỉ xem.</span>
@@ -1128,44 +1127,21 @@ function bbCheck(bb: Record<string, Bbg>, paths: string[], soPhieu: string): str
   return w;
 }
 
-/** QT3 · IPC/HW: ảnh giao hàng do PN chụp (chỉ xem); CCCD rõ / số đầy đủ theo quyền */
-function GiaoSrc({ d }: { d: Doc }) {
-  type Src = { doc_id: string; status: string; files: { kind: string; name: string; path: string }[]; header: Record<string, string | null> };
-  const [src, setSrc] = useState<Src | null>(null); const [urls, setUrls] = useState<Record<string, string>>({}); const [rev, setRev] = useState(''); const [er, setEr] = useState('');
-  useEffect(() => { let live = true; sb.rpc('gh_src', { p_doc: d.id }).then(async ({ data }) => { if (!live || !data) return; const x = data as Src; setSrc(x);
-    const ps = x.files.flatMap((f) => (f.kind === 'gh_cccd' ? [f.path, f.path + '.blur.jpg'] : [f.path]));
-    const { data: su } = await sb.storage.from('files').createSignedUrls(ps, 3600); if (live && su) setUrls(Object.fromEntries(su.filter((y) => y.signedUrl).map((y) => [y.path!, y.signedUrl]))); });
-    return () => { live = false; }; }, [d.id]);
-  if (!src || !src.files.length) return null;
-  const h = src.header; const cc = String(h.tx_cccd ?? ''); const bbP = src.files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const w = bbCheck(bbOf(h), bbP, String(h.so_phieu ?? ''));
-  return <section className="gh card gh-src" aria-label="Ảnh giao hàng từ Phương Nam">
-    <div className="gh-hd"><b>Ảnh giao hàng từ PN</b><span className="chip sm">{GH_ITEMS.filter(([k]) => src.files.some((f) => f.kind === k)).length}/5 mục</span><span className="small muted">Chỉ xem · do thủ kho PNC chụp</span></div>
-    <ol className="gh-list">{GH_ITEMS.map(([k, lab]) => { const mine = src.files.filter((f) => f.kind === k); if (!mine.length) return null;
-      return <li key={k} className="gh-it ok"><span className="gh-n" aria-hidden="true"><Icon name="check" size={14} /></span><div className="gh-body"><b>{lab}</b>
-        {k === 'gh_cccd' && <div className="gh-tx gh-tx-ro">
-          {h.tai_xe && <span><span className="small muted">Tài xế </span>{h.tai_xe}</span>}
-          {cc && <span className="gh-cc"><span className="small muted">CCCD </span><b className="gh-ccn">{rev || cc}</b>
-            {cc.includes('•') && <button type="button" className="gh-eye" aria-label={rev ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={rev ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'} onClick={async () => { if (rev) { setRev(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: src.doc_id }); if (error) setEr(error.message.includes('quyền') ? 'Bạn không có quyền xem số CCCD' : error.message); else setRev(String(data ?? '')); }}><Icon name={rev ? 'eyeoff' : 'eye'} size={18} /></button>}</span>}
-          {h.tx_sdt && <span><span className="small muted">SĐT </span>{h.tx_sdt}</span>}
-          {er && <small className="gh-busy">⚠ {er}</small>}</div>}
-        {k === 'gh_bbgh' && (w.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{w.join(' · ')}</span></div> : bbP.some((p) => bbOf(h)[p]) ? <div className="msg ok gh-ai"><Icon name="check" size={15} /><span>Số BBGH khớp số phiếu {h.so_phieu}</span></div> : null)}
-        <div className="gh-thumbs">{mine.map((f) => { const clear = urls[f.path], blur = urls[f.path + '.blur.jpg'];
-          return <span key={f.path} className="gh-th">{clear ? <a href={clear} target="_blank" rel="noreferrer"><img src={clear} alt={lab} loading="lazy" /></a>
-            : k === 'gh_cccd' && blur ? <span className="gh-blur" title="Ảnh CCCD đã làm mờ – chỉ người có quyền xem rõ"><img src={blur} alt="CCCD (đã làm mờ)" loading="lazy" /><Icon name="eyeoff" size={16} /></span>
-            : <span className="gh-ph gh-lock"><Icon name="eyeoff" size={18} /></span>}</span>; })}</div>
-      </div></li>; })}</ol>
-  </section>;
-}
-
 /** QT3 · Thủ kho tải ảnh giao hàng: 5 mục, mỗi mục cần ≥ 1 ảnh; điện thoại/tablet mở camera */
 function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: boolean; files: { kind: string; name: string; path: string }[]; h: Record<string, unknown>;
   onField: (k: string, v: string) => void; upload: (e: React.ChangeEvent<HTMLInputElement>, kind: string) => Promise<{ path: string }[] | undefined | void>; remove: (path: string, name: string) => void }) {
   const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
   const { can: hasRole } = useAuth(); const seeCccd = can || hasRole('admin_it') || hasRole('admin_cnc') || hasRole('kho_qc');
+  type Src = { doc_id: string; files: { kind: string; name: string; path: string }[]; header: Record<string, string | null> };
+  const [src, setSrc] = useState<Src | null>(null);
+  useEffect(() => { let live = true; setSrc(null); if (d.company !== 'PN') sb.rpc('gh_src', { p_doc: d.id }).then(({ data }) => { if (live && data) setSrc(data as Src); }); return () => { live = false; }; }, [d.id]);
   const [urls, setUrls] = useState<Record<string, string>>({});
-  useEffect(() => { let live = true; const ps = files.filter((f) => f.kind.startsWith('gh_')).map((f) => (f.kind === 'gh_cccd' && !seeCccd ? f.path + '.blur.jpg' : f.path)).filter((p) => !urls[p]);
+  useEffect(() => { let live = true;
+    const ps = [...files.filter((f) => f.kind.startsWith('gh_')).map((f) => (f.kind === 'gh_cccd' && !seeCccd ? f.path + '.blur.jpg' : f.path)),
+      ...(src?.files ?? []).flatMap((f) => (f.kind === 'gh_cccd' ? [f.path, f.path + '.blur.jpg'] : [f.path]))].filter((p) => !urls[p]);
     if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
-    return () => { live = false; }; }, [files]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { live = false; }; }, [files, src]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [srev, setSrev] = useState('');
   const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [rev, setRev] = useState('');
   useEffect(() => { setRev(''); }, [h.tx_cccd]);
   // Ảnh → JPEG nhỏ (gửi AI) hoặc bản làm mờ (người không có quyền xem CCCD)
@@ -1189,28 +1165,48 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
       } catch (x) { notes.push('⚠ ' + (x as Error).message); } }
     if (k === 'gh_bbgh') onField('_bbgh_ai', JSON.stringify(map));
     setBusy(''); setAiMsg(notes.join(' · ') + (notes.length || k === 'gh_bbgh' ? ' – nhớ bấm Lưu' : '')); };
-  const bbPaths = files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const bb = bbOf(h); const bbWarn = bbCheck(bb, bbPaths, String(h.so_phieu ?? ''));
-  const done = GH_ITEMS.filter(([k]) => files.some((f) => f.kind === k)).length + 0;
-  const txOk = String(h.tx_cccd ?? '').trim() && String(h.tx_sdt ?? '').trim();
+  const sh = src?.header ?? {}; const sF = src?.files ?? [];
+  const bbPaths = files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const bbWarn = bbCheck(bbOf(h), bbPaths, String(h.so_phieu ?? ''));
+  const sbbP = sF.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const sWarn = bbCheck(bbOf(sh), sbbP, String(sh.so_phieu ?? ''));
+  const srcTx = !!String(sh.tx_cccd ?? '').trim();
+  const has = (k: string) => files.some((f) => f.kind === k) || sF.some((f) => f.kind === k);
+  const done = GH_ITEMS.filter(([k]) => has(k)).length;
+  const txOk = srcTx || (String(h.tx_cccd ?? '').trim() && String(h.tx_sdt ?? '').trim());
+  if (!can && !done) return null;
+  const thumb = (f: { kind: string; name: string; path: string }, lab: string, pn: boolean, see: boolean) => { const clear = urls[f.path], blur = urls[f.path + '.blur.jpg'];
+    return <span key={f.path} className={'gh-th' + (pn ? ' gh-pn' : '')}>
+      {f.kind === 'gh_cccd' && !(see && clear) ? (blur ? <span className="gh-blur" title="Ảnh CCCD đã làm mờ – chỉ người có quyền xem rõ"><img src={blur} alt="CCCD (đã làm mờ)" loading="lazy" /><Icon name="eyeoff" size={16} /></span> : <span className="gh-ph gh-lock" title="Ảnh CCCD chỉ người có quyền xem"><Icon name="eyeoff" size={18} /></span>)
+        : clear ? <a href={clear} target="_blank" rel="noreferrer"><img src={clear} alt={lab} loading="lazy" /></a> : <span className="gh-ph" />}
+      {pn && <span className="gh-tag" aria-label="Ảnh của Phương Nam">PN</span>}
+      {!pn && can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>; };
+  const eye = (on: boolean, doc: string, set: (v: string) => void, cur: string) => <button type="button" className="gh-eye" aria-label={cur ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={cur ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'}
+    onClick={async () => { if (cur) { set(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: doc }); if (error) setAiMsg('⚠ ' + (error.message.includes('quyền') ? 'Bạn không có quyền xem số CCCD' : error.message)); else set(String(data ?? '')); }}><Icon name={on ? 'eyeoff' : 'eye'} size={18} /></button>;
   return <section className="gh card" aria-label="Ảnh giao hàng">
     <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (done === 5 && txOk ? 'ok' : '')}>{done}/5 mục</span>
-      <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}</span></div>
-    <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const ok = mine.length > 0 && (k !== 'gh_cccd' || txOk);
+      <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}{sF.length ? ' · kèm ảnh PN' : ''}</span></div>
+    <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const pnF = sF.filter((f) => f.kind === k);
+      const ok = (mine.length > 0 || pnF.length > 0) && (k !== 'gh_cccd' || txOk);
       return <li key={k} className={'gh-it' + (ok ? ' ok' : '') + (can && !ok ? ' need' : '')} data-fk={k}>
         <span className="gh-n" aria-hidden="true">{ok ? <Icon name="check" size={14} /> : i + 1}</span>
         <div className="gh-body"><b>{lab}</b>
-          {k === 'gh_cccd' && <div className="gh-tx">
+          {k === 'gh_cccd' && (srcTx ? <div className="gh-tx gh-tx-ro">
+              {sh.tai_xe && <span><span className="small muted">Tài xế </span>{sh.tai_xe}</span>}
+              <span className="gh-cc"><span className="small muted">CCCD </span><b className="gh-ccn">{srev || sh.tx_cccd}</b>{String(sh.tx_cccd).includes('•') && eye(!!srev, src!.doc_id, setSrev, srev)}</span>
+              {sh.tx_sdt && <span><span className="small muted">SĐT </span>{sh.tx_sdt}</span>}<small className="muted">Theo phiếu PN</small></div>
+            : <div className="gh-tx">
             <label><span className="small muted">Số CCCD</span><span className="gh-cc"><input inputMode="numeric" autoComplete="off" value={rev || String(h.tx_cccd ?? '')} disabled={!can} readOnly={!!rev} onFocus={(e) => { if (can && String(h.tx_cccd ?? '').includes('•')) e.target.select(); }} onChange={(e) => { const v = e.target.value; if (v.includes('•')) { if (v.replace(/[^•]/g, '').length < String(h.tx_cccd ?? '').replace(/[^•]/g, '').length) onField('tx_cccd', ''); return; } onField('tx_cccd', v.replace(/[^0-9]/g, '')); }} />
-              {seeCccd && String(h.tx_cccd ?? '').includes('•') && <button type="button" className="gh-eye" aria-label={rev ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={rev ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'} onClick={async () => { if (rev) { setRev(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: d.id }); if (error) setAiMsg('⚠ ' + error.message); else setRev(String(data ?? '')); }}><Icon name={rev ? 'eyeoff' : 'eye'} size={18} /></button>}</span></label>
+              {seeCccd && String(h.tx_cccd ?? '').includes('•') && eye(!!rev, d.id, setRev, rev)}</span></label>
             <label><span className="small muted">Số điện thoại</span><input type="tel" inputMode="tel" autoComplete="off" value={String(h.tx_sdt ?? '')} disabled={!can} onChange={(e) => onField('tx_sdt', e.target.value)} /></label>
-            <small className="muted">Chụp CCCD: Gemini tự điền tên tài xế và số CCCD. Số được mã hoá, chỉ người có quyền bấm 👁 xem đủ; ảnh gốc chỉ người có quyền xem rõ.</small></div>}
-          {k === 'gh_bbgh' && bbPaths.length > 0 && (bbWarn.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{bbWarn.join(' · ')}</span></div> : <div className="msg ok gh-ai" role="status"><Icon name="check" size={15} /><span>Số BBGH trang đầu và trang ký khớp số phiếu {String(h.so_phieu ?? '')}</span></div>)}
-          {mine.length > 0 && <div className="gh-thumbs">{mine.map((f) => <span key={f.path} className="gh-th">
-            {k === 'gh_cccd' && !seeCccd ? (urls[f.path + '.blur.jpg'] ? <span className="gh-blur" title="Ảnh CCCD đã làm mờ – chỉ người có quyền xem rõ"><img src={urls[f.path + '.blur.jpg']} alt="CCCD (đã làm mờ)" loading="lazy" /><Icon name="eyeoff" size={16} /></span> : <span className="gh-ph gh-lock" title="Ảnh CCCD chỉ người có quyền xem"><Icon name="eyeoff" size={18} /></span>) : urls[f.path] ? <a href={urls[f.path]} target="_blank" rel="noreferrer"><img src={urls[f.path]} alt={lab} loading="lazy" /></a> : <span className="gh-ph" />}
-            {can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>)}</div>}
-          {can && <label className={'btn sm ' + (mine.length ? '' : 'primary') + ' gh-up'}>
-            <Icon name={touch ? 'file' : 'upload'} size={15} />{touch ? (mine.length ? 'Chụp thêm' : 'Chụp ảnh') : (mine.length ? 'Thêm ảnh' : 'Tải ảnh lên')}
-            <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
+            {can && <small className="muted">Chụp CCCD: Gemini tự điền tên tài xế và số CCCD. Số được mã hoá; chỉ người có quyền bấm con mắt xem đủ số và xem rõ ảnh.</small>}</div>)}
+          {k === 'gh_bbgh' && (() => { const w = [...sWarn.map((x) => 'PN: ' + x), ...bbWarn]; const any = bbPaths.length > 0 || sbbP.some((p) => bbOf(sh)[p]);
+            return any ? (w.length ? <div className="msg warn gh-ai" role="status"><Icon name="alert" size={15} /><span>{w.join(' · ')}</span></div> : <div className="msg ok gh-ai" role="status"><Icon name="check" size={15} /><span>Số BBGH khớp số phiếu {String(h.so_phieu || sh.so_phieu || '')}</span></div>) : null; })()}
+          <div className="gh-thumbs">
+            {pnF.map((f) => thumb(f, lab, true, true))}
+            {mine.map((f) => thumb(f, lab, false, seeCccd))}
+            {can && <label className={'gh-add' + (mine.length || pnF.length ? '' : ' first')} aria-label={(touch ? 'Chụp ảnh ' : 'Tải ảnh ') + lab}>
+              <Icon name="plus" size={20} /><span>{touch ? 'Chụp' : 'Tải ảnh'}</span>
+              <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
+          </div>
           {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
           {!busy && aiMsg && (k === 'gh_cccd' ? aiMsg.includes('CCCD') || aiMsg.includes('Tài xế') : k === 'gh_bbgh' && !aiMsg.includes('CCCD')) && <small className="gh-busy">{aiMsg}</small>}
         </div></li>; })}</ol>
