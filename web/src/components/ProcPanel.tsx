@@ -51,6 +51,7 @@ import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { confirmDialog, toast, Msg } from './ui';
 import { useAuth } from '../lib/auth';
+import { VarTag } from '../lib/showVars';
 import { useWho } from '../lib/people';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -522,7 +523,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} lap={d.status === 'lap'} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
+<<<<<<< HEAD
           return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}{f.key === 'hao_hut' && h._hao_src && <ColTip info={['Hao hụt đọc từ file bóc tách', 'Ô ' + h._hao_src, 'Giá trị file: ' + h._hao_v + '%' + (String(v) !== String(h._hao_v) ? ' · đã sửa tay thành ' + v + '%' : '')]} />}</span>
+=======
+          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}<VarTag k={f.key} /></span>
+>>>>>>> 217fa38 (Admin: nút Hiện biến mẫu in cạnh ô/cột bảng + tìm biến trong Mẫu in)
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : !['text', 'number', 'select', 'textarea'].includes(f.type) ? <HeadInput f={f} v={String(v)} on={on} disabled={!ed} opts={f.type === 'lookup' ? lookOpts(f.options[0]) : undefined} calc={f.type === 'formula' ? fxHead(f) : undefined} />
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
@@ -558,8 +563,13 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
+<<<<<<< HEAD
         <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
           onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
+=======
+        <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
+          onChange={(rows) => { const dv = proc === 'QT0' && cols.some((c) => c.k === 'cot_moi'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.cot_moi ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, cot_moi: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
+>>>>>>> 217fa38 (Admin: nút Hiện biến mẫu in cạnh ô/cột bảng + tìm biến trong Mẫu in)
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
             return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined}
@@ -730,7 +740,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+function TableEdit({ vk, title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { vk?: string; q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
   const [q0, setQ0] = useState<{ code: string; rows: Q0Row[] } | null>(null);
   const openQ0 = async () => { if (!q0src) return; const [{ data: rs }, { data: ls }] = await Promise.all([sb.rpc('qt0_rows', { p_qt0: q0src.id, p_doc: q0src.docId }), sb.rpc('qt0_list', { p_order: q0src.orderId })]);
     const l = ((rs ?? []) as Q0Row[]).filter((x) => String(x.r.ma_tam ?? '').trim()); if (!l.length) { toast('QT0 nguồn không có tấm'); return; }
@@ -862,7 +872,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
   return (
     <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '')} onPaste={editable ? pasteAny : undefined} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && rows.length) { e.preventDefault(); if (fold) setFold(false); openSearch(); } }}>
-      <div className="row between pp-th"><b>{title}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
+      <div className="row between pp-th"><b>{title}{vk && <VarTag k={'#' + vk} />}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
         {rows.length > 0 && <span className={'pp-sx' + (sOpen || q ? ' open' : '')}>
           {sOpen || q ? <label className="pp-sx-in"><Icon name="search" size={15} /><input ref={sRef} type="search" placeholder="Tìm mã tấm…" value={q} aria-label="Tìm tấm"
               onChange={(e) => { setQ(e.target.value); setLim(0); }} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSOpen(false); } }} onBlur={() => { if (!q.trim()) setSOpen(false); }} />
@@ -929,7 +939,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
             .map((x, xi, arr) => <th key={'g' + x.k} colSpan={x.n} className={(x.g ? 'g' + (GCLS[x.g] ?? '') + (xi > 0 && arr[xi - 1].g === x.g ? '' : ' cg-first') : '') + (x.pin ? ' g-pin' : '')}>{x.pin && arr[1]?.g === x.g ? '' : x.g}</th>)}{editable && <th />}</tr>}
           <tr><th>#</th>{cols.map((c, ci) => <th key={c.k} className={(c.n ? 'n' : 't') + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' th-qty' : '') + (c.g ? ' th-in-g' : '') + cgOf(c, cols, ci)}>{editable && !c.calc && !c.ro && FILL_COLS.includes(c.k) && rows.length > 1
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
-              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}</th>)}{editable && <th />}</tr></thead>
+              {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}{vk && <VarTag k={vk + '.' + c.k} sum={c.n ? 'tong_' + vk + '_' + c.k : undefined} />}</th>)}{editable && <th />}</tr></thead>
         <tbody>
           {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} className={(bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : '') + (isNew(r) ? ' pp-new' : '') || undefined}><td className="muted">{i + 1}</td>
             {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '') + (!isNew(r) && chg(r, c) ? ' pp-chg' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}{c.k === 'kg' && <ColTip info={kgWhy(r)} />}</span>

@@ -3777,3 +3777,11 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 html[data-glass=facade]:not([data-theme=dark]){--fc-ink:#1F3A93;--fc-steel:#1F3A93}
 .btn.primary:hover{background-color:#192F78!important;border-color:#192F78!important}
 html[data-theme=dark]{--accent:#3B5FC9}
+
+/* Hiện biến mẫu in (admin) */
+.vtag-w{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle;font-weight:400}
+.vtag{all:unset;cursor:pointer;font:400 10.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted,#8a94a6);opacity:.85;white-space:nowrap}
+.vtag:hover,.vtag:focus-visible{color:var(--accent,#2563eb);opacity:1;text-decoration:underline}
+th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
+.pt-vq{width:100%;margin:0 0 8px}
+@media (max-width:640px){.f .vtag-w{display:flex;margin:2px 0 0}}

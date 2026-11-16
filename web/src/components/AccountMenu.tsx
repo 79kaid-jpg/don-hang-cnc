@@ -4,6 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { sb, type Profile } from '../lib/supabase';
 import { Appearance } from './Appearance';
 import { Icon } from './Icon';
+import { useAuth } from '../lib/auth';
+import { setShowVars, useShowVars } from '../lib/showVars';
 
 /** Chân menu trái: một nút tài khoản, bấm mở menu (giao diện, Zalo, hướng dẫn, phím tắt, đăng xuất) */
 export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
@@ -21,7 +23,7 @@ export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
     return () => { removeEventListener('mousedown', c); removeEventListener('keydown', k); };
   }, [open]);
   const go = (to: string) => { setOpen(false); nav(to); };
-  const noZalo = !me.zalo_chat_id;
+  const noZalo = !me.zalo_chat_id; const { can } = useAuth(); const adm = can('admin_it') || can('admin_cnc'); const sv = useShowVars();
   return (
     <div className="acc" ref={box}>
       {open && pos && createPortal(<div ref={pop} className="acc-pop acc-pop-p" role="menu" aria-label="Tài khoản" style={{ left: pos.left, bottom: pos.bottom, width: pos.width }}>
@@ -33,6 +35,7 @@ export function AccountMenu({ me, initial }: { me: Profile; initial: string }) {
           <button role="menuitem" onClick={() => go('/zalo')}><Icon name="bell" size={17} /><span>Thông báo Zalo</span>
             <span className={'acc-st' + (noZalo ? ' off' : '')}>{noZalo ? 'Chưa liên kết' : 'Đã liên kết'}</span></button>
           <button role="menuitem" onClick={() => go('/cai-app')}><Icon name="download" size={17} /><span>Hướng dẫn & cài app</span></button>
+          {adm && <button role="menuitemcheckbox" aria-checked={sv} onClick={() => setShowVars(!sv)} title="Hiện mã biến mẫu in {…} cạnh từng ô"><Icon name="tag" size={17} /><span>Hiện biến (mẫu in)</span><span className={'acc-st' + (sv ? '' : ' off')}>{sv ? 'Bật' : 'Tắt'}</span></button>}
           <button role="menuitem" onClick={() => { setOpen(false); dispatchEvent(new Event('show-shortcuts')); }}><Icon name="list" size={17} /><span>Phím tắt</span><kbd>?</kbd></button>
         </div>
         <div className="acc-list acc-out"><button role="menuitem" onClick={() => sb.auth.signOut()}><Icon name="logout" size={17} /><span>Đăng xuất</span></button></div>

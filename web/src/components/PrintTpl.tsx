@@ -73,7 +73,7 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
   const [proc, setProc] = useState<Proc>('QT1'); const [list, setList] = useState<Tpl[]>([]);
   const [up, setUp] = useState<{ file: File; buf: ArrayBuffer; vars: string[]; name: string; company: string } | null>(null); const [busy, setBusy] = useState(false);
   const [pv, setPv] = useState<{ html: string; landscape?: boolean; wb: Awaited<ReturnType<typeof render>>['wb']; t: Tpl } | null>(null);
-  const known = new Set(varList(proc).map((v) => v.k));
+  const known = new Set(varList(proc).map((v) => v.k)); const [vq, setVq] = useState('');
   const load = () => sb.from('print_templates').select('*').eq('proc', proc).order('created_at', { ascending: false }).then(({ data }) => setList((data as Tpl[]) ?? []));
   useEffect(() => { load(); setUp(null); }, [proc]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -131,7 +131,8 @@ export function PrintTemplates({ canEdit }: { canEdit: boolean }) {
       </section>
       <section className="af-card pt-side">
         <header><Icon name="tag" size={16} /><b>Biến dùng được</b><span className="small muted">· bấm để chép</span></header>
-        <ul className="pt-vl">{varList(proc).map((v) => <li key={v.k}><button onClick={() => copy(v.k)}><code>{'{' + v.k + '}'}</code><span>{v.t}</span></button></li>)}</ul>
+        <input type="search" className="pt-vq" placeholder="Tìm biến hoặc tên ô…" aria-label="Tìm biến" value={vq} onChange={(e) => setVq(e.target.value)} />
+        <ul className="pt-vl">{varList(proc).filter((v) => { const q = vq.trim().toLowerCase(); return !q || v.k.toLowerCase().includes(q) || v.t.toLowerCase().includes(q); }).map((v) => <li key={v.k}><button onClick={() => copy(v.k)}><code>{'{' + v.k + '}'}</code><span>{v.t}</span></button></li>)}</ul>
       </section>
     </div>
     {pv && <Preview html={pv.html} landscape={pv.landscape} title={pv.t.name + ' (thử)'} onXlsx={() => downloadWb(pv.wb, safe(pv.t.name) + '_thu.xlsx')} onTpl={() => dl(pv.t)} onClose={() => setPv(null)} />}
