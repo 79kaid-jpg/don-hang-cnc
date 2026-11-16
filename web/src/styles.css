@@ -3773,6 +3773,7 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 }
 
 /* ═══ Màu nhấn chuyên nghiệp: navy thương hiệu thay cho đen ═══ */
-:root{--accent:#1F3A93;--accent-2:#2B4FB8;--charcoal:#16295F}
-html[data-glass=facade]:not([data-theme=dark]){--fc-ink:#16295F}
+:root{--accent:#1F3A93;--accent-2:#2B4FB8;--charcoal:#1F3A93;--steel:#1F3A93}
+html[data-glass=facade]:not([data-theme=dark]){--fc-ink:#1F3A93;--fc-steel:#1F3A93}
+.btn.primary:hover{background-color:#192F78!important;border-color:#192F78!important}
 html[data-theme=dark]{--accent:#3B5FC9}
