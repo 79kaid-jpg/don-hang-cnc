@@ -83,7 +83,9 @@ export default function MyWork() {
   const [badList, alertBad] = useState<string[]>([]);
   const h = new Date().getHours(); const hello = h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
   const ago = (t: string) => { const m = (Date.now() - new Date(t).getTime()) / 6e4; return m < 60 ? Math.max(1, Math.round(m)) + ' phút' : m < 1440 ? Math.round(m / 60) + ' giờ' : Math.round(m / 1440) + ' ngày'; };
-  const shown = (rows ?? []).filter((r) => !fq || r.proc === fq);
+  const nq = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+  const [q, setQ] = useState('');
+  const shown = (rows ?? []).filter((r) => (!fq || r.proc === fq) && (!q || nq([coc(r.order_id, r.proc, r.batch_id, r.code), r.code, r.project, r.title].join(' ')).includes(nq(q))));
   const age = (s: string) => { const hh = (Date.now() - new Date(s).getTime()) / 36e5; return hh < 1 ? Math.max(1, Math.round(hh * 60)) + ' phút' : hh < 48 ? Math.round(hh) + ' giờ' : Math.round(hh / 24) + ' ngày'; };
   return (
     <>
@@ -92,12 +94,13 @@ export default function MyWork() {
       <InstallHint />
       <ZaloLink compact />
       <section className="card flush" aria-labelledby="h-todo">
-        <div className="card-head"><h2 id="h-todo">Đến lượt tôi làm</h2>{rows && <span className="chip idle">{rows.length} việc</span>}</div>
-        {rows && rows.length > 0 && <div className="qt-filter" role="group" aria-label="Lọc theo quy trình">
+        <div className="card-head"><h2 id="h-todo">Đến lượt tôi làm</h2></div>
+        {rows && rows.length > 0 && <div className="mw-bar">{rows.length > 5 && <label className="mw-q"><Icon name="search" size={16} /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã đơn, dự án…" aria-label="Tìm việc" />{q && <button type="button" className="mw-qx" aria-label="Xoá tìm" onClick={() => setQ('')}><Icon name="x" size={14} /></button>}</label>}
+        <div className="qt-filter" role="group" aria-label="Lọc theo quy trình">
           <button className={fq === '' ? 'on' : ''} aria-pressed={fq === ''} onClick={() => setFq('')}>Tất cả <b>{rows.length}</b></button>
-          {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((q) => { const n = rows.filter((r) => r.proc === q).length; return n > 0 &&
-            <button key={q} className={'qf ' + q.toLowerCase() + (fq === q ? ' on' : '')} aria-pressed={fq === q} onClick={() => setFq(fq === q ? '' : q)}>{q} <b>{n}</b></button>; })}
-        </div>}
+          {(['QT0', 'QT1', 'QT2', 'QT3'] as Proc[]).map((qq) => { const n = rows.filter((r) => r.proc === qq).length; return n > 0 &&
+            <button key={qq} className={'qf ' + qq.toLowerCase() + (fq === qq ? ' on' : '')} aria-pressed={fq === qq} onClick={() => setFq(fq === qq ? '' : qq)}>{qq} <b>{n}</b></button>; })}
+        </div></div>}
         <div>
           {!rows ? <Skeleton rows={3} /> : rows.length === 0 ? <div className="mw-empty"><span className="mw-empty-ic"><Icon name="check" size={18} /></span><span><b>Đã xong hết việc</b><span className="small muted">Không có hồ sơ nào đang chờ bạn.</span></span><Link className="btn sm" to="/bang">Kanban</Link></div> : (
             <ul className="worklist">
@@ -107,10 +110,11 @@ export default function MyWork() {
               {shown.map((r) => (
                 <li key={(r.doc_id ?? '') + r.batch_id} className={canBulk(r) ? 'mw-pickable' : undefined}>{canBulk(r) && <input type="checkbox" className="mw-pick" aria-label={'Chọn ' + r.code} checked={pick.has(r.doc_id!)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(r.doc_id!)) n.delete(r.doc_id!); else n.add(r.doc_id!); return n; })} />}<Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
                   <QtTag qt={r.proc} />
-                  <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id, r.code)}</b><span className="small muted">{r.project} · {r.title}</span></span>
-                  <span className="small">{r.kind === 'final' ? FINAL[r.proc] : (r.proc !== 'QT0' ? COMPANY[r.company] + ' · ' : '') + STATUS[r.status]}<span className="muted"> · {age(r.since)}</span></span>
+                  <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id, r.code)}</b><span className="small muted work-sub">{r.project} · {r.title}</span>
+                    <span className="work-st"><span className="work-step">{r.kind === 'final' ? FINAL[r.proc] : (r.proc !== 'QT0' ? COMPANY[r.company] + ' · ' : '') + STATUS[r.status]}</span><span className={'work-age' + ((Date.now() - new Date(r.since).getTime()) / 36e5 > 48 ? ' late' : '')}>{age(r.since)}</span></span></span>
                   <Icon name="arrow" size={18} />
                 </Link></li>))}
+              {shown.length === 0 && <li className="mw-none small muted">Không có việc khớp “{q || fq}”. <button type="button" className="link-btn" onClick={() => { setQ(''); setFq(''); }}>Bỏ lọc</button></li>}
             </ul>)}
         </div>
       </section>
