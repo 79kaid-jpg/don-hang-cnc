@@ -46,11 +46,13 @@ export default function Board() {
   const setKco = (c: KCo) => { setScope(c); setCol(''); };
   const inCo = (key: string) => kco === 'ALL' || key.startsWith(kco + '.') || (key === 'ky' && kco === 'HW');
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
+  const seeQ0 = adm || viewCo === 'PN'; // QT0 chỉ Phương Nam
   const [picking, setPicking] = useState(false); const [mkPj, setMkPj] = useState(false);
   const startNew = () => { if (qt === 'QT0') nav('/don/moi'); else setPicking(true); };
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
+  useEffect(() => { if (qt === 'QT0' && !seeQ0) setQt('QT1'); }, [qt, seeQ0]);
   const [col, setCol] = useState(''); const holder = useHolders();
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
   const load = async () => {
@@ -211,7 +213,7 @@ export default function Board() {
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist" aria-label="Chọn quy trình">
-          {PROCS.map((p) => <button key={p} role="tab" aria-selected={qt === p} className={(qt === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => pick(p)} data-kbd={String(PROCS.indexOf(p) + 1)} data-kbd-label={p + ' · ' + PROC_NAME[p]}>
+          {PROCS.filter((p) => p !== 'QT0' || seeQ0).map((p) => <button key={p} role="tab" aria-selected={qt === p} className={(qt === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => pick(p)} data-kbd={String(PROCS.indexOf(p) + 1)} data-kbd-label={p + ' · ' + PROC_NAME[p]}>
             <b>{p}</b><span>{PROC_NAME[p].split(' & ')[0].replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span><span className="kb-count">{batches ? countIn(p) : '–'}</span></button>)}
         </div>
         <div className="qt-panel" key={qt}>

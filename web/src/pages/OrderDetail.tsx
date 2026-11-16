@@ -39,7 +39,9 @@ export default function OrderDetail() {
   const coAll = CI.allOf(id).sort((a, z) => ['PN', 'IPC', 'HW'].indexOf(a.company) - ['PN', 'IPC', 'HW'].indexOf(z.company)); const coMine = CI.codeOf(id, viewCo);
   const [selB, setSelB] = useState<{ proc: string; id: string }>({ proc: '', id: '' });
   useEffect(() => { const h = (e: Event) => setSelB((e as CustomEvent).detail); addEventListener('pp-batch', h); return () => removeEventListener('pp-batch', h); }, []);
-  const tab0 = sp.get('tab') ?? 'QT0'; const tab = TABS.some(([k]) => k === tab0) ? tab0 : 'QT0';
+  const seeQ0 = adm0 || viewCo === 'PN'; // QT0 chỉ Phương Nam
+  const TABV = TABS.filter(([k]) => k !== 'QT0' || seeQ0);
+  const tab0 = sp.get('tab') ?? (seeQ0 ? 'QT0' : 'QT1'); const tab = TABV.some(([k]) => k === tab0) ? tab0 : seeQ0 ? 'QT0' : 'QT1';
   const { can } = useAuth();
   // Mở lại đơn vừa xem: hiện ngay bản nhớ tạm rồi cập nhật ngầm
   const c0 = peek<{ o: Order; people: Record<string, Profile>; cust: Record<string, Customer>; events: Ev[]; bs: Batch[]; ds: Doc[] }>('od:' + id, 600000);
@@ -123,7 +125,7 @@ export default function OrderDetail() {
       </header>
       <div className="qt-group od-group">
         <nav className="qt-tabs od-tabs" role="tablist" aria-label="Quy trình" ref={(el) => { const b = el?.querySelector<HTMLElement>('button.on'); if (b && el && (b.offsetLeft < el.scrollLeft || b.offsetLeft + b.offsetWidth > el.scrollLeft + el.clientWidth)) el.scrollLeft = b.offsetLeft - 16; }}>
-          {TABS.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null; const isP = PROCS.includes(k as Proc);
+          {TABV.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null; const isP = PROCS.includes(k as Proc);
             return <button key={k} role="tab" aria-selected={tab === k} className={(isP ? 'q' + k.slice(2) : 'qx') + (tab === k ? ' on' : '')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
               <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}</span>}</button>; })}
         </nav>

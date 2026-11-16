@@ -33,6 +33,7 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { askRating } from './Rating';
+import { Qt0Picker, Qt0Alloc, ReClone, takeRow, q0Key, type Q0Row, type Q0Pick } from './Qt0Picker';
 import { procData, procKey, type ProcData } from '../lib/orderData';
 import { evalFormula } from '../lib/formula';
 import { HeadInput, headErr } from './HeadInput';
@@ -104,6 +105,9 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && <div className="msg ok"><Icon name="check" size={18} /><span>{B.title}: đã xong cả 3 công ty và đã ký tay{B.final_files.length ? ' · ' : ''}{B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</span></div>}
         {B && B.status === 'fail' && <div className="msg err"><Icon name="alert" size={18} /><span>{B.title}: Thất bại – đã dừng. {B.proc === 'QT0' ? 'Mở “lần bóc tách mới”' : 'Mở lượt mới'} nếu cần làm lại.</span></div>}
+        {B && proc === 'QT1' && D && D.company === 'PN' && D.status === 'fail' && !(B.checklist as Record<string, unknown> | null)?.recloned_to && <div className="row" style={{ gap: 8, alignItems: 'center' }}><ReClone docId={D.id} onDone={(id) => { setBid(id); setCo(''); load(); }} /><span className="small muted">Chép bảng tấm (kể cả đơn giá) sang đơn mới; tấm đơn khác đã lấy sẽ báo thiếu.</span></div>}
+        {B && proc === 'QT0' && B.status === 'hoan_tat' && <Qt0Alloc qt0={B.id} order={o.id} />}
+        {B && proc === 'QT1' && (B as Batch & { src_qt0?: string | null }).src_qt0 && (!D || D.company === 'PN') && <Qt0Alloc qt0={String((B as Batch & { src_qt0?: string }).src_qt0)} order={o.id} />}
         {B && B.proc === 'QT2' && <Check5 b={B} />}
         {D && B && D.can_view === false && <div className="card lock-card"><Icon name="shield" size={22} /><div><b>Hồ sơ của {COMPANY[D.company]}</b><br />
           <span className="small muted">Bạn chỉ xem được hồ sơ của công ty mình. Tiến độ: {D.status === 'da_duyet' ? 'đã duyệt' : D.status === 'fail' ? 'thất bại' : 'đang xử lý'}.</span></div></div>}
@@ -172,7 +176,9 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const [title, setTitle] = useState(''); const [use0, setUse0] = useState(true); const [ck, setCk] = useState<Record<string, boolean>>({}); const [err, setErr] = useState('');
   const n = Object.values(ck).filter(Boolean).length;
   // Tách đơn: chọn tấm từ QT0 · QT2/QT3: chọn đơn PN
-  const [rows0, setRows0] = useState<Row[] | null>(null); const [used, setUsed] = useState<Record<number, string>>({}); const [pick, setPick] = useState<Set<number>>(new Set());
+  const [q0s, setQ0s] = useState<{ id: string; code: string; title: string; tot: number; used: number }[] | null>(null); const [q0, setQ0] = useState(''); const [q0rows, setQ0rows] = useState<Q0Row[] | null>(null);
+  const [picks, setPicks] = useState<Q0Pick[]>([]); const [pkOpen, setPkOpen] = useState(false);
+  useEffect(() => { setQ0rows(null); setPicks([]); if (!q0) return; sb.rpc('qt0_rows', { p_qt0: q0 }).then(({ data }) => setQ0rows(((data ?? []) as Q0Row[]).filter((x) => String(x.r.ma_tam ?? '').trim()))); }, [q0]);
   const [pnOrders, setPnOrders] = useState<{ id: string; code: string }[]>([]); const [coId, setCoId] = useState('');
   // IPC / HW: lập XNĐH bằng tham chiếu mã đơn đã duyệt của công ty trước
   const { co: myCo0 } = useMyCo(); const { scope: scNB } = useScope(); const myCoNB = scNB === 'IPC' || scNB === 'HW' ? scNB : myCo0; const refMode = false as boolean; const autoCo = proc !== 'QT0' && (myCoNB === 'IPC' || myCoNB === 'HW');
@@ -185,29 +191,15 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
   const takeBad = (rr ?? []).some((x) => takeN(x.i) > x.con_lai || takeN(x.i) < 0); const takeSum = (rr ?? []).reduce((a, x) => a + takeN(x.i), 0);
   useEffect(() => { if (!refMode) return; sb.rpc('ref_candidates', { p_order: o.id, p_co: myCoNB }).then(({ data }) => { const l = (data ?? []) as { code: string; title: string; used: string | null }[]; setRefs(l); const want = new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? ''; const hit = l.find((x) => x.code.trim().toUpperCase() === want.trim().toUpperCase()); if (hit) setRef(hit.code); else if (l.length === 1) setRef(l[0].code); }); }, [refMode, o.id, myCoNB]);
   useEffect(() => { if (refMode) return;
-    if (proc === 'QT1') (async () => {
-      const { data: bs } = await sb.from('batches').select('id, proc, status, done_at, title').eq('order_id', o.id);
-      const b0 = ((bs ?? []) as Batch[]).filter((x) => x.proc === 'QT0' && x.status === 'hoan_tat').sort((a, z) => (z.done_at ?? '').localeCompare(a.done_at ?? ''))[0];
-      if (!b0) return setRows0([]);
-      const q1 = ((bs ?? []) as Batch[]).filter((x) => x.proc === 'QT1');
-      const { data: ds } = await sb.from('docs_v').select('batch_id, company, tables').in('batch_id', [b0.id, ...q1.map((x) => x.id)]);
-      const all = (ds ?? []) as { batch_id: string; company: string; tables: Record<string, Row[]> }[];
-      const r0 = all.find((d) => d.batch_id === b0.id)?.tables?.ds ?? []; setRows0(r0);
-      const key = (r: Row) => [r.ma_tam, r.vat_lieu, r.day, r.dai, r.rong].join('|');
-      const u: Record<number, string> = {};
-      all.filter((d) => d.company === 'PN' && d.batch_id !== b0.id).forEach((d) => { const ks = new Set((d.tables?.ds ?? []).map(key)); const t = q1.find((x) => x.id === d.batch_id)?.title ?? '';
-        r0.forEach((r, i) => { if (ks.has(key(r))) u[i] = t; }); });
-      setUsed(u); setPick(new Set(r0.map((_, i) => i).filter((i) => !u[i])));
-    })();
+    if (proc === 'QT1') sb.rpc('qt0_list', { p_order: o.id }).then(({ data }) => { const l = (data ?? []) as { id: string; code: string; title: string; tot: number; used: number }[]; setQ0s(l);
+      const best = [...l].reverse().find((x) => x.tot - x.used > 0) ?? l[l.length - 1]; if (best) setQ0(best.id); });
     if (proc === 'QT2' || proc === 'QT3') sb.from('co_orders').select('id, code').eq('order_id', o.id).eq('company', 'PN').order('created_at').then(({ data }) => {
       const l = (data ?? []) as { id: string; code: string }[]; setPnOrders(l); const want = (new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref') ?? '').trim().toUpperCase(); const rid = new URLSearchParams(location.hash.split('?')[1] ?? '').get('refid'); const hit = l.find((x) => x.id === rid) ?? l.find((x) => x.code.trim().toUpperCase() === want); if (hit) setCoId(hit.id); else if (l.length === 1) setCoId(l[0].id); });
   }, [o.id, proc]);
-  const weld = (r: Row) => Number(String(r.duong_han ?? '').replace(',', '.')) > 0;
-  const sel = (f: (r: Row, i: number) => boolean) => setPick(new Set((rows0 ?? []).map((r, i) => (f(r, i) ? i : -1)).filter((i) => i >= 0)));
   const go = async () => {
     setErr('');
     if (refMode) { const { data, error } = await sb.rpc('doc_from_ref', { p_code: ref.trim(), p_co: myCoNB, p_pick: (rr ?? []).filter((x) => takeN(x.i) > 0).map((x) => ({ i: x.i, so_tam: takeN(x.i) })) }); if (error) return setErr(errText(error)); toast('Đã lập XNĐH ' + myCoNB + ' từ ' + ref); reloadCoIdx(); onDone(String(data ?? '')); return; }
-    const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0, ...(use0 && rows0?.length ? { rows: [...pick].sort((a, z) => a - z) } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
+    const { data, error } = await sb.rpc('batch_create', { p_order: o.id, p_proc: proc, p_title: title, p_opts: proc === 'QT1' ? { use_qt0: use0 && !!q0, qt0: q0 || null, ...(use0 && q0 ? { pick: picks } : {}) } : proc === 'QT2' ? { checklist: ck, co_order: coId || null } : { co_order: coId || null } });
     if (error) setErr(errText(error)); else { toast('Đã mở ' + proc); onDone(data as string); }
   };
   if (autoCo) return <PrevPick o={o} proc={proc} co={myCoNB as 'IPC' | 'HW'} prev={prevCo} onClose={onClose} onDone={onDone} />;
@@ -233,17 +225,13 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       </div>}
       {!refMode && <><label className="f">Tên (để trống thì tự đánh số)<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={proc === 'QT2' ? 'Ví dụ: Lệnh 1 – 250 tấm' : proc === 'QT3' ? 'Ví dụ: Đợt 1 – 50 tấm' : ''} /></label>
       {proc === 'QT1' && <label className="ck-item"><input type="checkbox" checked={use0} onChange={() => setUse0(!use0)} /><span>Lấy danh sách tấm từ QT0 đã duyệt <span className="small muted">(tách đơn: chỉ tick các tấm thuộc đơn này)</span></span></label>}
-      {proc === 'QT1' && use0 && rows0 !== null && (rows0.length === 0 ? <p className="small muted">Chưa có danh sách tấm QT0 đã duyệt.</p> : <div className="nb-pick">
-        <div className="nb-pick-h"><b>Chọn tấm cho XNĐH này</b><span className="small muted">{pick.size}/{rows0.length} tấm</span></div>
-        <div className="nb-flt">
-          <button type="button" className="chip" onClick={() => sel((_, i) => !used[i])}>Chưa dùng</button>
-          <button type="button" className="chip" onClick={() => sel((r, i) => !used[i] && weld(r))}>Có hàn</button>
-          <button type="button" className="chip" onClick={() => sel((r, i) => !used[i] && !weld(r))}>Không hàn</button>
-          <button type="button" className="chip" onClick={() => sel(() => true)}>Tất cả</button>
-          <button type="button" className="chip" onClick={() => setPick(new Set())}>Bỏ chọn</button></div>
-        <ul className="nb-rows">{rows0.map((r, i) => <li key={i}><label className={'nb-row' + (pick.has(i) ? ' on' : '') + (used[i] ? ' used' : '')}>
-          <input type="checkbox" checked={pick.has(i)} onChange={() => { const n2 = new Set(pick); if (n2.has(i)) n2.delete(i); else n2.add(i); setPick(n2); }} />
-          <span className="nb-t"><b>{String(r.ma_tam ?? '#' + (i + 1))}</b><span className="small muted">{[r.vat_lieu, r.day && r.day + 'mm', r.so_tam && r.so_tam + ' tấm', weld(r) && 'có hàn'].filter(Boolean).join(' · ')}</span>{used[i] && <span className="nb-used">Đã ở {used[i]}</span>}</span></label></li>)}</ul>
+      {proc === 'QT1' && use0 && q0s !== null && (q0s.length === 0 ? <p className="small muted">Chưa có QT0 nào đã duyệt.</p> : <div className="nb-pick">
+        <label className="f">Lấy từ QT0 *<select value={q0} onChange={(e) => setQ0(e.target.value)}>
+          {q0s.map((x) => <option key={x.id} value={x.id}>{x.code} · còn {Math.max(0, x.tot - x.used)}/{x.tot} tấm</option>)}</select></label>
+        <div className="nb-pick-h"><b>{picks.length ? `Đã chọn ${picks.length} dòng · ${picks.reduce((a, x) => a + x.q, 0).toLocaleString('vi-VN')} tấm` : 'Chưa chọn tấm'}</b>
+          <button type="button" className="btn sm primary" disabled={!q0rows} onClick={() => setPkOpen(true)}>{picks.length ? 'Sửa lựa chọn' : 'Chọn tấm…'}</button></div>
+        <span className="small muted">Tách đơn: lọc theo cột (mã tấm, loại gia công, dày…), nhập số tấm lấy để chia đơn lớn. Tấm đã lên đơn khác hiện mã đơn.</span>
+        {pkOpen && q0rows && <Qt0Picker code={q0s.find((x) => x.id === q0)?.code ?? 'QT0'} rows={q0rows} inTable={{}} onClose={() => setPkOpen(false)} onPick={(p) => { setPicks(p); setPkOpen(false); }} />}
       </div>)}
       {(proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && <label className="f">Thuộc đơn PN *<select value={coId} onChange={(e) => setCoId(e.target.value)}>
         <option value="">— Chọn đơn —</option>{pnOrders.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select></label>}
@@ -252,7 +240,7 @@ function NewBatch({ o, proc, onClose, onDone }: { o: Order; proc: Proc; onClose:
       </>}
       {err && <div className="msg err"><Icon name="alert" size={18} /><span>{err}</span></div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Huỷ</button>
-        <button className="btn primary" disabled={(refMode && (!ref.trim() || !rr || takeSum <= 0 || takeBad)) || (!refMode && ((proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!rows0?.length && pick.size === 0)))} onClick={go}>{refMode ? 'Lập XNĐH từ tham chiếu' : proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
+        <button className="btn primary" disabled={(refMode && (!ref.trim() || !rr || takeSum <= 0 || takeBad)) || (!refMode && ((proc === 'QT2' && n < 5) || ((proc === 'QT2' || proc === 'QT3') && pnOrders.length > 0 && !coId) || (proc === 'QT1' && use0 && !!q0s?.length && picks.length === 0)))} onClick={go}>{refMode ? 'Lập XNĐH từ tham chiếu' : proc === 'QT2' && n < 5 ? 'Chưa đủ 5 điều kiện · chờ' : 'Mở ' + BATCH_WORD[proc]}</button></div>
     </div></div>, document.body));
 }
 
@@ -565,9 +553,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
           onChange={(rows) => { setT({ ...t, [key]: rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
-            return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : proc === 'QT1' && key === 'ds' && d.company === 'PN' ? async () => { const { data: bs } = await sb.from('batches').select('id').eq('order_id', b.order_id).eq('proc', 'QT0').eq('status', 'hoan_tat').order('done_at', { ascending: false }).limit(1);
-            if (!bs?.length) return []; const { data: ds } = await sb.from('docs_v').select('tables').eq('batch_id', bs[0].id).limit(1);
-            return (((ds?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined} />))}
+            return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined}
+          q0src={proc === 'QT1' && key === 'ds' && d.company === 'PN' && (b as Batch & { src_qt0?: string | null }).src_qt0 ? { id: String((b as Batch & { src_qt0?: string }).src_qt0), docId: d.id, orderId: b.order_id } : undefined} />))}
       {proc === 'QT1' && !hid.has('ds:don_gia') && <Qt1Total rows={t.ds ?? []} vat={numIn(h.vat) ?? 8} vc={numIn(h.phi_vc) ?? 0} />}
       {proc === 'QT2' && <Qt2Loss nl={t.nl ?? []} tp={t.tp ?? []} />}
 
@@ -730,7 +717,18 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev }: { prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string }) {
+  const [q0, setQ0] = useState<{ code: string; rows: Q0Row[] } | null>(null);
+  const openQ0 = async () => { if (!q0src) return; const [{ data: rs }, { data: ls }] = await Promise.all([sb.rpc('qt0_rows', { p_qt0: q0src.id, p_doc: q0src.docId }), sb.rpc('qt0_list', { p_order: q0src.orderId })]);
+    const l = ((rs ?? []) as Q0Row[]).filter((x) => String(x.r.ma_tam ?? '').trim()); if (!l.length) { toast('QT0 nguồn không có tấm'); return; }
+    setQ0({ code: ((ls ?? []) as { id: string; code: string }[]).find((x) => x.id === q0src.id)?.code ?? 'QT0', rows: l }); };
+  const q0In = useMemo(() => { const m: Record<string, number> = {}; for (const r of rows) { const k = q0Key(r); const n = Number(String(r.so_tam ?? '').replace(',', '.')) || 0; if (String(r.ma_tam ?? '').trim()) m[k] = (m[k] ?? 0) + n; } return m; }, [rows]);
+  const takeQ0 = (p: Q0Pick[]) => { if (!q0) return; const KEEP = new Set(['don_gia', 'tt', 'ghi_chu', '_id']); const next = rows.filter((r) => Object.values(r).some((v) => String(v ?? '').trim())).map((r) => ({ ...r })); let up = 0, add = 0;
+    for (const x of p) { const src = q0.rows.find((y) => y.i === x.i); if (!src) continue; const t = takeRow(src.r, x.q); const k = q0Key(t); const j = next.findIndex((r) => q0Key(r) === k);
+      if (j >= 0) { const cur = next[j]; const n0 = Number(String(cur.so_tam ?? '').replace(',', '.')) || 0; const m0 = Number(String(cur.m2 ?? '').replace(',', '.')) || 0; const mt = Number(String(t.m2 ?? '').replace(',', '.')) || 0;
+        next[j] = { ...cur, so_tam: n0 + x.q, ...(mt || m0 ? { m2: Math.round((m0 + mt) * 10000) / 10000 } : {}) }; up++; }
+      else { next.push(Object.fromEntries(Object.entries(t).filter(([kk]) => !KEEP.has(kk))) as Row); add++; } }
+    onChange(next); setQ0(null); toast(`Đã lấy từ ${q0.code}: cộng thêm ${up} dòng, thêm mới ${add} dòng – bấm Lưu để giữ`); };
   const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = cols.filter((c) => !c.calc && !c.ro);
   const isAdm = useAuth().can('admin_it');
@@ -860,6 +858,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
           ? <span className="pp-chgsum" title="So với lúc bị trả về">Đã sửa: {[nC && nC + ' dòng sửa', nN && nN + ' dòng mới', removed && removed + ' dòng bỏ'].filter(Boolean).join(' · ')}</span> : <span className="pp-chgsum none">Chưa sửa gì so với lúc trả về</span>; })()}
         {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
+        {q0 && <Qt0Picker code={q0.code} rows={q0.rows} inTable={q0In} onClose={() => setQ0(null)} onPick={takeQ0} />}
         {pick && <Qt0Pick label={srcLabel} src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
           const KEEP = new Set(['don_gia', 'tt', 'ghi_chu', '_id']); const key = (r: Row) => String(r.ma_tam ?? '').trim().toLowerCase();
           const cur = rows.filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
@@ -875,6 +874,7 @@ function TableEdit({ title, req, cols, rows, editable, onChange, fname, fromQt0,
         {editable && <span className="row pp-tools" style={{ gap: 6 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={doFile} />
           <button className="btn xs" title="Tải file Excel lên (đọc theo tên cột)" onClick={() => fileRef.current?.click()}><Icon name="upload" size={13} />Tải lên</button>
+          {q0src && <button className="btn xs" title="Chọn tấm từ QT0 nguồn – lọc theo cột, nhập số tấm, cộng dồn vào bảng" onClick={openQ0}><Icon name="download" size={13} />Lấy từ QT0</button>}
           {fromQt0 && <button className="btn xs" title="Lấy danh sách tấm từ QT0 đã duyệt – khớp theo Mã tấm, giữ đơn giá và ghi chú đã nhập" onClick={async () => { const r = await fromQt0(); if (!r.length) { toast('Không có danh sách tấm để lấy'); return; } setPick(r); }}><Icon name="download" size={13} />{srcLabel}</button>}
           <button className="btn xs" title="Dán dữ liệu đã chép từ Excel – hoặc bấm vào một ô rồi Ctrl+V" onClick={() => setOpen(!open)}><Icon name="copy" size={13} />Dán</button>
           <button className="btn xs" title="Tải file mẫu: đúng các cột của bảng, có 3 dòng ví dụ" onClick={tpl}><Icon name="download" size={13} />Mẫu</button>
