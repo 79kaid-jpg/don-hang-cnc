@@ -46,6 +46,8 @@ export default function Admin() {
   const [openId, setOpenId] = useState<string | null>(null); const [creating, setCreating] = useState(false);
   const [q, setQ] = useState(''); const [fRole, setFRole] = useState(''); const [fAct, setFAct] = useState<'on' | 'off' | 'all'>('on'); const [fZ, setFZ] = useState(false); const [fU, setFU] = useState('');
   const [groups] = useGroups(); const mats = useMaterials();
+  const isIT = can('admin_it'); const [seen, setSeen] = useState<Record<string, Seen> | null>(null); const [fNo, setFNo] = useState(false); const [sortOld, setSortOld] = useState(false);
+  useEffect(() => { if (!isIT) { setSeen(null); return; } sb.rpc('admin_last_seen').then(({ data }) => setSeen(Object.fromEntries(((data as (Seen & { id: string })[]) ?? []).map((r) => [r.id, r])))); }, [isIT, people]);
   const load = () => {
     sb.from('profiles').select('*').order('full_name').then(({ data }) => setPeople((data as Profile[]) ?? []));
     sb.from('approval_steps').select('*').order('doc_type').order('step_no').then(({ data }) => setSteps((data as Step[]) ?? []));
@@ -61,7 +63,7 @@ export default function Admin() {
   const noRole = (people ?? []).filter((p) => p.active && !p.roles.length).length;
 
   if (creating) return <NewUser onBack={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setOpenId(id); }} />;
-  if (open) return <UserDetail p={open} people={people ?? []} onBack={() => setOpenId(null)} onSaved={load} />;
+  if (open) return <UserDetail p={open} seen={seen?.[open.id]} people={people ?? []} onBack={() => setOpenId(null)} onSaved={load} />;
 
   const TABS: [typeof tab, string, string, string][] = [
     ['hl', 'Sức khoẻ hệ thống', 'Bước thiếu người, phiếu kẹt, chưa nối Zalo', 'activity'], ['pm', 'Ma trận phân quyền', 'Ai làm bước nào, công ty nào', 'fgrid'], ['log', 'Nhật ký quản trị', 'Ai đã sửa cấu hình gì', 'clock'], ['cfg', 'Xuất / nhập cấu hình', 'Sao lưu & chuyển cấu hình', 'download'],
@@ -70,12 +72,15 @@ export default function Admin() {
   const act = (people ?? []).filter((p) => p.active);
   const noZalo = act.filter((p) => !p.zalo_chat_id).length;
   const roleCount = (r: string) => act.filter((p) => p.roles.includes(r)).length;
-  const shown = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU));
+  const lastAct = (id: string) => seen?.[id]?.last_active ?? null;
+  const neverIn = seen ? act.filter((p) => !lastAct(p.id)).length : 0;
+  const shown0 = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU) && (!fNo || !lastAct(p.id)));
+  const shown = sortOld && seen ? [...shown0].sort((a, b) => (lastAct(a.id) ?? '').localeCompare(lastAct(b.id) ?? '')) : shown0;
   const NAV: [string, (typeof TABS)[number][]][] = [['Tổng quan', TABS.filter((t) => ['hl', 'pm'].includes(t[0]))], ['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
     ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'vl', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['act', 'log', 'cfg', 'plan', 'perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
   const ini = (n: string) => (n || '?').replace(/\(.*?\)/g, '').split(' ').filter((x) => /\p{L}/u.test(x)).slice(-2).map((x) => x[0]).join('').toUpperCase() || '?';
-  const filtered = fRole !== '' || fZ || fU !== '' || fAct !== 'on' || q !== '';
+  const filtered = fRole !== '' || fZ || fNo || fU !== '' || fAct !== 'on' || q !== '';
   return (
     <div className={'adm2' + (home ? ' home' : mob ? ' sub' : '')}>
       {home && <header className="adm2-mhome"><h1>Quản trị</h1><p className="muted small">{act.length} người dùng · {noZalo} chưa liên kết Zalo</p></header>}
@@ -95,9 +100,10 @@ export default function Admin() {
 
       {tab === 'users' && (<div className="adm-users">
         {people && <div className="adm2-stats">
-          <button onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFU(''); setQ(''); }}><b>{act.length}</b><span>Đang hoạt động</span></button>
+          <button onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFNo(false); setFU(''); setQ(''); }}><b>{act.length}</b><span>Đang hoạt động</span></button>
           <button className={noRole ? 'warn' : ''} onClick={() => { setFRole('_none'); setFAct('on'); setFZ(false); }}><b>{noRole}</b><span>Chưa có vai trò</span></button>
           <button className={(noZalo ? 'warn' : '') + (fZ ? ' on' : '')} onClick={() => { setFRole(''); setFAct('on'); setFZ(!fZ); }}><b>{noZalo}</b><span>Chưa liên kết Zalo</span></button>
+          {seen && <button className={(neverIn ? 'warn' : '') + (fNo ? ' on' : '')} onClick={() => { setFRole(''); setFAct('on'); setFNo(!fNo); }}><b>{neverIn}</b><span>Chưa đăng nhập</span></button>}
           <button onClick={() => setTab('groups')}><b>{groups.filter((g) => g.active).length}</b><span>Nhóm</span></button>
         </div>}
         <div className="adm2-filters">
@@ -112,8 +118,9 @@ export default function Admin() {
             {noRole > 0 && <option value="_none">Chưa có vai trò ({noRole})</option>}</select>
           <div className="seg" role="group" aria-label="Trạng thái">{([['on', 'Hoạt động'], ['off', 'Đã khoá'], ['all', 'Tất cả']] as const).map(([k, t]) =>
             <button key={k} type="button" aria-pressed={fAct === k} onClick={() => setFAct(k)}>{t}</button>)}</div>
+          {seen && <button type="button" className={'btn sm' + (sortOld ? ' on' : '')} aria-pressed={sortOld} onClick={() => setSortOld(!sortOld)} title="Sắp xếp: lâu không hoạt động lên đầu"><Icon name="clock" size={15} />Lâu không hoạt động</button>}
         </div>
-        <div className="adm2-count small muted">{shown.length} người{filtered && <> · <button className="link" onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFU(''); setQ(''); }}>Xoá bộ lọc</button></>}</div>
+        <div className="adm2-count small muted">{shown.length} người{filtered && <> · <button className="link" onClick={() => { setFRole(''); setFAct('on'); setFZ(false); setFNo(false); setFU(''); setQ(''); }}>Xoá bộ lọc</button></>}</div>
         {!people ? <Skeleton rows={4} h={64} /> : shown.length === 0 ? <div className="adm2-empty"><Icon name="users" size={26} /><p>Không có người dùng khớp bộ lọc.</p></div> : (
           <ul className="adm2-list" role="list">
             {shown.map((p) => { const gs = groups.filter((g) => g.active && g.member_ids.includes(p.id)); const tags = [...p.roles.map((r) => ROLES[r] ?? r)];
@@ -126,6 +133,7 @@ export default function Admin() {
                   <span className="adm2-tags">{acc[p.id] ? <CoTags a={{ ...acc[p.id], admin: p.roles.includes('admin_it') }} /> : tags.length ? <>{tags.slice(0, 3).map((t) => <span key={t} className="adm2-tag">{t}</span>)}{tags.length > 3 && <span className="adm2-tag more">+{tags.length - 3}</span>}</>
                     : <span className="adm2-tag bad">Chưa có vai trò</span>}
                     {gs.slice(0, 2).map((g) => <span key={g.id} className="adm2-tag grp"><Icon name="users" size={11} />{g.name}</span>)}</span>
+                  {seen && <SeenTag s={seen[p.id]} />}
                   <span className={'adm2-zl' + (p.zalo_chat_id ? ' on' : '')} title={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'} aria-label={p.zalo_chat_id ? 'Đã liên kết Zalo' : 'Chưa liên kết Zalo'}>Z</span>
                   <Icon name="arrow" size={16} />
                 </button>
@@ -161,7 +169,17 @@ export default function Admin() {
   );
 }
 
-function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => void; onSaved: () => void; people?: Profile[] }) {
+type Seen = { last_sign_in: string | null; last_active: string | null };
+const agoTxt = (t?: string | null, short = false) => { if (!t) return short ? 'Chưa ĐN' : 'Chưa đăng nhập'; const m = (Date.now() - new Date(t).getTime()) / 6e4;
+  if (m < 60) return short ? Math.max(1, Math.round(m)) + 'p' : Math.max(1, Math.round(m)) + ' phút trước'; if (m < 1440) return short ? Math.round(m / 60) + 'g' : Math.round(m / 60) + ' giờ trước';
+  const d = Math.floor(m / 1440); return short ? d + 'n' : d + ' ngày không hoạt động'; };
+const seenCls = (t?: string | null) => !t ? 'never' : (Date.now() - new Date(t).getTime()) / 864e5 >= 7 ? 'old' : 'ok';
+const fullDt = (t?: string | null) => t ? new Date(t).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+function SeenTag({ s }: { s?: Seen }) { const t = s?.last_active ?? null;
+  return <span className={'adm2-seen ' + seenCls(t)} title={'Đăng nhập lần cuối: ' + fullDt(s?.last_sign_in) + '\nHoạt động lần cuối: ' + fullDt(t)}>
+    <span className="l">{agoTxt(t)}</span><span className="s" aria-hidden="true">{agoTxt(t, true)}</span></span>; }
+
+function UserDetail({ p, onBack, onSaved, people, seen }: { p: Profile; onBack: () => void; onSaved: () => void; people?: Profile[]; seen?: Seen }) {
   const { real, actAs } = useAuth(); const nav = useNavigate();
   const [init, setInit] = useState(() => ({ full_name: p.full_name, unit: p.unit, roles: p.roles, active: p.active, position: p.position ?? '', manager_id: p.manager_id ?? null }));
   const [f, setF] = useState(init);
@@ -193,7 +211,8 @@ function UserDetail({ p, onBack, onSaved, people }: { p: Profile; onBack: () => 
       <div className="card row" style={{ gap: 14 }}>
         <span className="avatar" style={{ width: 52, height: 52, borderRadius: 26, fontSize: 20 }}>{(f.full_name || '?').charAt(0).toUpperCase()}</span>
         <div style={{ flex: 1, minWidth: 0 }}><h1 style={{ fontSize: 22 }}>{f.full_name || '(chưa đặt tên)'}</h1>
-          <div className="small muted">{f.unit} · {f.active ? 'Đang hoạt động' : 'Đã khoá'}{isMe ? ' · tài khoản của bạn' : ''}</div></div>
+          <div className="small muted">{f.unit} · {f.active ? 'Đang hoạt động' : 'Đã khoá'}{isMe ? ' · tài khoản của bạn' : ''}</div>
+          {seen && <div className="small adm2-seen-d">Đăng nhập lần cuối: <b>{fullDt(seen.last_sign_in)}</b> · Hoạt động lần cuối: <b>{fullDt(seen.last_active)}</b> <SeenTag s={seen} /></div>}</div>
       </div>
 
       {!isMe && (

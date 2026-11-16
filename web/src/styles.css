@@ -3585,3 +3585,10 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 .side .act-box .btn:focus-visible{outline:2px solid #A85A12;outline-offset:1px}
 .app.side-hidden:not(.side-peek) .side .act-box{flex-direction:column;gap:2px;padding:5px 0 3px;width:40px;align-self:center}
 .app.side-hidden:not(.side-peek) .side .act-box .act-bt{display:none}
+/* Admin: lần hoạt động gần nhất (chỉ Admin IT) */
+.adm2-seen{flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;background:#EAF5EE;color:#2E6B45}
+.adm2-seen.old{background:#FFF1E0;color:#9A4A00}.adm2-seen.never{background:#FCEBEE;color:#B42335}
+.adm2-seen .s{display:none}
+.adm2-seen-d{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.adm2-filters .btn.on{background:#1F3A93;color:#fff;border-color:#1F3A93}
+@media (max-width:600px){.adm2-seen .l{display:none}.adm2-seen .s{display:inline}.adm2-seen{padding:2px 7px;font-size:11.5px}}
