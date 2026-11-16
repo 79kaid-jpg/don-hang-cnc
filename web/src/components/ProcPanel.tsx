@@ -523,11 +523,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} lap={d.status === 'lap'} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
-<<<<<<< HEAD
-          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}{f.key === 'hao_hut' && h._hao_src && <ColTip info={['Hao hụt đọc từ file bóc tách', 'Ô ' + h._hao_src, 'Giá trị file: ' + h._hao_v + '%' + (String(v) !== String(h._hao_v) ? ' · đã sửa tay thành ' + v + '%' : '')]} />}</span>
-=======
-          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}<VarTag k={f.key} /></span>
->>>>>>> 217fa38 (Admin: nút Hiện biến mẫu in cạnh ô/cột bảng + tìm biến trong Mẫu in)
+          return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}<VarTag k={f.key} />{f.key === 'hao_hut' && h._hao_src && <ColTip info={['Hao hụt đọc từ file bóc tách', 'Ô ' + h._hao_src, 'Giá trị file: ' + h._hao_v + '%' + (String(v) !== String(h._hao_v) ? ' · đã sửa tay thành ' + v + '%' : '')]} />}</span>
             {f.type === 'carrier' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">— chọn —</option>{carriers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.kind === 'noi_bo' ? ' (tự chở)' : ''}</option>)}</select>
               : !['text', 'number', 'select', 'textarea'].includes(f.type) ? <HeadInput f={f} v={String(v)} on={on} disabled={!ed} opts={f.type === 'lookup' ? lookOpts(f.options[0]) : undefined} calc={f.type === 'formula' ? fxHead(f) : undefined} />
               : f.type === 'select' ? <select disabled={!ed} value={v} onChange={(e) => on(e.target.value)}><option value="">—</option>{f.options.map((o2) => <option key={o2}>{o2}</option>)}{v && !f.options.includes(v) && <option>{v}</option>}</select>
@@ -563,13 +559,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
-<<<<<<< HEAD
-        <TableEdit key={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
-          onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
-=======
         <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
-          onChange={(rows) => { const dv = proc === 'QT0' && cols.some((c) => c.k === 'cot_moi'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.cot_moi ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, cot_moi: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
->>>>>>> 217fa38 (Admin: nút Hiện biến mẫu in cạnh ô/cột bảng + tìm biến trong Mẫu in)
+          onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
             return (((sd?.[0] as { tables?: Record<string, Row[]> } | undefined)?.tables?.ds) ?? []).filter((r) => String(r.ma_tam ?? '').trim()); } : undefined}
