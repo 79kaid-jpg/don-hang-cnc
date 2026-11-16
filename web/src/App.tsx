@@ -110,13 +110,13 @@ function Shell() {
           <Bell variant="side" />
           <button className="btn sm icon-btn side-hide" aria-label={hidden ? 'Mở rộng menu' : 'Thu gọn menu'} data-kbd="[" onClick={() => toggleSide(!hidden)}><Icon name="panel" size={18} /></button></div>
         <ScopeChip variant="side" />
-        {acting && <div className={'act-box' + (actUntil ? ' act-do' : '')} role="status" title={'Làm thay ' + me.full_name + ' · ghi là ' + real?.full_name + ' thay mặt'}><span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span><span className="act-bt">{actUntil ? 'Làm thay' : 'Xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <> · chỉ xem đơn thật</>}<small>Ghi là {real?.full_name} thay mặt</small></span><button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button></div>}
         <button className="side-search" title="Tìm đơn nhanh (Ctrl K)" onClick={() => dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}>
           <Icon name="search" size={18} /><span>Tìm đơn nhanh</span><kbd>Ctrl K</kbd></button>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((i) => (
             <NavLink key={i.to} to={i.to} end={i.end} className="nav-item" data-kbd={(i as { kbd?: string }).kbd} onClick={() => setPeek(false)}><Icon name={i.icon} />{i.label}{badge(i.badge)}</NavLink>))}
         </nav>
+        {acting && <div className={'act-box' + (actUntil ? ' act-do' : '')} role="status" title={'Làm thay ' + me.full_name + ' · ghi là ' + real?.full_name + ' thay mặt'}><span className="act-av" aria-hidden="true">{me.full_name.trim().split(' ').pop()?.[0]}</span><span className="act-bt">{actUntil ? 'Làm thay' : 'Xem với tư cách'} <b>{me.full_name}</b>{actUntil ? <> · đến {new Date(actUntil).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</> : <> · chỉ xem đơn thật</>}<small>Ghi là {real?.full_name} thay mặt</small></span><button className="btn sm" onClick={async () => { await stopActing(); location.reload(); }}><Icon name="x" size={15} />Thoát</button></div>}
         <AccountMenu me={me} initial={initial} />
       </aside>
 

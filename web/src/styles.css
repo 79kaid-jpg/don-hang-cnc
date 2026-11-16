@@ -3573,8 +3573,15 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 .act-box .act-bt{flex:1;min-width:0}.act-box small{display:block;opacity:.75;font-size:11.5px}
 .act-box .btn{min-height:36px;border-radius:999px;flex:none;border-color:#A85A12;color:#5C2E07}
 .sheet .act-box{margin:4px 0 12px;font-size:14px}.sheet .act-box .btn{min-height:44px}
-/* Thanh bên thu gọn: hộp làm thay chỉ còn chữ T + nút × xếp dọc */
-.app.side-hidden:not(.side-peek) .side .act-box{flex-direction:column;gap:4px;padding:6px 2px;border-radius:12px;align-items:center}
+/* Làm thay trong thanh bên: viên thuốc ở cuối, ngay trên tài khoản */
+.side .act-box{margin:auto 0 8px;border-radius:999px;padding:4px 4px 4px 5px;gap:8px;font-size:12.5px}
+.side .act-box + .acc{margin-top:0}
+.side .act-box .act-av{width:26px;height:26px}
+.side .act-box small{display:none}
+.side .act-box .btn{font-size:0;gap:0;padding:0;width:28px;height:28px;min-height:28px;min-width:0;border:0;background:transparent;justify-content:center;border-radius:50%;position:relative;color:#7a3e00}
+.side .act-box .btn::after{content:'';position:absolute;inset:-4px}
+.side .act-box .btn svg{width:13px;height:13px;stroke-width:2.5}
+.side .act-box .btn:hover{background:rgba(168,90,18,.14)}
+.side .act-box .btn:focus-visible{outline:2px solid #A85A12;outline-offset:1px}
+.app.side-hidden:not(.side-peek) .side .act-box{flex-direction:column;gap:2px;padding:5px 0 3px;width:40px;align-self:center}
 .app.side-hidden:not(.side-peek) .side .act-box .act-bt{display:none}
-.app.side-hidden:not(.side-peek) .side .act-box .btn{font-size:0;gap:0;padding:0;min-height:30px;width:30px;min-width:0;justify-content:center}
-.app.side-hidden:not(.side-peek) .side .act-box .btn svg{width:15px;height:15px}
