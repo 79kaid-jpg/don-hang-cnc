@@ -141,12 +141,15 @@ export function Qt0Alloc({ qt0, order }: { qt0: string; order: string }) {
   const byK = new Map<string, Q0Row>(); for (const x of st.rows) if (!byK.has(x.k)) byK.set(x.k, x);
   const ks = [...byK.values()]; const tot = ks.reduce((a, x) => a + x.tot, 0); const used = ks.reduce((a, x) => a + Math.min(x.used, x.tot), 0); const left = ks.filter((x) => x.tot > x.used);
   const pct = tot ? Math.round(used / tot * 100) : 0;
-  return <div className={'q0a' + (left.length ? '' : ' done')}>
-    <div className="q0a-h"><b>{st.code}</b><span>Đã lên đơn <b>{used.toLocaleString('vi-VN')}/{tot.toLocaleString('vi-VN')}</b> tấm{left.length ? <> · còn <b>{(tot - used).toLocaleString('vi-VN')}</b> tấm ({left.length} mã)</> : ' · đủ'}</span>
-      {left.length > 0 && <button type="button" className="btn xs" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Ẩn' : 'Xem tấm còn lại'}</button>}</div>
-    <div className="q0a-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Tỉ lệ đã lên đơn"><span style={{ width: pct + '%' }} /></div>
-    {open && <ul className="q0a-l">{left.map((x) => <li key={x.k}><b>{String(x.r.ma_tam ?? '')}</b><span className="small muted">{[x.r.vat_lieu, x.r.day && x.r.day + 'mm', x.r.loai_gc].filter(Boolean).join(' · ')}</span><em>còn {x.tot - x.used}/{x.tot}</em></li>)}</ul>}
-  </div>;
+  return <section className={'q0a' + (left.length ? '' : ' done')} aria-label="Phân bổ tấm QT0">
+    <div className="q0a-top"><span className="q0a-lbl">QT0 nguồn</span><b className="q0a-code" title={st.code}>{st.code}</b>
+      <span className={'q0a-pill' + (left.length ? '' : ' ok')}>{left.length ? pct + '%' : 'Đủ'}</span></div>
+    <div className="q0a-num"><b>{used.toLocaleString('vi-VN')}</b><span>/ {tot.toLocaleString('vi-VN')} tấm đã lên đơn</span></div>
+    <div className="q0a-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Tỉ lệ đã lên đơn"><span style={{ width: Math.max(pct, used ? 2 : 0) + '%' }} /></div>
+    {left.length > 0 && <div className="q0a-ft"><span>Còn <b>{(tot - used).toLocaleString('vi-VN')}</b> tấm · {left.length} mã</span>
+      <button type="button" className="q0a-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Thu gọn' : 'Xem còn lại'}<Icon name="caret" size={14} /></button></div>}
+    {open && <ul className="q0a-l">{left.map((x) => <li key={x.k}><b>{String(x.r.ma_tam ?? '')}</b><span className="small muted">{[x.r.vat_lieu, x.r.day && x.r.day + 'mm', x.r.loai_gc].filter(Boolean).join(' · ')}</span><em>{x.tot - x.used}/{x.tot}</em></li>)}</ul>}
+  </section>;
 }
 
 /** Đơn PN thất bại → tạo đơn mới (chép bảng, chỉ lấy phần QT0 còn lại) */

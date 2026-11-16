@@ -3723,3 +3723,20 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 .qp-tbl td.ck,.qp-tbl th.ck{background:transparent!important;border-radius:0!important;box-shadow:none!important}
 .qp-tbl thead th.ck{background:#EEF2F7!important}
 @media (max-width:640px){.qp-tbl tr.on{background:#EEF4FF}.qp-tbl tr.on td{background:transparent}}
+/* Thanh phân bổ QT0 – bản gọn */
+.q0a{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid #F0D3AE;background:#FFFAF3;margin:10px 0}
+.q0a.done{border-color:#BFE0CB;background:#F3FAF5}
+.q0a-top{display:flex;align-items:center;gap:8px;min-width:0}
+.q0a-lbl{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8A6A43;flex:none}
+.q0a.done .q0a-lbl{color:#3C6E4E}
+.q0a-code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.q0a-pill{flex:none;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:#FDE7CC;color:#9A4A00}.q0a-pill.ok{background:#DCEFE3;color:#2E6B45}
+.q0a-num{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.q0a-num b{font-size:26px;line-height:1;font-variant-numeric:tabular-nums}.q0a-num span{font-size:14px;color:#5B6472}
+.q0a-bar{height:8px;border-radius:8px;background:#F1E4D3;overflow:hidden}.q0a.done .q0a-bar{background:#DCEFE3}
+.q0a-bar span{display:block;height:100%;border-radius:8px;background:#E08A2E;transition:width .3s}.q0a.done .q0a-bar span{background:#2E6B45}
+.q0a-ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;color:#3A4352}.q0a-ft>span{flex:1;min-width:0}
+.q0a-more{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#1F3A93;font:inherit;font-weight:600;cursor:pointer}
+.q0a-more:hover{background:#EEF2FB}.q0a-more[aria-expanded=true] svg{transform:rotate(180deg)}
+.q0a-l{list-style:none;margin:0;padding:6px 0 0;border-top:1px dashed #EAD3B5;max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.q0a-l li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;font-size:13px;padding:4px 0}.q0a-l li .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q0a-l em{font-style:normal;font-weight:700;color:#9A4A00;font-variant-numeric:tabular-nums}
