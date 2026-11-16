@@ -3946,3 +3946,14 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
   .pp-act .btn:not(.primary){min-width:44px}
 }
 @media (min-width:1024px){.ol{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:12px}.ol>li+li{margin-top:0}}
+/* v2 · Đợt 5 – Hộp thoại thành tấm trượt từ dưới trên điện thoại; Quản trị gọn */
+@media (max-width:639px){
+  .modal-bg{align-items:flex-end;padding:0}
+  .modal-bg>.modal,.modal-bg>div:first-child:not(.sheet){width:100%;max-width:none;border-radius:20px 20px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:sheetUp .22s cubic-bezier(.2,.9,.3,1)}
+  .modal-bg>.modal::before,.modal-bg>div:first-child:not(.sheet)::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:var(--line2);margin:0 auto 8px}
+  .modal .btn{flex:1 1 auto}
+  .adm2-head h1{font-size:19px}.adm2-head p{display:none}
+  .adm2-nav button{min-height:56px}
+}
+@keyframes sheetUp{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.modal-bg>.modal,.modal-bg>div:first-child{animation:none}}
