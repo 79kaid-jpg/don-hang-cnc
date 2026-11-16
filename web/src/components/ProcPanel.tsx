@@ -502,7 +502,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
   const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
   const role = ROLE_OF[d.status];
-  const [mgrDoc, setMgrDoc] = useState(false);
+  const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false);
+  useEffect(() => { setHOpen(false); }, [d.id]);
   useEffect(() => { let live = true; setMgrDoc(false); sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => { if (live) setMgrDoc(!!data); }); return () => { live = false; }; }, [d.id]);
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
 
@@ -551,6 +552,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         return <div className="rt-ban" role="note"><div className="rt-ban-h"><Icon name="back" size={16} /><b>Bị trả về</b><span className="small muted"> · {people[ls.user]?.full_name ?? ''} · {dt(ls.at)}</span></div>
           {ls.note && <div className="rt-ban-t">{ls.note}</div>}<RtThumbs files={im} size={72} />{rs && <div className="small rt-ban-h2">Trả về từ <b>{STATUS[rs.from] ?? rs.from}</b> → <b>{STATUS[rs.to] ?? rs.to}</b> · ô / dòng <span className="rt-chg-key">viền vàng</span> là chỗ đã sửa sau khi bị trả về</div>}</div>; })()}
       {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} lap={d.status === 'lap'} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
+      {(() => { const hEd = hFields.some(canEd); const missH = can && hFields.some((f) => pm(f) === 'required' && !String(h[f.key] ?? '').trim());
+        const show = (f: (typeof hFields)[number]) => { const v = String(h[f.key] ?? '').trim(); if (!v) return ''; if (f.type === 'date' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4); if (f.type === 'carrier') return carriers.find((c) => c.id === v)?.name ?? v; return v; };
+        const thin = hEd && hFields.filter((f) => String(h[f.key] ?? '').trim()).length * 2 < hFields.length;
+        if (!hEd || (!hOpen && !missH && !thin)) return <div className={'pp-kv' + (hEd ? ' ed' : '')}>
+          <dl>{hFields.filter((f) => show(f)).map((f) => <div key={f.key} data-fk={f.key}><dt>{f.label}</dt><dd>{show(f)}</dd></div>)}
+            {hFields.every((f) => !show(f)) && <div><dt>Thông tin chung</dt><dd className="muted">Chưa có</dd></div>}</dl>
+          {hEd && <button type="button" className="pp-kv-ed" onClick={() => setHOpen(true)}><Icon name="edit" size={14} />Sửa thông tin</button>}</div>;
+        return <>{hOpen && !missH && !thin && <div className="pp-kv-close"><button type="button" className="link-btn" onClick={() => setHOpen(false)}>Thu gọn thông tin</button></div>}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}<VarTag k={f.key} />{f.key === 'hao_hut' && h._hao_src && <ColTip info={['Hao hụt đọc từ file bóc tách', 'Ô ' + h._hao_src, 'Giá trị file: ' + h._hao_v + '%' + (String(v) !== String(h._hao_v) ? ' · đã sửa tay thành ' + v + '%' : '')]} />}</span>
@@ -567,7 +576,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             {f.key === 'dk_giao' && <datalist id={'dkg-' + d.id}>{[...new Set([...DKG, ...dkgs])].map((x) => <option key={x} value={x} />)}</datalist>}
             {(f.key === 'dia_diem' || f.key === 'noi_giao') && ship.length > 0 && <datalist id={'ship-' + d.id}>{ship.map((x) => <option key={x} value={x} />)}</datalist>}
             {f.help && <small className="muted">{f.help}</small>}</label>; })}
-      </div>
+      </div></>; })()}
 
       {proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SignedBox d={d} o={o} b={b} files={files} onDone={(nf) => { setFiles(nf); onChanged(); }} />}
       <div className="pp-files">

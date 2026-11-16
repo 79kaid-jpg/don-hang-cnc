@@ -3974,3 +3974,13 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .pp-link>summary::-webkit-details-marker{display:none}.pp-link[open]>summary{border-color:var(--gold);color:var(--gold)}
 .pp-link-h{display:block;padding:6px 12px 4px}
 @media (max-width:639px){.pp-hbtn{min-height:36px;padding:0 12px}.pp-hold-acts{margin-left:0}.pp-link>summary{min-height:32px}}
+/* Phiếu v2 đợt 2 · thông tin chung dạng nhãn – giá trị */
+.pp-kv{display:flex;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:8px 0}
+.pp-kv dl{margin:0;flex:1 1 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 20px}
+.pp-kv dl>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pp-kv dt{font-size:12px;color:var(--muted)}
+.pp-kv dd{margin:0;font-size:14px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.pp-kv-ed{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:0;background:#EEF2FF;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;flex:none}
+.pp-kv-ed:hover{background:#E0E7FF}
+.pp-kv-close{display:flex;justify-content:flex-end;margin:4px 0}
+@media (max-width:639px){.pp-kv dl{grid-template-columns:1fr 1fr}.pp-kv-ed{width:100%;justify-content:center;min-height:44px}}
