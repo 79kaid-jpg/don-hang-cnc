@@ -51,6 +51,7 @@ import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { confirmDialog, toast, Msg } from './ui';
 import { useAuth } from '../lib/auth';
+import { useWho } from '../lib/people';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
 
@@ -86,6 +87,8 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
   const cur = [...bDocs].sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
   const D = bDocs.find((d) => d.company === co) ?? (cur?.can_view === false ? bDocs.filter((x) => x.can_view !== false).at(-1) ?? cur : cur);
+  const { isPerson } = useWho(); const { me: meNB, can: canNB } = useAuth(); const { co: coNB } = useMyCo();
+  const canNew = canNB('admin_it') || isPerson(proc, proc === 'QT0' ? 'PN' : coNB || 'PN', proc === 'QT0' ? 'admin' : 'lap', meNB?.id);
   if (!batches) return <div className="card pp-skel" aria-busy="true" aria-label={'Đang tải ' + proc}><span /><span /><span /><span /></div>;
   return (
     <div className="pp">
@@ -93,7 +96,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
         <div className="pp-hl"><button type="button" className={'pp-qt' + (info ? ' on' : '')} aria-expanded={info} aria-label={PROC_NAME[proc] + ' – xem mô tả'} title={PROC_NAME[proc]} onClick={() => setInfo(!info)}><QtTag qt={proc} /><Icon name="info" size={13} /></button>
           {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" />}
           {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
-        {batches.length ? <button type="button" className="btn sm icon-btn pp-new" data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={18} /></button>
+        {!canNew ? null : batches.length ? <button type="button" className="btn sm pp-new" data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={16} /><span className="pp-new-t">{({ QT0: 'Lần mới', QT1: 'XNĐH', QT2: 'Lệnh', QT3: 'Đợt' } as Record<string, string>)[proc]}</span></button>
           : <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
       </div>
       {info && <p className="small muted pp-desc">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'

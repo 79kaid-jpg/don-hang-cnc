@@ -24,5 +24,8 @@ export function useWho() {
     if (k === 'ky' || k === 'hoan_tat') { const co = proc === 'QT0' ? 'PN' : fin(proc); const r = proc === 'QT0' ? 'admin' : 'hoan_tat'; return (proc === 'QT0' ? '' : CO[co] + ' · ') + 'Tải bản ký: ' + names(proc, co, r); }
     const [co, st] = k.includes('.') ? k.split('.') : ['PN', k]; const r = ROLE_OF[st] ?? st;
     return (proc === 'QT0' ? '' : CO[co] + ' · ') + RN[r] + ': ' + names(proc, co, r); }).join(' · ');
-  return { who, names, ready: !!cache };
+  /** uid có phụ trách bước (proc, công ty, vai trò) không – theo người hoặc nhóm */
+  const isPerson = (proc: string, co: string, role: string, uid?: string | null) => { if (!cache || !uid) return false;
+    return cache.cp.some((x) => x.proc === proc && x.company === co && x.role === role && (x.user_id === uid || (!!x.group_id && (cache!.gs[x.group_id] ?? []).includes(uid)))); };
+  return { who, names, isPerson, ready: !!cache };
 }

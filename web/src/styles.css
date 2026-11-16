@@ -3740,3 +3740,8 @@ html[data-glass=facade] .bottom-nav a.active::after{animation:none!important}
 .q0a-l{list-style:none;margin:0;padding:6px 0 0;border-top:1px dashed #EAD3B5;max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:2px}
 .q0a-l li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;font-size:13px;padding:4px 0}.q0a-l li .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .q0a-l em{font-style:normal;font-weight:700;color:#9A4A00;font-variant-numeric:tabular-nums}
+/* Đầu QT: ô chọn đơn + nút mở mới cùng một hàng */
+.pp-hl{flex-wrap:nowrap!important;align-items:center}
+.pp-hl>.pp-bdm{flex:1 1 auto;min-width:0}
+.pp-hl .pp-new{width:auto!important;height:40px;padding:0 12px;gap:4px;flex:none;margin-left:8px;display:inline-flex;align-items:center;white-space:nowrap}
+@media (max-width:600px){.pp-hl .pp-new{width:44px!important;height:44px;padding:0;justify-content:center}.pp-new-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
