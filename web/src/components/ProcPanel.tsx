@@ -23,7 +23,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import { useProjects } from '../lib/projects';
-import { readPmsx } from '../lib/pmsx';
+import { readPmsx, readPmsxHead } from '../lib/pmsx';
 import { useMaterials } from '../lib/materials';
 import {
   BATCH_WORD, GH_ITEMS, CHECK5, COMPANIES, COMPANY, FINAL, FLOW, NEXT_LABEL, PROC_NAME, PROC_TABLES, ROLE_NAME, ROLE_OF, STATUS, TABLES,
@@ -438,17 +438,24 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const sheets = wb.SheetNames.map((sn) => X.utils.sheet_to_json<unknown[]>(wb.Sheets[sn], { header: 1, blankrows: false, defval: '' }));
     const defs = tblDefs.filter((x) => x.ed && !x.thide).map((x) => ({ tbl: x.key, title: x.key === 'nl' ? /xuat hang|nguyen lieu|nvl/ : /nhap hang|thanh pham/, cols: x.cols }));
     const got = readPmsx(sheets, defs).filter((x) => x.rows.length); if (!got.length) return;
+    const hk = new Set(fieldsOf(proc, 'header').filter((f) => canEd(f)).map((f) => f.key));
+    const hd = Object.fromEntries(Object.entries(readPmsxHead(sheets)).filter(([k]) => hk.has(k)));
+    // Đối chiếu tổng SL / DT / TL với dòng tổng trong file
+    const chk = got.filter((x) => x.total).map((x) => { const bad = (['so_tam', 'm2', 'kg'] as const).filter((k) => x.total![k] != null && Math.abs(x.rows.reduce((a, r) => a + (Number(r[k]) || 0), 0) - x.total![k]) > 0.05);
+      return { tbl: x.tbl, bad, n: x.total!.so_tam }; });
     const name = (k: string) => (k === 'nl' ? 'NVL (xuất hàng)' : 'Thành phẩm (nhập hàng)');
     const miss = [...new Set(got.flatMap((x) => x.unmatched))];
     const has = got.filter((x) => (t[x.tbl as never] as Row[] | undefined ?? []).some((r) => Object.values(r).some((v) => String(v ?? '').trim())));
-    const head = 'File có ' + got.map((x) => x.rows.length + ' dòng ' + name(x.tbl)).join(' và ') + '.' + (miss.length ? ' Cột không khớp (bỏ qua): ' + miss.join(', ') + '.' : '');
+    const head = 'File có ' + got.map((x) => x.rows.length + ' dòng ' + name(x.tbl)).join(' và ') + '.' + (Object.keys(hd).length ? ' Đầu phiếu: ' + Object.values(hd).join(' · ') + '.' : '') + (miss.length ? ' Cột không khớp (bỏ qua): ' + miss.join(', ') + '.' : '');
     let mode: 'thay' | 'them' = 'thay';
     if (has.length) { if (await confirmDialog(head + ' Thay toàn bộ dòng đang có trong bảng?', 'Thay toàn bộ')) mode = 'thay';
       else if (await confirmDialog('Thêm các dòng từ file vào cuối bảng?', 'Thêm vào cuối')) mode = 'them'; else return; }
     else if (!(await confirmDialog(head + ' Điền vào bảng?', 'Điền vào bảng'))) return;
     const nt = { ...t } as Record<string, Row[]>;
     for (const x of got) { const cur = (nt[x.tbl] ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim())); nt[x.tbl] = mode === 'them' ? [...cur, ...x.rows] : x.rows; }
-    setT(nt as typeof t); setDirty(true); toast('Đã điền ' + got.map((x) => x.rows.length + ' dòng ' + name(x.tbl)).join(', ') + ' – nhớ bấm Lưu');
+    setT(nt as typeof t); if (Object.keys(hd).length) setH((x) => ({ ...x, ...hd })); setDirty(true);
+    const ck = chk.map((c) => (c.bad.length ? '⚠ ' + name(c.tbl) + ' lệch tổng ' + c.bad.join(', ') + ' so với file' : '✓ ' + name(c.tbl) + ' khớp tổng' + (c.n != null ? ' ' + c.n.toLocaleString('vi-VN') + ' tấm' : ''))).join(' · ');
+    toast('Đã điền ' + got.map((x) => x.rows.length + ' dòng ' + name(x.tbl)).join(', ') + (ck ? ' · ' + ck : '') + ' – nhớ bấm Lưu');
   };
   const fillFromExcel = async (file: File) => {
     const tb = tblDefs.find((x) => x.key === 'ds'); if (!tb || !tb.ed) return;
