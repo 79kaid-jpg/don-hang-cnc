@@ -94,8 +94,8 @@ export default function ProcPanel({ o, proc, people, autoNew = false }: { o: Ord
     <div className="pp">
       <div className="pp-head">
         <div className="pp-hl"><button type="button" className={'pp-qt' + (info ? ' on' : '')} aria-expanded={info} aria-label={PROC_NAME[proc] + ' – xem mô tả'} title={PROC_NAME[proc]} onClick={() => setInfo(!info)}><QtTag qt={proc} /><Icon name="info" size={13} /></button>
-          {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" />}
           {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
+          {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" data-show={batches.length > 1 ? '0' : '1'} />}
         {!canNew ? null : batches.length ? <button type="button" className="btn sm pp-new" data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><Icon name="plus" size={16} /><span className="pp-new-t">{({ QT0: 'Lần mới', QT1: 'XNĐH', QT2: 'Lệnh', QT3: 'Đợt' } as Record<string, string>)[proc]}</span></button>
           : <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
       </div>
@@ -513,7 +513,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {(() => { const ls = rs ? [...(d.signs ?? [])].reverse().find((x) => x.action === 'tra_ve') : (d.signs ?? []).at(-1); if (!ls || ls.action !== 'tra_ve' || ['da_duyet', 'fail'].includes(d.status)) return null; const im = rtFilesAt({ files }, ls.at);
         return <div className="rt-ban" role="note"><div className="rt-ban-h"><Icon name="back" size={16} /><b>Bị trả về</b><span className="small muted"> · {people[ls.user]?.full_name ?? ''} · {dt(ls.at)}</span></div>
           {ls.note && <div className="rt-ban-t">{ls.note}</div>}<RtThumbs files={im} size={72} />{rs && <div className="small rt-ban-h2">Trả về từ <b>{STATUS[rs.from] ?? rs.from}</b> → <b>{STATUS[rs.to] ?? rs.to}</b> · ô / dòng <span className="rt-chg-key">viền vàng</span> là chỗ đã sửa sau khi bị trả về</div>}</div>; })()}
-      {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
+      {proc === 'QT1' && <CoBar docId={d.id} can={can && !closed} locked={closed} lap={d.status === 'lap'} onTables={(x) => { setT(x as Record<string, Row[]>); }} />}
       <div className="grid2">
         {hFields.map((f) => { const ed = canEd(f); const v = h[f.key] ?? ''; const chg = rs && String(rs.header?.[f.key] ?? '') !== String(v ?? ''); const on = (x: string) => { setH({ ...h, [f.key]: x }); setDirty(true); };
           return <label key={f.key} data-fk={f.key} className={'f' + (f.type === 'textarea' || f.type === 'location' ? ' f-wide' : '') + (can && pm(f) === 'required' && !String(v).trim() ? ' f-miss' : '') + (chg ? ' f-chg' : '')} title={chg ? 'Đã sửa sau khi bị trả về · trước: ' + (rs!.header?.[f.key] || '(trống)') : undefined}><span>{f.label}{pm(f) === 'required' && <b className="req" aria-label="bắt buộc"> *</b>}</span>
