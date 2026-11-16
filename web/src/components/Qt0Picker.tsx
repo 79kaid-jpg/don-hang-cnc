@@ -29,7 +29,7 @@ function match(v: unknown, q: string) {
 const COLS: { k: string; t: string; w?: number; n?: boolean; list?: boolean }[] = [
   { k: 'ma_tam', t: 'Mã tấm', w: 110 }, { k: 'vat_lieu', t: 'Vật liệu', w: 80, list: true }, { k: 'day', t: 'Dày', w: 56, n: true },
   { k: 'rong', t: 'Rộng', w: 64, n: true }, { k: 'dai', t: 'Dài', w: 64, n: true }, { k: 'loai_gc', t: 'Loại gia công', w: 120, list: true },
-  { k: 'mau_son', t: 'Màu', w: 90, list: true }];
+  { k: 'ma_mau', t: 'Màu', w: 90, list: true }];
 
 type St = 'all' | 'con' | 'da' | 'bang';
 
@@ -57,7 +57,7 @@ export function Qt0Picker({ code, rows, inTable, onPick, onClose }: { code: stri
   const xlsxOut = async () => {
     const X = await import('xlsx');
     const data = rows.map((x) => ({ 'Mã QT0': code, 'Mã tấm': x.r.ma_tam ?? '', 'Vật liệu': x.r.vat_lieu ?? '', 'Dày (mm)': num(x.r.day) ?? x.r.day ?? '', 'Rộng (mm)': num(x.r.rong) ?? '', 'Dài (mm)': num(x.r.dai) ?? '',
-      'Loại gia công': x.r.loai_gc ?? '', 'Màu': x.r.mau_son ?? '', 'm²/tấm': num(x.r.m2_tam) ?? '', 'SL QT0': num(x.r.so_tam) ?? 0,
+      'Loại gia công': x.r.loai_gc ?? '', 'Màu': x.r.ma_mau ?? x.r.mau_son ?? '', 'm²/tấm': num(x.r.m2_tam) ?? '', 'SL QT0': num(x.r.so_tam) ?? 0,
       'Đã lên đơn': x.orders.map((o) => `${o.code} (${o.q})`).join(', '), 'Trong bảng này': inTable[x.k] ?? 0, 'Còn lại': leftOf(x), 'SL lấy': selN(x.i) || '' }));
     const ws = X.utils.json_to_sheet(data); ws['!cols'] = [14, 16, 10, 8, 9, 9, 18, 14, 8, 8, 28, 10, 8, 8].map((w) => ({ wch: w }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Tam QT0'); X.writeFile(wb, `${code}-tam-con-lai.xlsx`);

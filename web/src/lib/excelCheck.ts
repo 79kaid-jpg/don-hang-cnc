@@ -73,7 +73,7 @@ export function bocTachRows(sheets: { name: string; rows: unknown[][] }[]): Reco
   const fx = (v: unknown, d: number) => { const n = num(v); return n > 0 ? String(+n.toFixed(d)) : ''; };
   for (const r of t.rows) { const ma = String(r[t.ci] ?? '').trim(); if (!ma) { if (out.length) break; continue; } if (num(r[t.si]) <= 0) continue;
     const v = (j: number) => (j >= 0 ? String(r[j] ?? '').trim() : '');
-    const row: Record<string, string> = { ma_tam: ma, day: v(t.di), rong: v(c.rong), dai: v(c.dai), so_tam: v(t.si), mau_son: v(c.mau), m2_ht: c.m2_ht >= 0 ? fx(r[c.m2_ht], 4) : '',
+    const row: Record<string, string> = { ma_tam: ma, day: v(t.di), rong: v(c.rong), dai: v(c.dai), so_tam: v(t.si),  m2_ht: c.m2_ht >= 0 ? fx(r[c.m2_ht], 4) : '',
       trai_rong: v(c.trai_rong), trai_dai: v(c.trai_dai), m2: c.m2 >= 0 ? fx(r[c.m2], 4) : '',
       phoi_rong: v(c.phoi_rong), phoi_dai: v(c.phoi_dai), phoi_sl: v(c.phoi_sl), phoi_m2: c.phoi_m2 >= 0 ? fx(r[c.phoi_m2], 4) : '', ghi_chu: v(gc), vat_lieu: v(c.vat_lieu) || mat, ma_mau: v(c.mau), loai_gc: gcm.get(ma) ?? '' };
     // File không có nhóm Thực tế trải: dùng m² hoàn thiện làm khối lượng
