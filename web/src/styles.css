@@ -3930,3 +3930,19 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
   .kb-pj{font-size:15px}
 }
 @media (min-width:640px) and (max-width:1023px){.kb-board{grid-auto-columns:minmax(280px,1fr)}}
+/* v2 · Đợt 4 – Danh sách đơn & phiếu */
+.ol-bar{position:sticky;top:0;z-index:6;background:var(--bg);display:flex;flex-direction:column;gap:8px;padding:6px 0 8px;margin-top:-6px}
+.ol-bar .search{flex:1}
+@media (max-width:900px){.ol-bar{top:calc(60px + env(safe-area-inset-top))}}
+@media (max-width:639px){
+  .page-head p{display:none}
+  .ol-bar .adm-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px}
+  .ol-bar .adm-chips::-webkit-scrollbar{display:none}
+  .ol-bar .adm-chips>*{flex:none}
+  .oc{padding:12px}
+  .oc-who{font-size:13px}
+  /* Phiếu: thanh Lưu/Duyệt đáy gọn 1 hàng */
+  .pp-act{gap:8px}
+  .pp-act .btn:not(.primary){min-width:44px}
+}
+@media (min-width:1024px){.ol{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:12px}.ol>li+li{margin-top:0}}

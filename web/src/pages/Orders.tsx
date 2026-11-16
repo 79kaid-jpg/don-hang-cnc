@@ -72,6 +72,7 @@ export default function Orders() {
         <div className="row"><Link className="btn sm hide-m" to="/bang"><Icon name="kanban" size={18} />Dạng Kanban</Link>
           {(can('kinh_doanh') || can('admin_cnc')) && <Link className="btn primary fab-m" to="/don/moi" aria-label="Tạo đơn mới"><Icon name="plus" size={20} /><span className="fab-t">Tạo đơn mới</span></Link>}</div>
       </div>
+      <div className="ol-bar">
       <div className="row">
         <label className="search"><Icon name="search" size={18} /><input aria-label="Tìm mã đơn, dự án" placeholder="Tìm mã đơn, dự án…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
       </div>
@@ -82,6 +83,7 @@ export default function Orders() {
 <label className="small muted row" style={{ gap: 6 }}>Kết quả
           <select aria-label="Lọc theo kết quả" value={kq} onChange={(e) => setKq(e.target.value as typeof kq)}>
             <option value="">Tất cả</option><option value="ok">Hoàn thành</option><option value="fail">Có lượt thất bại</option></select></label>
+      </div>
       </div>
       {!rows ? <Skeleton rows={4} h={92} /> : list.length === 0 ? <Empty title={q ? 'Không có đơn khớp “' + q + '”' : 'Không có đơn'} /> : (
         <ul className="ol">
