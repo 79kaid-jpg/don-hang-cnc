@@ -1,3 +1,4 @@
+import { useScope } from '../lib/myco';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -83,7 +84,10 @@ export default function FlowMap() {
   const all = sp.get('qt') === 'TQ' || (!sp.get('qt') && !one);
   const proc = (PROCS.includes(sp.get('qt') as Proc) ? sp.get('qt') : 'QT0') as Proc;
   const setProc = (p: Proc) => { const n = new URLSearchParams(sp); n.set('qt', p); setSp(n); setSel(''); };
-  const [orders, setOrders] = useState<Order[]>([]); const [bs, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]); const [bs0, setBs] = useState<Batch[]>([]); const [ds, setDs] = useState<Doc[]>([]);
+  const { scope: sc } = useScope();
+  const bs = useMemo(() => sc === 'ALL' ? bs0 : bs0.filter((b) => b.proc === 'QT0' ? sc === 'PN' : ds.some((d) => d.batch_id === b.id && d.company === sc)), [bs0, ds, sc]);
+  const PV = PROCS.filter((p) => p !== 'QT0' || sc === 'ALL' || sc === 'PN');
   const [q, setQ] = useState(''); const [sel, setSel] = useState(''); const W = useWho();
   useEffect(() => {
     sb.from('orders').select('*').neq('status', 'huy').order('created_at', { ascending: false }).then(({ data }) => setOrders((data as Order[]) ?? []));
@@ -153,9 +157,9 @@ export default function FlowMap() {
       </div>
       <div className="qt-group">
         <div className="qt-tabs" role="tablist"><button role="tab" aria-selected={all} className={all ? 'on' : ''} onClick={() => { const n = new URLSearchParams(sp); n.set('qt', 'TQ'); setSp(n); setSel(''); }}>
-          <b>Tổng quan</b><span>Đơn kẹt ở đâu</span></button>{PROCS.map((p) => <button key={p} role="tab" aria-selected={!all && proc === p} className={(!all && proc === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => setProc(p)}>
+          <b>Tổng quan</b><span>Đơn kẹt ở đâu</span></button>{PV.map((p) => <button key={p} role="tab" aria-selected={!all && proc === p} className={(!all && proc === p ? 'on ' : '') + 'q' + p.slice(2)} onClick={() => setProc(p)}>
           <b>{p}</b><span>{PROC_NAME[p].replace(' & bàn giao vật liệu', '').replace('Xuất kho kiêm biên bản giao hàng', 'Giao hàng')}</span></button>)}</div>
-        {all ? <Overview orders={orders} bs={bs} ds={ds} onOpen={(p) => setProc(p)} /> :
+        {all ? <Overview orders={orders} bs={bs} ds={ds} sc={sc} procs={PV} onOpen={(p) => setProc(p)} /> :
         <div className={'qt-panel sw ' + proc.toLowerCase()} key={proc}>
           <div className="sw-top"><span className="row" style={{ gap: 8 }}><QtTag qt={proc} /><b>{PROC_NAME[proc]}</b></span><span className="small muted">{P.note}</span>
             <span className="sw-legend small">{(['start', 'step', 'cond', 'end', 'fail'] as Kind[]).map((k) => <span key={k}><i className={'lg ' + k} />{KIND[k]}</span>)}</span>
@@ -205,16 +209,17 @@ export default function FlowMap() {
 const STUCK = 2; // ngày nằm yên ở một bước thì coi là kẹt
 const ago = (t?: string) => (t ? (Date.now() - new Date(t).getTime()) / 864e5 : 0);
 /** Tổng quan: mọi giai đoạn của QT0→QT3 trên một màn, mỗi ô = số hồ sơ đang nằm ở đó, số bị kẹt, chờ lâu nhất */
-function Overview({ orders, bs, ds, onOpen }: { orders: Order[]; bs: Batch[]; ds: Doc[]; onOpen: (p: Proc) => void }) {
+function Overview({ orders, bs, ds, sc = 'ALL', procs = PROCS, onOpen }: { orders: Order[]; bs: Batch[]; ds: Doc[]; sc?: string; procs?: Proc[]; onOpen: (p: Proc) => void }) {
   const [pick, setPick] = useState<{ p: Proc; s: S } | null>(null);
   const live = bs.filter((b) => b.status === 'dang_lam' || b.status === 'cho_ky');
   const since = (b: Batch) => { const l = ds.filter((d) => d.batch_id === b.id).map((d) => d.status_at).sort(); return l[l.length - 1] ?? b.created_at; };
   const stages = (p: Proc) => { const seen = new Set<string>();
     return D[p].steps.filter((s) => s.keys && !['end', 'fail', 'start'].includes(s.kind)).sort((a, z) => a.col - z.col)
       .filter((s) => { const k = s.keys!.join(); if (seen.has(k)) return false; seen.add(k); return true; })
+      .filter((s) => p === 'QT0' || sc === 'ALL' || s.keys!.some((k) => k.startsWith(sc + '.')))
       .map((s) => { const items = live.filter((b) => b.proc === p && s.keys!.includes(stepOf(b, ds).key)).map((b) => ({ b, d: ago(since(b)) })).sort((a, z) => z.d - a.d);
         return { s, items, stuck: items.filter((x) => x.d >= STUCK).length }; }); };
-  const rows = PROCS.map((p) => ({ p, st: stages(p) }));
+  const rows = procs.map((p) => ({ p, st: stages(p) }));
   const max = Math.max(1, ...rows.flatMap((r) => r.st.map((x) => x.items.length)));
   const tot = live.length, stuck = rows.reduce((a, r) => a + r.st.reduce((x, y) => x + y.stuck, 0), 0);
   const worst = rows.flatMap((r) => r.st.map((x) => ({ p: r.p, ...x }))).sort((a, z) => z.stuck - a.stuck || z.items.length - a.items.length)[0];
