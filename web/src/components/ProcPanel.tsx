@@ -1244,15 +1244,16 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
       {!pn && can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>; };
   const eye = (on: boolean, doc: string, set: (v: string) => void, cur: string) => <button type="button" className="gh-eye" aria-label={cur ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={cur ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'}
     onClick={async () => { if (cur) { set(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: doc }); if (error) setAiMsg('⚠ ' + (error.message.includes('quyền') ? 'Bạn không có quyền xem số CCCD' : error.message)); else set(String(data ?? '')); }}><Icon name={on ? 'eyeoff' : 'eye'} size={18} /></button>;
+  const opt = d.company !== 'PN'; // IPC/HW: ảnh giao hàng tuỳ chọn
   const full5 = done === 5 && !!txOk; const shut = gOpen === null ? full5 && !can : !gOpen;
   return <section className={'gh card' + (shut ? ' gh-shut' : '')} aria-label="Ảnh giao hàng">
-    <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (full5 ? 'ok' : '')}>{done}/5 mục</span>
+    <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (full5 ? 'ok' : '')}>{done}/5 mục</span>{opt && <span className="chip sm">Tuỳ chọn</span>}
       <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}</span>
       <button type="button" className="gh-fold" aria-expanded={!shut} aria-label={shut ? 'Mở ảnh giao hàng' : 'Thu gọn ảnh giao hàng'} onClick={() => setGOpen(shut)}><Icon name="caret" size={16} /></button></div>
     {shut && <div className="gh-strip">{[...sF, ...files].filter((f) => f.kind.startsWith('gh_')).slice(0, 8).map((f) => { const u = f.kind === 'gh_cccd' && !seeCccd ? urls[f.path + '.blur.jpg'] : urls[f.path]; return <span key={f.path} className="gh-th sm">{u ? <img src={u} alt="" loading="lazy" /> : <span className="gh-ph" />}</span>; })}</div>}
     {!shut && <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const pnF = sF.filter((f) => f.kind === k);
       const ok = (mine.length > 0 || pnF.length > 0) && (k !== 'gh_cccd' || txOk);
-      return <li key={k} className={'gh-it' + (ok ? ' ok' : '') + (can && !ok ? ' need' : '')} data-fk={k}>
+      return <li key={k} className={'gh-it' + (ok ? ' ok' : '') + (can && !ok && !opt ? ' need' : '')} data-fk={k}>
         <span className="gh-n" aria-hidden="true">{ok ? <Icon name="check" size={14} /> : i + 1}</span>
         <div className="gh-body"><b>{lab}</b>
           {k === 'gh_cccd' && (srcTx ? <div className="gh-tx gh-tx-ro">
