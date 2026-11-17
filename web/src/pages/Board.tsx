@@ -90,7 +90,7 @@ export default function Board() {
     const ownCo = qt === 'QT0' ? null : kco !== 'ALL' ? kco : !adm ? myCo : null;
     const own = ownCo ? docs.find((x) => x.batch_id === b.id && x.company === ownCo) : undefined;
     const st = own?.status === 'da_duyet' ? { ...st0, key: 'hoan_tat', doc: own } : own?.status === 'fail' ? { ...st0, key: 'fail', doc: own } : st0;
-    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
+    return { b, o, key: st.key, doc: st.doc, mine: mine.some((m) => m.batch_id === b.id), act: !['hoan_tat', 'fail'].includes(b.status) && (adm || mine.some((m) => m.batch_id === b.id)), i: (() => { if (ownCo && !own) return -1; const k = COLS.findIndex((c) => c.key === st.key); if (k >= 0 || adm || qt === 'QT0' || ['hoan_tat', 'fail'].includes(b.status)) return k;
       return -1; })() };
   }).filter((c) => c.i >= 0 && (!onlyMine || c.mine) && (!q || (c.o?.code + ' ' + c.o?.project + ' ' + c.b.title + ' ' + CI.text(c.b.order_id)).toLowerCase().includes(q.toLowerCase()))), [batches, docs, orders, mine, qt, q, onlyMine, adm, CI.ready, kco]); // eslint-disable-line
   // Cột Kết quả: hồ sơ vừa xong (duyệt / thất bại) mới nhất nằm trên cùng
