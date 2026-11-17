@@ -7836,7 +7836,7 @@ create policy "tải file" on storage.objects as PERMISSIVE for INSERT to authen
 create policy "đọc file" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'files'::text) AND file_visible(name)));
 
 -- ===== storage buckets =====
-insert into storage.buckets(id, name, public) values ('files', 'files', f) on conflict (id) do nothing;
+insert into storage.buckets(id, name, public) values ('files', 'files', false) on conflict (id) do nothing;
 
 -- ===== cron =====
 select cron.schedule('daily-report-8am', '0 1 * * *', 'select public.send_daily_report()');
