@@ -15,6 +15,7 @@ import { useHolders, initialOf, waited, isStuck } from '../lib/holders';
 import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
+import { useWho } from '../lib/people';
 import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
@@ -35,6 +36,9 @@ type Card = { b: Batch; o?: Order; key: string; doc?: Doc; mine: boolean; act: b
 let kbCache: { u?: string; a: Batch[]; b: Order[]; c: Customer[]; d: Mine[]; e: Doc[] } | null = null;
 
 export default function Board() {
+  const [q0a, setQ0a] = useState<Record<string, { tot: number; used: number }>>({});
+  const [q0Left, setQ0Left] = useState(false);
+  const { isPerson: isP0 } = useWho();
   const nav = useNavigate(); const ckTpl = useChecks(); useFields();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
   const { can: canA, me: meP } = useAuth(); const { co: viewCo } = useMyCo(); const CI = useCoIdx();
@@ -52,6 +56,11 @@ export default function Board() {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
+  useEffect(() => { if (qt !== 'QT0' || !batches) return; let live = true;
+    const ords = [...new Set(batches.filter((b) => b.proc === 'QT0' && b.status === 'hoan_tat').map((b) => b.order_id))];
+    Promise.all(ords.map((id) => sb.rpc('qt0_list', { p_order: id }))).then((rs) => { if (!live) return; const m: Record<string, { tot: number; used: number }> = {};
+      for (const r of rs) for (const x of ((r.data ?? []) as { id: string; tot: number; used: number }[])) m[x.id] = { tot: Number(x.tot) || 0, used: Number(x.used) || 0 }; setQ0a(m); });
+    return () => { live = false; }; }, [qt, batches]);
   useEffect(() => { if (qt === 'QT0' && !seeQ0) setQt('QT1'); }, [qt, seeQ0]);
   const [col, setCol] = useState(''); const holder = useHolders();
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
@@ -231,12 +240,12 @@ export default function Board() {
           {edge.l && <button className="kb-arrow l" aria-label="Cột bên trái" onClick={() => panBy(-1)}><Icon name="back" size={18} /></button>}
           {edge.r && <button className="kb-arrow r" aria-label="Cột bên phải" onClick={() => panBy(1)}><Icon name="arrow" size={18} /></button>}
           <div ref={boardRef} onScroll={() => { onBoardScroll(); updEdge(); }} onMouseDown={panStart} style={{ ['--kb-cols' as string]: COLS.map((c, i) => (isShut(c.key, i) ? '48px' : 'minmax(260px,1fr)')).join(' ') }} className={'kb-board' + (qt !== 'QT0' ? ' wide' : '') + (edge.l ? ' fade-l' : '') + (edge.r ? ' fade-r' : '')}>
-            {COLS.map((c, i) => { const list = byCol(i); const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
+            {COLS.map((c, i) => { const list0 = byCol(i); const isDone0 = qt === 'QT0' && c.key === 'hoan_tat'; const list = isDone0 && q0Left ? list0.filter((it) => { const a = q0a[it.b.id]; return !a || a.tot - a.used > 0; }) : list0; const tgt = drag && targets(drag).includes(i); const isBack = drag ? i < drag.i : false;
               const sh = isShut(c.key, i);
               return (
                 <section key={c.key} data-col={i} className={'kb-col door' + (sh ? ' closed' : '') + (/^(PN|IPC|HW)\./.test(c.key) ? ' co co-' + c.key.split('.')[0] : '') + (curCol === c.key ? ' show' : '') + (tgt ? ' drop-ok' + (isBack ? ' back' : '') : drag && drag.i !== i ? ' drop-no' : '') + (over === i ? ' drop-over' : '') + (c.key === 'ky' ? ' gated' : '') + (c.key === 'xong_minh' ? ' kb-elsewhere' : '') + (c.key === 'hoan_tat' ? ' kb-end ok' : c.key === 'fail' ? ' kb-end bad' : '')} aria-label={c.title}>
                   <header className="kb-head"><span className={'kb-group qt-c ' + qt.toLowerCase()}>{c.group === 'Kết quả' ? 'Kết quả · 14 ngày gần nhất' : c.key === 'xong_minh' ? 'Đã duyệt phần ' + (COMPANY[myCo as keyof typeof COMPANY] ?? myCo) : (c.group ?? qt) + ' · bước ' + (qt === 'QT0' ? i + 1 : (i % 3) + 1)}</span>
-                    <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2><span className="kb-count">{list.length}</span>
+                    <div className="row between" style={{ gap: 6 }}><h2>{c.title}</h2>{isDone0 && <button type="button" className={'kb-q0f' + (q0Left ? ' on' : '')} aria-pressed={q0Left} onClick={() => setQ0Left(!q0Left)}>Còn tấm</button>}<span className="kb-count">{list.length}</span>
                       {i === 0 && <button type="button" className={'kb-new ' + qt.toLowerCase()} aria-label={qt === 'QT0' ? 'Tạo mới QT0: chọn mã dự án' : 'Tạo mới: lập ' + BATCH_WORD[qt]} data-kbd-label={qt === 'QT0' ? 'Tạo mới · chọn mã dự án' : 'Tạo mới · lập ' + BATCH_WORD[qt]} data-kbd={qt === 'QT0' ? 'N' : undefined} onClick={startNew} onPointerDown={(e) => e.stopPropagation()}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg></button>}
                       <button type="button" className="kb-shut" aria-label={'Khép cột ' + c.title} data-kbd="X" data-kbd-label={'Khép cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}><Icon name="back" size={15} /></button></div></header>
                   <button type="button" className="kb-strip" tabIndex={sh ? 0 : -1} aria-hidden={!sh} aria-label={'Mở cột ' + c.title + ', ' + list.length + ' hồ sơ'} data-kbd="X" data-kbd-label={'Mở cột ' + c.title} onClick={() => toggleShut(c.key)} onPointerDown={(e) => e.stopPropagation()}>
@@ -249,13 +258,20 @@ export default function Board() {
                       <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
-                          <span className="kb-top"><span className="kb-code">{coCode(it.b.order_id, it.b.id) ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const btd = qt === 'QT0' ? String((it.doc?.header as Record<string, unknown> | undefined)?.han_boc_tach ?? '') : ''; const dd = btd || it.o?.due_date; if (!dd) return null; const lbl = btd ? 'Bóc tách' : 'Giao';
+                          <span className="kb-top"><span className="kb-code">{(() => { const cc = coCode(it.b.order_id, it.b.id); if (!cc) return null; const xs = String(cc).split(/,\s*/); return xs.length > 1 ? <span title={xs.join(', ')}>{xs[0]}<span className="kb-more">+{xs.length - 1}</span></span> : cc; })() ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const btd = qt === 'QT0' ? String((it.doc?.header as Record<string, unknown> | undefined)?.han_boc_tach ?? '') : ''; const dd = btd || it.o?.due_date; if (!dd) return null; const lbl = btd ? 'Bóc tách' : 'Giao';
                             const n = Math.ceil((new Date(dd + 'T23:59:59').getTime() - Date.now()) / 864e5); const done = ['hoan_tat', 'fail'].includes(it.b.status);
                             const cls = done ? '' : n < 0 ? ' late' : n <= 3 ? ' soon' : '';
                             return <span className={'kb-due' + cls} title={'Hạn ' + lbl.toLowerCase() + ' ' + new Date(dd).toLocaleDateString('vi-VN')}><Icon name="clock" size={12} />{lbl} {new Date(dd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                               {!done && (n < 0 ? ' · trễ ' + -n + 'n' : n <= 3 ? (n === 0 ? ' · hôm nay' : ' · còn ' + n + 'n') : '')}</span>; })()}</span>
                           <span className="kb-pj">{(it.o?.project ?? '').replace(/^\[(TEST|MẪU)\]\s*/i, '') || '—'}</span>
                           <span className="small muted kb-sub"><b className="kb-bt">{it.b.title}</b>{' · '}{[(() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
+                        {qt === 'QT0' && it.b.status === 'hoan_tat' && q0a[it.b.id] && (() => { const a = q0a[it.b.id]; const left = Math.max(0, a.tot - a.used); const pc = a.tot ? Math.min(100, Math.round(a.used / a.tot * 100)) : 0;
+                          const canLap = adm || isP0('QT1', 'PN', 'lap', meP?.id);
+                          return <div className={'kb-q0' + (left === 0 ? ' full' : '')}>
+                            <div className="kb-q0-bar" role="img" aria-label={`Đã lấy ${a.used}/${a.tot} tấm`}><i style={{ width: pc + '%' }} /></div>
+                            <span className="kb-q0-t">{a.used === 0 ? `Chưa lấy · ${a.tot} tấm` : left === 0 ? `Đã lấy hết ${a.tot} tấm` : <>Đã lấy <b>{a.used}/{a.tot}</b> tấm · còn <b>{left}</b></>}</span>
+                            {left > 0 && canLap && <Link className="btn sm primary kb-q0-go" to={'/don/' + it.b.order_id + '?tab=QT1&new=1&q0=' + it.b.id} draggable={false}><Icon name="plus" size={14} />Tạo XNĐH</Link>}
+                          </div>; })()}
                         {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
                           const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
