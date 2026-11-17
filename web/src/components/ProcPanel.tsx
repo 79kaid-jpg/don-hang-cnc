@@ -919,7 +919,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
   useEffect(() => { if (errOnly && nBad === 0) { setErrOnlyS(false); setErrSnap(null); setLim(0); setFixedAll(true); const t = setTimeout(() => setFixedAll(false), 4000); return () => clearTimeout(t); } }, [errOnly, nBad]);
   const clearAll = async () => { if (await confirmDialog(`Xoá hết ${rows.length} dòng của bảng “${title}”? (Chưa lưu thì bấm Huỷ thay đổi để lấy lại)`, 'Xoá hết')) onChange([]); };
   const addSample = () => { onChange([...rows, ...[0, 1, 2].map((i) => Object.fromEntries(inCols.map((c) => [c.k, String(sampleRow(c, i))])) as Row)]); setMsg('Đã nạp 3 dòng mẫu – kiểm tra rồi bấm Lưu'); };
-  return (
+  const tblEl = (
     <div className={'pp-tbl' + (asTbl ? ' as-tbl' : '') + (dense ? ' pp-dense' : '') + (full ? ' pp-full' : '')} role={full ? 'dialog' : undefined} aria-modal={full || undefined} aria-label={full ? title : undefined} onPaste={editable ? pasteAny : undefined} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && rows.length) { e.preventDefault(); if (fold) setFold(false); openSearch(); } }}>
       <div className="row between pp-th"><b>{title}{vk && <VarTag k={'#' + vk} />}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
         <span className="pp-view" role="group" aria-label="Hiển thị bảng">
@@ -1021,6 +1021,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
       </div>}
       {hit.length === 0 && rows.length > 0 && <div className="small muted pp-none">Không có tấm khớp. <button type="button" className="btn sm" onClick={() => { setQ(''); setErrOnly(false); setLim(0); }}>Bỏ lọc</button></div>}
     </div>);
+  return full ? createPortal(tblEl, document.body) : tblEl;
 }
 
 /** Bản in theo mẫu form (A4) */
