@@ -52,7 +52,7 @@ import { PrintTplButton } from './PrintTpl';
 import { QtTag } from './QtTag';
 import { confirmDialog, toast, Msg, InfoChip } from './ui';
 import { useAuth } from '../lib/auth';
-import { VarTag } from '../lib/showVars';
+import { VarTag, setShowVars, useShowVars } from '../lib/showVars';
 import { useWho } from '../lib/people';
 
 const fmtN = (v: number | null | undefined, d = 0) => (v == null || !isFinite(v) ? '' : fnum(v, d));
@@ -819,7 +819,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
     onChange(next); setQ0(null); toast(`Đã lấy từ ${q0.code}: cộng thêm ${up} dòng, thêm mới ${add} dòng – bấm Lưu để giữ`); };
   const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = colsAll.filter((c) => !c.calc && !c.ro);
-  const isAdm = useAuth().can('admin_it');
+  const isAdm = useAuth().can('admin_it'); const fAdm2 = isAdm || useAuth().can('admin_cnc'); const sv = useShowVars();
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const [subOpen, setSubOpen] = useState<string | null>(null);
   // So với bản lúc bị trả về
@@ -940,7 +940,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
       <div className="row between pp-th"><b>{title}{vk && <VarTag k={'#' + vk} />}{req && <span className="req-star" title="Bắt buộc có ít nhất 1 dòng trước khi ký"> *</span>} <span className="small muted">· {rows.length} dòng</span>
         <span className="pp-view" role="group" aria-label="Hiển thị bảng">
           {many && <span className="pp-seg">{([['co', 'Cơ bản'], ['du', 'Đầy đủ'], ...(hasTech ? [['kt', 'Kỹ thuật']] : [])] as ['co' | 'du' | 'kt', string][]).map(([k, t]) => <button key={k} type="button" aria-pressed={preset === k} className={preset === k ? 'on' : ''} onClick={() => setPreset(k)}>{t}</button>)}</span>}
-          <button type="button" className="pp-vbtn" aria-pressed={dense} title="Mật độ dòng" onClick={() => setDense(!dense)}>{dense ? 'Gọn' : 'Vừa'}</button>
+          <button type="button" className="pp-vbtn" aria-pressed={dense} title="Mật độ dòng" onClick={() => setDense(!dense)}>{dense ? 'Gọn' : 'Vừa'}</button>{fAdm2 && <button type="button" className="pp-vbtn" aria-pressed={sv} title={sv ? 'Ẩn mã biến mẫu in' : 'Hiện mã biến mẫu in {…}'} aria-label="Hiện biến mẫu in" onClick={() => setShowVars(!sv)}>{'{ }'}</button>}
           {rows.length > 0 && <button type="button" className="pp-vbtn" aria-label={full ? 'Thu nhỏ bảng' : 'Mở rộng bảng'} title={full ? 'Thu nhỏ (Esc)' : 'Mở rộng toàn màn hình'} onClick={() => setFull(!full)}><Icon name={full ? 'x' : 'expand'} size={14} /><span className="pp-vt">{full ? 'Đóng' : 'Mở rộng'}</span></button>}
         </span>
         {rows.length > 0 && <span className={'pp-sx' + (sOpen || q ? ' open' : '')}>
