@@ -120,7 +120,7 @@ export default function Production() {
   const S = M.series; const line = (f: (s: (typeof S)[0]) => number | null) => S.map((s, i) => { const v = f(s); return v == null ? '' : (i && f(S[i - 1]) != null ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * mx / 1.1);
   const spark = (k: 'del' | 'ord', f: (q: Q) => number) => { const a = M.series.map((s) => f(s[k])); const mn = Math.min(...a), mxx = Math.max(...a); return a.map((v, i) => (i ? 'L' : 'M') + (i * 120 / 11).toFixed(1) + ' ' + (25 - (v - mn) / (mxx - mn || 1) * 22).toFixed(1)).join(' '); };
-  const agT = M.aging.reduce((a, q) => a + uv(q, u), 0) || 1; const AG = [['Còn > 30 ngày', '#2E6B45'], ['15–30 ngày', '#8DBB9C'], ['≤ 14 ngày', '#E0A43A'], ['Đã trễ hạn', '#C2412F']] as const;
+  const agT = M.aging.reduce((a, q) => a + uv(q, u), 0) || 1; const AG = [['Còn > 30 ngày', '#1F3A93'], ['15–30 ngày', '#8FA3D9'], ['≤ 14 ngày', '#E0A43A'], ['Đã trễ hạn', '#C2412F']] as const;
   const cm = Math.max(1, ...M.custTop.map((c) => uv(c.q, u)));
   const dmy = (d: string | null) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
 

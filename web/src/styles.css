@@ -4072,3 +4072,10 @@ body>.pp-tbl.pp-full{z-index:1000;padding:calc(12px + env(safe-area-inset-top)) 
 .pm .pm-leg .sq{background:#1F3A93!important}
 html[data-theme=dark] .pm .pm-k:not(.hero){background:#1E2A4A!important}
 html[data-theme=dark] .pm .pm-k:not(.hero) b,html[data-theme=dark] .pm .pm-k:not(.hero) span,html[data-theme=dark] .pm .pm-k:not(.hero) em{color:#C9D4F2!important}
+/* Thống kê sản lượng · tông navy */
+.pd-chart .b{fill:#8FA3D9!important}.pd-chart .b.cur,.pd-chart .b:hover{fill:#1F3A93!important}.pd-chart .v{fill:#1F3A93!important}
+.pd-leg .sq,.pd-tip .sq{background:#1F3A93!important}
+.pd-k svg path{stroke:#1F3A93!important}.pd-k.hero svg path{stroke:#fff!important}
+.pd-prog i b,.prr-bar i{background:#1F3A93!important}
+html[data-glass=facade]:not([data-theme=dark]) .pd-k.hero,.pd-k.hero{background:#1F3A93!important;border-color:#1F3A93!important}
+html[data-glass=facade]:not([data-theme=dark]) .pd-seg button[aria-pressed=true]{background:#1F3A93!important}
