@@ -566,7 +566,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         const thin = hEd && hFields.filter((f) => String(h[f.key] ?? '').trim()).length * 2 < hFields.length;
         if (hEd && !hOpen && (missH || thin)) queueMicrotask(() => setHOpen(true)); // tự mở thì giữ mở, không tự thu khi đang gõ
         if (!hEd || (!hOpen && !missH && !thin)) return <div className={'pp-kv' + (hEd ? ' ed' : '')}>
-          <dl>{hFields.filter((f) => show(f)).map((f) => <div key={f.key} data-fk={f.key}><dt>{f.label}</dt><dd>{show(f)}</dd></div>)}
+          <dl>{hFields.filter((f) => show(f)).map((f) => <div key={f.key} data-fk={f.key}><dt>{f.label}<VarTag k={f.key} /></dt><dd>{show(f)}</dd></div>)}
             {hFields.every((f) => !show(f)) && <div><dt>Thông tin chung</dt><dd className="muted">Chưa có</dd></div>}</dl>
           {hEd && <button type="button" className="pp-kv-ed" onClick={() => setHOpen(true)}><Icon name="edit" size={14} />Sửa thông tin</button>}</div>;
         return <>{hOpen && <div className="pp-kv-close"><button type="button" className="link-btn" onClick={() => setHOpen(false)}>Thu gọn thông tin</button></div>}
