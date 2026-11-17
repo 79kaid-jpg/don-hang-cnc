@@ -1,0 +1,21 @@
+name: Đồng bộ cấu trúc DB vào repo
+# Hằng đêm (và khi bấm tay): xuất cấu trúc DB thật → supabase/schema/baseline.sql. Có thay đổi thì commit, CI test sẽ dùng bản mới.
+on:
+  schedule: [{ cron: '30 18 * * *' }]   # 01:30 giờ Việt Nam
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xuất cấu trúc
+        env: { DB_URL: '${{ secrets.SUPABASE_DB_URL }}' }
+        run: |
+          psql "$DB_URL" -Atq -c "select ztest.schema_dump()" | grep -v ztest > supabase/schema/baseline.sql
+          test -s supabase/schema/baseline.sql
+      - name: Commit nếu đổi
+        run: |
+          git diff --quiet && { echo "Không đổi"; exit 0; }
+          git -c user.name="schema-sync" -c user.email="actions@github.com" commit -am "DB: đồng bộ cấu trúc $(date -u +%F)"
+          git push
