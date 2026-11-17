@@ -502,7 +502,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
   const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
   const role = ROLE_OF[d.status];
-  const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false); const [actOpen, setActOpen] = useState(false);
+  const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false); const [actOpen, setActOpen] = useState(false); const [lastMsg, setLastMsg] = useState('');
+  const seenKey = 'pp-seen:' + d.id; const [seenAt, setSeenAt] = useState(() => { try { return localStorage.getItem(seenKey) ?? ''; } catch { return ''; } });
+  useEffect(() => { let live = true; sb.from('order_msgs').select('at,from_user').eq('doc_id', d.id).order('at', { ascending: false }).limit(1).then(({ data }) => { const m = (data as { at: string; from_user: string }[] | null)?.[0]; if (live) setLastMsg(m && m.from_user !== meId ? m.at : ''); }); return () => { live = false; }; }, [d.id, actOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (actOpen) { const n = new Date().toISOString(); setSeenAt(n); try { localStorage.setItem(seenKey, n); } catch { /* bỏ qua */ } } }, [actOpen, seenKey]);
+  const unread = !!lastMsg && lastMsg > seenAt;
+  useEffect(() => { const f = () => setActOpen(true); addEventListener('pms-goto-check', f); return () => removeEventListener('pms-goto-check', f); }, []);
   useEffect(() => { const f = (e: Event) => { if ((e as CustomEvent<{ doc: string }>).detail?.doc === d.id) setActOpen(true); }; addEventListener('pp-talk', f); return () => removeEventListener('pp-talk', f); }, [d.id]);
   useEffect(() => { if (!actOpen) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setActOpen(false); }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [actOpen]);
   useEffect(() => { setHOpen(false); }, [d.id]);
@@ -647,7 +652,6 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}
       {(d.status === 'da_duyet' || d.status === 'fail') && <CloneBar b={b} d={d} onChanged={onChanged} />}
-      {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
       </div>
       <aside className="pp-side">
         <button type="button" className="pp-sidebtn pp-grip" onClick={() => setShut(!shut)} aria-expanded={!shut} title={(shut ? 'Mở' : 'Đóng') + ' ghi chú & hành trình'} data-kbd="]" aria-label={(shut ? 'Mở' : 'Đóng') + ' cột ghi chú và hành trình'}><svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true"><path d={shut ? 'M7 2 2 7l5 5' : 'M3 2l5 5-5 5'} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
@@ -666,10 +670,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
 
-      <button type="button" className="pp-actv-fab" aria-expanded={actOpen} onClick={() => setActOpen(true)}><Icon name="chat" size={16} /><span>Hoạt động</span></button>
+      <button type="button" className="pp-actv-fab" aria-expanded={actOpen} aria-label={'Hoạt động' + (unread ? ', có tin mới' : '')} onClick={() => setActOpen(true)}><Icon name="chat" size={16} /><span>Hoạt động</span>{unread && <i className="pp-dot" aria-hidden="true" />}</button>
       {actOpen && <div className="pp-drawer-bg" onClick={() => setActOpen(false)} />}
       <aside className={'pp-drawer' + (actOpen ? ' on' : '')} aria-label="Hoạt động" aria-hidden={!actOpen}>
         <div className="pp-drawer-h"><b>Hoạt động</b><button type="button" className="pp-drawer-x" aria-label="Đóng" onClick={() => setActOpen(false)}><Icon name="x" size={16} /></button></div>
+        {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
         <Journey d={d} proc={proc} people={people} />
       </aside>
       </aside>
