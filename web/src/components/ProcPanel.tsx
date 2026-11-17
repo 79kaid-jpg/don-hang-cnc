@@ -1270,6 +1270,8 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
             {can && <label className={'gh-add' + (mine.length || pnF.length ? '' : ' first')} aria-label={(touch ? 'Chụp ảnh ' : 'Tải ảnh ') + lab}>
               <Icon name="plus" size={20} /><span>{touch ? 'Chụp' : 'Tải ảnh'}</span>
               <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
+            {can && touch && <label className="gh-add gh-up2" aria-label={'Tải ảnh có sẵn ' + lab}><Icon name="upload" size={20} /><span>Tải ảnh</span>
+              <input type="file" accept="image/*" multiple hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
           </div>
           {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
           {!busy && aiMsg && aiK === k && <small className="gh-busy">{aiMsg}</small>}
