@@ -1203,7 +1203,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
     if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
     return () => { live = false; }; }, [files, src]); // eslint-disable-line react-hooks/exhaustive-deps
   const [srev, setSrev] = useState(''); const [gOpen, setGOpen] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [aiK, setAiK] = useState(''); const [rev, setRev] = useState('');
+  const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [aiK, setAiK] = useState(''); const [aiRe, setAiRe] = useState<{ k: string; fl: File[]; ps: string[] } | null>(null); const [rev, setRev] = useState('');
   useEffect(() => { setRev(''); }, [h.tx_cccd]);
   // Ảnh → JPEG nhỏ (gửi AI) hoặc bản làm mờ (người không có quyền xem CCCD)
   const toJpeg = (file: File, max: number, blur = 0) => new Promise<Blob>((ok, bad) => { const img = new Image(); const u = URL.createObjectURL(file);
@@ -1214,18 +1214,20 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
   const ai = async (op: 'cccd' | 'bbgh', file: File) => { const { data, error } = await sb.functions.invoke('gh-ai', { body: { op, doc_id: d.id, image: await b64(await toJpeg(file, 1600)) } });
     const er = (data as { error?: string } | null)?.error ?? (error ? (await (error as { context?: Response }).context?.json?.().catch(() => null))?.error ?? error.message : ''); if (er) throw new Error(er); return data as Record<string, unknown>; };
   const pick = async (e: React.ChangeEvent<HTMLInputElement>, k: string) => { const fl = Array.from(e.target.files ?? []); const added = (await upload(e, k)) || [];
-    if (k !== 'gh_cccd' && k !== 'gh_bbgh') return; setAiMsg(''); setAiK(k);
-    let map: Record<string, Bbg> = bbOf(h); const notes: string[] = [];
-    for (let i = 0; i < added.length && i < fl.length; i++) { const f = fl[i], p = added[i].path;
+    if (k !== 'gh_cccd' && k !== 'gh_bbgh') return; await runAi(k, fl, added.map((a) => a.path)); };
+  const runAi = async (k: string, fl: File[], ps: string[]) => { setAiMsg(''); setAiK(k); setAiRe(null);
+    let map: Record<string, Bbg> = bbOf(h); const notes: string[] = []; const fF: File[] = [], fP: string[] = [];
+    for (let i = 0; i < ps.length && i < fl.length; i++) { const f = fl[i], p = ps[i];
       try {
         if (k === 'gh_cccd') { setBusy('Đang làm mờ ảnh CCCD…'); await sb.storage.from('files').upload(p + '.blur.jpg', await toJpeg(f, 480, 14), { upsert: true, contentType: 'image/jpeg' });
           setBusy('Gemini đang đọc CCCD…'); const r = await ai('cccd', f);
           if (r.ho_ten && !String(h.tai_xe ?? '').trim()) { onField('tai_xe', String(r.ho_ten)); notes.push('Tài xế: ' + r.ho_ten); }
           if (r.so_cccd) { onField('tx_cccd', String(r.so_cccd)); notes.push('Số CCCD đã điền (sẽ mã hoá khi Lưu)'); } else notes.push('⚠ Không đọc được số CCCD, nhập tay'); }
         else { setBusy('Gemini đang đọc BBGH…'); const r = await ai('bbgh', f); map = { ...map, [p]: { so: r.so_bbgh ? String(r.so_bbgh) : '', trang: String(r.trang ?? ''), ky: !!r.co_chu_ky } }; }
-      } catch (x) { notes.push('⚠ ' + (x as Error).message); logError('ai_' + k, x); } }
+      } catch (x) { notes.push('⚠ ' + (x as Error).message); fF.push(f); fP.push(p); logError('ai_' + k, x); } }
     if (k === 'gh_bbgh') onField('_bbgh_ai', JSON.stringify(map));
-    setBusy(''); setAiMsg(notes.join(' · ') + (notes.length || k === 'gh_bbgh' ? ' – nhớ bấm Lưu' : '')); };
+    if (fF.length) setAiRe({ k, fl: fF, ps: fP });
+    setBusy(''); setAiMsg(notes.join(' · ') + (fF.length === notes.length ? '' : ' – nhớ bấm Lưu')); };
   const sh = src?.header ?? {}; const sF = src?.files ?? [];
   const bbPaths = files.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const bbWarn = bbCheck(bbOf(h), bbPaths, String(h.so_phieu ?? ''));
   const sbbP = sF.filter((f) => f.kind === 'gh_bbgh').map((f) => f.path); const sWarn = bbCheck(bbOf(sh), sbbP, String(sh.so_phieu ?? ''));
@@ -1274,7 +1276,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
               <input type="file" accept="image/*" multiple hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
           </div>
           {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
-          {!busy && aiMsg && aiK === k && <small className="gh-busy">{aiMsg}</small>}
+          {!busy && aiMsg && aiK === k && <small className="gh-busy">{aiMsg}{aiRe?.k === k && <button type="button" className="gh-retry" onClick={() => runAi(k, aiRe.fl, aiRe.ps)}>Đọc lại</button>}</small>}
         </div></li>; })}</ol>}
   </section>;
 }
