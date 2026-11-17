@@ -18,18 +18,17 @@ export function CoBar({ docId, can, locked, lap, onTables }: { docId: string; ca
   const load = async () => { const { data } = await sb.from('co_orders').select('*').eq('doc_id', docId).maybeSingle(); setCo(data as CoOrder | null); };
   useEffect(() => { load(); }, [docId]);
   const seller = cos?.find((c) => c.buyer === co?.company);
-  useEffect(() => { if (!co || !seller) return setCands([]);
-    let q = sb.from('co_orders').select('*').eq('company', seller.code).order('created_at', { ascending: false }).limit(50);
-    if (co.project_id) q = q.eq('project_id', co.project_id); q.then(({ data }) => setCands((data as CoOrder[]) ?? [])); }, [co?.id, seller?.code]);
+  const [info, setInfo] = useState<{ auto: boolean; ref_code: string | null; cands: { id: string; code: string }[] } | null>(null);
+  useEffect(() => { if (!co) return; sb.rpc('co_ref_info', { p_doc: docId }).then(({ data }) => { const x = data as typeof info; setInfo(x); setCands(((x?.cands ?? []) as CoOrder[])); }); }, [co?.id, co?.ref_id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!co) return null;
-  const me = cos?.find((c) => c.code === co.company); const canCode = !locked && !!lap && ((me?.allow_edit && (can || adm)) || role('admin_it')); const canRef = !locked && !!lap && (can || adm);
+  const me = cos?.find((c) => c.code === co.company); const canCode = !locked && !!lap && ((me?.allow_edit && (can || adm)) || role('admin_it')); const canRef = !locked && !!lap && (can || adm) && !info?.auto;
   const saveCode = async () => { if (ed === null) return; setBusy(true); const { data, error } = await sb.rpc('co_set_code', { p_doc: docId, p_code: ed }); setBusy(false);
     if (error) return toast(errText(error)); setEd(null); toast('Đã đổi mã: ' + data); load(); reloadCoIdx(); };
-  const setRef = async (id: string) => { const { error } = await sb.rpc('co_set_ref', { p_doc: docId, p_ref: id || null }); if (error) return toast(errText(error)); load(); };
+  const setRef = async (id: string) => { if (!(await confirmDialog('Đổi tham chiếu sang ' + (cands.find((c) => c.id === id)?.code ?? 'không tham chiếu') + '? Thay đổi được ghi vào Lịch sử đơn.', 'Đổi'))) return; const { error } = await sb.rpc('co_set_ref', { p_doc: docId, p_ref: id || null }); if (error) return toast(errText(error)); load(); };
   const copy = async () => { if (!(await confirmDialog('Chép danh sách tấm từ đơn tham chiếu? Danh sách hiện tại sẽ bị thay; giá để trống cho bạn nhập.', 'Chép'))) return;
     const { data, error } = await sb.rpc('co_copy_ref', { p_doc: docId }); if (error) return toast(errText(error));
     const r = await sb.from('docs_v').select('tables').eq('id', docId).single(); if (r.data) onTables(r.data.tables ?? {}); toast('Đã chép ' + data + ' dòng'); };
-  const ref = cands.find((c) => c.id === co.ref_id);
+  const ref = { code: info?.ref_code ?? null };
   const showCode = slot?.dataset.show === '1'; // chỉ 1 XNĐH → không có ô chọn đơn, hiện mã ở đây
   const top = slot && (showCode || canCode || ed !== null) ? createPortal(ed === null
     ? <span className="cob-top2">{showCode && <b className="cob-v" title={'Mã đơn ' + co.company}>{co.code}</b>}{showCode && co.edited && <span className="chip idle" title={'Mã tự tạo: ' + co.code_auto}>đã sửa</span>}
@@ -40,8 +39,8 @@ export function CoBar({ docId, can, locked, lap, onTables }: { docId: string; ca
     {seller && lap && <div className="cob-ref1">
       <label><span className="cob-lb">Tham chiếu {seller.code}</span>
         {canRef ? <select value={co.ref_id ?? ''} onChange={(e) => setRef(e.target.value)} aria-label="Đơn tham chiếu">
-            <option value="">— Không —</option>{cands.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select>
-          : <b>{ref?.code ?? '—'}</b>}</label>
+            <option value="">{cands.length ? '— Chọn đơn ' + seller.code + ' —' : 'Không có đơn ' + seller.code + ' nào đang chờ liên kết'}</option>{co.ref_id && ref.code && !cands.some((c) => c.id === co.ref_id) && <option value={co.ref_id}>{ref.code}</option>}{cands.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select>
+          : <b className="cob-locked">{info?.auto && <Icon name="shield" size={13} />}{ref.code ?? '—'}{info?.auto && <span className="small muted"> · Liên kết tự động</span>}</b>}</label>
       {false && canRef && co?.ref_id && <button type="button" className="btn sm" onClick={copy}><Icon name="copy" size={15} />Chép DS tấm</button>}
     </div>}</>;
 }
