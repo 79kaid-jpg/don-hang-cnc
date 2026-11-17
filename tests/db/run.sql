@@ -1,6 +1,8 @@
 -- Chạy kịch bản TC02–TC10 trên DB tạm (CI) và kiểm kết quả. Lỗi → raise exception → CI đỏ, không deploy.
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
+-- khoá mã hoá CCCD riêng cho DB tạm (không dùng khoá thật)
+insert into private.kv(k, v) values ('CCCD_KEY', encode(extensions.gen_random_bytes(32), 'hex')) on conflict do nothing;
 
 create or replace function ztest.expect(tc text, label text, ok boolean, got text) returns void language plpgsql as $$
 begin
@@ -41,10 +43,11 @@ begin
 end $$;
 
 -- Kiểm số liệu Thống kê (xem như Admin IT)
-select ztest.su((select id from profiles where 'admin_it' = any(roles) and active order by created_at limit 1));
 do $$ declare s jsonb; tc text; co text; exp jsonb := '{"TC02":[100,100,0],"TC03":[89,89,0],"TC04":[83,83,0],"TC05":[498,498,0],"TC06":[80,80,0],"TC07":[29,19,10],"TC08":[39,39,0],"TC10":[60,60,0]}';
   e jsonb; x jsonb;
 begin
+  perform ztest.su((select id from profiles where 'admin_it' = any(roles) and active and active_co is null order by created_at limit 1));
+  perform ztest.su(coalesce((select id from profiles where 'admin_it' = any(roles) and active and active_co is null order by created_at limit 1), (select id from profiles where 'admin_it' = any(roles) and active order by created_at limit 1)));
   for tc, e in select * from jsonb_each(exp) loop
     s := ztest.stat(tc);
     foreach co in array array['PN','IPC','HW'] loop
