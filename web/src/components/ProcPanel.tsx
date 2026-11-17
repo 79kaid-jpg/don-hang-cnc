@@ -33,6 +33,7 @@ import {
 } from '../lib/proc';
 import { Icon } from './Icon';
 import { askRating } from './Rating';
+import { SplitPicker } from './CloneChip';
 import { Qt0Picker, Qt0Alloc, ReClone, takeRow, q0Key, type Q0Row, type Q0Pick } from './Qt0Picker';
 import { procData, procKey, type ProcData } from '../lib/orderData';
 import { evalFormula } from '../lib/formula';
@@ -658,6 +659,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}
+      {b.proc === 'QT1' && d.status === 'da_duyet' && d.company !== 'HW' && <SplitBar docId={d.id} next={d.company === 'PN' ? 'IPC' : 'Hanwa'} />}
       {(d.status === 'da_duyet' || d.status === 'fail') && <CloneBar b={b} d={d} onChanged={onChanged} />}
       </div>
       <aside className="pp-side">
@@ -1272,12 +1274,22 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
   </section>;
 }
 
+/** Đơn nguồn: số tấm đã chia cho đơn công ty sau / còn lại */
+function SplitBar({ docId, next }: { docId: string; next: string }) {
+  const [x, setX] = useState<{ tot: number; used: number; kids: number } | null>(null);
+  useEffect(() => { let on = true; sb.rpc('src_split', { p_doc: docId }).then(({ data }) => { if (on && data) { const v = data as { tot: number; used: number; kids: number }; setX({ tot: Number(v.tot), used: Number(v.used), kids: Number(v.kids) }); } }); return () => { on = false; }; }, [docId]);
+  if (!x || !x.tot) return null; const left = Math.max(0, x.tot - x.used); const pc = Math.min(100, Math.round(x.used / x.tot * 100));
+  return <div className={'kb-q0 pp-split' + (left === 0 ? ' full' : '')}><div className="kb-q0-bar" role="img" aria-label={`Đã chia ${x.used}/${x.tot} tấm`}><i style={{ width: pc + '%' }} /></div>
+    <span className="kb-q0-t">{x.used === 0 ? `Chưa chia cho ${next} · ${x.tot} tấm` : left === 0 ? `Đã chia hết ${x.tot} tấm cho ${x.kids} đơn ${next}` : <>Đã chia <b>{x.used}/{x.tot}</b> tấm cho {x.kids} đơn {next} · còn <b>{left}</b></>}</span></div>;
+}
+
 /** Clone phiếu đã Thành công / Thất bại thành đơn mới (Admin / người Lập của công ty đó) */
 function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void }) {
-  const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [, setSp] = useSearchParams();
+  const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [, setSp] = useSearchParams(); const [split, setSplit] = useState(false); const isSplit = b.proc === 'QT1' && d.company !== 'PN';
   useEffect(() => { let live = true; setOk(false); sb.rpc('can_start', { p_proc: b.proc, p_co: d.company }).then(({ data }) => { if (live) setOk(!!data); }); return () => { live = false; }; }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!ok) return null;
   const go = async () => {
+    if (isSplit) { setSplit(true); return; }
     if (!(await confirmDialog('Tạo đơn mới chép toàn bộ thông tin của phiếu này (' + COMPANY[d.company as Company] + ' · ' + b.title + ')? Đơn mới bắt đầu lại từ bước đầu để chỉnh sửa.', 'Clone thành đơn mới'))) return;
     setBusy(true); const { data, error } = await sb.rpc('doc_clone', { p_doc: d.id }); setBusy(false);
     if (error) { toast(errText(error)); return; }
@@ -1287,7 +1299,8 @@ function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void
   };
   return <div className={'pp-clone2' + (d.status === 'fail' ? ' fail' : '')}><span className="pp-clone2-ic" aria-hidden="true"><Icon name="copy" size={18} /></span>
     <span className="pp-clone2-t"><b>{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'}</b><small>Làm lại với thông tin tương tự – hồ sơ mới bắt đầu từ bước đầu</small></span>
-    <button type="button" className="cl-hero" disabled={busy} onClick={go}><Icon name="copy" size={16} />{busy ? 'Đang tạo…' : 'Clone'}</button></div>;
+    <button type="button" className="cl-hero" disabled={busy} onClick={go}><Icon name="copy" size={16} />{busy ? 'Đang tạo…' : isSplit ? 'Tách đơn' : 'Clone'}</button>
+    {split && <SplitPicker docId={d.id} onClose={() => setSplit(false)} onDone={(id) => { setSplit(false); setSp((p) => { const n = new URLSearchParams(p); n.set('tab', b.proc); n.set('b', id); n.set('co', d.company); return n; }); onChanged(); }} />}</div>;
 }
 
 /** Chọn tấm từ QT0 đã duyệt để đưa vào QT1 */

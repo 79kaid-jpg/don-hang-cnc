@@ -1,0 +1,2 @@
+-- src_rows(p_doc): dòng đơn nguồn + đã chia; src_split(p_doc): tổng đã chia; doc_clone_pick(p_doc, [{k,q}]): tách đơn có chọn số tấm
+-- (đã áp qua MCP, nội dung như phiên 17/11)

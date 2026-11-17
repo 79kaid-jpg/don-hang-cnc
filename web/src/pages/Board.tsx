@@ -38,6 +38,7 @@ let kbCache: { u?: string; a: Batch[]; b: Order[]; c: Customer[]; d: Mine[]; e: 
 export default function Board() {
   const [q0a, setQ0a] = useState<Record<string, { tot: number; used: number }>>({});
   const [q0Left, setQ0Left] = useState(false);
+  const [spl, setSpl] = useState<Record<string, { tot: number; used: number; kids: number }>>({});
   const { isPerson: isP0 } = useWho();
   const nav = useNavigate(); const ckTpl = useChecks(); useFields();
   const [orders, setOrders] = useState<Record<string, Order>>({}); const [cust, setCust] = useState<Record<string, Customer>>({});
@@ -56,6 +57,11 @@ export default function Board() {
   const [batches, setBatches] = useState<Batch[] | null>(null); const [docs, setDocs] = useState<Doc[]>([]); const [mine, setMine] = useState<Mine[]>([]);
   const [q, setQ] = useState(''); const [onlyMine, setOnlyMine] = useState(false);
   const [qt, setQt] = useState<Proc>(() => { try { return (localStorage.getItem('kb-proc') as Proc) || 'QT0'; } catch { return 'QT0'; } });
+  useEffect(() => { if (qt !== 'QT1' || !docs.length) return; let live = true;
+    const ds = docs.filter((d) => d.company !== 'HW' && d.status === 'da_duyet' && batches?.some((b) => b.id === d.batch_id && b.proc === 'QT1'));
+    Promise.all(ds.map((d) => sb.rpc('src_split', { p_doc: d.id }).then(({ data }) => [d.batch_id + ':' + d.company, data] as const))).then((rs) => { if (!live) return; const m: typeof spl = {};
+      for (const [k, v] of rs) if (v) { const x = v as { tot: number; used: number; kids: number }; m[k] = { tot: Number(x.tot), used: Number(x.used), kids: Number(x.kids) }; } setSpl(m); });
+    return () => { live = false; }; }, [qt, docs, batches]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (qt !== 'QT0' || !batches) return; let live = true;
     const ords = [...new Set(batches.filter((b) => b.proc === 'QT0' && b.status === 'hoan_tat').map((b) => b.order_id))];
     Promise.all(ords.map((id) => sb.rpc('qt0_list', { p_order: id }))).then((rs) => { if (!live) return; const m: Record<string, { tot: number; used: number }> = {};
@@ -265,6 +271,9 @@ export default function Board() {
                               {!done && (n < 0 ? ' · trễ ' + -n + 'n' : n <= 3 ? (n === 0 ? ' · hôm nay' : ' · còn ' + n + 'n') : '')}</span>; })()}</span>
                           <span className="kb-pj">{(it.o?.project ?? '').replace(/^\[(TEST|MẪU)\]\s*/i, '') || '—'}</span>
                           <span className="small muted kb-sub"><b className="kb-bt">{it.b.title}</b>{' · '}{[(() => { const c = cust[it.o?.customer_id ?? it.o?.kh2_id ?? it.o?.kh1_id ?? '']; return c ? (c.code || c.name.replace(/^(CÔNG TY|CTY)\s+(TNHH|CỔ PHẦN|CP)\s*/i, '')) : ''; })()].filter(Boolean).join(' · ')}</span></Link>
+                        {qt === 'QT1' && it.doc && spl[it.b.id + ':' + it.doc.company]?.tot > 0 && (() => { const a = spl[it.b.id + ':' + it.doc!.company]; const left = Math.max(0, a.tot - a.used); const pc = Math.min(100, Math.round(a.used / a.tot * 100)); const nx = it.doc!.company === 'PN' ? 'IPC' : 'Hanwa';
+                          return <div className={'kb-q0' + (left === 0 ? ' full' : '')}><div className="kb-q0-bar" role="img" aria-label={`Đã chia ${a.used}/${a.tot} tấm`}><i style={{ width: pc + '%' }} /></div>
+                            <span className="kb-q0-t">{left === 0 ? `Đã chia hết ${a.tot} tấm cho ${nx}` : <>Chia cho {nx} <b>{a.used}/{a.tot}</b> · còn <b>{left}</b></>}</span></div>; })()}
                         {qt === 'QT0' && it.b.status === 'hoan_tat' && q0a[it.b.id] && (() => { const a = q0a[it.b.id]; const left = Math.max(0, a.tot - a.used); const pc = a.tot ? Math.min(100, Math.round(a.used / a.tot * 100)) : 0;
                           const canLap = adm || isP0('QT1', 'PN', 'lap', meP?.id);
                           return <div className={'kb-q0' + (left === 0 ? ' full' : '')}>
