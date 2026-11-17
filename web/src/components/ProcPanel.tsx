@@ -502,7 +502,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
   const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
   const role = ROLE_OF[d.status];
-  const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false);
+  const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false); const [actOpen, setActOpen] = useState(false);
+  useEffect(() => { const f = (e: Event) => { if ((e as CustomEvent<{ doc: string }>).detail?.doc === d.id) setActOpen(true); }; addEventListener('pp-talk', f); return () => removeEventListener('pp-talk', f); }, [d.id]);
+  useEffect(() => { if (!actOpen) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setActOpen(false); }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [actOpen]);
   useEffect(() => { setHOpen(false); }, [d.id]);
   useEffect(() => { let live = true; setMgrDoc(false); sb.rpc('can_manage_doc', { p_doc: d.id }).then(({ data }) => { if (live) setMgrDoc(!!data); }); return () => { live = false; }; }, [d.id]);
   const admEdit = adm && (d.status === 'da_duyet' || !FLOW[proc].slice(0, proc === 'QT0' ? 3 : 1).includes(d.status));
@@ -664,7 +666,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       </div>
 
 
-      <Journey d={d} proc={proc} people={people} />
+      <button type="button" className="pp-actv-fab" aria-expanded={actOpen} onClick={() => setActOpen(true)}><Icon name="chat" size={16} /><span>Hoạt động</span></button>
+      {actOpen && <div className="pp-drawer-bg" onClick={() => setActOpen(false)} />}
+      <aside className={'pp-drawer' + (actOpen ? ' on' : '')} aria-label="Hoạt động" aria-hidden={!actOpen}>
+        <div className="pp-drawer-h"><b>Hoạt động</b><button type="button" className="pp-drawer-x" aria-label="Đóng" onClick={() => setActOpen(false)}><Icon name="x" size={16} /></button></div>
+        <Journey d={d} proc={proc} people={people} />
+      </aside>
       </aside>
     </section>);
 }
