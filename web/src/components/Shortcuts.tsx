@@ -1,3 +1,5 @@
+import { getShowVars, setShowVars } from '../lib/showVars';
+import { toast } from './ui';
 import { useScope } from '../lib/myco';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +39,7 @@ export const SHORTCUTS: { group: string; items: [string[], string][] }[] = [
     [['1 … 7'], 'Đổi thẻ: F0, QT0, QT1, QT2, QT3, Chứng từ, Lịch sử'], [['S'], 'Xem đơn trên sơ đồ'],
     [['B'], 'Quay lại bảng Kanban'], [[']'], 'Đóng / mở cột phải của phiếu'], [['Ctrl', 'S'], 'Lưu phiếu'],
     [['Shift', 'T'], 'Tách đơn mới / mở lệnh, đợt mới'], [['Shift', 'C'], 'Viết ghi chú'], [['Shift', 'H'], 'Mở / thu chi tiết hành trình'],
-    [['Shift', 'D'], 'Mở / thu trao đổi'], [['Shift', 'N'], 'Nhắc việc'], [['Shift', 'G'], 'Giao lại']] }
+    [['Shift', 'D'], 'Mở / thu trao đổi'], [['Shift', 'N'], 'Nhắc việc'], [['Shift', 'G'], 'Giao lại'], [['Shift', 'V'], 'Hiện / ẩn mã biến mẫu in (admin)']] }
 ];
 
 export const Kbd = ({ k }: { k: string[] }) => <span className="kbd-set">{k.map((x, i) => <kbd key={i}>{x}</kbd>)}</span>;
@@ -70,6 +72,7 @@ export function ShortcutHost({ onToggleSide }: { onToggleSide: () => void }) {
         if (to[key]) { e.preventDefault(); nav(to[key]); }
         return;
       }
+      if (e.shiftKey && key === 'v' && (can('admin_it') || can('admin_cnc'))) { e.preventDefault(); const v = !getShowVars(); setShowVars(v); toast('Hiện biến mẫu in: ' + (v ? 'Bật' : 'Tắt')); return; }
       if (e.shiftKey && /^[a-z]$/.test(key)) return;
       if (key === 'g') { gAt.current = Date.now(); return; }
       if (key === '/') { e.preventDefault(); setPal(true); }

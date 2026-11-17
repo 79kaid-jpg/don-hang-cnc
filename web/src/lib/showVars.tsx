@@ -6,6 +6,7 @@ const KEY = 'pms.showVars';
 let on = (() => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } })();
 const subs = new Set<(v: boolean) => void>();
 export function setShowVars(v: boolean) { on = v; try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* bỏ qua */ } subs.forEach((f) => f(v)); }
+export const getShowVars = () => on;
 export function useShowVars() {
   const [v, set] = useState(on);
   useEffect(() => { subs.add(set); set(on); return () => { subs.delete(set); }; }, []);
