@@ -4056,3 +4056,19 @@ body>.pp-tbl.pp-full{z-index:1000;padding:calc(12px + env(safe-area-inset-top)) 
 .pp-split{margin:8px 0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 
 .gh-retry{margin-left:8px;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#cbd5e1);background:#fff;color:var(--brand,#1e3a8a);font-weight:600;cursor:pointer}
+
+/* Sản lượng (Việc của tôi) · tông navy đồng bộ app */
+.pm .pm-k{background:#E6EBF7!important;color:#1F3A93!important;border-color:transparent!important}
+.pm .pm-k span,.pm .pm-k em{color:#3D4F86!important}
+.pm .pm-k b{color:#1F3A93!important}
+.pm .pm-k.ok b{color:#1E7A46!important}
+.pm .pm-k.hero{background:#1F3A93!important;color:#fff!important}
+.pm .pm-k.hero span,.pm .pm-k.hero em,.pm .pm-k.hero b,.pm .pm-k.hero small{color:#fff!important}
+.pm .pm-k.hero .pm-bar{background:rgba(255,255,255,.25)!important}
+.pm .pm-k.hero .pm-bar b{background:#fff!important}
+.pm .pm-chart .b{fill:#1F3A93!important}
+.pm .pm-chart .b:not(.cur){fill:#8FA3D9!important}
+.pm .pm-chart .p{stroke:#1F3A93!important}
+.pm .pm-leg .sq{background:#1F3A93!important}
+html[data-theme=dark] .pm .pm-k:not(.hero){background:#1E2A4A!important}
+html[data-theme=dark] .pm .pm-k:not(.hero) b,html[data-theme=dark] .pm .pm-k:not(.hero) span,html[data-theme=dark] .pm .pm-k:not(.hero) em{color:#C9D4F2!important}

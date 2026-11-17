@@ -68,7 +68,7 @@ export function ProdMini() {
           <div className="pm-kpis">
             <div className="pm-k hero"><span>Đã giao</span><b>{fmt(M.delCur, dp)}<small>{UN[u]}</small></b>{pp != null && <><i className="pm-bar"><b style={{ width: Math.min(100, pp) + '%' }} /></i><em>{pp}% kế hoạch</em></>}</div>
             <div className="pm-k"><span>Tồn chưa giao</span><b>{fmt(M.back, dp)}<small>{UN[u]}</small></b><em>{M.months != null ? '≈ ' + fmt(M.months, 1) + ' tháng' : ''}</em></div>
-            <div className="pm-k"><span>Đúng hạn</span><b>{M.onTime == null ? '—' : Math.round(M.onTime * 100)}<small>%</small></b><em>mục tiêu 95%</em></div>
+            <div className={"pm-k" + (M.onTime != null && M.onTime >= .95 ? " ok" : "")}><span>Đúng hạn</span><b>{M.onTime == null ? '—' : Math.round(M.onTime * 100)}<small>%</small></b><em>mục tiêu 95%</em></div>
           </div>
           <div className="pm-soon"><b className="small">Cần giao ≤ 14 ngày / đã trễ</b>
             {M.soon.length === 0 ? <span className="muted small">Không có.</span> : M.soon.slice(0, 3).map((x) => <Link key={x.id} to={'/don/' + x.order_id + '?tab=QT3'} className="pm-s">
