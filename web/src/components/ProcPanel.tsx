@@ -501,6 +501,12 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const first = FLOW[proc][0] === d.status;
   // Mục bắt buộc còn trống (tính trực tiếp) → báo trên nút trước khi bấm
   const miss = can && !closed ? missingReq(proc, d.company, d.status, { header: h, tables: t, files } as never) : [];
+  const [ck, setCk] = useState<{ miss: string[]; done: number; total: number } | null>(null);
+  useEffect(() => { setCk(null); const f = (e: Event) => { const x = (e as CustomEvent<{ doc: string; miss: string[]; done: number; total: number }>).detail; if (x?.doc === d.id) setCk(x); }; addEventListener('pms-ck-state', f); return () => removeEventListener('pms-ck-state', f); }, [d.id]);
+  const ckMiss = can && !closed && !['da_duyet', 'fail'].includes(d.status) ? ck?.miss ?? [] : [];
+  const missTbl = miss.filter((x) => x.key.startsWith('tbl:') || x.key.includes(':')); const missF = miss.filter((x) => !missTbl.includes(x));
+  const blocked = miss.length > 0 || ckMiss.length > 0;
+  const blockTip = [...(ckMiss.length ? ['Checklist: ' + ckMiss.join(', ')] : []), ...(miss.length ? ['Còn trống: ' + miss.map((x) => x.label).join(', ')] : [])].join('\n');
   const role = ROLE_OF[d.status];
   const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false); const [actOpen, setActOpen] = useState(false); const [lastMsg, setLastMsg] = useState('');
   const seenKey = 'pp-seen:' + d.id; const [seenAt, setSeenAt] = useState(() => { try { return localStorage.getItem(seenKey) ?? ''; } catch { return ''; } });
@@ -635,6 +641,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                     nf.push({ kind: 'tra_ve', name: 'Ảnh ghi chú ' + (i + 1) + '.png', path, at, by: meId, step: d.status } as (typeof files)[number]); }
                   if (!(await persist(nf, 'Đã gắn ' + rtImgs.length + ' ảnh ghi chú'))) return; note += ' (kèm ' + rtImgs.length + ' ảnh)'; }
                 await act(ask, note, ask === 'back' && backTo ? backTo : undefined); setRtImgs([]); setBackTo(''); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
+            {can && !closed && blocked ? <div className="pp-need" role="status" id={'need-' + d.id}><Icon name="alert" size={15} />
+              {ckMiss.length > 0 && <button type="button" className="pp-need-l" onClick={() => setActOpen(true)}>Còn {ckMiss.length} mục checklist ›</button>}
+              {missF.length > 0 && <button type="button" className="pp-need-l" onClick={() => jumpField(missF[0].key)}>Thiếu {missF.length} ô bắt buộc ›</button>}
+              {missTbl.length > 0 && <button type="button" className="pp-need-l" onClick={() => jumpField(missTbl[0].key)}>{missTbl[0].label} ›</button>}</div>
+            : can && !closed && ck && ck.total > 0 ? <span className="pp-ok"><Icon name="check" size={14} />Đủ điều kiện</span> : null}
             <SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} />
             {!first && <button className="btn kb-back pp-sec" onClick={() => setAsk('back')}><Icon name="back" size={16} />Trả về</button>}
             {(d.status === 'duyet' || d.status === 'duyet_them') && <button className="btn rt-go pp-sec" onClick={() => setAsk('fail')}><Icon name="x" size={16} />Thất bại</button>}
@@ -642,7 +653,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
               <div className="odh-menu pp-actmenu" role="menu">
                 {!first && <button type="button" role="menuitem" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('back'); }}><Icon name="back" size={16} />Trả về</button>}
                 {(d.status === 'duyet' || d.status === 'duyet_them') && <button type="button" role="menuitem" className="danger-h" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; setAsk('fail'); }}><Icon name="x" size={16} />Thất bại</button>}</div></details>}
-            <button className="btn primary pp-go" disabled={busy} title={(d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' + (proc !== 'QT0' ? (d.company === 'HW' ? ' · tiếp theo: khách ký tay' : ' · tiếp theo: ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '') : undefined} onClick={() => { if (miss.length) { setErr('Còn trống: ' + miss.map((x) => x.label).join(', ')); jumpField(miss[0].key); return; } act('next'); }}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký')}{miss.length > 0 && !busy && <span className="pp-miss" title={'Còn trống: ' + miss.map((x) => x.label).join(', ')}>thiếu {miss.length}</span>}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
+            <button className={'btn primary pp-go' + (blocked ? ' is-blocked' : '')} disabled={busy || blocked} aria-describedby={blocked ? 'need-' + d.id : undefined} title={blocked ? blockTip : (d.status === 'duyet' || d.status === 'duyet_them') ? 'Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”' + (proc !== 'QT0' ? (d.company === 'HW' ? ' · tiếp theo: khách ký tay' : ' · tiếp theo: ' + COMPANY[d.company === 'PN' ? 'IPC' : 'HW']) : '') : undefined} onClick={() => { if (miss.length) { setErr('Còn trống: ' + miss.map((x) => x.label).join(', ')); jumpField(miss[0].key); return; } act('next'); }}><Icon name="check" size={16} />{busy ? 'Đang ký…' : (d.status === 'duyet_them' ? 'Duyệt (' + (lvName ?? 'cấp thêm') + ')' : NEXT_LABEL[d.status] ?? 'Ký')}{miss.length > 0 && !busy && <span className="pp-miss" title={'Còn trống: ' + miss.map((x) => x.label).join(', ')}>thiếu {miss.length}</span>}</button>{(d.status === 'duyet' || d.status === 'duyet_them') && <span className="pp-hint">Duyệt sẽ lưu PDF có dấu “ĐÃ DUYỆT”</span>}</>)}
         </div>)}
       {editable && !(can && !['da_duyet', 'fail'].includes(d.status)) && <div className="pp-act"><SaveState editable={editable} dirty={dirty} busy={busy} onSave={() => save()} /></div>}
       {d.status === 'da_duyet' && <NextStep o={o} b={b} d={d} />}

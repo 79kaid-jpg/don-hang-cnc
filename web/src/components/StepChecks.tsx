@@ -41,6 +41,7 @@ export function StepChecks({ proc, d, people, canEdit, onChanged, live }: { proc
   const tpl = useChecks(); const { me } = useAuth();
   const step = d.status;
   const [items, setItems] = useState<CheckItem[]>(() => itemsOf(tpl, proc, step, d.checklist));
+  useEffect(() => { const m = items.filter((x) => x.level === 'req' && !x.done).map((x) => x.label); dispatchEvent(new CustomEvent('pms-ck-state', { detail: { doc: d.id, miss: m, done: items.filter((x) => x.done).length, total: items.length } })); }, [items, d.id]);
   const [nl, setNl] = useState(''); const [busy, setBusy] = useState(false); const [all, setAll] = useState(false); const [flash, setFlash] = useState(false); const box = useRef<HTMLElement>(null);
   useEffect(() => { const go = () => { setAll(true); setFlash(true); requestAnimationFrame(() => box.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })); setTimeout(() => setFlash(false), 2400); };
     addEventListener('pms-goto-check', go); return () => removeEventListener('pms-goto-check', go); }, []);
