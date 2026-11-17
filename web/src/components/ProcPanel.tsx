@@ -666,12 +666,14 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
 
       <button type="button" className="pp-actv-fab" aria-expanded={actOpen} aria-label={'Hoạt động' + (unread ? ', có tin mới' : '')} onClick={() => setActOpen(true)}><Icon name="chat" size={16} /><span>Hoạt động</span>{unread && <i className="pp-dot" aria-hidden="true" />}</button>
+      {createPortal(<>
       {actOpen && <div className="pp-drawer-bg" onClick={() => setActOpen(false)} />}
       <aside className={'pp-drawer' + (actOpen ? ' on' : '')} aria-label="Hoạt động" aria-hidden={!actOpen}>
         <div className="pp-drawer-h"><b>Hoạt động</b><button type="button" className="pp-drawer-x" aria-label="Đóng" onClick={() => setActOpen(false)}><Icon name="x" size={16} /></button></div>
         {d.status !== 'da_duyet' && d.status !== 'fail' && <StepChecks proc={proc} d={d} people={people} canEdit={can || adm} onChanged={onChanged} live={{ header: h, tables: t as never, files }} />}
         <Journey d={d} proc={proc} people={people} />
       </aside>
+      </>, document.body)}
       </aside>
     </section>);
 }
