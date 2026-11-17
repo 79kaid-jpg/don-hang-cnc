@@ -2,3 +2,4 @@
 -- _m2_tam: m²/tấm theo kích thước hoàn thiện (rong×dai); seq_block: chỉ chờ phiếu được DUYỆT (không chờ khách ký tay);
 -- q1_codes: thêm 'used' (đã giao ở đợt khác); docs_turn_msg: nhãn "Tải ảnh giao hàng";
 -- prod_stats: mỗi công ty chỉ lấy XNĐH/đợt giao của chính mình, giá trị = m² hoàn thiện × đơn giá XNĐH công ty đó.
+-- prod_stats: bỏ mã lạ, giới hạn theo số đặt (cộng dồn), trả x=[tấm mã lạ, tấm dư, tiền dư] (MCP)

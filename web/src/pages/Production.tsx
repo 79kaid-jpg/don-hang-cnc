@@ -42,7 +42,7 @@ export default function Production() {
   const [hov, setHov] = useState<number | null>(null);
   const { can } = useAuth(); const [pe, setPe] = useState<string | null>(null);
   const [drill, setDrill] = useState<{ t: string; sub?: string; kind: 'trip' | 'rem'; ids: string[] } | null>(null);
-  type ST = { q1: { id: string; order_id: string; title: string; created_at: string; o: number[]; r: number[] }[]; q3: { id: string; order_id: string; title: string; done_at: string; q1: string | null; d: number[] }[]; hasVal: boolean };
+  type ST = { q1: { id: string; order_id: string; title: string; created_at: string; o: number[]; r: number[] }[]; q3: { id: string; order_id: string; title: string; done_at: string; q1: string | null; d: number[]; x?: number[] }[]; hasVal: boolean };
   const [data, setData] = useState<{ p: P[]; o: O[]; cu: Record<string, string>; plan: Record<string, number> } | null>(null);
   const [st, setSt] = useState<ST | null>(null);
   useEffect(() => { try { localStorage.setItem('prod-u', u); } catch { /* */ } }, [u]);
@@ -106,6 +106,7 @@ export default function Production() {
     return { cur, now, del, delPrev, ordP, back, avg3, onTime, onTimePrev, planP, series, aging, agIds, soon, projects, custTop, hasVal, months, tripsBy, remBy, tripsIn, rem, pjOf, per2 };
   }, [data, st, per, fm, fp, fk]);
 
+  const XS = (() => { const ids = new Set((M?.tripsIn ?? []).map((t) => t.b.id)); return (st?.q3 ?? []).filter((x) => ids.has(x.id)).reduce((a, x) => [a[0] + (x.x?.[0] ?? 0), a[1] + (x.x?.[1] ?? 0), a[2] + (x.x?.[2] ?? 0)], [0, 0, 0]); })();
   if (!M) return <Skeleton rows={4} h={140} />;
   const pct = (a: number, b: number) => (b ? Math.round((a / b - 1) * 100) : null);
   const ch = pct(M.del.kg, M.delPrev.kg), chV = pct(M.del.val, M.delPrev.val);
@@ -143,9 +144,11 @@ export default function Production() {
         <button type="button" className="pd-k pd-kb hero" onClick={() => setDrill({ t: 'Các đợt đã giao · ' + title, sub: M.tripsIn.length + ' đợt', kind: 'trip', ids: M.tripsIn.map((t) => t.b.id) })}><span>Đã giao</span><b>{ufmt(M.del, u)}<small>{UNAME[u]}</small></b>
           <div><Delta v={ch} /> <span className="muted">so với {perName}</span></div>
           {u === 't' && M.planP > 0 && <><div className="pd-plan"><i style={{ width: Math.min(100, M.del.kg / 10 / M.planP) + '%' }} /></div><span className="muted small">{Math.round(M.del.kg / 10 / M.planP)}% kế hoạch ({fmt(M.planP)} t)</span></>}
-          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.kg)} /></svg></button>
+          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.kg)} /></svg>
+          {XS[0] > 0 && <span className="pd-xl"><b>{fmt(XS[0])} tấm</b> mã không có trong XNĐH – không tính</span>}
+          {XS[1] > 0 && <span className="pd-xl"><b>{fmt(XS[1])} tấm</b> giao dư so với đặt – không tính doanh thu</span>}</button>
         {can('admin_it') && M.per2 === 'M' && <button type="button" className="pd-pled" aria-label="Sửa kế hoạch tháng" title="Sửa kế hoạch tháng" onClick={() => setPe(M.cur)}><Icon name="edit" size={16} /></button>}</div>
-        <div className="pd-k"><span>Giá trị đã giao</span><b>{M.hasVal ? tỷ(M.del.val) : '—'}<small>đ</small></b><div><Delta v={chV} /> <span className="muted">theo giá {co}</span></div>
+        <div className="pd-k"><span>Giá trị đã giao</span><b>{M.hasVal ? tỷ(M.del.val) : '—'}<small>đ</small></b><div><Delta v={chV} /> <span className="muted">theo giá {co}</span></div>{XS[2] > 0 && <span className="pd-xv">giao dư {tỷ(XS[2])} đ chưa tính</span>}
           <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.val)} /></svg></div>
         <div className="pd-k"><span>Đặt mới (XNĐH)</span><b>{ufmt(M.ordP, u)}<small>{UNAME[u]}</small></b><div><span className="muted">đặt / giao </span><b className={bb != null && bb >= 1 ? 'pd-up' : 'pd-dn'}>{bb == null ? '—' : fmt(bb, 2)}</b></div>
           <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true" className="o"><path d={spark('ord', (q) => q.kg)} /></svg></div>
