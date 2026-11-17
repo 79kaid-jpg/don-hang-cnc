@@ -1128,16 +1128,19 @@ function NextStep({ o, b, d }: { o: Order; b: Batch; d: Doc }) {
   const t = b.proc === 'QT0' ? { proc: 'QT1', co: 'PN', label: 'Tạo XNĐH (QT1)' }
     : b.proc === 'QT1' && d.company === 'PN' ? { proc: 'QT2', co: 'PN', label: 'Tạo lệnh sản xuất (QT2)' }
     : b.proc === 'QT2' && d.company === 'PN' ? { proc: 'QT3', co: 'PN', label: 'Tạo đợt giao (QT3)' } : null;
-  useEffect(() => { setOk(false); if (!t) return; let live = true;
+  const [full, setFull] = useState(false);
+  useEffect(() => { setOk(false); setFull(false); if (!t) return; let live = true;
     (async () => { const r = await sb.rpc('can_start', { p_proc: t.proc, p_co: t.co }); if (!live || !r.data) return;
+      if (b.proc === 'QT0') { const { data: l } = await sb.rpc('qt0_list', { p_order: b.order_id }); const me = ((l ?? []) as { id: string; tot: number; used: number }[]).find((x) => x.id === b.id);
+        if (!live) return; setFull(!!me && Number(me.tot) > 0 && Number(me.used) >= Number(me.tot)); }
       setOk(true); })();
     return () => { live = false; }; }, [d.id, t?.proc, t?.co, code]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = () => t && setSp((p) => { const n = new URLSearchParams(p); n.set('tab', t.proc); n.set('new', '1'); n.set('ref', code); const cid = (b as { co_order_id?: string | null }).co_order_id; if (cid) n.set('refid', cid); else n.delete('refid'); n.delete('b'); n.delete('co'); return n; });
-  useEffect(() => { if (!ok) return; const k = (e: KeyboardEvent) => { if (keyOf(e) !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
+  useEffect(() => { if (!ok || full) return; const k = (e: KeyboardEvent) => { if (keyOf(e) !== 'n' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || isTyping(e) || modalOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); go(); };
     window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true); }); // eslint-disable-line react-hooks/exhaustive-deps
   if (!t || !ok) return null;
-  return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />Đã duyệt · bước tiếp theo</span>
-    <button className="btn primary pp-go" onClick={go} data-kbd="N"><Icon name="plus" size={16} />{t.label}</button></div>;
+  return <div className="pp-act pp-next"><span className="pp-next-t"><Icon name="check" size={15} />{full ? 'Đã lên đơn đủ tấm của lần bóc tách này' : 'Đã duyệt · bước tiếp theo'}</span>
+    <button className={'btn primary pp-go' + (full ? ' is-blocked' : '')} disabled={full} title={full ? 'Tất cả tấm đã có XNĐH – không tạo thêm từ lần bóc tách này' : undefined} onClick={go} data-kbd="N"><Icon name="plus" size={16} />{t.label}</button></div>;
 }
 
 /** ⓘ Cách tính của cột tự tính – rê chuột / chạm; hiện nổi để không bị bảng che */
