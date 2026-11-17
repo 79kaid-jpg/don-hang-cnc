@@ -1,10 +1,11 @@
 name: Deploy GitHub Pages
-# Mỗi lần push vào main (thư mục web/ hoặc file này) sẽ build và deploy lên GitHub Pages
+# Push vào main → test DB → build → lên BẢN THỬ (/thu) ngay → chờ duyệt (môi trường 'production') → lên BẢN THẬT.
+# Bản thật đã duyệt được lưu ở nhánh site-prod để các lần lên bản thử giữ nguyên bản thật.
 on:
   push: { branches: [main], paths: ['web/**', 'supabase/schema/**', 'tests/**', '.github/workflows/deploy.yml'] }
   workflow_dispatch:
-permissions: { contents: read, pages: write, id-token: write }
-concurrency: { group: pages, cancel-in-progress: true }
+permissions: { contents: write, pages: write, id-token: write }
+concurrency: { group: pages, cancel-in-progress: false }
 jobs:
   # Kiểm thử QT0→QT3 (PN→IPC→HW) trên DB Supabase tạm: sai → không deploy
   dbtest:
@@ -46,12 +47,56 @@ jobs:
           echo "Giữ lại $(ls .prev-assets | wc -l) file"
       - uses: actions/cache/save@v4
         with: { path: web/.prev-assets, key: 'pages-assets-${{ github.run_id }}' }
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: web/dist }
-  deploy:
+      - run: mv dist/thu dist-thu
+      - uses: actions/upload-artifact@v4
+        with: { name: prod, path: web/dist, retention-days: 7 }
+      - uses: actions/upload-artifact@v4
+        with: { name: thu, path: web/dist-thu, retention-days: 7 }
+  # 1) Bản thử: bản thật đang chạy (nhánh site-prod) + bản thử mới
+  stage:
     needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}thu/' }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: site-prod, path: site }
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with: { name: thu, path: thu }
+      - uses: actions/download-artifact@v4
+        with: { name: prod, path: prod }
+      - run: |
+          if [ ! -f site/index.html ]; then echo "Chưa có site-prod → dùng bản mới làm bản thật lần đầu"; rm -rf site; cp -r prod site; fi
+          rm -rf site/.git site/thu && cp -r thu site/thu
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site, name: stage-site }
+      - id: d
+        uses: actions/deploy-pages@v4
+        with: { artifact_name: stage-site }
+  # 2) Chờ duyệt: môi trường 'production' (Settings → Environments → production → Required reviewers)
+  approve:
+    needs: stage
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Đã duyệt lên bản thật"
+  # 3) Bản thật: bản mới + bản thử mới; lưu vào nhánh site-prod
+  deploy:
+    needs: approve
     runs-on: ubuntu-latest
     environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
     steps:
+      - uses: actions/download-artifact@v4
+        with: { name: prod, path: site }
+      - uses: actions/download-artifact@v4
+        with: { name: thu, path: site/thu }
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site, name: prod-site }
       - id: d
         uses: actions/deploy-pages@v4
+        with: { artifact_name: prod-site }
+      - name: Lưu bản thật đã duyệt (nhánh site-prod)
+        run: |
+          cd site && rm -rf thu && git init -q -b site-prod && git add -A
+          git -c user.name=deploy -c user.email=actions@github.com commit -qm "Bản thật ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" site-prod
