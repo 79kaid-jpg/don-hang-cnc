@@ -1,0 +1,3 @@
+-- 17/11 IPC/HW: khoá QT2 khi XNĐH chưa duyệt, QT3 khi XNĐH/Lệnh GC chưa duyệt (seq_block, seq_blocked, doc_advance),
+-- QT3 IPC/HW ảnh tuỳ chọn, thông báo "mở khoá" (docs_seq_unlock → Zalo cá nhân op=doc + nhóm _zgroup 'approved').
+-- (đã áp dụng qua MCP)
