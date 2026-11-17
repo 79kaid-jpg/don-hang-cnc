@@ -1,12 +1,29 @@
 name: Deploy GitHub Pages
 # Mỗi lần push vào main (thư mục web/ hoặc file này) sẽ build và deploy lên GitHub Pages
 on:
-  push: { branches: [main], paths: ['web/**', '.github/workflows/deploy.yml'] }
+  push: { branches: [main], paths: ['web/**', 'supabase/schema/**', 'tests/**', '.github/workflows/deploy.yml'] }
   workflow_dispatch:
 permissions: { contents: read, pages: write, id-token: write }
 concurrency: { group: pages, cancel-in-progress: true }
 jobs:
+  # Kiểm thử QT0→QT3 (PN→IPC→HW) trên DB Supabase tạm: sai → không deploy
+  dbtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env: { DB: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - run: |
+          mkdir -p /tmp/sb && cd /tmp/sb && supabase init --force >/dev/null
+          supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+      - run: psql "$DB" -v ON_ERROR_STOP=1 -q -f supabase/schema/baseline.sql
+      - run: psql "$DB" -v ON_ERROR_STOP=1 -q -f tests/db/seed.sql
+      - name: Chạy kịch bản TC02–TC10
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f tests/db/run.sql
   build:
+    needs: dbtest
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }
     steps:

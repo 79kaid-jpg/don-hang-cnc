@@ -1,0 +1,24 @@
+name: Kiểm thử DB (QT0→QT3)
+# Dựng Supabase tạm, áp cấu trúc + cấu hình + dữ liệu test, chạy TC02–TC10. (Chạy thử riêng trước khi gắn vào Deploy.)
+on:
+  push: { branches: ['ci-*'], paths: ['supabase/schema/**', 'tests/**', '.github/workflows/db-test.yml'] }
+  workflow_dispatch:
+jobs:
+  dbtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env: { DB: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Dựng Supabase tạm
+        run: |
+          mkdir -p /tmp/sb && cd /tmp/sb && supabase init --force >/dev/null
+          supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+      - name: Áp cấu trúc DB
+        run: psql "$DB" -v ON_ERROR_STOP=1 -q -f supabase/schema/baseline.sql
+      - name: Nạp cấu hình + dữ liệu test
+        run: psql "$DB" -v ON_ERROR_STOP=1 -q -f tests/db/seed.sql
+      - name: Chạy kịch bản TC02–TC10
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f tests/db/run.sql
