@@ -1159,7 +1159,7 @@ const nSo = (x: string) => x.toUpperCase().replace(/[^A-Z0-9]/g, '');
 function bbCheck(bb: Record<string, Bbg>, paths: string[], soPhieu: string): string[] {
   const xs = paths.map((p, i) => ({ i: i + 1, ...(bb[p] ?? { so: '', trang: '', ky: false, none: true }) })) as (Bbg & { i: number; none?: boolean })[];
   if (!xs.length) return []; const w: string[] = [];
-  const none = xs.filter((x) => x.none); if (none.length === xs.length) return ['Chưa đọc được ảnh BBGH bằng AI (chụp lại để đọc)'];
+  const none = xs.filter((x) => x.none); if (none.length === xs.length) return ['Chưa đọc được ảnh BBGH (chụp lại để đọc)'];
   for (const x of xs) if (!x.none && !x.so) w.push(`Ảnh ${x.i}: không đọc được số BBGH`);
   const dau = xs.find((x) => x.trang === 'dau' && x.so), cuoi = xs.find((x) => x.ky && x.so) ?? xs.find((x) => x.trang === 'cuoi' && x.so);
   if (!xs.some((x) => x.ky)) w.push('Chưa thấy trang có chữ ký');
@@ -1183,7 +1183,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
       ...(src?.files ?? []).flatMap((f) => (f.kind === 'gh_cccd' ? [f.path, f.path + '.blur.jpg'] : [f.path]))].filter((p) => !urls[p]);
     if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
     return () => { live = false; }; }, [files, src]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [srev, setSrev] = useState('');
+  const [srev, setSrev] = useState(''); const [gOpen, setGOpen] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [rev, setRev] = useState('');
   useEffect(() => { setRev(''); }, [h.tx_cccd]);
   // Ảnh → JPEG nhỏ (gửi AI) hoặc bản làm mờ (người không có quyền xem CCCD)
@@ -1223,10 +1223,13 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
       {!pn && can && <button type="button" className="gh-x" aria-label={'Gỡ ' + f.name} onClick={() => remove(f.path, f.name)}><Icon name="x" size={12} /></button>}</span>; };
   const eye = (on: boolean, doc: string, set: (v: string) => void, cur: string) => <button type="button" className="gh-eye" aria-label={cur ? 'Ẩn số CCCD' : 'Xem đầy đủ số CCCD'} title={cur ? 'Ẩn' : 'Xem đầy đủ (có ghi nhật ký)'}
     onClick={async () => { if (cur) { set(''); return; } const { data, error } = await sb.rpc('reveal_cccd', { p_doc: doc }); if (error) setAiMsg('⚠ ' + (error.message.includes('quyền') ? 'Bạn không có quyền xem số CCCD' : error.message)); else set(String(data ?? '')); }}><Icon name={on ? 'eyeoff' : 'eye'} size={18} /></button>;
-  return <section className="gh card" aria-label="Ảnh giao hàng">
-    <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (done === 5 && txOk ? 'ok' : '')}>{done}/5 mục</span>
-      <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}{sF.length ? ' · kèm ảnh PN' : ''}</span></div>
-    <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const pnF = sF.filter((f) => f.kind === k);
+  const full5 = done === 5 && !!txOk; const shut = gOpen === null ? full5 && !can : !gOpen;
+  return <section className={'gh card' + (shut ? ' gh-shut' : '')} aria-label="Ảnh giao hàng">
+    <div className="gh-hd"><b>Ảnh giao hàng</b><span className={'chip sm ' + (full5 ? 'ok' : '')}>{done}/5 mục</span>
+      <span className="small muted">Thủ kho · {d.company === 'PN' ? 'PNC' : d.company}</span>
+      <button type="button" className="gh-fold" aria-expanded={!shut} aria-label={shut ? 'Mở ảnh giao hàng' : 'Thu gọn ảnh giao hàng'} onClick={() => setGOpen(shut)}><Icon name="caret" size={16} /></button></div>
+    {shut && <div className="gh-strip">{[...sF, ...files].filter((f) => f.kind.startsWith('gh_')).slice(0, 8).map((f) => { const u = f.kind === 'gh_cccd' && !seeCccd ? urls[f.path + '.blur.jpg'] : urls[f.path]; return <span key={f.path} className="gh-th sm">{u ? <img src={u} alt="" loading="lazy" /> : <span className="gh-ph" />}</span>; })}</div>}
+    {!shut && <ol className="gh-list">{GH_ITEMS.map(([k, lab], i) => { const mine = files.filter((f) => f.kind === k); const pnF = sF.filter((f) => f.kind === k);
       const ok = (mine.length > 0 || pnF.length > 0) && (k !== 'gh_cccd' || txOk);
       return <li key={k} className={'gh-it' + (ok ? ' ok' : '') + (can && !ok ? ' need' : '')} data-fk={k}>
         <span className="gh-n" aria-hidden="true">{ok ? <Icon name="check" size={14} /> : i + 1}</span>
@@ -1251,7 +1254,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
           </div>
           {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
           {!busy && aiMsg && (k === 'gh_cccd' ? aiMsg.includes('CCCD') || aiMsg.includes('Tài xế') : k === 'gh_bbgh' && !aiMsg.includes('CCCD')) && <small className="gh-busy">{aiMsg}</small>}
-        </div></li>; })}</ol>
+        </div></li>; })}</ol>}
   </section>;
 }
 
@@ -1270,7 +1273,7 @@ function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void
   };
   return <div className={'pp-clone2' + (d.status === 'fail' ? ' fail' : '')}><span className="pp-clone2-ic" aria-hidden="true"><Icon name="copy" size={18} /></span>
     <span className="pp-clone2-t"><b>{d.status === 'fail' ? 'Phiếu thất bại' : 'Phiếu đã thành công'}</b><small>Làm lại với thông tin tương tự – hồ sơ mới bắt đầu từ bước đầu</small></span>
-    <button type="button" className="cl-hero" disabled={busy} onClick={go}><Icon name="copy" size={16} />{busy ? 'Đang tạo…' : 'Clone thành hồ sơ mới'}</button></div>;
+    <button type="button" className="cl-hero" disabled={busy} onClick={go}><Icon name="copy" size={16} />{busy ? 'Đang tạo…' : 'Clone'}</button></div>;
 }
 
 /** Chọn tấm từ QT0 đã duyệt để đưa vào QT1 */

@@ -4022,3 +4022,7 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .pp-stepbar .doc-steps li{text-decoration:none!important}
 @media (min-width:640px){.pp-act{justify-content:flex-end}.pp-act .pp-go,.pp-act .btn.primary{flex:0 0 auto!important;min-height:44px;padding:0 20px}}
 body>.pp-tbl.pp-full{z-index:1000;padding:calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom))}
+.gh-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gh-fold{margin-left:auto;width:36px;height:36px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:transform .15s}
+.gh-fold[aria-expanded="true"] svg{transform:rotate(180deg)}
+.gh-strip{display:flex;gap:6px;overflow-x:auto;margin-top:8px}.gh-th.sm{width:48px;height:48px;border-radius:8px;flex:none}
