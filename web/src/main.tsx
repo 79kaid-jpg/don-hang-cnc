@@ -23,7 +23,9 @@ try {
   else if (fresh && location.hash && location.hash !== '#/' && location.hash !== '#') history.replaceState(null, '', location.pathname + '#/');
 } catch { /* bỏ qua */ }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>);
+const STG = import.meta.env.VITE_STAGING === '1';
+if (STG) { document.documentElement.classList.add('is-staging'); document.title = '[THỬ] ' + document.title; }
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{STG && <div className="stg-bar" role="note">BẢN THỬ – dữ liệu không thật · đăng nhập u5@test.local / Thu@2026</div>}<HashRouter><App /></HashRouter></React.StrictMode>);
 
 // Điện thoại: đang gõ (bàn phím mở) thì ẩn thanh nút nổi để không che ô nhập
 if (matchMedia('(pointer:coarse)').matches) {

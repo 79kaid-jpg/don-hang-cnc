@@ -4098,3 +4098,5 @@ tr.pp-off>td{background:#FDECEC!important}tr.pp-off>td:first-child{box-shadow:in
 .pd-xv{display:inline-block;margin-top:6px;font-size:12px;color:#8A5A00;background:#FFF4DC;border-radius:6px;padding:3px 8px}
 tr.pp-dup>td{background:#FFF8E6!important}tr.pp-dup>td:first-child{box-shadow:inset 3px 0 0 #D99A00}
 .pp-dupchip .pp-need-l{background:#FFF4DC;color:#7A5200}
+/* Bản thử */
+.stg-bar{position:sticky;top:0;z-index:9999;background:#FFD54A;color:#3D2E00;font:600 12.5px/28px system-ui,sans-serif;text-align:center;height:28px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px}
