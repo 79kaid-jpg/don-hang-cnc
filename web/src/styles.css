@@ -4026,3 +4026,8 @@ body>.pp-tbl.pp-full{z-index:1000;padding:calc(12px + env(safe-area-inset-top)) 
 .gh-fold{margin-left:auto;width:36px;height:36px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:transform .15s}
 .gh-fold[aria-expanded="true"] svg{transform:rotate(180deg)}
 .gh-strip{display:flex;gap:6px;overflow-x:auto;margin-top:8px}.gh-th.sm{width:48px;height:48px;border-radius:8px;flex:none}
+/* Xem trước mẫu in: nội dung mẫu (ảnh/khối định vị) không được đè lên thanh nút */
+.pt-box header{position:relative;z-index:5;background:#fff;flex:none;flex-wrap:wrap}
+.pt-paper{position:relative;z-index:0;isolation:isolate;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
+.pt-box header .btn{position:relative;z-index:1;touch-action:manipulation}
+@media (max-width:639px){.pt-ov{padding:0;align-items:stretch}.pt-box{border-radius:0;max-height:none;height:100%;padding-top:env(safe-area-inset-top)}.pt-box header b{flex-basis:100%;font-size:14px}}
