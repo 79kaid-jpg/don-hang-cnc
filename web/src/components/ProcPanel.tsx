@@ -20,7 +20,7 @@ import { useSearchParams } from 'react-router-dom';
 import { safeName } from '../lib/files';
 import { normNum, parseTsv } from '../lib/paste';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
+import { logError, sb, errText, type Customer, type Order, type Profile } from '../lib/supabase';
 import { dt, num as fnum } from '../lib/format';
 import { useProjects } from '../lib/projects';
 import { readPmsx, readPmsxHead, readBbgh } from '../lib/pmsx';
@@ -1203,7 +1203,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
     if (ps.length) sb.storage.from('files').createSignedUrls(ps, 3600).then(({ data }) => { if (live && data) setUrls((u) => ({ ...u, ...Object.fromEntries(data.filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl])) })); });
     return () => { live = false; }; }, [files, src]); // eslint-disable-line react-hooks/exhaustive-deps
   const [srev, setSrev] = useState(''); const [gOpen, setGOpen] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [rev, setRev] = useState('');
+  const [busy, setBusy] = useState(''); const [aiMsg, setAiMsg] = useState(''); const [aiK, setAiK] = useState(''); const [rev, setRev] = useState('');
   useEffect(() => { setRev(''); }, [h.tx_cccd]);
   // Ảnh → JPEG nhỏ (gửi AI) hoặc bản làm mờ (người không có quyền xem CCCD)
   const toJpeg = (file: File, max: number, blur = 0) => new Promise<Blob>((ok, bad) => { const img = new Image(); const u = URL.createObjectURL(file);
@@ -1214,7 +1214,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
   const ai = async (op: 'cccd' | 'bbgh', file: File) => { const { data, error } = await sb.functions.invoke('gh-ai', { body: { op, doc_id: d.id, image: await b64(await toJpeg(file, 1600)) } });
     const er = (data as { error?: string } | null)?.error ?? (error ? (await (error as { context?: Response }).context?.json?.().catch(() => null))?.error ?? error.message : ''); if (er) throw new Error(er); return data as Record<string, unknown>; };
   const pick = async (e: React.ChangeEvent<HTMLInputElement>, k: string) => { const fl = Array.from(e.target.files ?? []); const added = (await upload(e, k)) || [];
-    if (k !== 'gh_cccd' && k !== 'gh_bbgh') return; setAiMsg('');
+    if (k !== 'gh_cccd' && k !== 'gh_bbgh') return; setAiMsg(''); setAiK(k);
     let map: Record<string, Bbg> = bbOf(h); const notes: string[] = [];
     for (let i = 0; i < added.length && i < fl.length; i++) { const f = fl[i], p = added[i].path;
       try {
@@ -1223,7 +1223,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
           if (r.ho_ten && !String(h.tai_xe ?? '').trim()) { onField('tai_xe', String(r.ho_ten)); notes.push('Tài xế: ' + r.ho_ten); }
           if (r.so_cccd) { onField('tx_cccd', String(r.so_cccd)); notes.push('Số CCCD đã điền (sẽ mã hoá khi Lưu)'); } else notes.push('⚠ Không đọc được số CCCD, nhập tay'); }
         else { setBusy('Gemini đang đọc BBGH…'); const r = await ai('bbgh', f); map = { ...map, [p]: { so: r.so_bbgh ? String(r.so_bbgh) : '', trang: String(r.trang ?? ''), ky: !!r.co_chu_ky } }; }
-      } catch (x) { notes.push('⚠ ' + (x as Error).message); } }
+      } catch (x) { notes.push('⚠ ' + (x as Error).message); logError('ai_' + k, x); } }
     if (k === 'gh_bbgh') onField('_bbgh_ai', JSON.stringify(map));
     setBusy(''); setAiMsg(notes.join(' · ') + (notes.length || k === 'gh_bbgh' ? ' – nhớ bấm Lưu' : '')); };
   const sh = src?.header ?? {}; const sF = src?.files ?? [];
@@ -1272,7 +1272,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
               <input type="file" accept="image/*" {...(touch ? { capture: 'environment' as const } : {})} multiple={!touch} hidden disabled={!!busy} onChange={(e) => pick(e, k)} /></label>}
           </div>
           {busy && (k === 'gh_cccd' || k === 'gh_bbgh') && <small className="gh-busy" role="status"><span className="spin" aria-hidden="true" />{busy}</small>}
-          {!busy && aiMsg && (k === 'gh_cccd' ? aiMsg.includes('CCCD') || aiMsg.includes('Tài xế') : k === 'gh_bbgh' && !aiMsg.includes('CCCD')) && <small className="gh-busy">{aiMsg}</small>}
+          {!busy && aiMsg && aiK === k && <small className="gh-busy">{aiMsg}</small>}
         </div></li>; })}</ol>}
   </section>;
 }
