@@ -1,0 +1,1 @@
+-- Xem migration áp qua MCP: _co_chain_guard (IPC/HW QT1–QT3 phải tạo từ đơn công ty trước; QT1 không vượt số tấm đơn nguồn)

@@ -89,7 +89,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false, info: info
   const cur = [...bDocs].sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
   const D = bDocs.find((d) => d.company === co) ?? (cur?.can_view === false ? bDocs.filter((x) => x.can_view !== false).at(-1) ?? cur : cur);
   const { isPerson } = useWho(); const { me: meNB, can: canNB } = useAuth(); const { co: coNB } = useMyCo();
-  const canNew = canNB('admin_it') || isPerson(proc, proc === 'QT0' ? 'PN' : coNB || 'PN', proc === 'QT0' ? 'admin' : 'lap', meNB?.id);
+  const canNew = (proc === 'QT0' || !coNB || coNB === 'PN') && (canNB('admin_it') || isPerson(proc, proc === 'QT0' ? 'PN' : coNB || 'PN', proc === 'QT0' ? 'admin' : 'lap', meNB?.id)); // IPC/HW chỉ có đơn từ đơn công ty trước
   if (!batches) return <div className="card pp-skel" aria-busy="true" aria-label={'Đang tải ' + proc}><span /><span /><span /><span /></div>;
   return (
     <div className="pp">
@@ -1276,7 +1276,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
 function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void }) {
   const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [, setSp] = useSearchParams();
   useEffect(() => { let live = true; setOk(false); sb.rpc('can_start', { p_proc: b.proc, p_co: d.company }).then(({ data }) => { if (live) setOk(!!data); }); return () => { live = false; }; }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!ok) return null;
+  if (!ok || (b.proc !== 'QT0' && d.company !== 'PN')) return null; // IPC/HW không clone – đơn phải có tham chiếu
   const go = async () => {
     if (!(await confirmDialog('Tạo đơn mới chép toàn bộ thông tin của phiếu này (' + COMPANY[d.company as Company] + ' · ' + b.title + ')? Đơn mới bắt đầu lại từ bước đầu để chỉnh sửa.', 'Clone thành đơn mới'))) return;
     setBusy(true); const { data, error } = await sb.rpc('doc_clone', { p_doc: d.id }); setBusy(false);
