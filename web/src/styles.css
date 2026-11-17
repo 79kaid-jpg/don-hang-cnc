@@ -4092,3 +4092,5 @@ a.pp-need-l{text-decoration:none}
 @media (max-width:639px){.pp-need-l{height:40px;min-height:40px}}
 .pp-seqlock{display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border-radius:10px;background:#FFF8E6;color:#7A5200;font-size:13.5px;line-height:1.4}
 .pp-seqlock svg{flex:none}
+tr.pp-off>td{background:#FDECEC!important}tr.pp-off>td:first-child{box-shadow:inset 3px 0 0 #C2412F}
+.pp-warnonly{margin-right:0}.pp-warnonly .pp-need-l{background:#FDECEC;color:#9B2C1F}
