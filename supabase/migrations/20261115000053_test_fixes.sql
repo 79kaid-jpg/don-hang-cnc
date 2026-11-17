@@ -1,0 +1,4 @@
+-- 17/11 sửa sau test tự động (đã áp dụng qua MCP):
+-- _m2_tam: m²/tấm theo kích thước hoàn thiện (rong×dai); seq_block: chỉ chờ phiếu được DUYỆT (không chờ khách ký tay);
+-- q1_codes: thêm 'used' (đã giao ở đợt khác); docs_turn_msg: nhãn "Tải ảnh giao hàng";
+-- prod_stats: mỗi công ty chỉ lấy XNĐH/đợt giao của chính mình, giá trị = m² hoàn thiện × đơn giá XNĐH công ty đó.

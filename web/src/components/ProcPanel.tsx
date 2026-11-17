@@ -482,7 +482,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const raw = bocTachRows(shs); const hh = proc === 'QT0' ? haoHutOf(shs) : null;
     const add = raw.map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => (keys.has(k) || k.startsWith('phoi_') || k === 'day' || k === 'mac_thep' || k === '_vat') && v !== '')) as Row).map((r) => (proc === 'QT0' && !String(r.don_vi_tinh ?? '').trim() ? { ...r, don_vi_tinh: 'tấm' } : r));
     const nlT = tblDefs.find((x) => x.key === 'nl'); const nl = proc === 'QT0' && nlT?.ed ? nlFromPhoi(add as never) : [];
-    if (!add.length) return;
+    if (!add.length) { setErr('Không đọc được dòng tấm nào từ file “' + file.name + '”: cần cột Mã tấm, Độ dày và Số lượng (> 0).'); return; }
     const cur = (t.ds ?? []).filter((r) => Object.values(r).some((v) => String(v ?? '').trim()));
     let next = add;
     if (cur.length) {
@@ -509,9 +509,13 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   const [seq, setSeq] = useState<{ need: string; msg: string } | null>(null);
   useEffect(() => { let live = true; setSeq(null); if (d.company !== 'PN' && (proc === 'QT2' || proc === 'QT3') && !['da_duyet', 'fail'].includes(d.status)) sb.rpc('seq_block', { p_doc: d.id }).then(({ data }) => { if (live) setSeq((data as { need: string; msg: string } | null) ?? null); }); return () => { live = false; }; }, [d.id, d.status]);
   const seqB = can && !closed ? seq : null;
-  const [q1c, setQ1c] = useState<{ code: string | null; codes: Record<string, number> } | null>(null);
+  const [q1c, setQ1c] = useState<{ code: string | null; codes: Record<string, number>; used?: Record<string, number> } | null>(null);
   useEffect(() => { let live = true; setQ1c(null); if (proc === 'QT2' || proc === 'QT3') sb.rpc('q1_codes', { p_doc: d.id }).then(({ data }) => { if (live && data && Object.keys((data as { codes: object }).codes ?? {}).length) setQ1c(data as never); }); return () => { live = false; }; }, [d.id]);
   const offN = q1c ? Object.values(t).flat().filter((r) => { const m = String((r as Row).ma_tam ?? '').trim().toUpperCase(); return m && !(m in q1c.codes); }).length : 0;
+  const overOf = (r: Row) => { if (!q1c || proc !== 'QT3') return 0; const m = String(r.ma_tam ?? '').trim().toUpperCase(); if (!m || !(m in q1c.codes)) return 0;
+    const mine = (t.tp ?? []).filter((x) => String(x.ma_tam ?? '').trim().toUpperCase() === m).reduce((a, x) => a + (Number(String(x.so_tam ?? '').replace(',', '.')) || 0), 0);
+    return Math.max(0, mine + (q1c.used?.[m] ?? 0) - q1c.codes[m]); };
+  const overN = q1c && proc === 'QT3' ? new Set((t.tp ?? []).filter((r) => overOf(r) > 0).map((r) => String(r.ma_tam).trim().toUpperCase())).size : 0;
   const blocked = miss.length > 0 || ckMiss.length > 0 || !!seqB;
   const blockTip = [...(seqB ? [seqB.msg] : []), ...(ckMiss.length ? ['Checklist: ' + ckMiss.join(', ')] : []), ...(miss.length ? ['Còn trống: ' + miss.map((x) => x.label).join(', ')] : [])].join('\n');
   const role = ROLE_OF[d.status];
@@ -613,7 +617,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
 
       {seq && <div className="pp-seqlock" role="note"><Icon name="shield" size={14} />Bảng hàng chỉ xem cho tới khi {seq.need === 'QT1' ? 'XNĐH' : 'Lệnh GC'} của {d.company === 'HW' ? 'Hanwa' : d.company} được duyệt. Thông tin chung và ảnh vẫn soạn trước được.</div>}
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
-        <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} offCodes={q1c?.codes} offRef={q1c?.code ?? undefined} editable={ed && !seq} prev={rs ? rs.tables?.[key] ?? [] : undefined}
+        <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} offCodes={q1c?.codes} offRef={q1c?.code ?? undefined} overOf={key === 'tp' && proc === 'QT3' ? overOf : undefined} editable={ed && !seq} prev={rs ? rs.tables?.[key] ?? [] : undefined}
           onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
@@ -651,6 +655,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                   if (!(await persist(nf, 'Đã gắn ' + rtImgs.length + ' ảnh ghi chú'))) return; note += ' (kèm ' + rtImgs.length + ' ảnh)'; }
                 await act(ask, note, ask === 'back' && backTo ? backTo : undefined); setRtImgs([]); setBackTo(''); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             {offN > 0 && !closed && <div className="pp-need pp-warnonly" role="status"><button type="button" className="pp-need-l" onClick={() => document.querySelector('tr.pp-off')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}><Icon name="alert" size={13} />{offN} dòng mã tấm không có trong XNĐH ›</button></div>}
+            {overN > 0 && !closed && <div className="pp-need pp-warnonly" role="status"><button type="button" className="pp-need-l" onClick={() => document.querySelector('tr.pp-off')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}><Icon name="alert" size={13} />{overN} mã giao vượt số đặt ›</button></div>}
             {can && !closed && blocked ? <div className="pp-need" role="status" id={'need-' + d.id}><Icon name="alert" size={15} />
               {seqB && <a className="pp-need-l" href={(() => { const [pa, qs] = location.hash.split('?'); const u = new URLSearchParams(qs ?? ''); u.set('tab', seqB.need); return pa + '?' + u.toString(); })()}><Icon name="shield" size={13} />{seqB.msg} ›</a>}
               {ckMiss.length > 0 && <button type="button" className="pp-need-l" onClick={() => setActOpen(true)}>Còn {ckMiss.length} mục checklist ›</button>}
@@ -802,7 +807,7 @@ function MList({ cols, rows, shown, editable, open, setOpen, set, onChange, tota
 /** Bảng nhập liệu: sửa trực tiếp, dán từ Excel, tải file Excel, tải mẫu */
 /** Cột được "áp dụng cho toàn bộ dòng" */
 const FILL_COLS = ['don_gia'];
-function TableEdit({ offCodes, offRef, vk, title, req, cols: colsAll, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { vk?: string; q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string; offCodes?: Record<string, number>; offRef?: string }) {
+function TableEdit({ offCodes, offRef, overOf, vk, title, req, cols: colsAll, rows, editable, onChange, fname, fromQt0, srcLabel = 'Lấy từ QT0', prev, q0src }: { vk?: string; q0src?: { id: string; docId: string; orderId: string }; prev?: Row[]; title: string; req?: boolean; cols: Col[]; rows: Row[]; editable: boolean; onChange: (r: Row[]) => void; fname: string; fromQt0?: () => Promise<Row[]>; srcLabel?: string; offCodes?: Record<string, number>; offRef?: string; overOf?: (r: Row) => number }) {
   const isOff = (r: Row) => { if (!offCodes) return false; const m = String(r.ma_tam ?? '').trim().toUpperCase(); return !!m && !(m in offCodes); };
   // Bộ chọn cột (nhớ theo người dùng, theo bảng) · mật độ · mở rộng toàn màn hình
   const pk = 'pp-cols:' + (fname.split('-').slice(-2).join('-'));
@@ -971,7 +976,7 @@ function TableEdit({ offCodes, offRef, vk, title, req, cols: colsAll, rows, edit
           // m²/tấm: QT0 chỉ có kích thước trải / tổng m² → tự tính khi chưa có
           const n = (v: unknown) => { const x = Number(String(v ?? '').replace(',', '.')); return String(v ?? '').trim() && isFinite(x) ? x : null; };
           const m2t = (r: Row) => { if (String(r.m2_tam ?? '').trim()) return r.m2_tam; const tr = n(r.trai_rong), td = n(r.trai_dai), m = n(r.m2), st = n(r.so_tam), w = n(r.rong), l = n(r.dai);
-            const v = tr != null && td != null ? tr * td / 1e6 : m != null && st ? m / st : w != null && l != null ? w * l / 1e6 : null; return v == null ? '' : String(Math.round(v * 10000) / 10000); };
+            const mh = n(r.m2_ht); void tr; void td; const v = w != null && l != null ? w * l / 1e6 : mh != null && st ? mh / st : m != null && st ? m / st : null; return v == null ? '' : String(Math.round(v * 10000) / 10000); };
           for (const s0 of sel) { const s1 = Object.fromEntries(Object.entries(s0).filter(([k]) => !KEEP.has(k))) as Row; s1.m2_tam = m2t(s0); const j = key(s0) ? idx.get(key(s0)) : undefined;
             if (j != null) { next[j] = { ...next[j], ...s1 }; up++; } else { next.push(s1); add++; } }
           if (cur.length && !(await confirmDialog(`Cập nhật ${up} tấm đã có (giữ đơn giá, ghi chú) và thêm ${add} tấm mới?`, 'Lấy từ QT0'))) return;
@@ -1021,7 +1026,7 @@ function TableEdit({ offCodes, offRef, vk, title, req, cols: colsAll, rows, edit
           ? <button className="th-fill" onClick={() => setHdr(hdr?.k === c.k ? null : { k: c.k, v: String(rows.find((r) => String(r[c.k] ?? '').trim())?.[c.k] ?? '') })} title={'Đặt cùng giá trị cho cả cột ' + c.t} aria-label={'Đặt chung cột ' + c.t}>
               {c.t}{c.req && <b className="req"> *</b>}<Icon name="list" size={12} /></button> : <>{c.t}{c.req && <b className="req"> *</b>}</>}{c.info && <ColTip info={c.info} />}{c.u && <small className="th-u">{c.u}</small>}{vk && <VarTag k={vk + '.' + c.k} sum={c.n ? 'tong_' + vk + '_' + c.k : undefined} />}</th>)}{editable && <th />}</tr></thead>
         <tbody>
-          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} title={isOff(r) ? 'Mã tấm không có trong XNĐH ' + (offRef ?? '') + ' – dòng này chưa tính được giá' : undefined} className={(bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : isOff(r) ? 'pp-off' : '') + (isNew(r) ? ' pp-new' : '') || undefined}><td className="muted">{i + 1}</td>
+          {shown.map((i) => [rows[i], i] as const).map(([r, i]) => <Fragment key={i}><tr data-row={i} title={isOff(r) ? 'Mã tấm không có trong XNĐH ' + (offRef ?? '') + ' – dòng này chưa tính được giá' : overOf && overOf(r) > 0 ? 'Giao vượt ' + overOf(r) + ' tấm so với XNĐH ' + (offRef ?? '') + ' (cộng dồn các đợt giao)' : undefined} className={(bad(r) ? 'pp-bad' : errSnap?.has(i) ? 'pp-fixed' : isOff(r) || (overOf && overOf(r) > 0) ? 'pp-off' : '') + (isNew(r) ? ' pp-new' : '') || undefined}><td className="muted">{i + 1}</td>
             {cols.map((c, ci) => <td key={c.k} className={(c.n ? 'n' : 't') + cgOf(c, cols, ci) + (c.k === 'so_tam' || c.k === 'phoi_sl' ? ' td-qty' : '') + (c.k === 'kg' && c.calc && matOf(r).how === 'mac_dinh' && String(r.vat_lieu ?? r.mac_thep ?? '').trim() ? ' pp-kgw' : '') + (!c.calc && !c.ro && ((c.req && !String(r[c.k] ?? '').trim()) || (c.n && !okNum(c, r[c.k]))) ? ' pp-cbad' : '') + (!isNew(r) && chg(r, c) ? ' pp-chg' : '')} title={c.k === 'ma_tam' ? String(r[c.k] ?? '') : c.k === 'kg' ? kgTip(r) : undefined}>{c.ty === 'sub' ? <button type="button" className={'pp-subbtn' + (subOpen === i + ':' + c.k ? ' on' : '')} aria-expanded={subOpen === i + ':' + c.k} onClick={() => setSubOpen(subOpen === i + ':' + c.k ? null : i + ':' + c.k)}><Icon name="caret" size={12} />{subRows(r, c.k).length} dòng</button> : c.ty === 'ref' ? <span className="calc pp-ref">{refOf(r, c, editable)}</span> : c.calc ? <span className="calc">{fmtN(c.calc(r), c.d ?? 0)}{c.k === 'kg' && <ColTip info={kgWhy(r)} />}</span>
               : editable && !c.ro && c.ty ? <TyCell r={r} c={c} on={(v) => set(i, c.k, v)} />
               : editable && !c.ro ? <NumInput money={isMoneyCol(c)} onPaste={(e) => pasteAt(e, i, c.k)} value={typeof r[c.k] === 'number' ? String(Math.round((r[c.k] as number) * 1e6) / 1e6) : String(r[c.k] ?? '')} inputMode={c.n ? 'decimal' : undefined} aria-invalid={c.n && !okNum(c, r[c.k]) ? true : undefined} title={c.n && !okNum(c, r[c.k]) ? c.t + ' phải là số' : undefined} onChange={(e) => set(i, c.k, c.n ? numTyping(e.target.value) : e.target.value)} onBlur={(e) => offer(c.k, e.target.value)}
