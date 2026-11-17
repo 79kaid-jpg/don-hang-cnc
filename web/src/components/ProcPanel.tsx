@@ -506,8 +506,11 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
   useEffect(() => { setCk(null); const f = (e: Event) => { const x = (e as CustomEvent<{ doc: string; miss: string[]; done: number; total: number }>).detail; if (x?.doc === d.id) setCk(x); }; addEventListener('pms-ck-state', f); return () => removeEventListener('pms-ck-state', f); }, [d.id]);
   const ckMiss = can && !closed && !['da_duyet', 'fail'].includes(d.status) ? ck?.miss ?? [] : [];
   const missTbl = miss.filter((x) => x.key.startsWith('tbl:') || x.key.includes(':')); const missF = miss.filter((x) => !missTbl.includes(x));
-  const blocked = miss.length > 0 || ckMiss.length > 0;
-  const blockTip = [...(ckMiss.length ? ['Checklist: ' + ckMiss.join(', ')] : []), ...(miss.length ? ['Còn trống: ' + miss.map((x) => x.label).join(', ')] : [])].join('\n');
+  const [seq, setSeq] = useState<{ need: string; msg: string } | null>(null);
+  useEffect(() => { let live = true; setSeq(null); if (d.company !== 'PN' && (proc === 'QT2' || proc === 'QT3') && !['da_duyet', 'fail'].includes(d.status)) sb.rpc('seq_block', { p_doc: d.id }).then(({ data }) => { if (live) setSeq((data as { need: string; msg: string } | null) ?? null); }); return () => { live = false; }; }, [d.id, d.status]);
+  const seqB = can && !closed ? seq : null;
+  const blocked = miss.length > 0 || ckMiss.length > 0 || !!seqB;
+  const blockTip = [...(seqB ? [seqB.msg] : []), ...(ckMiss.length ? ['Checklist: ' + ckMiss.join(', ')] : []), ...(miss.length ? ['Còn trống: ' + miss.map((x) => x.label).join(', ')] : [])].join('\n');
   const role = ROLE_OF[d.status];
   const [mgrDoc, setMgrDoc] = useState(false); const [hOpen, setHOpen] = useState(false); const [actOpen, setActOpen] = useState(false); const [lastMsg, setLastMsg] = useState('');
   const seenKey = 'pp-seen:' + d.id; const [seenAt, setSeenAt] = useState(() => { try { return localStorage.getItem(seenKey) ?? ''; } catch { return ''; } });
@@ -644,6 +647,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                   if (!(await persist(nf, 'Đã gắn ' + rtImgs.length + ' ảnh ghi chú'))) return; note += ' (kèm ' + rtImgs.length + ' ảnh)'; }
                 await act(ask, note, ask === 'back' && backTo ? backTo : undefined); setRtImgs([]); setBackTo(''); }}>{ask === 'fail' ? 'Xác nhận Thất bại' : 'Trả về'}</button></div></div>) : (<>
             {can && !closed && blocked ? <div className="pp-need" role="status" id={'need-' + d.id}><Icon name="alert" size={15} />
+              {seqB && <a className="pp-need-l" href={(() => { const [pa, qs] = location.hash.split('?'); const u = new URLSearchParams(qs ?? ''); u.set('tab', seqB.need); return pa + '?' + u.toString(); })()}><Icon name="shield" size={13} />{seqB.msg} ›</a>}
               {ckMiss.length > 0 && <button type="button" className="pp-need-l" onClick={() => setActOpen(true)}>Còn {ckMiss.length} mục checklist ›</button>}
               {missF.length > 0 && <button type="button" className="pp-need-l" onClick={() => jumpField(missF[0].key)}>Thiếu {missF.length} ô bắt buộc ›</button>}
               {missTbl.length > 0 && <button type="button" className="pp-need-l" onClick={() => jumpField(missTbl[0].key)}>{missTbl[0].label} ›</button>}</div>

@@ -4079,3 +4079,7 @@ html[data-theme=dark] .pm .pm-k:not(.hero) b,html[data-theme=dark] .pm .pm-k:not
 .pd-prog i b,.prr-bar i{background:#1F3A93!important}
 html[data-glass=facade]:not([data-theme=dark]) .pd-k.hero,.pd-k.hero{background:#1F3A93!important;border-color:#1F3A93!important}
 html[data-glass=facade]:not([data-theme=dark]) .pd-seg button[aria-pressed=true]{background:#1F3A93!important}
+/* Chờ QT trước của chính công ty */
+.kb-card.seq-wait{opacity:.62}.kb-card.seq-wait:hover,.kb-card.seq-wait:focus-within{opacity:1}
+.kb-where.kb-seq{color:#8A5A00;background:#FFF4DC;border-radius:6px;padding:2px 6px;display:inline-flex;gap:4px;align-items:center;font-weight:600}
+a.pp-need-l{text-decoration:none}

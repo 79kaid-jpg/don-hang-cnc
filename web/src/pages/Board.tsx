@@ -70,8 +70,9 @@ export default function Board() {
   useEffect(() => { if (qt === 'QT0' && !seeQ0) setQt('QT1'); }, [qt, seeQ0]);
   const [col, setCol] = useState(''); const holder = useHolders();
   const pick = (p: Proc) => { setQt(p); setCol(''); setSel(null); try { localStorage.setItem('kb-proc', p); } catch { /* */ } };
+  const [seqB, setSeqB] = useState<Record<string, string>>({});
   const load = async () => {
-    reloadCoIdx();
+    reloadCoIdx(); sb.rpc('seq_blocked').then(({ data }) => setSeqB((data as Record<string, string>) ?? {}));
     const [a, b, c, d, e] = await Promise.all([
       sb.from('batches').select('*').or(`status.in.(dang_lam,cho_ky),and(status.in.(hoan_tat,fail),done_at.gte.${new Date(Date.now() - 14 * 864e5).toISOString()})`).order('created_at'),
       sb.from('orders').select('*'), sb.from('customers').select('*'), sb.rpc('my_docs'), sb.from('docs_v').select('*')]);
@@ -261,7 +262,7 @@ export default function Board() {
                       <span className="kb-slot-txt"><Icon name={isBack ? 'back' : 'inbox'} size={16} />{isBack ? 'Thả để trả về' : 'Thả để ký, chuyển sang'} {c.title}</span></div>}
                     {!batches ? <Skeleton rows={1} h={110} /> : list.length === 0 && <p className="kb-empty">Không có hồ sơ</p>}
                     {list.map((it) => (
-                      <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
+                      <article key={it.b.id} data-card={it.b.id} className={'kb-card' + (it.mine ? ' mine' : '') + (seqB[it.b.id] ? ' seq-wait' : '') + (drag?.b.id === it.b.id ? ' dragging' : '') + (landed === it.b.id ? ' landed' : '') + (selCard?.b.id === it.b.id ? ' kb-sel' : '')}
                         onPointerDown={(e) => startDrag(e, it)}>
                         <Link to={'/don/' + it.b.order_id + '?tab=' + qt} className="kb-link" draggable={false}>
                           <span className="kb-top"><span className="kb-code">{(() => { const cc = coCode(it.b.order_id, it.b.id); if (!cc) return null; const xs = String(cc).split(/,\s*/); return xs.length > 1 ? <span title={xs.join(', ')}>{xs[0]}<span className="kb-more">+{xs.length - 1}</span></span> : cc; })() ?? <>{it.o?.code ?? '—'}<span className="kb-nocode-t" title="Mã XNĐH tạo ở QT1">chưa có XNĐH</span></>}</span>{(() => { const btd = qt === 'QT0' ? String((it.doc?.header as Record<string, unknown> | undefined)?.han_boc_tach ?? '') : ''; const dd = btd || it.o?.due_date; if (!dd) return null; const lbl = btd ? 'Bóc tách' : 'Giao';
@@ -286,6 +287,7 @@ export default function Board() {
                           const lb = { PN: 'PN CNC', IPC: 'IPC', HW: 'Hanwa' }[co];
                           return <span key={co} className={'kb-co c-' + co + ' ' + st} title={lb + ': ' + (st === 'ok' ? 'đã duyệt' : st === 'bad' ? 'thất bại' : st === 'cur' ? 'đang xử lý' : 'chưa tới')}>
                             <i className="kb-co-ic" aria-hidden="true">{st === 'ok' ? <Icon name="check" size={11} /> : st === 'bad' ? <Icon name="x" size={11} /> : null}</i>{co === 'HW' ? 'Hanwa' : co}</span>; })}</div>}
+                        {seqB[it.b.id] && <div className="kb-where kb-seq"><Icon name="shield" size={12} />Chờ {seqB[it.b.id] === 'QT1' ? 'XNĐH' : 'Lệnh GC'} duyệt</div>}
                         {COLS[it.i]?.key === 'hoan_tat' && qt === 'QT1' && it.doc && it.doc.company !== 'HW' && !((it.doc as { files?: { kind: string }[] }).files ?? []).some((f) => f.kind === 'ban_ky') && <div className="kb-where kb-nosign" data-co={it.doc.company}><Icon name="alert" size={12} />{(it.doc.company === 'PN' ? 'PN' : it.doc.company)} · chưa có bản ký lưu trữ</div>}
                         {COLS[it.i]?.key === 'xong_minh' && <div className="kb-where"><Icon name="arrow" size={12} />{it.key === 'ky' ? 'Chờ khách ký – ' + FINAL[qt].toLowerCase() : 'Đang ở ' + (COMPANY[it.key.split('.')[0] as keyof typeof COMPANY] ?? '') + ' · ' + (STATUS[it.key.split('.')[1]] ?? '')}</div>}
                         {COLS[it.i]?.key !== 'xong_minh' && it.doc && !['da_duyet', 'fail'].includes(it.doc.status) && (() => { const pr = progress(applyAuto(itemsOf(ckTpl, qt, it.doc.status, (it.doc as { checklist?: Record<string, CheckItem[]> }).checklist), it.doc as never, reqKeysOf(qt, it.doc.company, it.doc.status)).items);
