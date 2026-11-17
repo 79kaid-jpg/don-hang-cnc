@@ -386,7 +386,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
     const tt = { ...t } as Record<string, Row[]>; for (const x of tblDefs) if (x.ed && tt[x.key]?.length && x.cols.some((c) => c.k === 'kg')) tt[x.key] = tt[x.key].map(stampDens);
     for (const x of tblDefs) { const rc = x.cols.filter((c) => c.ty === 'ref'); if (!rc.length || !x.ed || !tt[x.key]?.length) continue;
       tt[x.key] = tt[x.key].map((r) => { const n = { ...r }; for (const c of rc) n[c.k] = c.refv ?? ''; return n; }); }
-    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: tt, p_files: files });
+    const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: hh, p_tables: seq ? null : tt, p_files: files });
     if (error) { setErr(errText(error)); return false; } setDirty(false); if (!quiet) toast('Đã lưu'); return true;
   };
   useUnsavedGuard(dirty);
@@ -409,7 +409,7 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
       setErr(ms.length ? m + ' – còn trống: ' + ms.map((x) => x.label).join(', ') : m); if (ms[0]) setTimeout(() => jumpField(ms[0].key), 300); }
   };
   const addNote = async () => { const { error } = await sb.rpc('doc_note', { p_doc: d.id, p_text: note }); if (error) setErr(errText(error)); else { setNote(''); onChanged(); } };
-  const persist = async (nf: typeof files, msg: string) => { setFiles(nf); const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: h, p_tables: t, p_files: nf }); if (error) { setErr(errText(error)); return false; } toast(msg); return true; };
+  const persist = async (nf: typeof files, msg: string) => { setFiles(nf); const { error } = await sb.rpc('doc_save', { p_doc: d.id, p_header: h, p_tables: seq ? null : t, p_files: nf }); if (error) { setErr(errText(error)); return false; } toast(msg); return true; };
   const removeFile = async (path: string, name: string) => {
     if (!(await confirmDialog(`Gỡ file “${name}”?`, 'Gỡ file'))) return;
     if (await persist(files.filter((x) => x.path !== path), 'Đã gỡ ' + name)) sb.storage.from('files').remove([path]);
@@ -608,8 +608,9 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
                 {one && <button type="button" className="btn xs icon-only pp-fdel" title={'Gỡ ' + one.name} aria-label={'Gỡ ' + one.name} onClick={() => removeFile(one.path, one.name)}><Icon name="trash" size={13} /></button>}</span>}</>; })()}</span></div>))}
       </div>
 
+      {seq && <div className="pp-seqlock" role="note"><Icon name="shield" size={14} />Bảng hàng chỉ xem cho tới khi {seq.need === 'QT1' ? 'XNĐH' : 'Lệnh GC'} của {d.company === 'HW' ? 'Hanwa' : d.company} được duyệt. Thông tin chung và ảnh vẫn soạn trước được.</div>}
       {tblDefs.filter((x) => !x.thide).map(({ key, title, cols, ed, treq }) => (
-        <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed} prev={rs ? rs.tables?.[key] ?? [] : undefined}
+        <TableEdit key={key} vk={key} title={title} req={treq} cols={cols} rows={t[key] ?? []} editable={ed && !seq} prev={rs ? rs.tables?.[key] ?? [] : undefined}
           onChange={(rows) => { const dv = proc === 'QT0' && (key === 'ds' || key === 'nl'); setT({ ...t, [key]: dv ? rows.map((r) => (String(r.don_vi_tinh ?? '').trim() || !Object.values(r).some((v) => String(v ?? '').trim()) ? r : { ...r, don_vi_tinh: 'tấm' })) : rows }); setDirty(true); }} fname={`${codeFile(docCode(o, b, d.company))}-${proc}-${key}`}
           srcLabel={d.company === 'PN' ? 'Lấy từ QT0' : 'Lấy lại từ phiếu ' + (d.company === 'HW' ? 'IPC' : 'PN')}
           fromQt0={proc === 'QT1' && key === 'ds' && d.company !== 'PN' && (b.checklist as Record<string, unknown> | null)?.auto_from ? async () => { const { data: sd } = await sb.from('docs_v').select('tables').eq('id', String((b.checklist as Record<string, unknown>).auto_from)).limit(1);
