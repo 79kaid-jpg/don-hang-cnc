@@ -819,7 +819,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
     onChange(next); setQ0(null); toast(`Đã lấy từ ${q0.code}: cộng thêm ${up} dòng, thêm mới ${add} dòng – bấm Lưu để giữ`); };
   const [pick, setPick] = useState<Row[] | null>(null);
   const inCols = colsAll.filter((c) => !c.calc && !c.ro);
-  const isAdm = useAuth().can('admin_it'); const fAdm2 = isAdm || useAuth().can('admin_cnc'); const sv = useShowVars();
+  const isAdm = useAuth().can('admin_it'); const cnc2 = useAuth().can('admin_cnc'); const fAdm2 = isAdm || cnc2; const sv = useShowVars();
   const [paste, setPaste] = useState(''); const [open, setOpen] = useState(false); const [msg, setMsg] = useState('');
   const [subOpen, setSubOpen] = useState<string | null>(null);
   // So với bản lúc bị trả về
