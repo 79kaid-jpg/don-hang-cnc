@@ -127,9 +127,8 @@ export default function OrderDetail() {
       <div className="qt-group od-group">
         <nav className="qt-tabs od-tabs" role="tablist" aria-label="Quy trình" ref={(el) => { const b = el?.querySelector<HTMLElement>('button.on'); if (b && el && (b.offsetLeft < el.scrollLeft || b.offsetLeft + b.offsetWidth > el.scrollLeft + el.clientWidth)) el.scrollLeft = b.offsetLeft - 16; }}>
           {TABV.map(([k, t]) => { const s = PROCS.includes(k as Proc) ? sum(k as Proc) : null; const isP = PROCS.includes(k as Proc);
-            return <button key={k} role="tab" aria-selected={tab === k} className={(isP ? 'q' + k.slice(2) : 'qx') + (tab === k ? ' on' : '')} onClick={() => setSp({ tab: k })} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
-              <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}</span>}</button>; }).flatMap((el, i) => { const k = TABV[i][0];
-              return PROCS.includes(k as Proc) && tab === k ? [el, <button key={k + '-i'} type="button" className={'odt-i q' + k.slice(2) + (qInfo ? ' on' : '')} aria-expanded={qInfo} aria-label={k + ' – xem mô tả quy trình'} title="Mô tả quy trình" onClick={() => setQInfo((v) => !v)}><Icon name="info" size={16} /></button>] : [el]; })}
+            return <button key={k} role="tab" aria-selected={tab === k} className={(isP ? 'q' + k.slice(2) : 'qx') + (tab === k ? ' on' : '')} onClick={() => (tab === k && isP ? setQInfo((v) => !v) : setSp({ tab: k }))} aria-expanded={tab === k && isP ? qInfo : undefined} data-kbd={String(TABS.findIndex((x) => x[0] === k) + 1)} title={s ? PROC_SHORT[k as Proc] + ': ' + s.t + (s.d ? ' · ' + s.d : '') : undefined}>
+              <b>{s && <i className={'odt-dot s-' + s.cls} aria-hidden="true" />}{isP ? k : t.split(' ').slice(1).join(' ')}</b>{isP && <span>{t.split(' ').slice(1).join(' ')}{tab === k && <i className={'odt-in' + (qInfo ? ' on' : '')} aria-hidden="true"><Icon name="info" size={14} /></i>}</span>}</button>; })}
         </nav>
       <div className="qt-panel od-panel" key={tab}>
       <Msg err={err} ok={ok} />

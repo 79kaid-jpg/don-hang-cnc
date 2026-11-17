@@ -4009,3 +4009,15 @@ th .vtag-w{display:flex;margin:2px 0 0;justify-content:inherit}
 .pp-actv-fab{position:relative}.pp-dot{position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--surface)}
 .pp-drawer .ck,.pp-drawer section{margin-bottom:12px}
 @media (max-width:639px){.pp-actv-fab{position:fixed;right:14px;bottom:calc(var(--nav-h) + 84px + env(safe-area-inset-bottom));z-index:30;box-shadow:var(--shadow-2);margin:0}}
+/* Clean-up theo ghi chú tablet */
+.qt-group .qt-tabs .odt-i{display:none}
+.odt-in{display:inline-grid;place-items:center;margin-left:6px;width:22px;height:22px;border-radius:50%;font-style:normal;vertical-align:middle;opacity:.85}
+.odt-in.on,.qt-tabs button:hover .odt-in{background:color-mix(in srgb,currentColor 14%,transparent);opacity:1}
+.cob.cob-link{display:inline-flex;align-items:baseline;gap:6px;border:0;background:none;padding:0;margin:0;font-size:13px;color:var(--muted)}
+.cob.cob-link .cob-v{font-size:13px;color:var(--ink)}
+.pp-th>b{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1;min-width:0}
+.pp-th .pp-fold{order:99;margin-left:auto;min-width:32px;min-height:32px;justify-content:center}
+.pp-fold-t{display:none}
+.pp-stepbar{flex-basis:100%;width:100%}
+.pp-stepbar .doc-steps li{text-decoration:none!important}
+@media (min-width:640px){.pp-act{justify-content:flex-end}.pp-act .pp-go,.pp-act .btn.primary{flex:0 0 auto!important;min-height:44px;padding:0 20px}}

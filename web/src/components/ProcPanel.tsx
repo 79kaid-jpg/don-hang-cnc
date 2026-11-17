@@ -107,7 +107,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false, info: info
       {batches.length === 0 ? <div className="empty"><Icon name="inbox" size={28} /><b>Chưa có hồ sơ {proc} cho đơn này</b><span className="small muted">Bấm “{'Bắt đầu ' + proc}” để mở.</span></div> : (<>
         {B && B.status === 'cho_ky' && <Final b={B} o={o} onDone={load} />}
         {B && B.status === 'hoan_tat' && proc !== 'QT0' && (() => { const co = D?.company ?? ''; const nx = ({ PN: 'IPC', IPC: 'HW' } as Record<string, string>)[co];
-          return <InfoChip id="batch-done" tone="ok" label={<>{B.title} · {co === 'PN' ? 'PNC' : co} xong{nx ? ' → ' + nx : ' cả chuỗi'}</>}>
+          return <InfoChip id="batch-done" tone="ok" label={<>{B.title} · Đã xong</>}>
             <p>{B.title} của {COMPANY[co as Company] ?? co} đã duyệt xong{B.done_at ? ' lúc ' + new Date(B.done_at).toLocaleString('vi-VN') : ''}.</p>
             <p>{nx ? `Hệ thống đã tự mở ${B.title.toLowerCase()} cho ${COMPANY[nx as Company]} – chọn ${nx} ở thanh công ty để xem.` : 'Đã đi hết chuỗi PN → IPC → HW.'}</p>
             {B.final_files.length > 0 && <p>Bản đã ký: {B.final_files.map((f) => <FileLink key={f.path} f={f} />)}</p>}</InfoChip>; })()}
@@ -543,13 +543,8 @@ function DocView({ o, b, d, people, onChanged, docs = [], onPickCo }: { o: Order
             <button type="button" className="pp-hbtn" onClick={() => dispatchEvent(new CustomEvent('pp-talk', { detail: { doc: d.id, mode: 'nudge' } }))}><Icon name="bell" size={13} />Nhắc</button>
             <button type="button" className="pp-hbtn" onClick={() => dispatchEvent(new CustomEvent('pp-talk', { detail: { doc: d.id, mode: 'reassign' } }))}><Icon name="users" size={13} />Giao lại</button></span>}</div>}
       </div>
-      {d.status === 'da_duyet' && proc !== 'QT0' && (proc !== 'QT1' || d.company === 'HW') && <div className="pt-cta"><PrintTplButton o={o} b={b} d={d} people={people} big /></div>}
       {admEdit && admInfo && <InfoChip id="adm-edit" tone="warn" icon="shield" label={'Sửa bằng quyền Admin' + (d.status === 'da_duyet' ? ' · phiếu đã duyệt' : '')}><p>Bạn đang sửa phiếu với quyền Admin. Mọi thay đổi được ghi vào lịch sử đơn hàng.</p></InfoChip>}
       {lockAct && d.status !== 'da_duyet' && d.status !== 'fail' && <div className="msg lock-mini"><Icon name="shield" size={15} /><span>Đơn thật · chỉ xem khi vào vai</span></div>}
-      {(() => { const tk = tablesOf(proc)[0]?.key; const rs = (tk && (t as Record<string, Row[]>)[tk]) || []; if (!tk || rs.length === 0) return null; const cs = colsOf(proc, tk);
-        const g = (k: string) => { const c = cs.find((x) => x.k === k); return c ? sumOf(rs, c) : null; }; const f = (v: number | null, dd: number, u: string) => v == null ? null : fmtN(v, dd) + u;
-        const kg = g('kg'); const parts = [rs.length + ' dòng', f(g('so_tam'), 0, ' tấm'), f(g('m2'), 1, ' m²'), kg == null ? null : kg >= 1000 ? fmtN(kg / 1000, 1) + ' t' : fmtN(kg, 0) + ' kg', f(g('tt'), 0, ' đ')].filter(Boolean);
-        return <div className="pp-sum" aria-label="Tóm tắt">{parts.map((x, i) => <span key={i}>{x}</span>)}</div>; })()}
       {!lockAct && !can && !adm && d.status !== 'da_duyet' && d.status !== 'fail' && viewInfo && <InfoChip id="view-only" icon="eye" label="Chỉ xem"><p>Bước này do người phụ trách “{ROLE_NAME[role]}” của {COMPANY[d.company]} làm.</p><p>Đổi người phụ trách: Quản trị → Người phụ trách quy trình.</p></InfoChip>}
 
       <ReviewPdf docId={d.id} status={d.status} />
@@ -940,7 +935,7 @@ function TableEdit({ vk, title, req, cols: colsAll, rows, editable, onChange, fn
             : <button type="button" className="pp-sx-btn" aria-label="Tìm trong bảng (Ctrl+F)" title="Tìm trong bảng (Ctrl+F)" onClick={openSearch}><Icon name="search" size={16} /></button>}</span>}
         {pv && (() => { const nN = rows.filter(isNew).length; const nC = rows.filter((r) => !isNew(r) && cols.some((c) => chg(r, c))).length; return nN + nC + removed > 0
           ? <span className="pp-chgsum" title="So với lúc bị trả về">Đã sửa: {[nC && nC + ' dòng sửa', nN && nN + ' dòng mới', removed && removed + ' dòng bỏ'].filter(Boolean).join(' · ')}</span> : <span className="pp-chgsum none">Chưa sửa gì so với lúc trả về</span>; })()}
-        {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} />{folded ? 'Mở rộng' : 'Thu gọn'}</button>}</b>
+        {rows.length > 0 && <button type="button" className={'pp-fold' + (folded ? ' on' : '')} aria-expanded={!folded} onClick={() => { setFold(!folded); if (ql || errOnly) { setQ(''); setErrOnly(false); } }} title={folded ? 'Hiện các dòng' : 'Chỉ hiện dòng tổng'}><Icon name="caret" size={14} /><span className="pp-fold-t">{folded ? 'Mở rộng' : 'Thu gọn'}</span></button>}</b>
         {rows.length > 0 && <span className="pp-vt" role="group" aria-label="Kiểu xem"><button type="button" aria-pressed={!asTbl} title="Danh sách" aria-label="Danh sách" onClick={() => setAsTbl(false)}><Icon name="list" size={16} /></button><button type="button" aria-pressed={asTbl} title="Bảng" aria-label="Bảng" onClick={() => setAsTbl(true)}><Icon name="sheet" size={16} /></button></span>}
         {q0 && <Qt0Picker code={q0.code} rows={q0.rows} inTable={q0In} onClose={() => setQ0(null)} onPick={takeQ0} />}
         {pick && <Qt0Pick label={srcLabel} src={pick} onClose={() => setPick(null)} onPick={async (sel) => {
