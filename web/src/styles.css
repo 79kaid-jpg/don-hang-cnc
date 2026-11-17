@@ -4049,3 +4049,7 @@ body>.pp-tbl.pp-full{z-index:1000;padding:calc(12px + env(safe-area-inset-top)) 
 .pp-ok{display:inline-flex;align-items:center;gap:6px;color:#2E7D4F;font-size:13px;font-weight:600;margin-right:auto}
 .pp-go.is-blocked,.pp-go.is-blocked:disabled{background:#C9CED6!important;background-image:none!important;color:#fff;cursor:not-allowed;box-shadow:none}
 @media (max-width:639px){.pp-need,.pp-ok{flex:1 0 100%;margin:0 0 6px}.pp-need-l{min-height:44px}}
+.err-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.err-h{width:100%;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 12px;font:inherit;cursor:pointer}
+.err-m{font-size:14px;font-weight:600;overflow-wrap:anywhere}.err-w{grid-column:2}
+.err-d{padding:8px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}.err-d pre{white-space:pre-wrap;background:var(--soft);padding:8px;border-radius:8px;margin:0;font-size:12px}

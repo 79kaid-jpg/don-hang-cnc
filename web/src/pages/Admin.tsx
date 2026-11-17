@@ -1,3 +1,4 @@
+import { ErrorsAdmin } from '../components/ErrorsAdmin';
 import { BotNameEdit, ZaloGroups } from '../components/ZaloLink';
 import { CoRoles, CoTags, type Access, type Co } from '../components/CoRoles';
 import { PlanGrid } from '../components/PlanEdit';
@@ -34,7 +35,7 @@ const UNIT_NAME: Record<string, string> = { CNC: 'CNC', IPC: 'IPC', HANWA: 'Hanw
 /** Quản trị – thiết kế ưu tiên điện thoại: danh sách thẻ → bấm mở chi tiết; nút hành động luôn hiện, không cần cuộn ngang */
 export default function Admin() {
   const { can, real, actAs } = useAuth(); const nav = useNavigate();
-  type Tab = 'hl' | 'pm' | 'log' | 'cfg' | 'vl' | 'so' | 'pj' | 'kh' | 'fields' | 'users' | 'groups' | 'flows' | 'ck' | 'guide' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl' | 'plan' | 'act';
+  type Tab = 'err' | 'hl' | 'pm' | 'log' | 'cfg' | 'vl' | 'so' | 'pj' | 'kh' | 'fields' | 'users' | 'groups' | 'flows' | 'ck' | 'guide' | 'sd' | 'base' | 'cp' | 'perf' | 'apv' | 'tpl' | 'plan' | 'act';
   const [asp, setAsp] = useSearchParams(); const tParam = asp.get('t') as Tab | null;
   const tab: Tab = tParam ?? 'users';
   const setTab = (t: Tab) => { const n = new URLSearchParams(asp); n.set('t', t); setAsp(n); };
@@ -66,7 +67,7 @@ export default function Admin() {
   if (open) return <UserDetail p={open} seen={seen?.[open.id]} people={people ?? []} onBack={() => setOpenId(null)} onSaved={load} />;
 
   const TABS: [typeof tab, string, string, string][] = [
-    ['hl', 'Sức khoẻ hệ thống', 'Bước thiếu người, phiếu kẹt, chưa nối Zalo', 'activity'], ['pm', 'Ma trận phân quyền', 'Ai làm bước nào, công ty nào', 'fgrid'], ['log', 'Nhật ký quản trị', 'Ai đã sửa cấu hình gì', 'clock'], ['cfg', 'Xuất / nhập cấu hình', 'Sao lưu & chuyển cấu hình', 'download'],
+    ['hl', 'Sức khoẻ hệ thống', 'Bước thiếu người, phiếu kẹt, chưa nối Zalo', 'activity'], ['pm', 'Ma trận phân quyền', 'Ai làm bước nào, công ty nào', 'fgrid'], ['err', 'Nhật ký lỗi', 'Lỗi người dùng gặp phải', 'alert'], ['log', 'Nhật ký quản trị', 'Ai đã sửa cấu hình gì', 'clock'], ['cfg', 'Xuất / nhập cấu hình', 'Sao lưu & chuyển cấu hình', 'download'],
     ['users', 'Người dùng', 'Tài khoản & vai trò', 'users'], ['groups', 'Nhóm', 'Nhóm làm việc', 'kanban'],
     ['cp', 'Phụ trách quy trình', 'Lập · kiểm tra · duyệt theo công ty', 'flow'], ['pj', 'Dự án', 'Mã dự án, khách cuối, đóng dự án', 'fgrid'], ['so', 'Đánh số đơn', 'Mẫu mã đơn theo công ty', 'fgrid'], ['vl', 'Vật liệu', 'Tỷ trọng tính khối lượng', 'fgrid'], ['kh', 'Đối tác', 'Khách hàng, vận chuyển, nội bộ', 'users'], ['fields', 'Trường dữ liệu', 'Thêm trường, bắt buộc theo bước', 'fgrid'], ['apv', 'Luồng duyệt', 'Cấp duyệt thêm, hạn, ủy quyền', 'shield'], ['tpl', 'Mẫu in', 'Mẫu Excel cho khách ký', 'print'], ['ck', 'Checklist', 'Mục kiểm tra từng bước', 'check'], ['guide', 'Hướng dẫn bước', 'Mục đích, việc cần làm, lưu ý', 'eye'], ['act', 'Uỷ quyền làm thay', 'Admin làm thay người dùng theo thời gian', 'users'], ['plan', 'Kế hoạch sản lượng', 'Số tấn mục tiêu từng tháng', 'chart'], ['perf', 'Hiệu quả & thưởng', 'Điểm, vương miện, vòng quay', 'star'], ['base', 'Kết nối & API', 'Base, Zalo, Google, Anthropic…', 'shield']];
   const act = (people ?? []).filter((p) => p.active);
@@ -77,7 +78,7 @@ export default function Admin() {
   const shown0 = list.filter((p) => (fRole === '' || (fRole === '_none' ? !p.roles.length : p.roles.includes(fRole))) && (fAct === 'all' || (fAct === 'on') === p.active) && (!fZ || !p.zalo_chat_id) && (fU === '' || p.unit === fU) && (!fNo || !lastAct(p.id)));
   const shown = sortOld && seen ? [...shown0].sort((a, b) => (lastAct(a.id) ?? '').localeCompare(lastAct(b.id) ?? '')) : shown0;
   const NAV: [string, (typeof TABS)[number][]][] = [['Tổng quan', TABS.filter((t) => ['hl', 'pm'].includes(t[0]))], ['Con người', TABS.filter((t) => ['users', 'groups'].includes(t[0]))],
-    ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'vl', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['act', 'log', 'cfg', 'plan', 'perf', 'base'].includes(t[0]))]];
+    ['Quy trình', TABS.filter((t) => ['pj', 'so', 'kh', 'vl', 'cp', 'fields', 'ck', 'guide', 'apv', 'tpl'].includes(t[0]))], ['Hệ thống', TABS.filter((t) => ['err', 'act', 'log', 'cfg', 'plan', 'perf', 'base'].includes(t[0]))]];
   const cur = TABS.find((t) => t[0] === tab);
   const ini = (n: string) => (n || '?').replace(/\(.*?\)/g, '').split(' ').filter((x) => /\p{L}/u.test(x)).slice(-2).map((x) => x[0]).join('').toUpperCase() || '?';
   const filtered = fRole !== '' || fZ || fNo || fU !== '' || fAct !== 'on' || q !== '';
@@ -151,6 +152,7 @@ export default function Admin() {
       {tab === 'hl' && <HealthAdmin go={(t) => setTab(t as Tab)} />}
       {tab === 'pm' && <PermMatrix people={people ?? []} go={(t) => setTab(t as Tab)} />}
       {tab === 'log' && <AuditAdmin people={people ?? []} />}
+      {tab === 'err' && can('admin_it') && <ErrorsAdmin people={people ?? []} />}
       {tab === 'cfg' && <ConfigIO />}
       {tab === 'vl' && <MaterialsAdmin canEdit={can('admin_it')} />}
       {tab === 'fields' && <FieldsAdmin canEdit={can('admin_it')} />}

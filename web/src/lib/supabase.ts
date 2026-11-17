@@ -19,8 +19,17 @@ export type Approval = { id: string; order_id: string; doc_type: string; round: 
   approver_id: string | null; status: string; note: string | null; due_at: string | null; decided_at: string | null; created_at: string };
 
 /** Lỗi từ Postgres → câu tiếng Việt cho người dùng */
+/** Ghi lỗi về máy chủ (Admin IT xem ở Quản trị → Nhật ký lỗi). Không bao giờ ném lỗi. */
+let lastErr = '';
+export function logError(kind: string, e: unknown, extra?: string) {
+  try { const m = (e as { message?: string })?.message ?? String(e); const key = kind + m; if (key === lastErr) return; lastErr = key;
+    const ex = e as { code?: string; details?: string; hint?: string; stack?: string };
+    const detail = [ex?.code && 'code: ' + ex.code, ex?.details, ex?.hint, extra, ex?.stack?.split('\n').slice(0, 6).join('\n')].filter(Boolean).join('\n');
+    void sb.rpc('log_error', { p_kind: kind, p_message: m, p_detail: detail, p_url: location.href, p_ua: navigator.userAgent, p_ver: (import.meta.env.VITE_BUILD as string | undefined) ?? '' }).then(() => {}, () => {});
+  } catch { /* bỏ qua */ } }
 export function errText(e: unknown): string {
   const m = (e as { message?: string })?.message ?? String(e);
+  logError('thao_tac', e);
   if (m.includes('row-level security')) return 'Bạn không có quyền sửa phiếu này ở bước hiện tại.';
   return m;
 }

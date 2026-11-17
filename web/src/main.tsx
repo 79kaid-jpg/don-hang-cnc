@@ -1,4 +1,7 @@
 import React from 'react';
+import { logError } from './lib/supabase';
+addEventListener('error', (e) => { if (e.error || e.message) logError('js', e.error ?? e.message, (e.filename ?? '') + ':' + (e.lineno ?? '')); });
+addEventListener('unhandledrejection', (e) => logError('promise', e.reason));
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
