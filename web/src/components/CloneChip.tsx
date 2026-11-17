@@ -17,7 +17,7 @@ export function useCanClone(proc: string, co?: string | null) {
 
 /** Nút Clone trên thẻ Kanban (phiếu đã Thành công / Thất bại) – hỏi xác nhận ngay tại chỗ */
 export function CloneChip({ docId, orderId, proc, company, title }: { docId: string; orderId: string; proc: string; company: string; title: string }) {
-  const ok0 = useCanClone(proc, company); const ok = ok0 && (proc === 'QT0' || company === 'PN'); const [ask, setAsk] = useState<{ r: number; b: number } | null>(null); const [busy, setBusy] = useState(false); const nav = useNavigate(); const ref = useRef<HTMLDivElement>(null);
+  const ok = useCanClone(proc, company); const [ask, setAsk] = useState<{ r: number; b: number } | null>(null); const [busy, setBusy] = useState(false); const nav = useNavigate(); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!ask) return; const f = (e: Event) => { const t = e.target as Node; if (!ref.current?.contains(t) && !document.querySelector('.cl-pop')?.contains(t)) setAsk(null); }; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setAsk(null); };
     document.addEventListener('pointerdown', f); addEventListener('keydown', k); return () => { document.removeEventListener('pointerdown', f); removeEventListener('keydown', k); }; }, [ask]);
   if (!ok) return null;

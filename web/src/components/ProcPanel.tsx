@@ -1276,7 +1276,7 @@ function GiaoAnh({ d, can, files, h, onField, upload, remove }: { d: Doc; can: b
 function CloneBar({ b, d, onChanged }: { b: Batch; d: Doc; onChanged: () => void }) {
   const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [, setSp] = useSearchParams();
   useEffect(() => { let live = true; setOk(false); sb.rpc('can_start', { p_proc: b.proc, p_co: d.company }).then(({ data }) => { if (live) setOk(!!data); }); return () => { live = false; }; }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!ok || (b.proc !== 'QT0' && d.company !== 'PN')) return null; // IPC/HW không clone – đơn phải có tham chiếu
+  if (!ok) return null;
   const go = async () => {
     if (!(await confirmDialog('Tạo đơn mới chép toàn bộ thông tin của phiếu này (' + COMPANY[d.company as Company] + ' · ' + b.title + ')? Đơn mới bắt đầu lại từ bước đầu để chỉnh sửa.', 'Clone thành đơn mới'))) return;
     setBusy(true); const { data, error } = await sb.rpc('doc_clone', { p_doc: d.id }); setBusy(false);
