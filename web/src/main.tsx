@@ -25,7 +25,7 @@ try {
 
 const STG = import.meta.env.VITE_STAGING === '1';
 if (STG) { document.documentElement.classList.add('is-staging'); document.title = '[THỬ] ' + document.title; }
-createRoot(document.getElementById('root')!).render(<React.StrictMode>{STG && <div className="stg-bar" role="note">BẢN THỬ – dữ liệu không thật · đăng nhập u5@test.local / Thu@2026</div>}<HashRouter><App /></HashRouter></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{STG && <div className="stg-bar" role="note">BẢN THỬ · dữ liệu không thật</div>}<HashRouter><App /></HashRouter></React.StrictMode>);
 
 // Điện thoại: đang gõ (bàn phím mở) thì ẩn thanh nút nổi để không che ô nhập
 if (matchMedia('(pointer:coarse)').matches) {
