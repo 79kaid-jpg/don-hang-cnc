@@ -6,7 +6,7 @@ import { BotQR, useBotName, ZaloLink } from '../components/ZaloLink';
 import { ShortcutTable } from '../components/Shortcuts';
 import ProcessGuide from '../components/ProcessGuide';
 
-const URL_APP = 'https://79kaid-jpg.github.io/don-hang-cnc/';
+const URL_APP = 'https://pms.ksideworks.com/';
 
 /** Hướng dẫn cài app vào màn hình chính, theo đúng thiết bị đang dùng */
 export default function Install() {

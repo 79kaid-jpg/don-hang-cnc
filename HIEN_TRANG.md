@@ -6,7 +6,7 @@
 | Mục | Giá trị |
 |---|---|
 | Repo | `79kaid-jpg/don-hang-cnc` (front-end ở `web/`, React + TS + Vite, HashRouter) |
-| Web | https://79kaid-jpg.github.io/don-hang-cnc/ (GitHub Pages, deploy khi push `main`, giữ `dist/assets` cũ 7 ngày) |
+| Web | https://pms.ksideworks.com/ (GitHub Pages, tên miền riêng; link cũ 79kaid-jpg.github.io/don-hang-cnc/ tự chuyển sang, deploy khi push `main`, giữ `dist/assets` cũ 7 ngày) |
 | Supabase | project `wtybzzlglgvzflovqhng` – Postgres + RLS + RPC security definer, view `docs_v` |
 | Edge functions | `zalo` (v17, verify_jwt=false), `admin-users`, `base`, `excel-check`, `integration-test` (`uat-clean` đã tắt – 410) |
 | Migration | `supabase/migrations/2026111500000NN_*.sql`, mới nhất **32** (`doc_visible_multi_co`). Áp dụng bằng MCP `apply_migration` rồi lưu file |
