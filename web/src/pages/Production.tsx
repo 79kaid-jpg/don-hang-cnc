@@ -41,7 +41,7 @@ export default function Production() {
   const setF = (k: string, v: string | null) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); setSp(n, { replace: true }); };
   const [hov, setHov] = useState<number | null>(null);
   const { can } = useAuth(); const [pe, setPe] = useState<string | null>(null);
-  const [drill, setDrill] = useState<{ t: string; sub?: string; kind: 'trip' | 'rem'; ids: string[] } | null>(null);
+  const [drill, setDrill] = useState<Drill | null>(null);
   type ST = { q1: { id: string; order_id: string; title: string; created_at: string; o: number[]; r: number[] }[]; q3: { id: string; order_id: string; title: string; done_at: string; q1: string | null; d: number[]; x?: number[] }[]; hasVal: boolean };
   const [data, setData] = useState<{ p: P[]; o: O[]; cu: Record<string, string>; plan: Record<string, number> } | null>(null);
   const [st, setSt] = useState<ST | null>(null);
@@ -103,11 +103,23 @@ export default function Production() {
     const hasVal = st.hasVal;
     const tripsBy = new Map(trips.map((t) => [t.b.id, t])); const remBy = new Map(rem.map((x) => [x.b.id, x]));
     const tripsIn = trips.filter((t) => inPer(mk(t.b.done_at!)));
-    return { cur, now, del, delPrev, ordP, back, avg3, onTime, onTimePrev, planP, series, aging, agIds, soon, projects, custTop, hasVal, months, tripsBy, remBy, tripsIn, rem, pjOf, per2 };
+    const xflag = new Map(q3.map((x) => [x.id, x.x ?? [0, 0, 0]]));
+    const xn = q1.map((b) => { const o = ord.get(b.order_id); return { id: b.id, order_id: b.order_id, title: b.title, created_at: b.created_at, o: toQ(b.o), r: toQ(b.r), due: o?.due_date ?? null }; });
+    const custName = (oid: string) => data.cu[custOf(oid)] ?? '—';
+    return { cur, now, del, delPrev, ordP, back, avg3, onTime, onTimePrev, planP, series, aging, agIds, soon, projects, custTop, hasVal, months, tripsBy, remBy, tripsIn, rem, pjOf, per2, trips, xn, xflag, custOf, custName, inPer };
   }, [data, st, per, fm, fp, fk]);
 
   const XS = (() => { const ids = new Set((M?.tripsIn ?? []).map((t) => t.b.id)); return (st?.q3 ?? []).filter((x) => ids.has(x.id)).reduce((a, x) => [a[0] + (x.x?.[0] ?? 0), a[1] + (x.x?.[1] ?? 0), a[2] + (x.x?.[2] ?? 0)], [0, 0, 0]); })();
   if (!M) return <Skeleton rows={4} h={140} />;
+  const yr = M.cur.slice(0, 4);
+  const D = {
+    del: (t: string): Drill => ({ t, tab: 'trip', trips: M.tripsIn.map((x) => x.b.id), xn: M.xn.filter((x) => M.inPer(mk(x.created_at))).map((x) => x.id) }),
+    ord: (t: string): Drill => ({ t, tab: 'xn', trips: M.tripsIn.map((x) => x.b.id), xn: M.xn.filter((x) => M.inPer(mk(x.created_at))).map((x) => x.id) }),
+    rem: (t: string, ids: string[]): Drill => ({ t, tab: 'xn', xnRem: true, trips: [], xn: ids }),
+    month: (m: string): Drill => ({ t: MN(m) + '/' + m.slice(0, 4), tab: 'trip', trips: M.trips.filter((x) => mk(x.b.done_at!) === m).map((x) => x.b.id), xn: M.xn.filter((x) => mk(x.created_at) === m).map((x) => x.id), f: ['m', m, 'Lọc cả trang theo ' + MN(m)] }),
+    proj: (id: string, t: string): Drill => ({ t, tab: 'xn', trips: M.trips.filter((x) => M.pjOf(x.b.order_id)?.id === id).map((x) => x.b.id), xn: M.xn.filter((x) => M.pjOf(x.order_id)?.id === id).map((x) => x.id), f: ['pj', id, 'Lọc cả trang theo dự án này'] }),
+    cust: (id: string, t: string): Drill => ({ t, sub: 'năm ' + yr, tab: 'trip', trips: M.trips.filter((x) => M.custOf(x.b.order_id) === id && x.b.done_at!.startsWith(yr)).map((x) => x.b.id), xn: M.xn.filter((x) => M.custOf(x.order_id) === id).map((x) => x.id), f: ['kh', id, 'Lọc cả trang theo khách này'] }),
+  };
   const pct = (a: number, b: number) => (b ? Math.round((a / b - 1) * 100) : null);
   const ch = pct(M.del.kg, M.delPrev.kg), chV = pct(M.del.val, M.delPrev.val);
   const perName = M.per2 === 'M' ? 'tháng trước' : M.per2 === 'Q' ? 'quý trước' : 'năm trước';
@@ -141,20 +153,20 @@ export default function Production() {
         <button type="button" className="link-btn small" onClick={() => setSp(new URLSearchParams(), { replace: true })}>Bỏ tất cả</button></div>}
       <section className="pd-kpis">
         <div className="pd-hw">
-        <button type="button" className="pd-k pd-kb hero" onClick={() => setDrill({ t: 'Các đợt đã giao · ' + title, sub: M.tripsIn.length + ' đợt', kind: 'trip', ids: M.tripsIn.map((t) => t.b.id) })}><span>Đã giao</span><b>{ufmt(M.del, u)}<small>{UNAME[u]}</small></b>
+        <button type="button" className="pd-k pd-kb hero" onClick={() => setDrill(D.del('Đã giao · ' + title))}><span>Đã giao</span><b>{ufmt(M.del, u)}<small>{UNAME[u]}</small></b>
           <div><Delta v={ch} /> <span className="muted">so với {perName}</span></div>
           {u === 't' && M.planP > 0 && <><div className="pd-plan"><i style={{ width: Math.min(100, M.del.kg / 10 / M.planP) + '%' }} /></div><span className="muted small">{Math.round(M.del.kg / 10 / M.planP)}% kế hoạch ({fmt(M.planP)} t)</span></>}
           <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.kg)} /></svg>
           {XS[0] > 0 && <span className="pd-xl"><b>{fmt(XS[0])} tấm</b> mã không có trong XNĐH – không tính</span>}
           {XS[1] > 0 && <span className="pd-xl"><b>{fmt(XS[1])} tấm</b> giao dư so với đặt – không tính doanh thu</span>}</button>
         {can('admin_it') && M.per2 === 'M' && <button type="button" className="pd-pled" aria-label="Sửa kế hoạch tháng" title="Sửa kế hoạch tháng" onClick={() => setPe(M.cur)}><Icon name="edit" size={16} /></button>}</div>
-        <div className="pd-k"><span>Giá trị đã giao</span><b>{M.hasVal ? tỷ(M.del.val) : '—'}<small>đ</small></b><div><Delta v={chV} /> <span className="muted">theo giá {co}</span></div>{XS[2] > 0 && <span className="pd-xv">giao dư {tỷ(XS[2])} đ chưa tính</span>}
-          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.val)} /></svg></div>
-        <div className="pd-k"><span>Đặt mới (XNĐH)</span><b>{ufmt(M.ordP, u)}<small>{UNAME[u]}</small></b><div><span className="muted">đặt / giao </span><b className={bb != null && bb >= 1 ? 'pd-up' : 'pd-dn'}>{bb == null ? '—' : fmt(bb, 2)}</b></div>
-          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true" className="o"><path d={spark('ord', (q) => q.kg)} /></svg></div>
-        <button type="button" className="pd-k pd-kb" onClick={() => setDrill({ t: 'Tồn chưa giao', sub: M.rem.length + ' XNĐH', kind: 'rem', ids: M.rem.map((x) => x.b.id) })}><span>Tồn chưa giao</span><b>{ufmt(M.back, u)}<small>{UNAME[u]}</small></b><div><span className="pd-wa">≈ {M.avg3 ? fmt(M.back.kg / M.avg3, 1) : '—'} tháng</span> <span className="muted">giao</span></div>
+        <button type="button" className="pd-k pd-kb" onClick={() => setDrill({ ...D.del('Giá trị đã giao · ' + title), sort: 'val' })}><span>Giá trị đã giao</span><b>{M.hasVal ? tỷ(M.del.val) : '—'}<small>đ</small></b><div><Delta v={chV} /> <span className="muted">theo giá {co}</span></div>{XS[2] > 0 && <span className="pd-xv">giao dư {tỷ(XS[2])} đ chưa tính</span>}
+          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path d={spark('del', (q) => q.val)} /></svg></button>
+        <button type="button" className="pd-k pd-kb" onClick={() => setDrill(D.ord('Đặt mới (XNĐH) · ' + title))}><span>Đặt mới (XNĐH)</span><b>{ufmt(M.ordP, u)}<small>{UNAME[u]}</small></b><div><span className="muted">đặt / giao </span><b className={bb != null && bb >= 1 ? 'pd-up' : 'pd-dn'}>{bb == null ? '—' : fmt(bb, 2)}</b></div>
+          <svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true" className="o"><path d={spark('ord', (q) => q.kg)} /></svg></button>
+        <button type="button" className="pd-k pd-kb" onClick={() => setDrill(D.rem('Tồn chưa giao', M.rem.map((x) => x.b.id)))}><span>Tồn chưa giao</span><b>{ufmt(M.back, u)}<small>{UNAME[u]}</small></b><div><span className="pd-wa">≈ {M.avg3 ? fmt(M.back.kg / M.avg3, 1) : '—'} tháng</span> <span className="muted">giao</span></div>
           <span className="muted small">{M.hasVal ? tỷ(M.back.val) + ' đ' : ''}</span></button>
-        <button type="button" className="pd-k pd-kb" onClick={() => { const late = M.tripsIn.filter((t) => t.onTime === false); setDrill({ t: 'Đợt giao trễ hạn · ' + title, sub: late.length + ' / ' + M.tripsIn.length + ' đợt', kind: 'trip', ids: late.map((t) => t.b.id) }); }}><span>Giao đúng hạn</span><b>{M.onTime == null ? '—' : Math.round(M.onTime * 100)}<small>%</small></b>
+        <button type="button" className="pd-k pd-kb" onClick={() => setDrill({ ...D.del('Đúng hạn · ' + title), sort: 'late' })}><span>Giao đúng hạn</span><b>{M.onTime == null ? '—' : Math.round(M.onTime * 100)}<small>%</small></b>
           <div>{M.onTime != null && M.onTimePrev != null ? <Delta v={Math.round((M.onTime - M.onTimePrev) * 100)} /> : <span className="muted">—</span>} <span className="muted">điểm · mục tiêu 95%</span></div></button>
       </section>
 
@@ -164,7 +176,7 @@ export default function Production() {
             <span className="pd-leg"><span><i className="sq" />Đã giao</span><span><i className="ln" />Đặt mới</span>{u === 't' && <span><i className="ds" />Kế hoạch</span>}</span></div>
           <svg className="pd-chart" viewBox={`0 0 ${W} ${H + 40}`} role="img" aria-label="Biểu đồ sản lượng 12 tháng">
             {ticks.map((t, i) => <g key={i}><line x1={L} x2={W - 4} y1={y(t)} y2={y(t)} className="g" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmt(t, t < 10 ? 1 : 0)}</text></g>)}
-            {M.series.map((s, i) => { const v = uv(s.del, u); return <g key={s.m} className="pd-col" role="button" tabIndex={0} aria-label={MN(s.m) + ': đã giao ' + ufmt(s.del, u) + ' ' + UNAME[u]} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)} onFocus={() => setHov(i)} onClick={() => { setHov(i); setF('m', fm === s.m ? null : s.m); }} onKeyDown={(e) => { if (e.key === 'Enter') setF('m', fm === s.m ? null : s.m); }}><rect x={x(i) - (step - bw) / 2} y={top} width={step} height={H} className="hit" /><rect x={x(i)} y={y(v)} width={bw} height={Math.max(0, top + H - y(v))} rx={4} className={(s.m === M.cur ? 'b cur' : 'b') + (fm && s.m !== fm ? ' dim' : '')} />
+            {M.series.map((s, i) => { const v = uv(s.del, u); return <g key={s.m} className="pd-col" role="button" tabIndex={0} aria-label={MN(s.m) + ': đã giao ' + ufmt(s.del, u) + ' ' + UNAME[u]} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)} onFocus={() => setHov(i)} onClick={() => { setHov(i); setDrill(D.month(s.m)); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDrill(D.month(s.m)); } }}><rect x={x(i) - (step - bw) / 2} y={top} width={step} height={H} className="hit" /><rect x={x(i)} y={y(v)} width={bw} height={Math.max(0, top + H - y(v))} rx={4} className={(s.m === M.cur ? 'b cur' : 'b') + (fm && s.m !== fm ? ' dim' : '')} />
               <text x={x(i) + bw / 2} y={top + H + 18} textAnchor="middle">{MN(s.m)}</text>{s.m === M.cur && <text x={x(i) + bw / 2} y={y(v) - 6} textAnchor="middle" className="v">{fmt(v, u === 't' ? 1 : 0)}</text>}</g>; })}
             <path d={line((s) => uv(s.ord, u))} className="o" />
             {u === 't' && <path d={line((s) => s.plan)} className="p" />}
@@ -173,12 +185,12 @@ export default function Production() {
           {hov != null && (() => { const s = M.series[hov]; const pl = u === 't' ? s.plan : null; return <div className="pd-tip" style={{ left: Math.min(78, Math.max(4, (x(hov) + bw / 2) / W * 100 - 10)) + '%' }}>
             <b>{MN(s.m)}/{s.m.slice(0, 4)}</b><span><i className="sq" />Đã giao <b>{ufmt(s.del, u)}</b> {UNAME[u]}</span><span><i className="ln" />Đặt mới <b>{ufmt(s.ord, u)}</b></span>
             {pl ? <span><i className="ds" />Kế hoạch <b>{fmt(pl)}</b> · đạt <b>{Math.round(s.del.kg / 10 / pl)}%</b></span> : null}{M.hasVal && <span>Giá trị <b>{tỷ(s.del.val)}</b></span>}
-            <em>{fm === s.m ? 'Bấm để bỏ lọc' : 'Bấm để lọc tháng này'}</em></div>; })()}
+            <em>Bấm để xem chi tiết ›</em></div>; })()}
         </div>
         <div className="pd-card">
           <div className="pd-ch"><b>Tồn chưa giao</b><span className="muted">theo hạn giao</span></div>
-          <div className="pd-stack">{M.aging.map((q, i) => uv(q, u) > 0 && <div key={i} role="button" tabIndex={0} className="pd-agb" onClick={() => setDrill({ t: 'Tồn chưa giao · ' + AG[i][0], sub: M.agIds[i].length + ' XNĐH', kind: 'rem', ids: M.agIds[i] })} style={{ flexGrow: uv(q, u), background: AG[i][1] }} title={AG[i][0]}>{Math.round(uv(q, u) / agT * 100)}%</div>)}</div>
-          <div className="pd-ag">{M.aging.map((q, i) => <div key={i} role="button" tabIndex={0} onClick={() => setDrill({ t: 'Tồn chưa giao · ' + AG[i][0], sub: M.agIds[i].length + ' XNĐH', kind: 'rem', ids: M.agIds[i] })}><i style={{ background: AG[i][1] }} /><span>{AG[i][0]}</span><b>{ufmt(q, u)} {UNAME[u]}</b></div>)}</div>
+          <div className="pd-stack">{M.aging.map((q, i) => uv(q, u) > 0 && <div key={i} role="button" tabIndex={0} className="pd-agb" onClick={() => setDrill(D.rem('Tồn chưa giao · ' + AG[i][0], M.agIds[i]))} style={{ flexGrow: uv(q, u), background: AG[i][1] }} title={AG[i][0]}>{Math.round(uv(q, u) / agT * 100)}%</div>)}</div>
+          <div className="pd-ag">{M.aging.map((q, i) => <div key={i} role="button" tabIndex={0} onClick={() => setDrill(D.rem('Tồn chưa giao · ' + AG[i][0], M.agIds[i]))}><i style={{ background: AG[i][1] }} /><span>{AG[i][0]}</span><b>{ufmt(q, u)} {UNAME[u]}</b></div>)}</div>
           <div className="pd-soon"><b>Cần giao trong 14 ngày / đã trễ</b>
             {M.soon.length === 0 ? <p className="muted small">Không có.</p> : M.soon.map((x) => <Link key={x.b.id} to={'/don/' + x.b.order_id + '?tab=QT3'} className="pd-s">
               <span className={x.due! < today() ? 'pd-late' : 'muted'}>{dmy(x.due)}</span><b>{data!.p.find((p) => p.id === x.o?.project_id)?.code ?? '—'}</b><span className="pd-ell">{x.b.title}</span><b>{ufmt(x.q, u)} {UNAME[u]}</b></Link>)}</div>
@@ -189,24 +201,57 @@ export default function Production() {
         <div className="pd-card pd-proj">
           <div className="pd-ch"><b>Dự án đang chạy</b><span className="muted">xếp theo khối lượng còn lại</span><Link className="pd-all" to="/bao-cao-du-an">Chi tiết từng dự án →</Link></div>
           <div className="pd-tr pd-th"><span>Mã</span><span>Tên dự án</span><span>Tiến độ giao</span><span className="r">Đặt</span><span className="r">Còn lại</span><span className="r">Giá trị còn</span><span className="r">Hạn gần nhất</span></div>
-          {M.projects.slice(0, 8).map((x) => { const a = x.ord.kg ? x.del.kg / x.ord.kg : 0; return <div key={x.p.id} role="button" tabIndex={0} className={'pd-tr' + (fp === x.p.id ? ' on' : '')} onClick={() => setF('pj', fp === x.p.id ? null : x.p.id)} onKeyDown={(e) => { if (e.key === 'Enter') setF('pj', fp === x.p.id ? null : x.p.id); }} title="Bấm để lọc theo dự án">
+          {M.projects.slice(0, 8).map((x) => { const a = x.ord.kg ? x.del.kg / x.ord.kg : 0; return <div key={x.p.id} role="button" tabIndex={0} className={'pd-tr' + (fp === x.p.id ? ' on' : '')} onClick={() => setDrill(D.proj(x.p.id, x.p.code + ' · ' + x.p.name))} onKeyDown={(e) => { if (e.key === 'Enter') setDrill(D.proj(x.p.id, x.p.code + ' · ' + x.p.name)); }} title="Xem chi tiết dự án">
             <b className="pj-code">{x.p.code}</b><span className="pd-ell">{x.p.name}</span>
             <span className="pd-prog"><i><b style={{ width: a * 100 + '%' }} /></i><em>{Math.round(a * 100)}%</em></span>
             <span className="r">{ufmt(x.ord, u)}</span><b className="r">{ufmt(x.rem, u)}</b><span className="r">{M.hasVal ? tỷ(x.rem.val) : '—'}</span><span className={'r' + (x.late ? ' pd-late' : '')}>{x.late ? 'Trễ ' : ''}{dmy(x.due)}</span></div>; })}
         </div>
         <div className="pd-card">
           <div className="pd-ch"><b>Đã giao theo khách hàng</b><span className="muted">năm {M.cur.slice(0, 4)}</span></div>
-          <div className="pd-cust">{M.custTop.map((c) => <div key={c.n} role={c.id ? 'button' : undefined} tabIndex={c.id ? 0 : undefined} className={fk === c.id ? 'on' : ''} onClick={() => c.id && setF('kh', fk === c.id ? null : c.id)}><span className="pd-ell">{c.n}</span><i><b style={{ width: uv(c.q, u) / cm * 100 + '%' }} /></i><b className="r">{ufmt(c.q, u)}</b></div>)}</div>
+          <div className="pd-cust">{M.custTop.map((c) => <div key={c.n} role={c.id ? 'button' : undefined} tabIndex={c.id ? 0 : undefined} className={fk === c.id ? 'on' : ''} onClick={() => c.id && setDrill(D.cust(c.id, c.n))} onKeyDown={(e) => { if (e.key === 'Enter' && c.id) setDrill(D.cust(c.id, c.n)); }} title="Xem chi tiết khách hàng"><span className="pd-ell">{c.n}</span><i><b style={{ width: uv(c.q, u) / cm * 100 + '%' }} /></i><b className="r">{ufmt(c.q, u)}</b></div>)}</div>
         </div>
       </section>
       {pe && <PlanSheet ym={pe} value={data!.plan[pe] ?? null} onClose={() => setPe(null)} onSaved={(v) => setData((d) => { if (!d) return d; const plan = { ...d.plan }; if (v == null) delete plan[pe]; else plan[pe] = v; return { ...d, plan }; })} />}
-      {drill && createPortal(<div className="pd-dr-bg" onClick={() => setDrill(null)}>
-        <aside className="pd-dr" role="dialog" aria-modal="true" aria-label={drill.t} onClick={(e) => e.stopPropagation()}>
-          <header><div><b>{drill.t}</b>{drill.sub && <span className="muted small">{drill.sub}</span>}</div><button type="button" className="btn sm" onClick={() => setDrill(null)} aria-label="Đóng">✕</button></header>
-          <div className="pd-dr-b">{drill.ids.length === 0 ? <p className="muted">Không có.</p> : drill.kind === 'trip' ? drill.ids.map((id) => { const t = M.tripsBy.get(id)!; const pj = M.pjOf(t.b.order_id); return <Link key={id} className="pd-dr-r" to={'/don/' + t.b.order_id + '?tab=QT3'}>
-            <span className="muted">{dmy(t.b.done_at!.slice(0, 10))}</span><b className="pj-code">{pj?.code ?? '—'}</b><span className="pd-ell">{t.b.title}{t.onTime === false && <em className="pd-late"> · trễ</em>}</span><b>{ufmt(t.q, u)} {UNAME[u]}</b>{M.hasVal && <span className="muted">{tỷ(t.q.val)}</span>}</Link>; })
-            : drill.ids.map((id) => { const x = M.remBy.get(id)!; const pj = M.pjOf(x.b.order_id); return <Link key={id} className="pd-dr-r" to={'/don/' + x.b.order_id + '?tab=QT1'}>
-            <span className={x.due && x.due < today() ? 'pd-late' : 'muted'}>{dmy(x.due)}</span><b className="pj-code">{pj?.code ?? '—'}</b><span className="pd-ell">{x.b.title}</span><b>{ufmt(x.q, u)} {UNAME[u]}</b>{M.hasVal && <span className="muted">{tỷ(x.q.val)}</span>}</Link>; })}</div>
-        </aside></div>, document.body)}
+      {drill && <DrillSheet d={drill} M={M} u={u} onClose={() => setDrill(null)} onFilter={drill.f ? () => { setF(drill.f![0], drill.f![1]); setDrill(null); } : undefined} />}
     </div>);
+}
+
+type Drill = { t: string; sub?: string; tab: 'trip' | 'xn'; trips: string[]; xn: string[]; xnRem?: boolean; sort?: 'date' | 'qty' | 'val' | 'late'; f?: [string, string, string] };
+type MM = { tripsBy: Map<string, { b: { id: string; order_id: string; title: string; done_at: string | null }; q: Q; onTime: boolean | null }>; xn: { id: string; order_id: string; title: string; created_at: string; o: Q; r: Q; due: string | null }[];
+  xflag: Map<string, number[]>; pjOf: (oid: string) => P | undefined; custName: (oid: string) => string; hasVal: boolean };
+/** Ngăn chi tiết dùng chung: tổng · tab Đợt giao / XNĐH · tìm · sắp xếp · CSV · lọc cả trang */
+function DrillSheet({ d, M, u, onClose, onFilter }: { d: Drill; M: MM; u: Unit; onClose: () => void; onFilter?: () => void }) {
+  const [tab, setTab] = useState(d.tab); const [q, setQ] = useState(''); const [so, setSo] = useState(d.sort ?? 'date');
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [onClose]);
+  const xnBy = useMemo(() => new Map(M.xn.map((x) => [x.id, x])), [M]);
+  type R = { id: string; to: string; date: string; pj: string; kh: string; title: string; q: Q; q2?: Q; tags: string[] };
+  const rows: R[] = useMemo(() => {
+    const r: R[] = tab === 'trip' ? d.trips.map((id) => { const t = M.tripsBy.get(id); if (!t) return null; const x = M.xflag.get(id) ?? [0, 0, 0];
+        return { id, to: '/don/' + t.b.order_id + '?tab=QT3', date: (t.b.done_at ?? '').slice(0, 10), pj: M.pjOf(t.b.order_id)?.code ?? '—', kh: M.custName(t.b.order_id), title: t.b.title, q: t.q,
+          tags: [...(t.onTime === false ? ['Trễ'] : []), ...(x[0] > 0 ? ['Mã lạ ' + x[0]] : []), ...(x[1] > 0 ? ['Dư ' + x[1]] : [])] }; }).filter(Boolean) as R[]
+      : d.xn.map((id) => { const x = xnBy.get(id); if (!x) return null; const late = !!x.due && x.due < new Date().toISOString().slice(0, 10) && x.r.tam > 0;
+        return { id, to: '/don/' + x.order_id + '?tab=QT1', date: d.xnRem ? (x.due ?? '') : x.created_at.slice(0, 10), pj: M.pjOf(x.order_id)?.code ?? '—', kh: M.custName(x.order_id), title: x.title, q: d.xnRem ? x.r : x.o, q2: x.r, tags: late ? ['Trễ hạn'] : x.r.tam === 0 ? ['Đã giao đủ'] : [] }; }).filter(Boolean) as R[];
+    const k = q.trim().toLowerCase(); const f = k ? r.filter((x) => (x.pj + ' ' + x.kh + ' ' + x.title).toLowerCase().includes(k)) : r;
+    return [...f].sort((a, z) => so === 'qty' ? uv(z.q, u) - uv(a.q, u) : so === 'val' ? z.q.val - a.q.val : so === 'late' ? Number(z.tags.includes('Trễ')) - Number(a.tags.includes('Trễ')) || z.date.localeCompare(a.date) : z.date.localeCompare(a.date));
+  }, [tab, q, so, d, M, u, xnBy]);
+  const sum = rows.reduce((a, x) => add(a, x.q), Z());
+  const csv = () => { const h = ['Ngày', 'Dự án', 'Khách hàng', 'Phiếu', 'Tấm', 'm²', 'Tấn', 'Giá trị (đ)', 'Ghi chú'];
+    const L = rows.map((x) => [x.date, x.pj, x.kh, x.title, x.q.tam, x.q.m2.toFixed(2), (x.q.kg / 1000).toFixed(3), Math.round(x.q.val), x.tags.join('; ')].map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(','));
+    const b = new Blob(['\ufeff' + [h.join(','), ...L].join('\n')], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = d.t.replace(/[^\p{L}\p{N}]+/gu, '_') + '.csv'; a.click(); };
+  return createPortal(<div className="pd-dr-bg" onClick={onClose}>
+    <aside className="pd-dr pdx" role="dialog" aria-modal="true" aria-label={d.t} onClick={(e) => e.stopPropagation()}>
+      <header><div><b>{d.t}</b>{d.sub && <span className="muted small"> · {d.sub}</span>}</div><button type="button" className="btn sm" onClick={onClose} aria-label="Đóng">✕</button></header>
+      <div className="pdx-sum"><div><span>Số tấm</span><b>{fmt(sum.tam)}</b></div><div><span>{u === 'm2' ? 'm²' : 'Tấn'}</span><b>{u === 'm2' ? fmt(sum.m2, 1) : fmt(sum.kg / 1000, 2)}</b></div>{M.hasVal && <div><span>Giá trị</span><b>{tỷ(sum.val)} đ</b></div>}</div>
+      <div className="pdx-bar">
+        {d.trips.length > 0 || d.xn.length > 0 ? <span className="pd-seg" role="tablist">{(['trip', 'xn'] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} aria-pressed={tab === k} onClick={() => setTab(k)}>{k === 'trip' ? 'Đợt giao' : 'XNĐH'} <em>{k === 'trip' ? d.trips.length : d.xn.length}</em></button>)}</span> : null}
+        <input type="search" className="pdx-q" placeholder="Tìm dự án, khách, phiếu…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Tìm" />
+        <select value={so} onChange={(e) => setSo(e.target.value as never)} aria-label="Sắp xếp"><option value="date">Mới nhất</option><option value="qty">Số lượng</option>{M.hasVal && <option value="val">Giá trị</option>}<option value="late">Trễ trước</option></select>
+        <button type="button" className="btn sm" onClick={csv} disabled={!rows.length}>Tải CSV</button>
+      </div>
+      <div className="pd-dr-b pdx-list">{rows.length === 0 ? <p className="muted">Không có.</p> : rows.map((x) => <Link key={x.id} className="pdx-r" to={x.to} onClick={onClose}>
+        <span className="muted pdx-d">{x.date ? x.date.slice(8) + '/' + x.date.slice(5, 7) : '—'}</span>
+        <span className="pdx-m"><b className="pj-code">{x.pj}</b> <span className="pd-ell">{x.title}</span><small className="muted pd-ell">{x.kh}{x.tags.map((g) => <em key={g} className={'pdx-tag' + (g.startsWith('Trễ') ? ' late' : g.startsWith('Đã') ? ' ok' : '')}>{g}</em>)}</small></span>
+        <span className="pdx-v"><b>{ufmt(x.q, u)} {UNAME[u]}</b>{tab === 'xn' && !d.xnRem && x.q2 && x.q2.tam > 0 && <small className="muted">còn {ufmt(x.q2, u)}</small>}{M.hasVal && <small className="muted">{tỷ(x.q.val)}</small>}</span></Link>)}</div>
+      {onFilter && <footer className="pdx-f"><button type="button" className="btn" onClick={onFilter}>{d.f![2]} ›</button></footer>}
+    </aside></div>, document.body);
 }
