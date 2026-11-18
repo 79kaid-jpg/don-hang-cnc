@@ -8,6 +8,7 @@ import { Skeleton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { PlanSheet } from '../components/PlanEdit';
 import { Icon } from '../components/Icon';
+import AllOverview from '../components/AllOverview';
 
 type P = { id: string; code: string; name: string; end_customer_id: string | null; status: string };
 type O = { id: string; project_id: string | null; due_date: string | null; customer_id: string | null };
@@ -32,6 +33,10 @@ const MN = (ym: string) => 'T' + Number(ym.slice(5));
 
 /** Thống kê sản lượng dự án cho lãnh đạo: đã giao (QT3 khách ký), đặt mới (XNĐH), tồn chưa giao, dự án, khách hàng */
 export default function Production() {
+  const { scope } = useScope(); const { all } = useMyCo() as { all?: boolean };
+  return scope === 'ALL' && all ? <AllOverview /> : <ProductionCo />;
+}
+function ProductionCo() {
   const { co: co0, canSwitch } = useMyCo(); const { scope } = useScope(); const cur: Co = scope && scope !== 'ALL' ? (scope as Co) : co0;
   const [co, setCo] = useState<Co>(cur);
   useEffect(() => { setCo(cur); }, [cur]); // theo công ty đang làm

@@ -83,7 +83,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false, info: info
   const batchesAll = batchesRaw;
   // Nhiều công ty (kể cả admin): chỉ hiện hồ sơ của công ty đang chọn (QT0 dùng chung nên không lọc)
   const coOk = (x: Batch) => { const ds = docs.filter((d) => d.batch_id === x.id); return !ds.length || (multiCo0 ? (proc === 'QT0' || ds.some((d) => d.company === scope0)) : ds.some((d) => myCos0.includes(d.company))); };
-  const batches = !batchesAll || (!multiCo0 && !myCos0.length) ? batchesAll : batchesAll.filter(coOk);
+  const batches = !batchesAll || (!multiCo0 && !myCos0.length) || (multiCo0 && scope0 === 'ALL') ? batchesAll : batchesAll.filter(coOk); // Tất cả → hiện phiếu cả 3 công ty
   const B = batches?.find((x) => x.id === bid) ?? batches?.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches?.at(-1);
   useEffect(() => { dispatchEvent(new CustomEvent('pp-batch', { detail: { proc, id: B?.id ?? '' } })); }, [proc, B?.id]);
   const bDocs = docs.filter((d) => d.batch_id === B?.id);
