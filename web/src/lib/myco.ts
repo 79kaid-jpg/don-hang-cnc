@@ -67,4 +67,6 @@ export function useScope(): { scope: Scope; canSwitch: boolean; own: Co | null; 
   return { scope, canSwitch, own, options };
 }
 export const SCOPE_LABEL: Record<Scope, string> = { ALL: 'Tất cả', PN: 'PNC', IPC: 'IPC', HW: 'HAN' };
+/** Đang xem gộp 'Tất cả' (chỉ tài khoản xem được cả 3 công ty) — người 1 công ty luôn false */
+export function useAllView(): boolean { const { scope } = useScope(); const { all } = useMyCo(); return scope === 'ALL' && all; }
 export const SCOPES: Scope[] = ['ALL', 'PN', 'IPC', 'HW'];

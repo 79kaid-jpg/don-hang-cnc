@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sb, type Approval, type Order } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx, useAllView } from '../lib/myco';
 import { DOC, ORDER_STATUS, dt } from '../lib/format';
 import { Chip, Empty, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -43,7 +43,8 @@ type A = Approval & { orders: Pick<Order, 'code' | 'project'> };
 type M = { doc_id: string | null; batch_id: string; order_id: string; proc: Proc; company: Company; status: string; title: string; code: string; project: string; since: string; kind: string };
 export default function MyWork() {
   const { me } = useAuth(); const { co: myCo } = useMyCo(); const CI = useCoIdx();
-  const coc = (o: string, p: string, b?: string, oc?: string) => CI.codeOf(o, myCo, p === 'QT1' ? b : undefined) ?? (oc ? oc + ' · chưa có XNĐH' : 'Chưa có XNĐH');
+  const allV = useAllView(); // Tất cả: mã theo công ty của chính phiếu
+  const coc = (o: string, p: string, b?: string, oc?: string, rc?: string) => CI.codeOf(o, (allV && rc ? rc : myCo) as typeof myCo, p === 'QT1' ? b : undefined) ?? (oc ? oc + ' · chưa có XNĐH' : 'Chưa có XNĐH');
   const [rows, setRows] = useState<M[] | null>(null); const [fq, setFq] = useState('');
   const [st, setSt] = useState<{ run: number; late: number; stuck: number } | null>(null);
   const [mine, setMine] = useState<{ id: string; order_id: string; proc: Proc; code: string; title: string; action: string; at: string }[]>([]);
@@ -85,7 +86,7 @@ export default function MyWork() {
   const ago = (t: string) => { const m = (Date.now() - new Date(t).getTime()) / 6e4; return m < 60 ? Math.max(1, Math.round(m)) + ' phút' : m < 1440 ? Math.round(m / 60) + ' giờ' : Math.round(m / 1440) + ' ngày'; };
   const nq = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
   const [q, setQ] = useState('');
-  const shown = (rows ?? []).filter((r) => (!fq || r.proc === fq) && (!q || nq([coc(r.order_id, r.proc, r.batch_id, r.code), r.code, r.project, r.title].join(' ')).includes(nq(q))));
+  const shown = (rows ?? []).filter((r) => (!fq || r.proc === fq) && (!q || nq([coc(r.order_id, r.proc, r.batch_id, r.code, r.company), r.code, r.project, r.title].join(' ')).includes(nq(q))));
   const age = (s: string) => { const hh = (Date.now() - new Date(s).getTime()) / 36e5; return hh < 1 ? Math.max(1, Math.round(hh * 60)) + ' phút' : hh < 48 ? Math.round(hh) + ' giờ' : Math.round(hh / 24) + ' ngày'; };
   return (
     <>
@@ -110,7 +111,7 @@ export default function MyWork() {
               {shown.map((r) => (
                 <li key={(r.doc_id ?? '') + r.batch_id} className={canBulk(r) ? 'mw-pickable' : undefined}>{canBulk(r) && <input type="checkbox" className="mw-pick" aria-label={'Chọn ' + r.code} checked={pick.has(r.doc_id!)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(r.doc_id!)) n.delete(r.doc_id!); else n.add(r.doc_id!); return n; })} />}<Link to={'/don/' + r.order_id + '?tab=' + r.proc} className={'work qtl ' + r.proc.toLowerCase()}>
                   <QtTag qt={r.proc} />
-                  <span className="work-main"><b>{coc(r.order_id, r.proc, r.batch_id, r.code)}</b><span className="small muted work-sub">{r.project} · {r.title}</span>
+                  <span className="work-main"><b>{allV && <span className={'co-chip c-' + r.company}>{r.company === 'HW' ? 'Hanwa' : r.company}</span>}{coc(r.order_id, r.proc, r.batch_id, r.code, r.company)}</b><span className="small muted work-sub">{r.project} · {r.title}</span>
                     <span className="work-st"><span className="work-step">{r.kind === 'final' ? FINAL[r.proc] : (r.proc !== 'QT0' ? COMPANY[r.company] + ' · ' : '') + STATUS[r.status]}</span><span className={'work-age' + ((Date.now() - new Date(r.since).getTime()) / 36e5 > 48 ? ' late' : '')}>{age(r.since)}</span></span></span>
                   <Icon name="arrow" size={18} />
                 </Link></li>))}

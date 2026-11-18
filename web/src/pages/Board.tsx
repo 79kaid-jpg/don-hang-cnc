@@ -16,7 +16,7 @@ import { Skeleton, toast } from '../components/ui';
 import { isTyping, modalOpen } from '../components/Shortcuts';
 import { useAuth } from '../lib/auth';
 import { useWho } from '../lib/people';
-import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx, useScope, setScope, useAllView } from '../lib/myco';
 import { FixMsg } from '../components/FixMsg';
 import { advanceDoc } from '../lib/records';
 import { Sheet } from '../components/Sheet';
@@ -47,7 +47,7 @@ export default function Board() {
   // Công ty của người đang dùng (kể cả khi Admin "đăng nhập với tư cách"): chỉ hiện cột của công ty mình
   const [sp, setSp] = useSearchParams();
   type KCo = 'ALL' | 'PN' | 'IPC' | 'HW';
-  const { scope } = useScope(); const kco: KCo = scope as KCo;
+  const { scope } = useScope(); const kco: KCo = scope as KCo; const allV = useAllView();
   const setKco = (c: KCo) => { setScope(c); setCol(''); };
   const inCo = (key: string) => kco === 'ALL' || key.startsWith(kco + '.') || (key === 'ky' && kco === 'HW');
   const myCo = ({ CNC: 'PN', IPC: 'IPC', HANWA: 'HW' } as Record<string, string>)[meP?.unit ?? ''] ?? '';
@@ -280,7 +280,7 @@ export default function Board() {
                           return <div className={'kb-q0' + (left === 0 ? ' full' : '')}>
                             <div className="kb-q0-bar" role="img" aria-label={`Đã lấy ${a.used}/${a.tot} tấm`}><i style={{ width: pc + '%' }} /></div>
                             <span className="kb-q0-t">{a.used === 0 ? `Chưa lấy · ${a.tot} tấm` : left === 0 ? `Đã lấy hết ${a.tot} tấm` : <>Đã lấy <b>{a.used}/{a.tot}</b> tấm · còn <b>{left}</b></>}</span>
-                            {left > 0 && canLap && <Link className="btn sm primary kb-q0-go" to={'/don/' + it.b.order_id + '?tab=QT1&new=1&q0=' + it.b.id} draggable={false}><Icon name="plus" size={14} />Tạo XNĐH</Link>}
+                            {left > 0 && canLap && !allV && <Link className="btn sm primary kb-q0-go" to={'/don/' + it.b.order_id + '?tab=QT1&new=1&q0=' + it.b.id} draggable={false}><Icon name="plus" size={14} />Tạo XNĐH</Link>}
                           </div>; })()}
                         {qt !== 'QT0' && <div className="kb-cos" aria-label="Tiến độ theo công ty">{(['PN', 'IPC', 'HW'] as const).map((co) => { const dd = docs.find((x) => x.batch_id === it.b.id && x.company === co);
                           const st = !dd ? 'off' : dd.status === 'da_duyet' ? 'ok' : dd.status === 'fail' || dd.status === 'tu_choi' && it.b.status === 'fail' ? 'bad' : it.b.status === 'fail' ? 'off' : 'cur';

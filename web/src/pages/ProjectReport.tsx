@@ -5,7 +5,7 @@ import { useProjects } from '../lib/projects';
 import { m2Of, kgOf, ttOf, type Row } from '../lib/proc';
 import { Skeleton, Empty } from '../components/ui';
 import { Icon } from '../components/Icon';
-import { useMyCo } from '../lib/myco';
+import { useMyCo, useAllView } from '../lib/myco';
 
 type B = { id: string; order_id: string; proc: string; status: string; title: string; co_order_id: string | null; done_at: string | null };
 type D = { batch_id: string; company: string; status: string; tables: Record<string, Row[]> | null; header: Record<string, string> | null };
@@ -19,7 +19,7 @@ const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/
 
 /** Báo cáo theo dự án: số đơn mỗi công ty, khối lượng, giá trị (theo quyền xem giá), tiến độ, trễ */
 export default function ProjectReport() {
-  const pj = useProjects(); const { co: myCo0 } = useMyCo(); const myCo = myCo0 || 'PN'; const [openId, setOpenId] = useState(''); const [st, setSt] = useState<'open' | 'closed' | 'all'>('open'); const [q, setQ] = useState('');
+  const pj = useProjects(); const { co: myCo0 } = useMyCo(); const allV = useAllView(); const [pc, setPc] = useState<'PN' | 'IPC' | 'HW'>('PN'); const myCo = allV ? pc : (myCo0 || 'PN'); const [openId, setOpenId] = useState(''); const [st, setSt] = useState<'open' | 'closed' | 'all'>('open'); const [q, setQ] = useState('');
   const [data, setData] = useState<{ o: O[]; b: B[]; d: D[]; co: CO[]; cu: Record<string, Customer> } | null>(null);
   useEffect(() => { Promise.all([sb.from('orders').select('id, code, project_id, due_date, status'), sb.from('batches').select('id, order_id, proc, status, title, co_order_id, done_at'), sb.from('docs_v').select('batch_id, company, status, tables, header'),
     sb.from('co_orders').select('id, company, code, project_id, batch_id'), sb.from('customers').select('*')]).then(([o, b, d, co, cu]) =>
@@ -86,7 +86,7 @@ export default function ProjectReport() {
           <div><span>Khối lượng</span><b>{fmt(r.m2, 1)} m²</b><small>{fmt(r.kg)} kg</small></div>
         </div>
         {r.ord.tam > 0 && <div className="prr-dl">
-          <div className="prr-dl-h"><b>Giao hàng</b><span className="small muted">{r.going > 0 ? r.going + ' đợt đang giao · ' : ''}giá theo {myCo}</span></div>
+          <div className="prr-dl-h"><b>Giao hàng</b><span className="small muted">{r.going > 0 ? r.going + ' đợt đang giao · ' : ''}giá theo {allV ? <span className="pd-seg prr-pc">{(['PN', 'IPC', 'HW'] as const).map((c) => <button key={c} type="button" aria-pressed={pc === c} onClick={() => setPc(c)}>{c}</button>)}</span> : myCo}</span></div>
           <div className="prr-bar" role="img" aria-label={'Đã giao ' + Math.round(r.dlv.tam / r.ord.tam * 100) + '%'}><i style={{ width: Math.min(100, r.dlv.tam / r.ord.tam * 100) + '%' }} /><span>{Math.round(r.dlv.tam / r.ord.tam * 100)}%</span></div>
           <div className="prr-3">{([['Đặt', r.ord], ['Đã giao', r.dlv], ['Còn lại', { tam: r.ord.tam - r.dlv.tam, kg: r.ord.kg - r.dlv.kg, val: r.ord.val == null || r.dlv.val == null ? null : r.ord.val - r.dlv.val }]] as [string, Agg][]).map(([t, a]) =>
             <div key={t}><span>{t}</span><b>{fmt(a.tam)} tấm</b><small>{fmt(a.kg / 1000, 2)} t · {a.val == null ? 'ẩn giá' : fmt(a.val) + ' đ'}</small></div>)}</div>

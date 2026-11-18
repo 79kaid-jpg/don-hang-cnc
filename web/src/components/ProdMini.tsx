@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { sb } from '../lib/supabase';
-import { useMyCo } from '../lib/myco';
+import { useMyCo, useAllView, setScope, type Co } from '../lib/myco';
 import { cached } from '../lib/qcache';
 
 type Unit = 't' | 'm2' | 'tam';
@@ -13,7 +13,27 @@ const ld = () => { const d = new Date(); return d.getFullYear() + '-' + String(d
 const addM = (ym: string, k: number) => { const [y, m] = ym.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + k, 1)); return d.toISOString().slice(0, 7); };
 
 /** Khối sản lượng gọn cho "Việc của tôi": 6 tháng, đã giao / kế hoạch, tồn, đúng hạn, cần giao 14 ngày */
-export function ProdMini() {
+export function ProdMini() { return useAllView() ? <ProdMiniAll /> : <ProdMiniCo />; }
+
+/** Tất cả: 3 thẻ gọn PN · IPC · HW trong tháng này, bấm → xem riêng công ty đó */
+function ProdMiniAll() {
+  const COS: Co[] = ['PN', 'IPC', 'HW'];
+  const [s, setS] = useState<Record<string, { tam: number; val: number; trips: number; rem: number }> | null>(null);
+  useEffect(() => { let on = true; const cur = new Date().toISOString().slice(0, 7);
+    Promise.all(COS.map((c) => cached('prod:' + c, () => sb.rpc('prod_stats', { p_co: c }), 60000))).then((r) => { if (!on) return;
+      setS(Object.fromEntries(COS.map((c, i) => { const st = (r[i].data ?? { q1: [], q3: [] }) as ST; const q3 = st.q3.filter((x) => x.done_at.startsWith(cur));
+        return [c, { tam: q3.reduce((a, x) => a + (+x.d[2] || 0), 0), val: q3.reduce((a, x) => a + (+x.d[3] || 0), 0), trips: q3.length, rem: st.q1.reduce((a, x) => a + (+(x as { r?: number[] }).r?.[2]! || 0), 0) }]; }))); });
+    return () => { on = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const f = (n: number) => n.toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+  return <section className="pm pm-all" aria-label="Sản lượng tháng này · 3 công ty">
+    <div className="pm-h"><b>Sản lượng tháng này · 3 công ty</b><span className="muted small">bấm thẻ để xem riêng</span></div>
+    <div className="pm-all-g">{COS.map((c) => <button key={c} type="button" className="pm-all-c" onClick={() => setScope(c)}>
+      <span className={'co-chip c-' + c}>{c === 'HW' ? 'Hanwa' : c}</span>
+      {!s ? <span className="muted">…</span> : <><b>{f(s[c].tam)} <small>tấm</small></b><span>{s[c].val ? f(s[c].val / 1e6) + ' tr' : '—'} · {s[c].trips} đợt</span><span className="muted small">Tồn {f(s[c].rem)} tấm</span></>}
+    </button>)}</div></section>;
+}
+
+function ProdMiniCo() {
   const { co } = useMyCo(); const nav = useNavigate(); void nav;
   const [dr, setDr] = useState<{ t: string; sub?: string; rows: { id: string; to: string; a: string; b: string; c: string; v: number[]; late?: boolean }[] } | null>(null);
   useEffect(() => { if (!dr) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setDr(null); }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [dr]);

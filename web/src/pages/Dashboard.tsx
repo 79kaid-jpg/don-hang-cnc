@@ -132,7 +132,7 @@ export default function Dashboard() {
     <>
       <header className="db-head">
         <div className="db-title"><h1>Thống kê</h1>
-          <span className="db-live"><i />Cập nhật {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
+          {scope === 'ALL' && <span className="all-note" title="Phiếu đếm theo từng công ty: 1 đợt qua 3 công ty = 3 phiếu">Cộng cả 3 công ty</span>}<span className="db-live"><i />Cập nhật {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
         <Link className="btn sm" to="/bao-cao-du-an"><Icon name="fgrid" size={16} />Theo dự án</Link>
         <ShareBtn target="#db-root" name="dashboard" label="Gửi ảnh" />
         <p className="db-hint small muted hide-m"><Icon name="arrow" size={13} />Bấm vào số, cột hoặc thanh để xem danh sách hồ sơ · nút <Icon name="share" size={13} /> để gửi ảnh qua Zalo.</p>

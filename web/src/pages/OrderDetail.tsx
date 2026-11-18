@@ -16,7 +16,7 @@ import { sb, errText, type Approval, type Customer, type Line, type Order, type 
 import { procData, allPeople, allCustomers } from '../lib/orderData';
 import { cached, peek } from '../lib/qcache';
 import { useAuth } from '../lib/auth';
-import { useMyCo, useCoIdx, reloadCoIdx } from '../lib/myco';
+import { useMyCo, useCoIdx, reloadCoIdx, useAllView } from '../lib/myco';
 import { useProjects } from '../lib/projects';
 import { BRANCH, ORDER_STATUS, QT2_STEP, date, dt, money, num, qt2Step } from '../lib/format';
 import { InfoChip, Chip, Msg, Skeleton, confirmDialog, toast } from '../components/ui';
@@ -34,7 +34,7 @@ const PROCS: Proc[] = ['QT0', 'QT1', 'QT2', 'QT3'];
 
 export default function OrderDetail() {
   const projs = useProjects();
-  const { co: viewCo } = useMyCo(); const CI = useCoIdx(); const adm0 = useAuth().can('admin_it');
+  const { co: viewCo } = useMyCo(); const allV = useAllView(); const CI = useCoIdx(); const adm0 = useAuth().can('admin_it');
   const { id = '' } = useParams(); const [sp, setSp] = useSearchParams(); const navOD = useNavigate();
   const coAll = CI.allOf(id).sort((a, z) => ['PN', 'IPC', 'HW'].indexOf(a.company) - ['PN', 'IPC', 'HW'].indexOf(z.company)); const coMine = CI.codeOf(id, viewCo);
   const [selB, setSelB] = useState<{ proc: string; id: string }>({ proc: '', id: '' });
@@ -109,7 +109,7 @@ export default function OrderDetail() {
           <Link to="/bang" className="btn icon-btn odh-back" aria-label="Về bảng đơn hàng" data-kbd="B"><Icon name="back" size={20} /></Link>
           <div className="odh-t">
             <h1>{o.project || 'Chưa có dự án'}{prj?.name && prj.name !== o.project && <span className="odh-pn">{prj.name}</span>}</h1>
-            {(() => { const xc = tab !== 'QT0' && selB.proc === tab ? coAll.find((r) => r.company === viewCo && r.batch_id === selB.id)?.code : undefined;
+            {(() => { const xc = tab !== 'QT0' && selB.proc === tab ? (allV ? coAll.filter((r) => r.batch_id === selB.id).map((r) => r.code).join(' · ') || undefined : coAll.find((r) => r.company === viewCo && r.batch_id === selB.id)?.code) : undefined;
               const code = xc ?? o.code; return <div className="odh-code"><button type="button" className="odh-cp" title="Bấm để copy mã" onClick={() => { navigator.clipboard?.writeText(code).then(() => toast('Đã copy ' + code)).catch(() => {}); }}>{code}<Icon name="copy" size={13} /></button>
                 {!xc && <span className="kb-nocode-t">{tab === 'QT0' ? 'chưa có XNĐH' : 'mã nội bộ'}</span>}{o.due_date && <span className={'odh-due ' + dueCls(o.due_date)}>Hạn {date(o.due_date)}</span>}</div>; })()}
             {chain && <div className="odh-sub"><span>{chain}</span></div>}
@@ -118,8 +118,8 @@ export default function OrderDetail() {
           <details className="odh-more"><summary className="btn icon-btn" aria-label="Thêm"><Icon name="more" size={20} /></summary>
             <div className="odh-menu" role="menu">
               <Link role="menuitem" to={'/so-do?don=' + o.id}><Icon name="flow" size={16} />Xem trên sơ đồ</Link>
-              <button role="menuitem" type="button" onClick={() => setSp({ tab: 'QT1', new: '1' })}><Icon name="plus" size={16} />Tách đơn mới (XNĐH)</button>
-              {coAll.filter((r) => r.company === viewCo).length > 0 && <div className="odh-mi"><span className="small muted">Mã đơn {viewCo}</span>{coAll.filter((r) => r.company === viewCo).map((r) => <b key={r.id}>{r.code}</b>)}</div>}
+              {!allV && <button role="menuitem" type="button" onClick={() => setSp({ tab: 'QT1', new: '1' })}><Icon name="plus" size={16} />Tách đơn mới (XNĐH)</button>}
+              {(allV ? (['PN', 'IPC', 'HW'] as const) : [viewCo]).map((c) => coAll.filter((r) => r.company === c).length > 0 && <div key={c} className="odh-mi"><span className="small muted">Mã đơn {c}</span>{coAll.filter((r) => r.company === c).map((r) => <b key={r.id}>{r.code}</b>)}</div>)}
               {adm0 && <div className="odh-mi"><span className="small muted">Mã nội bộ</span><b>{o.code}</b></div>}
             </div></details>
         </div>

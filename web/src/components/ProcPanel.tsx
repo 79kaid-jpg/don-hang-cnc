@@ -1,7 +1,7 @@
 import { GuideBox } from './GuideBox';
 import { Sheet } from './Sheet';
 import { switchCo } from './ScopeChip';
-import { useScope } from '../lib/myco';
+import { useScope, useAllView } from '../lib/myco';
 import { Annotate } from './Annotate';
 import { bocTachRows, haoHutOf } from '../lib/excelCheck';
 import { FixMsg } from './FixMsg';
@@ -90,7 +90,8 @@ export default function ProcPanel({ o, proc, people, autoNew = false, info: info
   const cur = [...bDocs].sort((a, z) => COMPANIES.indexOf(z.company) - COMPANIES.indexOf(a.company))[0];
   const D = bDocs.find((d) => d.company === co) ?? (cur?.can_view === false ? bDocs.filter((x) => x.can_view !== false).at(-1) ?? cur : cur);
   const { isPerson } = useWho(); const { me: meNB, can: canNB } = useAuth(); const { co: coNB } = useMyCo();
-  const canNew = (proc === 'QT0' || !coNB || coNB === 'PN') && (canNB('admin_it') || isPerson(proc, proc === 'QT0' ? 'PN' : coNB || 'PN', proc === 'QT0' ? 'admin' : 'lap', meNB?.id)); // IPC/HW chỉ có đơn từ đơn công ty trước
+  const allV = useAllView();
+  const canNew = !allV && (proc === 'QT0' || !coNB || coNB === 'PN') && (canNB('admin_it') || isPerson(proc, proc === 'QT0' ? 'PN' : coNB || 'PN', proc === 'QT0' ? 'admin' : 'lap', meNB?.id)); // IPC/HW chỉ có đơn từ đơn công ty trước
   if (!batches) return <div className="card pp-skel" aria-busy="true" aria-label={'Đang tải ' + proc}><span /><span /><span /><span /></div>;
   return (
     <div className="pp">
@@ -98,6 +99,7 @@ export default function ProcPanel({ o, proc, people, autoNew = false, info: info
         <div className="pp-hl">{canNew && batches.length > 0 && <button type="button" className={'pp-fab q' + proc.slice(2)} data-sk="t" data-kbd="Shift T" title={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} aria-label={proc === 'QT1' ? 'Tách đơn mới' : 'Mở ' + BATCH_WORD[proc] + ' mới'} onClick={() => setCreating(true)}><span className="pp-fab-c"><Icon name="plus" size={22} /></span><span className="pp-fab-t">{({ QT0: 'Lần mới', QT1: 'XNĐH', QT2: 'Lệnh mới', QT3: 'Đợt mới' } as Record<string, string>)[proc]}</span></button>}
           {batches.length > 1 && (() => { const B0 = batches.find((x) => x.id === bid) ?? batches.filter((x) => x.status === 'dang_lam' || x.status === 'cho_ky').at(-1) ?? batches.at(-1)!; return <BatchSel o={o} batches={batches} B={B0} onPick={(id) => { setBid(id); setCo(''); }} />; })()}
           {proc === 'QT1' && <span id="pp-codeslot" className="pp-codeslot" data-show={batches.length > 1 ? '0' : '1'} />}
+        {allV && !batches.length && <span className="small muted all-hint">Đang xem Tất cả · chuyển về 1 công ty để tạo</span>}
         {canNew && !batches.length && <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} />{'Bắt đầu ' + proc}</button>}</div>
       </div>
       {info && <p className="small pp-desc" role="note">{proc === 'QT0' ? 'Chỉ Phương Nam CNC làm. Danh sách tấm đã duyệt là đầu vào (tuỳ chọn) của XNĐH.'
