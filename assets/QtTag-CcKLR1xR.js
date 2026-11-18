@@ -1,0 +1,1 @@
+import{j as s}from"./index-D4w-eRih.js";const a={QT0:"Tiếp nhận & bóc tách",QT1:"Xác nhận đơn hàng",QT2:"Lệnh GC & NVL",QT3:"Giao hàng"},c=({qt:n,long:t})=>s.jsxs("span",{className:"qt-tag "+n.toLowerCase(),title:a[n],children:[n,t&&s.jsxs("span",{children:[" · ",a[n]]})]});export{c as Q};

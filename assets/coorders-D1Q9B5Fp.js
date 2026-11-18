@@ -1,0 +1,1 @@
+import{r as o,s as a}from"./index-Dc_9cNYb.js";let e=null;const r=new Set;async function n(){const{data:t}=await a.from("companies").select("*").order("ord");return e=t??[],r.forEach(s=>s(e)),e}function u(){const[t,s]=o.useState(e);return o.useEffect(()=>(r.add(s),e||n(),()=>{r.delete(s)}),[]),t}export{n as r,u};

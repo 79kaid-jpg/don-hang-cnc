@@ -1,0 +1,3 @@
+function f(o){const t=[];let n=[],e="",i=!1;const s=o.replace(/\r\n?/g,`
+`);for(let l=0;l<s.length;l++){const r=s[l];if(i){r==='"'?s[l+1]==='"'?(e+='"',l++):i=!1:e+=r;continue}if(r==='"'&&e===""){i=!0;continue}r==="	"?(n.push(e),e=""):r===`
+`?(n.push(e),t.push(n),n=[],e=""):e+=r}return(e!==""||n.length)&&(n.push(e),t.push(n)),t.filter(l=>l.some(r=>r.trim()!==""))}function u(o){let t=o.replace(/[\s\u00a0]/g,"");if(!t)return"";const n=t.lastIndexOf("."),e=t.lastIndexOf(",");if(n>=0&&e>=0){const l=n>e?".":",";return t=t.split(l==="."?",":".").join(""),t.replace(",",".")}const i=n>=0?".":e>=0?",":"";if(!i)return t;const s=t.split(i);return s.length>2||s.length===2&&s[1].length===3&&s[0]!=="0"?s.join(""):s.join(".")}export{u as n,f as p};
